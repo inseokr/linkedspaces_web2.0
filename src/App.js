@@ -27,9 +27,18 @@ const polylineOptions = {
 };
 
 // Function to format visited time
-const formatVisitedTime = (timeString) => {
-  const [date, time] = timeString.split(' ');
-  return `${date.replace(/:/g, '-')} ${time}`;
+const formatVisitedTime = (timestamp) => {
+  const date = new Date(timestamp);
+  return date.toLocaleString('en-US', {
+    weekday: 'long', // "Tuesday"
+    year: 'numeric', // "2024"
+    month: 'long', // "December"
+    day: 'numeric', // "26"
+    hour: 'numeric', // "3"
+    minute: 'numeric', // "58"
+    second: 'numeric', // "03"
+    hour12: true, // "AM/PM"
+  });
 };
 
 function App() {
@@ -94,15 +103,14 @@ function App() {
                   <Popup>
                     <h3>{place.placeName}</h3>
                     <p>{place.story}</p>
-                    <p><strong>Visited:</strong> {formatVisitedTime(place.visitedTimeDigitized)}</p>
-                    {place.photoList.map((photo, idx) => (
-                      <img
-                        key={idx}
-                        src={fileServer + photo.uri}
-                        alt={`Photo ${photo.uri}`}
+                    <p><strong>Visited:</strong> {formatVisitedTime(place.visitedTime)}</p>
+                    {<img
+                        key={0}
+                        src={fileServer + place.photoList[0].uri}
+                        alt={`Photo ${place.photoList[0].uri}`}
                         className="popup-photo"
                       />
-                    ))}
+                    }
                   </Popup>
                 </Marker>
               ))}
@@ -116,9 +124,11 @@ function App() {
               const layoutClass = placeIndex % 2 === 0 ? 'layout-even' : 'layout-odd';
               return (
                 <div key={placeIndex} className={`place-card ${layoutClass}`}>
-                  <h3>{place.placeName}</h3>
+                  <h3><a href={place.externalUrl} target="_blank" rel="noopener noreferrer" style={{ color: 'black', textDecorationLine: 'underline' }}>
+                    {place.placeName}
+                  </a></h3>
                   <p className="place-story">{place.story}</p>
-                  <p><strong>Visited:</strong> {formatVisitedTime(place.visitedTimeDigitized)}</p>
+                  <p><strong>Visited:</strong> {formatVisitedTime(place.visitedTime)}</p>
                   <div className="photo-grid">
                     {place.photoList.map((photo, idx) => (
                       <div key={idx} className="photo-card">
@@ -128,6 +138,11 @@ function App() {
                           className="photo"
                         />
                         <p className="photo-story">{photo.story}</p>
+                        {(photo.audio?.length??0)>0 &&
+                        <audio controls className="photo-audio">
+                          <source src={fileServer + photo.audio} type="audio/mpeg" />
+                          Your browser does not support the audio element.
+                        </audio>}
                       </div>
                     ))}
                   </div>
