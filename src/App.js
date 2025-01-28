@@ -104,7 +104,7 @@ function App() {
                     <h3>{place.placeName}</h3>
                     <p>{place.story}</p>
                     <p><strong>Visited:</strong> {formatVisitedTime(place.visitedTime)}</p>
-                    {<img
+                    {place.photoList[0] && <img
                         key={0}
                         src={fileServer + place.photoList[0].uri}
                         alt={`Photo ${place.photoList[0].uri}`}
@@ -132,11 +132,12 @@ function App() {
                   <div className="photo-grid">
                     {place.photoList.map((photo, idx) => (
                       <div key={idx} className="photo-card">
+                        {photo.uri &&
                         <img
                           src={fileServer + photo.uri}
                           alt={`Photo ${photo.uri}`}
                           className="photo"
-                        />
+                        />}
                         <p className="photo-story">{photo.story}</p>
                         {(photo.audio?.length??0)>0 &&
                         <audio controls className="photo-audio">
