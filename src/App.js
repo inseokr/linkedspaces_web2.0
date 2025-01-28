@@ -52,7 +52,7 @@ function App() {
 
   useEffect(() => {
     if (userId && tripId) {
-      axios.get(`http://10.0.0.116:5000/LS_API/ls-beta-test/trip-recap/${userId}/${tripId}`)
+      axios.get(`https://pocketverse.herokuapp.com/LS_API/ls-beta-test/trip-recap/${userId}/${tripId}`)
         .then(response => {
           setRecapData(response.data);
           setLoading(false);
