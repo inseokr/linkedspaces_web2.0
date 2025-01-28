@@ -8,17 +8,7 @@ import './App.css';
 
 const fileServer = `https://s3-us-west-1.amazonaws.com/linkedspaces.fs`;
 
-// Fix for default marker icon
-// const defaultIcon = L.icon({
-//   iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
-//   iconRetinaUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png',
-//   shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
-//   iconSize: [25, 41],
-//   iconAnchor: [12, 41],
-//   popupAnchor: [1, -34],
-//   shadowSize: [41, 41],
-// });
-
+// Custom marker icon
 const defaultIcon = (index) =>
   L.divIcon({
     className: "custom-marker",
@@ -31,10 +21,11 @@ const defaultIcon = (index) =>
   });
 
 const polylineOptions = {
-  color: "blue",        // Line color
+  color: "#007bff",        // Line color
   weight: 2,            // Line thickness
   dashArray: "4 8",     // Pattern for dashes (4px dash, 8px space)
 };
+
 // Function to format visited time
 const formatVisitedTime = (timeString) => {
   const [date, time] = timeString.split(' ');
@@ -47,8 +38,6 @@ function App() {
   const [recapData, setRecapData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
-
 
   useEffect(() => {
     if (userId && tripId) {
@@ -86,7 +75,7 @@ function App() {
             <MapContainer
               center={[day.places[0].coordinate.latitude, day.places[0].coordinate.longitude]}
               zoom={12}
-              style={{ height: '100%', width: '100%' }}
+              style={{ height: '400px', width: '100%' }}
             >
               <TileLayer
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -94,8 +83,6 @@ function App() {
               {/* Polyline to connect places */}
               <Polyline
                 positions={day.places.map(place => [place.coordinate.latitude, place.coordinate.longitude])}
-                color="blue"
-                weight={1}
                 pathOptions={polylineOptions}
               />
               {day.places.map((place, placeIndex) => (
