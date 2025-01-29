@@ -48,6 +48,43 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  const [isModalOpen, setModalOpen] = useState(false);
+  const [modalImageSrc, setModalImageSrc] = useState("");
+  const [isMobile, setIsMobile] = useState(false);
+
+  const handleImageClick = (imageSrc) => {
+    if (isMobile) {
+      setModalImageSrc(imageSrc);
+      setModalOpen(true);
+    }
+  };
+
+  const closeModal = () => {
+    setModalOpen(false);
+  };
+
+  useEffect(() => {
+    // Check if the screen width is below 768px (commonly used mobile breakpoint)
+    const checkIfMobile = () => {
+      if (window.innerWidth <= 768) {
+        setIsMobile(true);
+      } else {
+        setIsMobile(false);
+      }
+    };
+
+    // Initial check on component mount
+    checkIfMobile();
+
+    // Add event listener to handle resizing
+    window.addEventListener("resize", checkIfMobile);
+
+    // Cleanup event listener on component unmount
+    return () => {
+      window.removeEventListener("resize", checkIfMobile);
+    };
+  }, []);
+
   useEffect(() => {
     if (userId && tripId) {
       axios.get(`https://pocketverse.herokuapp.com/LS_API/ls-beta-test/trip-recap/${userId}/${tripId}`)
@@ -140,6 +177,7 @@ function App() {
                           src={fileServer + photo.uri}
                           alt={`Photo ${photo.uri}`}
                           className="photo"
+                          onClick={() => handleImageClick(fileServer + photo.uri)} 
                         />}
                         <p className="photo-story">{photo.story}</p>
                         {(photo.audio?.length??0)>0 &&
@@ -154,16 +192,23 @@ function App() {
               );
             })}
           </div>
-          <div>
-            <button className='signup-button'>
-              <a href={'https://linkedspaces.com'} target="_blank" rel="noopener noreferrer" style={{ color: 'black', textDecoration: 'none'}}>Linkedspaces</a>
-            </button>
-          </div>
+         
         </div>
       ))}
-     
+      {/* Modal */}
+      {isModalOpen && (
+        <div className="modal" onClick={closeModal}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <img src={modalImageSrc} alt="Popup" className="modal-image" onClick={()=>{closeModal()}}/>
+          </div>
+        </div>
+      )}
+      <div>
+        <button className='signup-button'>
+          <a href={'https://linkedspaces.com'} target="_blank" rel="noopener noreferrer" style={{ color: 'white', textDecoration: 'none', fontSize: '1.1rem' }}>Sign up for LinkedSpaces</a>
+        </button>
+      </div>
     </div>
-    
   );
 }
 
