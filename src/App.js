@@ -67,11 +67,13 @@ function App() {
 
   return (
     <div className="App">
-      <header className="header">
-        <h1>Trip Recap: {recapData.trip.title}</h1>
-        <p className="trip-dates">
-          {recapData.trip.startTimeString} - {recapData.trip.endTimeString}
-        </p>
+      <header className="trip-header">
+        <div className="trip-info">
+          <h1>Trip Recap from Linkedspaces</h1>
+          <p className="trip-dates">
+            {recapData.trip.startTimeString} - {recapData.trip.endTimeString}
+          </p></div>
+       
       </header>
 
       {/* Display recap per day */}
@@ -152,9 +154,16 @@ function App() {
               );
             })}
           </div>
+          <div>
+            <button className='signup-button'>
+              <a href={'https://linkedspaces.com'} target="_blank" rel="noopener noreferrer" style={{ color: 'black', textDecoration: 'none'}}>Linkedspaces</a>
+            </button>
+          </div>
         </div>
       ))}
+     
     </div>
+    
   );
 }
 
