@@ -76,7 +76,8 @@ body {
 
 .popup-photo-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); /* Responsive grid with a minimum size for photos */
+  grid-template-columns: repeat(auto-fit, minmax(30px, 1fr)); 
+  max-height: 30vh;
   gap: 10px; /* Space between photos */
   padding: 10px; /* Inner padding for the grid container */
   justify-items: center; /* Center-align items horizontally */
@@ -89,6 +90,7 @@ body {
 .popup-photo {
   max-width: 100%; /* Ensure images don't exceed their grid cell */
   height: auto; /* Maintain aspect ratio */
+  max-height: 30vh;
   border-radius: 8px; /* Rounded corners for photos */
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Slight shadow for depth */
   cursor: pointer; /* Pointer cursor for interactivity */

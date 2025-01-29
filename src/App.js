@@ -102,15 +102,17 @@ function App() {
                 >
                   <Popup>
                     <h3>{place.placeName}</h3>
-                    <p>{place.story}</p>
                     <p><strong>Visited:</strong> {formatVisitedTime(place.visitedTime)}</p>
-                    {place.photoList[0] && <img
-                        key={0}
-                        src={fileServer + place.photoList[0].uri}
-                        alt={`Photo ${place.photoList[0].uri}`}
-                        className="popup-photo"
-                      />
-                    }
+                    <div className="popup-photo-grid">
+                      {place.photoList?.slice(0,2).map((photo, index) => (
+                        <img
+                          key={index}
+                          src={fileServer + photo.uri}
+                          alt={`Photo ${photo.uri}`}
+                          className="popup-photo"
+                        />
+                      ))}
+                    </div>
                   </Popup>
                 </Marker>
               ))}
@@ -127,7 +129,6 @@ function App() {
                   <h3><a href={place.externalUrl} target="_blank" rel="noopener noreferrer" style={{ color: 'black', textDecorationLine: 'underline' }}>
                     {place.placeName}
                   </a></h3>
-                  <p className="place-story">{place.story}</p>
                   <p><strong>Visited:</strong> {formatVisitedTime(place.visitedTime)}</p>
                   <div className="photo-grid">
                     {place.photoList.map((photo, idx) => (
