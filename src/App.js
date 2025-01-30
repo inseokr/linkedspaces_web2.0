@@ -150,6 +150,7 @@ function App() {
 
   useEffect(()=>{
     if(isModalOpen) {
+      console.warn(`hidden`);
       document.body.style.overflow = 'hidden';
     }
     else {
