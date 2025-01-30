@@ -147,6 +147,16 @@ function App() {
     }
   }, [userId, tripId]);
 
+
+  useEffect(()=>{
+    if(isModalOpen) {
+      document.body.style.overflow = 'hidden';
+    }
+    else {
+      document.body.style.overflow = 'auto';
+    }
+  })
+
   if (loading) return <div className="loading">Loading...</div>;
   if (error) return <div className="error">Error: {error}</div>;
 
