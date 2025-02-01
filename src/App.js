@@ -262,14 +262,6 @@ function App() {
          
         </div>
       ))}
-      {/* Modal */}
-      {/* {isModalOpen && <ZoomableImageModal 
-        visible={isModalOpen}
-        onClose={()=>{
-          closeModal()
-        }}
-        imageUri={modalImageSrc}
-      />} */}
       {isModalOpen && (
         <div className="modal" onClick={closeModal}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
