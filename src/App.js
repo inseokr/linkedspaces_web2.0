@@ -89,6 +89,14 @@ function formatDate(dateStr) {
   
 }
 
+// ex> 2022:09:23
+// ==> 9/23/2022
+const reformatDate = (dateStr)=> {
+const [year, month, day] = dateStr.split(':');
+return `${numberToMonth(parseInt(month))}/${parseInt(day)} ${year}`;
+
+}
+
 function App() {
   const { userId, tripId } = useParams(); // Get userId and tripId from the route
 
@@ -175,7 +183,7 @@ function App() {
       {/* Display recap per day */}
       {recapData.days.map((day, dayIndex) => (
         <div key={dayIndex} className="day-container">
-          <h2>Day {dayIndex + 1}: {day.date}</h2>
+          <h2>Day {dayIndex + 1}: {reformatDate(day.date)}</h2>
 
           {/* Map for the day */}
           <div className="map-container">
@@ -255,6 +263,13 @@ function App() {
         </div>
       ))}
       {/* Modal */}
+      {/* {isModalOpen && <ZoomableImageModal 
+        visible={isModalOpen}
+        onClose={()=>{
+          closeModal()
+        }}
+        imageUri={modalImageSrc}
+      />} */}
       {isModalOpen && (
         <div className="modal" onClick={closeModal}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
