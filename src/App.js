@@ -264,6 +264,11 @@ function App() {
                           <source src={fileServer + photo.audio} type="audio/mpeg" />
                           Your browser does not support the audio element.
                         </audio>}
+                        {(photo.storyAudio?.length??0)>0 &&
+                        <audio controls className="photo-audio">
+                          <source src={fileServer + photo.storyAudio} type="audio/mpeg" />
+                          Your browser does not support the audio element.
+                        </audio>}
                       </div>
                     ))}
                   </div>
