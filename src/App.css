@@ -13,7 +13,6 @@ body {
   padding: 5;
   color: white;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-  margin-bottom: 10px;
 }
 
 /* Left-aligned trip info */
@@ -35,6 +34,19 @@ body {
   font-size: 1rem;
   opacity: 0.85;
    color: #232525; /* Gray for subtlety */
+}
+
+.user-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.trip-user {
+  font-size: 1rem;
+  opacity: 0.85;
+  color: #232525; /* Gray for subtlety */
+  padding-right: 5px;
 }
 
 /* Button Container for Better Spacing */
@@ -112,6 +124,13 @@ body {
   width: 100%;
   border-radius: 8px;
   height: 30vh;
+  object-fit: cover;
+}
+
+.profile-picture {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%; /* Make the edges rounded, turning the image into a circle */
   object-fit: cover;
 }
 
@@ -228,4 +247,31 @@ body {
 
 .photo:hover {
   transform: scale(1.02); /* Slight zoom effect when hovering */
+}
+
+/* Trip Highlight Styles */
+.trip-highlight {
+  background-color: #f9f9f9;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  margin-top: 30px;
+}
+
+.trip-highlight h2 {
+  font-size: 2rem;
+  margin-bottom: 15px;
+  color: #333;
+}
+
+.highlight-story h3 {
+  font-size: 1.5rem;
+  color: #555;
+  margin-bottom: 10px;
+}
+
+.highlight-story p {
+  font-size: 1.2rem;
+  line-height: 1.6;
+  color: #666;
 }

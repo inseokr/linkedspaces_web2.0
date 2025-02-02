@@ -77,16 +77,12 @@ function formatDate(dateStr) {
   // Split the input string into date and time parts
   const [datePart, timePart] = dateStr.split(' '); 
 
-  console.warn(`datePart:`, datePart, timePart);
   // 2024:12:05 10:44:44 ==> 
   var year = datePart.split(':')[0];
   var month = datePart.split(':')[1];
   var day = datePart.split(':')[2];
 
-  console.warn(`year:`, year, numberToMonth(parseInt(month)), day);
-
   return `${numberToMonth(parseInt(month))} ${parseInt(day)}, ${year} at ${convertTo12Hour(timePart)}`
-  
 }
 
 // ex> 2022:09:23
@@ -147,6 +143,8 @@ function App() {
         .then(response => {
           setRecapData(response.data);
           setLoading(false);
+
+          console.warn(`response: `, response.data);
         })
         .catch(error => {
           setError(error.message);
@@ -173,12 +171,26 @@ function App() {
     <div className="App">
       <header className="trip-header">
         <div className="trip-info">
-          <h1>Trip Recap from Linkedspaces</h1>
+          <h1>{(recapData.trip.title?.length??0>0)? recapData.trip.title: 'Trip Recap from LinkedSpaces'}</h1>
           <p className="trip-dates">
-            {recapData.trip.startTimeString} - {recapData.trip.endTimeString}
-          </p></div>
-       
+          From {recapData.trip.startTimeString} to {recapData.trip.endTimeString}, {recapData.trip.startingYear}
+          </p>
+          <section className="user-container">
+          <p className="trip-user">
+            Shared from {recapData.trip.userName}
+          </p>
+          <img src={fileServer + recapData.trip.profilePicture} alt="Popup" className="profile-picture" onClick={()=>{}}/>
+          </section>
+          </div>
       </header>
+
+      {/* {(recapData.trip.title?.length??0>0) &&
+      <section className="trip-highlight">
+        <h2>Trip Highlight: {recapData.trip.title}</h2>
+        <div className="highlight-story">
+          <h3>{recapData.trip.highlight}</h3>
+        </div>
+      </section>} */}
 
       {/* Display recap per day */}
       {recapData.days.map((day, dayIndex) => (
