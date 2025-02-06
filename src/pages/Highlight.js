@@ -26,6 +26,19 @@ const Highlight = () => {
           setModalOpen(true);
         }
       };
+    
+    const getPlaceCoverPhoto = (place) => {
+
+        if(!place || ((place.photoList?.length ??0)===0)) {
+            return null;
+        }
+
+        for (let _photo of place.photoList) {
+            if(_photo) return _photo.uri;
+        }
+        
+        return null;
+    }
 
     useEffect(() => {
         const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -97,7 +110,7 @@ const Highlight = () => {
                 <Marker
                     key={index}
                     position={[place.coordinate.latitude, place.coordinate.longitude]}
-                    icon={markerWithPlaceInfo(fileServer+place.photoList[0].uri, place.placeName)}
+                    icon={markerWithPlaceInfo(fileServer+getPlaceCoverPhoto(place), place.placeName)}
                 >
                     <Popup>
                         <div className="text-center">
