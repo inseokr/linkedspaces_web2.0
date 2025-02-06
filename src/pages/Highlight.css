@@ -1,0 +1,218 @@
+/* PlacesMap.css */
+
+.container {
+    margin: 5px auto;
+    max-width: 1200px;
+    padding: 10px;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  }
+
+.trip-header {
+    display: flex;
+    align-items: center;
+    justify-content: center; /* Centers the content */
+    position: relative; /* Needed for absolute positioning of the button */
+    padding: 5;
+    color: white;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  }
+  
+  /* Left-aligned trip info */
+  .trip-info {
+    text-align: center; /* Centers the text inside */
+  }
+  
+  /* Title Styling */
+  .trip-header h1 {
+    font-size: 1.7rem;
+    margin-bottom: 8px;
+    color: #34495e;
+    font-weight: bold;
+    text-shadow: 2px 2px 6px rgba(0, 0, 0, 0.2);
+  }
+  
+  /* Trip Dates Styling */
+  .trip-dates {
+    font-size: 1rem;
+    opacity: 0.85;
+     color: #232525; /* Gray for subtlety */
+  }
+  
+  .user-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  
+  .trip-user {
+    font-size: 1rem;
+    opacity: 0.85;
+    color: #232525; /* Gray for subtlety */
+    padding-right: 5px;
+  }
+
+.flex-1 {
+    flex: 1
+}
+
+.w-full {
+    width: 100%;
+  }
+  
+  .h-screen {
+    height: 100vh;
+  }
+  
+  .flex {
+    display: flex;
+  }
+  
+  .flex-col {
+    flex-direction: column;
+  }
+
+  .flex-row {
+    flex-direction: row;
+  }
+  
+  .md\\:flex-row {
+    flex-direction: row;
+  }
+  
+  .p-4 {
+    padding: 1rem;
+  }
+  
+  .overflow-auto {
+    overflow: auto;
+  }
+  
+  .border-r {
+    border-right: 1px solid #ccc;
+  }
+  
+  .bg-gray-100 {
+    background-color: #f7f7f7;
+  }
+  
+  .rounded {
+    border-radius: 0.5rem;
+  }
+  
+  .cursor-pointer {
+    cursor: pointer;
+  }
+  
+  .fixed {
+    position: fixed;
+  }
+  
+  .bottom-4 {
+    bottom: 1rem;
+  }
+  
+  .left-1\/2 {
+    left: 50%;
+  }
+  
+  .transform {
+    transform: translateX(-50%);
+  }
+  
+  .bg-blue-600 {
+    background-color: #2563eb;
+  }
+  
+  .text-white {
+    color: white;
+  }
+  
+  .text-gray-500 {
+    color: #6b7280;
+  }
+  
+  .text-lg {
+    font-size: 1.125rem;
+    font-weight: bold;
+  }
+  
+  .text-md {
+    font-size: 1rem;
+  }
+  
+  .text-sm {
+    font-size: 0.875rem;
+  }
+  
+  .font-bold {
+    font-weight: bold;
+  }
+  
+  .p-2 {
+    padding: 0.5rem;
+  }
+  
+  .bg-black\/30 {
+    background-color: rgba(0, 0, 0, 0.3);
+  }
+  
+  .absolute {
+    position: absolute;
+  }
+  
+  .top-2 {
+    top: 0.5rem;
+  }
+  
+  .right-2 {
+    right: 0.5rem;
+  }
+
+  .map-container {
+    background-color: lightgray;
+  }
+
+  .places-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+  }
+  
+  .place-card {
+    background: #fff;
+    border-radius: 10px;
+    padding: 15px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    flex: 1 1 calc(50% - 20px);
+    margin-bottom: 15px;
+  }
+  
+  .photo-grid {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  
+  .photo-card {
+    flex: 1 1 calc(50% - 10px);
+    margin-top: 10px;
+  }
+  
+  .photo-backup {
+    width: 100%;
+    border-radius: 8px;
+    height: 30vh;
+    object-fit: cover;
+  }
+
+  .photo {
+    width: 100%;
+    border-radius: 8px;
+    aspect-ratio: 16 / 9; /* Keeps a consistent shape */
+    object-fit: cover;
+}
+  
+  
+  

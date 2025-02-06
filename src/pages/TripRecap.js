@@ -2,83 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet';
-import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import './App.css';
+import './TripRecap.css';
+import { formatDate, reformatDate } from '../utils/DateUtils';
+import { defaultIcon, polylineOptions } from '../constants/MapConstants';
+import { fileServer } from '../constants/ServerUrls';
 
-const fileServer = `https://s3-us-west-1.amazonaws.com/linkedspaces.fs`;
-
-// Custom marker icon
-const defaultIcon = (index) =>
-  L.divIcon({
-    className: "custom-marker",
-    html: `<div style="background-color: #007bff; color: white; 
-      width: 30px; height: 30px; display: flex; 
-      align-items: center; justify-content: center; 
-      border-radius: 50%; font-size: 14px;">${index}</div>`,
-    iconSize: [30, 30],
-    iconAnchor: [15, 15], // Center the icon
-  });
-
-const polylineOptions = {
-  color: "#007bff",        // Line color
-  weight: 2,            // Line thickness
-  dashArray: "4 8",     // Pattern for dashes (4px dash, 8px space)
-};
-
-function numberToMonth(number) {
-  const months = [
-    "Jan",
-    "Feb",
-    "Mar",
-    "Apr",
-    "May",
-    "Jun",
-    "July",
-    "Aug",
-    "Sep",
-    "Oct",
-    "Nov",
-    "Dec",
-  ];
-
-  // Check if the input is a valid number (between 1 and 12)
-  if (number < 1 || number > 12 || !Number.isInteger(number)) {
-    return "Invalid input. Please enter a number between 1 and 12.";
-  }
-
-  // Return the corresponding month name
-  return months[number - 1]; 
-}
-
-function convertTo12Hour(timeStr) {
-  let [hours, minutes] = timeStr.split(":").map(Number);
-  let period = hours >= 12 ? "PM" : "AM";
-  hours = hours % 12 || 12; // Convert 0 to 12 for 12-hour format
-  return `${hours}:${minutes.toString().padStart(2, "0")} ${period}`;
-}
-
-function formatDate(dateStr) {
-  // Split the input string into date and time parts
-  const [datePart, timePart] = dateStr.split(' '); 
-
-  // 2024:12:05 10:44:44 ==> 
-  var year = datePart.split(':')[0];
-  var month = datePart.split(':')[1];
-  var day = datePart.split(':')[2];
-
-  return `${numberToMonth(parseInt(month))} ${parseInt(day)}, ${year} at ${convertTo12Hour(timePart)}`
-}
-
-// ex> 2022:09:23
-// ==> 9/23/2022
-const reformatDate = (dateStr)=> {
-const [year, month, day] = dateStr.split(':');
-return `${numberToMonth(parseInt(month))}/${parseInt(day)} ${year}`;
-
-}
-
-function App() {
+function TripRecap() {
   const { userId, tripId } = useParams(); // Get userId and tripId from the route
 
   const [recapData, setRecapData] = useState(null);
@@ -153,7 +83,7 @@ function App() {
   if (error) return <div className="error">Error: {error}</div>;
 
   return (
-    <div className="App">
+    <div className="TripRecap">
       <header className="trip-header">
         <div className="trip-info">
           <h1>{(recapData.trip.title?.length??0>0)? recapData.trip.title: 'Trip Recap from LinkedSpaces'}</h1>
@@ -169,19 +99,10 @@ function App() {
           </div>
       </header>
 
-      {/* {(recapData.trip.title?.length??0>0) &&
-      <section className="trip-highlight">
-        <h2>Trip Highlight: {recapData.trip.title}</h2>
-        <div className="highlight-story">
-          <h3>{recapData.trip.highlight}</h3>
-        </div>
-      </section>} */}
-
       {/* Display recap per day */}
       {recapData.days.map((day, dayIndex) => (
         <div key={dayIndex} className="day-container">
           <h2>Day {dayIndex + 1}: {reformatDate(day.date)}</h2>
-
           {/* Map for the day */}
           <div className="map-container">
             <MapContainer
@@ -221,7 +142,6 @@ function App() {
               ))}
             </MapContainer>
           </div>
-
           {/* Stories and Photos for the day */}
           <div className="places-container">
             {day.places.map((place, placeIndex) => {
@@ -280,4 +200,4 @@ function App() {
   );
 }
 
-export default App;
+export default TripRecap;
