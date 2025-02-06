@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+
 import axios from "axios";
 import "leaflet/dist/leaflet.css";
 import "./Highlight.css";
@@ -160,23 +161,28 @@ const Highlight = () => {
                                         {place.photoList.map((photo, idx) => (
                                             <div key={idx} className="photo-card">
                                             {photo.uri && (
-                                              <img
-                                                src={fileServer + photo.uri}
-                                                alt={`Photo ${photo.uri}`}
-                                                className="photo"
-                                                onClick={() => handleImageClick(fileServer + photo.uri)}
-                                              />
+                                             <div style={{ position: "relative", display: "inline-block" }}>
+                                             <img
+                                               src={fileServer + photo.uri}
+                                               alt={`Photo ${photo.uri}`}
+                                               className="photo"
+                                               onClick={() => handleImageClick(fileServer + photo.uri)}
+                                             />
+                                           </div>
+                                           
                                             )}
                                             <p className="photo-story">{photo.story}</p>
                                             {(photo.audio?.length ?? 0) > 0 && (
-                                              <audio
-                                                controls
-                                                className="photo-audio"
-                                                onClick={(e) => e.stopPropagation()} // Stop propagation
-                                              >
-                                                <source src={fileServer + photo.audio} type="audio/mpeg" />
-                                                Your browser does not support the audio element.
-                                              </audio>
+                                                <div style={{ width: "100%", margin: "0 auto" }}>
+                                                    <audio
+                                                        controls
+                                                        className="photo-audio"
+                                                        onClick={(e) => e.stopPropagation()} // Stop propagation
+                                                    >
+                                                        <source src={fileServer + photo.audio} type="audio/mpeg" />
+                                                        Your browser does not support the audio element.
+                                                    </audio>
+                                                </div>
                                             )}
                                           </div>
                                         ))}

@@ -259,6 +259,11 @@
   .close-modal:hover {
     color: #ff6f61; /* Change color on hover */
   }
+
+  .photo-audio {
+    margin-bottom: 5px;
+    margin: 0 auto;
+  }
   
   
   
