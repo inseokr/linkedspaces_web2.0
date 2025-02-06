@@ -82,7 +82,7 @@ const Highlight = () => {
         </header>
          {coordinates && <div 
             style={{
-                width: window.innerWidth*0.8,
+                width: (isMobile===true)? window.innerWidth*0.95: window.innerWidth*0.8,
                 margin: "0 auto",
                 paddingTop: 10,
             }}
@@ -121,10 +121,10 @@ const Highlight = () => {
                 </Marker>
             ))}
         </MapContainer></div>}
-        {!isMobile && highlightData && (
+        {highlightData && (
                 <div 
                     style={{
-                        width: window.innerWidth*0.8,
+                        width: (isMobile===true)? window.innerWidth*0.95: window.innerWidth*0.8,
                         margin: "0 auto",
                         marginTop: 10
                         }}
