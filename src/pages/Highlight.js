@@ -20,6 +20,10 @@ const Highlight = () => {
     const [modalImageSrc, setModalImageSrc] = useState("");
     const [isModalOpen, setModalOpen] = useState(false);
 
+    const closeModal = () => {
+        setModalOpen(false);
+      };
+
     const handleImageClick = (imageSrc) => {
         if (isMobile) {
           setModalImageSrc(imageSrc);
@@ -182,7 +186,13 @@ const Highlight = () => {
                     ))}
                 </div>
             )}
-       
+        {isModalOpen && (
+            <div className="modal" onClick={closeModal}>
+                <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                    <img src={modalImageSrc} alt="Popup" className="modal-image" onClick={() => { closeModal() }} />
+                </div>
+            </div>
+        )}
     </div>
 };
 
