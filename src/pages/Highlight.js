@@ -159,25 +159,26 @@ const Highlight = () => {
                                     <div className="photo-grid">
                                         {place.photoList.map((photo, idx) => (
                                             <div key={idx} className="photo-card">
-                                                {photo.uri &&
-                                                    <img
-                                                        src={fileServer + photo.uri}
-                                                        alt={`Photo ${photo.uri}`}
-                                                        className="photo"
-                                                        onClick={() => handleImageClick(fileServer + photo.uri)}
-                                                    />}
-                                                <p className="photo-story">{photo.story}</p>
-                                                {(photo.audio?.length ?? 0) > 0 &&
-                                                    <audio controls className="photo-audio">
-                                                        <source src={fileServer + photo.audio} type="audio/mpeg" />
-                                                        Your browser does not support the audio element.
-                                                    </audio>}
-                                                {(photo.storyAudio?.length ?? 0) > 0 &&
-                                                    <audio controls className="photo-audio">
-                                                        <source src={fileServer + photo.storyAudio} type="audio/mpeg" />
-                                                        Your browser does not support the audio element.
-                                                    </audio>}
-                                            </div>
+                                            {photo.uri && (
+                                              <img
+                                                src={fileServer + photo.uri}
+                                                alt={`Photo ${photo.uri}`}
+                                                className="photo"
+                                                onClick={() => handleImageClick(fileServer + photo.uri)}
+                                              />
+                                            )}
+                                            <p className="photo-story">{photo.story}</p>
+                                            {(photo.audio?.length ?? 0) > 0 && (
+                                              <audio
+                                                controls
+                                                className="photo-audio"
+                                                onClick={(e) => e.stopPropagation()} // Stop propagation
+                                              >
+                                                <source src={fileServer + photo.audio} type="audio/mpeg" />
+                                                Your browser does not support the audio element.
+                                              </audio>
+                                            )}
+                                          </div>
                                         ))}
                                     </div>
                                 </div>
