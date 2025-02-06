@@ -9,6 +9,7 @@ import { formatDate } from "../utils/DateUtils";
 import { useParams } from "react-router-dom";
 import { defaultIcon, markerWithPlaceInfo } from "../constants/MapConstants";
 import { fileServer } from "../constants/ServerUrls";
+import Spinner from "../components/Spinner";
 
 const Highlight = () => {
     const [highlightData, setHighlightData] = useState(null);
@@ -82,6 +83,13 @@ const Highlight = () => {
         setSelectedPlace(place);
         setModalOpen(true);
     };
+
+    if (loading) return <div>
+        <div className="loading">Loading...</div>
+        <Spinner />
+    </div>;
+
+    if (error) return <div className="error">Error: {error}</div>;
 
     return <div style={{
     }}
