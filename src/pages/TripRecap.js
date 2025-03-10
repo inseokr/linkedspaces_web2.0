@@ -217,14 +217,12 @@ function TripRecap() {
             {selectedPhoto.comments?.map((comment) => (
               <div key={comment.id} className="comment">
                 <p><strong>{comment.username}</strong>: {comment.text}</p>
-                <p>Likes: {comment.liked.length}</p>
                 {comment.replies.length > 0 && (
                   <div className="replies">
                     <h3>Replies</h3>
                     {comment.replies.map((reply) => (
                       <div key={reply.id} className="reply">
                         <p><strong>{reply.username}</strong>: {reply.text}</p>
-                        <p>Likes: {reply.liked.length}</p>
                       </div>
                     ))}
                   </div>
