@@ -283,28 +283,29 @@ body {
 }
 
 .comments-section {
-  width: 90%;
-  height: 90%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000; /* Ensure it's on top */
+  padding: 20px;
+  overflow-y: auto;
+  max-height: 90%;
+  z-index: 1000;
 }
 
 .comment {
   margin-bottom: 20px;
   padding-bottom: 10px;
   border-bottom: 1px solid #ddd;
+  z-index: 2000;
 }
 
 .replies {
   margin-left: 20px;
+  z-index: 2000;
 }
 
 .reply {
   margin-bottom: 10px;
   padding-bottom: 5px;
   border-bottom: 1px solid #eee;
+  z-index: 2000;
 }
 
 button {

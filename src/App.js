@@ -192,11 +192,12 @@ function App() {
           <h2>Day {dayIndex + 1}: {reformatDate(day.date)}</h2>
 
           {/* Map for the day */}
+          {commentModalOpen===false &&
           <div className="map-container">
             <MapContainer
               center={[day.places[0].coordinate.latitude, day.places[0].coordinate.longitude]}
               zoom={12}
-              style={{ height: '400px', width: '100%' }}
+              style={{ height: '400px', width: '100%'}}
             >
               <TileLayer
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -229,7 +230,7 @@ function App() {
                 </Marker>
               ))}
             </MapContainer>
-          </div>
+          </div>}
 
           {/* Stories and Photos for the day */}
           <div className="places-container">
@@ -285,8 +286,7 @@ function App() {
           </div>
         </div>
       )}
-      <div>
-        <Modal
+      <Modal
           isOpen={commentModalOpen}
           onRequestClose={() => {
             setCommentModalOpen(false);
@@ -319,6 +319,7 @@ function App() {
             </div>
           )}
         </Modal>
+      <div>
         <button className='signup-button'>
           <a href={'https://linkedspaces.com'} target="_blank" rel="noopener noreferrer" style={{ color: 'white', textDecoration: 'none', fontSize: '1.1rem' }}>Sign up for LinkedSpaces</a>
         </button>

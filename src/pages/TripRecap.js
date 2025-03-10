@@ -112,6 +112,7 @@ function TripRecap() {
         <div key={dayIndex} className="day-container">
           <h2>Day {dayIndex + 1}: {reformatDate(day.date)}</h2>
           {/* Map for the day */}
+          {commentModalOpen===false && 
           <div className="map-container">
             <MapContainer
               center={[day.places[0].coordinate.latitude, day.places[0].coordinate.longitude]}
@@ -149,7 +150,7 @@ function TripRecap() {
                 </Marker>
               ))}
             </MapContainer>
-          </div>
+          </div>}
           {/* Stories and Photos for the day */}
           <div className="places-container">
             {day.places.map((place, placeIndex) => {
