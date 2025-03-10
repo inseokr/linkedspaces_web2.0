@@ -284,6 +284,7 @@ body {
   padding: 20px;
   overflow-y: auto;
   max-height: 90%;
+  z-index: 1000;
 }
 
 .comment {
