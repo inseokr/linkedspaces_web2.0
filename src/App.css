@@ -283,12 +283,8 @@ body {
 }
 
 .comments-section {
-  position: absolute; /* Changed to absolute */
-  top: 0;
-  left: 0;
   width: 90%;
   height: 90%;
-  background-color: rgba(0, 0, 0, 0.7); /* Semi-transparent background */
   display: flex;
   justify-content: center;
   align-items: center;
