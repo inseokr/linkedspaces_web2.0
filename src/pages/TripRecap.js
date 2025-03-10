@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet';
+import Modal from 'react-modal';
 import 'leaflet/dist/leaflet.css';
 import './TripRecap.css';
 import { formatDate, reformatDate } from '../utils/DateUtils';
@@ -18,6 +19,13 @@ function TripRecap() {
   const [isModalOpen, setModalOpen] = useState(false);
   const [modalImageSrc, setModalImageSrc] = useState("");
   const [isMobile, setIsMobile] = useState(false);
+  const [commentModalOpen, setCommentModalOpen] = useState(false);
+  const [selectedPhoto, setSelectedPhoto] = useState(null);
+
+  const handleCommentClick = (photo) => {
+    setSelectedPhoto(photo);
+    setCommentModalOpen(true);
+  };
 
   const handleImageClick = (imageSrc) => {
     if (isMobile) {
@@ -164,6 +172,11 @@ function TripRecap() {
                           onClick={() => handleImageClick(fileServer + photo.uri)} 
                         />}
                         <p className="photo-story">{photo.story}</p>
+                        {(photo.comments?.length??0)>0 &&
+                        <p className="photo-story">
+                        <button onClick={() => handleCommentClick(photo)}>
+                          View Comments ({photo.comments?.length || 0})
+                        </button></p>}
                         {(photo.audio?.length??0)>0 &&
                         <audio controls className="photo-audio">
                           <source src={fileServer + photo.audio} type="audio/mpeg" />
@@ -181,7 +194,6 @@ function TripRecap() {
               );
             })}
           </div>
-         
         </div>
       ))}
       {isModalOpen && (
@@ -191,6 +203,41 @@ function TripRecap() {
           </div>
         </div>
       )}
+      <Modal
+        isOpen={commentModalOpen}
+        onRequestClose={()=>{
+          setCommentModalOpen(false);
+          setSelectedPhoto(null);
+        }}
+        contentLabel="Comments Modal"
+      >
+        {selectedPhoto && (
+          <div className="comments-section">
+            <h2>Comments</h2>
+            {selectedPhoto.comments?.map((comment) => (
+              <div key={comment.id} className="comment">
+                <p><strong>{comment.username}</strong>: {comment.text}</p>
+                <p>Likes: {comment.liked.length}</p>
+                {comment.replies.length > 0 && (
+                  <div className="replies">
+                    <h3>Replies</h3>
+                    {comment.replies.map((reply) => (
+                      <div key={reply.id} className="reply">
+                        <p><strong>{reply.username}</strong>: {reply.text}</p>
+                        <p>Likes: {reply.liked.length}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+            <button onClick={()=>{
+              setCommentModalOpen(false);
+              setSelectedPhoto(null);
+            }}>Close</button>
+          </div>
+        )}
+      </Modal>
       <div>
         <button className='signup-button'>
           <a href={'https://linkedspaces.com'} target="_blank" rel="noopener noreferrer" style={{ color: 'white', textDecoration: 'none', fontSize: '1.1rem' }}>Sign up for LinkedSpaces</a>

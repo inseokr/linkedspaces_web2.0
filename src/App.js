@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet';
+import Modal from 'react-modal';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import './App.css';
@@ -48,7 +49,7 @@ function numberToMonth(number) {
   }
 
   // Return the corresponding month name
-  return months[number - 1]; 
+  return months[number - 1];
 }
 
 function convertTo12Hour(timeStr) {
@@ -60,7 +61,7 @@ function convertTo12Hour(timeStr) {
 
 function formatDate(dateStr) {
   // Split the input string into date and time parts
-  const [datePart, timePart] = dateStr.split(' '); 
+  const [datePart, timePart] = dateStr.split(' ');
 
   // 2024:12:05 10:44:44 ==> 
   var year = datePart.split(':')[0];
@@ -72,9 +73,9 @@ function formatDate(dateStr) {
 
 // ex> 2022:09:23
 // ==> 9/23/2022
-const reformatDate = (dateStr)=> {
-const [year, month, day] = dateStr.split(':');
-return `${numberToMonth(parseInt(month))}/${parseInt(day)} ${year}`;
+const reformatDate = (dateStr) => {
+  const [year, month, day] = dateStr.split(':');
+  return `${numberToMonth(parseInt(month))}/${parseInt(day)} ${year}`;
 
 }
 
@@ -88,6 +89,14 @@ function App() {
   const [isModalOpen, setModalOpen] = useState(false);
   const [modalImageSrc, setModalImageSrc] = useState("");
   const [isMobile, setIsMobile] = useState(false);
+
+  const [commentModalOpen, setCommentModalOpen] = useState(false);
+  const [selectedPhoto, setSelectedPhoto] = useState(null);
+
+  const handleCommentClick = (photo) => {
+    setSelectedPhoto(photo);
+    setCommentModalOpen(true);
+  };
 
   const handleImageClick = (imageSrc) => {
     if (isMobile) {
@@ -139,8 +148,8 @@ function App() {
   }, [userId, tripId]);
 
 
-  useEffect(()=>{
-    if(isModalOpen) {
+  useEffect(() => {
+    if (isModalOpen) {
       console.warn(`hidden`);
       document.body.style.overflow = 'hidden';
     }
@@ -156,17 +165,17 @@ function App() {
     <div className="App">
       <header className="trip-header">
         <div className="trip-info">
-          <h1>{(recapData.trip.title?.length??0>0)? recapData.trip.title: 'Trip Recap from LinkedSpaces'}</h1>
+          <h1>{(recapData.trip.title?.length ?? 0 > 0) ? recapData.trip.title : 'Trip Recap from LinkedSpaces'}</h1>
           <p className="trip-dates">
-          From {recapData.trip.startTimeString} to {recapData.trip.endTimeString}, {recapData.trip.startingYear}
+            From {recapData.trip.startTimeString} to {recapData.trip.endTimeString}, {recapData.trip.startingYear}
           </p>
           <section className="user-container">
-          <p className="trip-user">
-            Shared from {recapData.trip.userName}
-          </p>
-          <img src={fileServer + recapData.trip.profilePicture} alt="Popup" className="profile-picture" onClick={()=>{}}/>
+            <p className="trip-user">
+              Shared from {recapData.trip.userName}
+            </p>
+            <img src={fileServer + recapData.trip.profilePicture} alt="Popup" className="profile-picture" onClick={() => { }} />
           </section>
-          </div>
+        </div>
       </header>
 
       {/* {(recapData.trip.title?.length??0>0) &&
@@ -201,13 +210,13 @@ function App() {
                 <Marker
                   key={placeIndex}
                   position={[place.coordinate.latitude, place.coordinate.longitude]}
-                  icon={defaultIcon(placeIndex + 1)} 
+                  icon={defaultIcon(placeIndex + 1)}
                 >
                   <Popup>
                     <h3>{place.placeName}</h3>
                     <p><strong>Visited:</strong> {formatDate(place.digitizedTime)}</p>
                     <div className="popup-photo-grid">
-                      {place.photoList?.slice(0,2).map((photo, index) => (
+                      {place.photoList?.slice(0, 2).map((photo, index) => (
                         <img
                           key={index}
                           src={fileServer + photo.uri}
@@ -237,23 +246,26 @@ function App() {
                     {place.photoList.map((photo, idx) => (
                       <div key={idx} className="photo-card">
                         {photo.uri &&
-                        <img
-                          src={fileServer + photo.uri}
-                          alt={`Photo ${photo.uri}`}
-                          className="photo"
-                          onClick={() => handleImageClick(fileServer + photo.uri)} 
-                        />}
+                          <img
+                            src={fileServer + photo.uri}
+                            alt={`Photo ${photo.uri}`}
+                            className="photo"
+                            onClick={() => handleImageClick(fileServer + photo.uri)}
+                          />}
                         <p className="photo-story">{photo.story}</p>
-                        {(photo.audio?.length??0)>0 &&
-                        <audio controls className="photo-audio">
-                          <source src={fileServer + photo.audio} type="audio/mpeg" />
-                          Your browser does not support the audio element.
-                        </audio>}
-                        {(photo.storyAudio?.length??0)>0 &&
-                        <audio controls className="photo-audio">
-                          <source src={fileServer + photo.storyAudio} type="audio/mpeg" />
-                          Your browser does not support the audio element.
-                        </audio>}
+                        {(photo.audio?.length ?? 0) > 0 &&
+                          <audio controls className="photo-audio">
+                            <source src={fileServer + photo.audio} type="audio/mpeg" />
+                            Your browser does not support the audio element.
+                          </audio>}
+                        {(photo.storyAudio?.length ?? 0) > 0 &&
+                          <audio controls className="photo-audio">
+                            <source src={fileServer + photo.storyAudio} type="audio/mpeg" />
+                            Your browser does not support the audio element.
+                          </audio>}
+                        <button onClick={() => handleCommentClick(photo)}>
+                          View Comments ({photo.comments?.length || 0})
+                        </button>
                       </div>
                     ))}
                   </div>
@@ -261,17 +273,52 @@ function App() {
               );
             })}
           </div>
-         
+
         </div>
       ))}
       {isModalOpen && (
         <div className="modal" onClick={closeModal}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <img src={modalImageSrc} alt="Popup" className="modal-image" onClick={()=>{closeModal()}}/>
+            <img src={modalImageSrc} alt="Popup" className="modal-image" onClick={() => { closeModal() }} />
           </div>
         </div>
       )}
       <div>
+        <Modal
+          isOpen={commentModalOpen}
+          onRequestClose={() => {
+            setCommentModalOpen(false);
+            setSelectedPhoto(null);
+          }}
+          contentLabel="Comments Modal"
+        >
+          {selectedPhoto && (
+            <div className="comments-section">
+              <h2>Comments</h2>
+              {selectedPhoto.comments?.map((comment) => (
+                <div key={comment.id} className="comment">
+                  <p><strong>{comment.username}</strong>: {comment.text}</p>
+                  <p>Likes: {comment.liked.length}</p>
+                  {comment.replies.length > 0 && (
+                    <div className="replies">
+                      <h3>Replies</h3>
+                      {comment.replies.map((reply) => (
+                        <div key={reply.id} className="reply">
+                          <p><strong>{reply.username}</strong>: {reply.text}</p>
+                          <p>Likes: {reply.liked.length}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+              <button onClick={() => {
+                setCommentModalOpen(false);
+                setSelectedPhoto(null);
+              }}>Close</button>
+            </div>
+          )}
+        </Modal>
         <button className='signup-button'>
           <a href={'https://linkedspaces.com'} target="_blank" rel="noopener noreferrer" style={{ color: 'white', textDecoration: 'none', fontSize: '1.1rem' }}>Sign up for LinkedSpaces</a>
         </button>
