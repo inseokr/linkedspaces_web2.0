@@ -264,7 +264,9 @@ function App() {
                             Your browser does not support the audio element.
                           </audio>}
                         <button onClick={() => handleCommentClick(photo)}>
-                          View Comments ({photo.comments?.length || 0})
+                        <p className="photo-story">View Comments ({photo.comments?.length || 0})</p>
+
+                          
                         </button>
                       </div>
                     ))}
@@ -305,7 +307,6 @@ function App() {
                       {comment.replies.map((reply) => (
                         <div key={reply.id} className="reply">
                           <p><strong>{reply.username}</strong>: {reply.text}</p>
-                          <p>Likes: {reply.liked.length}</p>
                         </div>
                       ))}
                     </div>
