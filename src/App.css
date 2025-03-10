@@ -93,6 +93,8 @@ body {
   border-radius: 10px;
   overflow: hidden;
   height: 400px;
+  position: relative;
+  z-index: 1;
 }
 
 .places-container {
@@ -281,10 +283,16 @@ body {
 }
 
 .comments-section {
-  padding: 20px;
-  overflow-y: auto;
-  max-height: 90%;
-  z-index: 1000;
+  position: absolute; /* Changed to absolute */
+  top: 0;
+  left: 0;
+  width: 90%;
+  height: 90%;
+  background-color: rgba(0, 0, 0, 0.7); /* Semi-transparent background */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000; /* Ensure it's on top */
 }
 
 .comment {
