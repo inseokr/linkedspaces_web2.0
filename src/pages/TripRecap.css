@@ -8,153 +8,343 @@
 }
 
 .comments-section {
-    padding: 20px;
-    overflow-y: auto;
-    max-height: 90%;
-    z-index: 1000;
-  }
-  
-  .comment {
-    margin-bottom: 20px;
-    padding-bottom: 10px;
-    border-bottom: 1px solid #ddd;
-  }
-  
-  .replies {
-    margin-left: 20px;
-  }
-  
-  .reply {
-    margin-bottom: 10px;
-    padding-bottom: 5px;
-    border-bottom: 1px solid #eee;
-  }
-  
-  button {
+    margin-top: 12px;
+    border-top: 1px solid #eee;
+    padding: 12px 0;
+    width: 100%;
+}
+
+.comments-toggle-button {
+    background: none !important;
+    border: none !important;
+    padding: 0 !important;
+    color: #666;
+    font-size: 14px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    transition: color 0.2s ease;
+    line-height: 1.4;
+    width: 100%;
+    text-align: left;
+    justify-content: flex-start;
+}
+
+.comments-toggle-button:hover {
+    color: #000;
+}
+
+.comments-toggle-button svg {
+    width: 16px;
+    height: 16px;
+    margin-top: 2px;
+}
+
+.comments-list {
+    margin-top: 12px;
+    padding-left: 8px;
+    border-left: 2px solid #eee;
+    animation: slideDown 0.2s ease-out;
+    width: 100%;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.comment {
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #f5f5f5;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.comment:last-child {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+}
+
+.comment p {
+    margin: 0;
+    color: #333;
+}
+
+.comment strong {
+    color: #000;
+    font-weight: 600;
+    font-size: 13px;
+    letter-spacing: -0.2px;
+}
+
+.replies {
+    margin-top: 8px;
+    margin-left: 16px;
+    padding-left: 12px;
+    border-left: 1px solid #eee;
+}
+
+.replies h3 {
+    font-size: 12px;
+    color: #666;
+    margin: 0 0 8px 0;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.reply {
+    margin-bottom: 8px;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.reply:last-child {
+    margin-bottom: 0;
+}
+
+.reply p {
+    margin: 0;
+    color: #444;
+}
+
+.reply strong {
+    color: #000;
+    font-weight: 600;
+    font-size: 12px;
+    letter-spacing: -0.2px;
+}
+
+button {
     background-color: #007bff;
     color: white;
     padding: 10px 20px;
     border: none;
     border-radius: 5px;
     cursor: pointer;
-  }
-  
-  button:hover {
+}
+
+button:hover {
     background-color: #0069d9;
-  }
+}
 
 .photo-card {
-  width: 100%;
-  padding: 10px;
-  box-sizing: border-box;
+    width: 100%;
+    padding: 10px;
+    box-sizing: border-box;
 }
 
 .photo-container {
-  position: relative;
-  width: 100%;
-  aspect-ratio: 1;
-  overflow: hidden;
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1;
+    overflow: hidden;
 }
 
 .comments-button {
-  position: absolute;
-  bottom: 8px;
-  left: 8px;
-  background: rgba(0, 0, 0, 0.7);
-  color: white;
-  padding: 6px 12px;
-  border: none;
-  border-radius: 16px;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  z-index: 1000;
-  transition: all 0.2s ease;
-  backdrop-filter: blur(4px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    position: absolute;
+    bottom: 8px;
+    left: 8px;
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+    padding: 6px 12px;
+    border: none;
+    border-radius: 16px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    z-index: 1000;
+    transition: all 0.2s ease;
+    backdrop-filter: blur(4px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .comments-button:hover {
-  background: rgba(0, 0, 0, 0.85);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    background: rgba(0, 0, 0, 0.85);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 .photo {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
 }
 
 .audio-icon-button {
-  transition: transform 0.2s ease;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  background: rgba(255, 255, 255, 0.8) !important;
-  border: none !important;
-  border-radius: 50% !important;
-  width: 32px !important;
-  height: 32px !important;
-  cursor: pointer !important;
-  z-index: 2 !important;
+    transition: transform 0.2s ease;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background: rgba(255, 255, 255, 0.8) !important;
+    border: none !important;
+    border-radius: 50% !important;
+    width: 32px !important;
+    height: 32px !important;
+    cursor: pointer !important;
+    z-index: 2 !important;
 }
 
 .audio-icon-button svg {
-  color: #007bff !important;
-  width: 20px !important;
-  height: 20px !important;
+    color: #007bff !important;
+    width: 20px !important;
+    height: 20px !important;
 }
 
 .audio-icon-button:hover {
-  transform: scale(1.1);
+    transform: scale(1.1);
 }
 
 .photo-story {
-  margin-top: 10px;
-  width: 100%;
-  word-wrap: break-word;
-  overflow-wrap: break-word;
+    margin-top: 10px;
+    width: 100%;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    line-height: 1.5;
+}
+
+.story-audio-button {
+    background: none !important;
+    border: none !important;
+    padding: 0 !important;
+    cursor: pointer;
+    color: #666;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: flex-start;
+    margin-top: 2px;
+    flex-shrink: 0;
+    border-radius: 0 !important;
+}
+
+.story-audio-button:hover {
+    color: #000;
+    transform: scale(1.1);
+    background: none !important;
+}
+
+.story-audio-button svg {
+    width: 20px;
+    height: 20px;
+}
+
+/* Style for playing state */
+.story-audio-button.playing {
+    color: #000;
+    animation: pulse 2s infinite;
+}
+
+.story-audio-button.playing:hover {
+    animation: none;
+    transform: scale(1.1);
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.1);
+    }
+    100% {
+        transform: scale(1);
+    }
 }
 
 /* Mobile styles */
 @media screen and (max-width: 768px) {
-  .photo-card {
-    padding: 0;
-    margin-bottom: 24px;
-    background: #fff;
-    border-radius: 12px;
-    overflow: hidden;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-  }
+    .photo-card {
+        padding: 0;
+        margin-bottom: 24px;
+        background: #fff;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
 
-  .photo-container {
-    height: 40vh;
-    aspect-ratio: auto;
-  }
+    .photo-container {
+        height: 40vh;
+        aspect-ratio: auto;
+    }
 
-  .photo {
-    height: 100%;
-    width: 100%;
-    object-fit: cover;
-  }
+    .photo {
+        height: 100%;
+        width: 100%;
+        object-fit: cover;
+    }
 
-  .photo-grid {
-    display: flex;
-    flex-direction: column;
-    gap: 24px;
-  }
+    .photo-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+    }
 
-  .photo-story {
-    margin: 16px;
-    font-size: 15px;
-    line-height: 1.6;
-    color: #333;
-  }
+    .photo-story {
+        margin: 16px;
+        font-size: 15px;
+        line-height: 1.6;
+        color: #333;
+        gap: 10px;
+    }
 
-  .modal-image {
-    height: 40vh !important;
-    width: auto !important;
-    object-fit: contain !important;
-  }
+    .story-audio-button {
+        margin-top: 3px;
+    }
+
+    .modal-image {
+        height: 40vh !important;
+        width: auto !important;
+        object-fit: contain !important;
+    }
+
+    .comments-section {
+        margin: 12px 0 0;
+        padding: 12px 16px;
+    }
+
+    .comments-toggle-button {
+        font-size: 13px;
+    }
+
+    .comments-list {
+        margin-top: 10px;
+    }
+
+    .comment {
+        margin-bottom: 12px;
+        padding-bottom: 10px;
+        font-size: 13px;
+    }
+}
+
+/* Add styles for the modal overlay */
+.ReactModal__Overlay {
+    z-index: 9998;
+    background-color: rgba(0, 0, 0, 0.5) !important;
+}
+
+.ReactModal__Content {
+    z-index: 9999;
+    position: relative;
+    background: white;
+    border-radius: 8px;
+    padding: 0 !important;
+    max-width: 90%;
+    max-height: 90vh;
+    margin: auto;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
 }

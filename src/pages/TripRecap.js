@@ -5,7 +5,7 @@ import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet'
 import Modal from 'react-modal';
 import { FaMicrophoneAlt } from 'react-icons/fa';
 import { BsMusicNoteBeamed } from 'react-icons/bs';
-import { IoRadioOutline } from 'react-icons/io5';
+import { IoRadioOutline, IoHeadsetOutline, IoPause, IoChevronDown, IoChevronUp } from 'react-icons/io5';
 import 'leaflet/dist/leaflet.css';
 import './TripRecap.css';
 import { formatDate, reformatDate } from '../utils/DateUtils';
@@ -26,6 +26,8 @@ function TripRecap() {
   const [selectedPhoto, setSelectedPhoto] = useState(null);
   const [playingAudio, setPlayingAudio] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [playingStoryAudio, setPlayingStoryAudio] = useState(null);
+  const [expandedComments, setExpandedComments] = useState(null);
 
   const handleCommentClick = (photo) => {
     setSelectedPhoto(photo);
@@ -117,6 +119,52 @@ function TripRecap() {
     }
   };
 
+  const handleStoryAudioPlay = async (audioUrl, event) => {
+    event.stopPropagation();
+    
+    // If the same audio is already playing, stop it
+    if (playingStoryAudio && playingStoryAudio.src === fileServer + audioUrl) {
+      playingStoryAudio.pause();
+      playingStoryAudio.removeEventListener('ended', handleStoryAudioEnd);
+      setPlayingStoryAudio(null);
+      return;
+    }
+
+    // If different audio is playing, stop it first
+    if (playingStoryAudio) {
+      playingStoryAudio.pause();
+      playingStoryAudio.removeEventListener('ended', handleStoryAudioEnd);
+    }
+
+    const audio = new Audio(fileServer + audioUrl);
+    audio.addEventListener('ended', () => {
+      setPlayingStoryAudio(null);
+    });
+    try {
+      await audio.play();
+      setPlayingStoryAudio(audio);
+    } catch (error) {
+      console.error('Error playing story audio:', error);
+      setPlayingStoryAudio(null);
+    }
+  };
+
+  const handleStoryAudioEnd = () => {
+    if (playingStoryAudio) {
+      playingStoryAudio.removeEventListener('ended', handleStoryAudioEnd);
+      playingStoryAudio.removeEventListener('pause', handleStoryAudioEnd);
+      setPlayingStoryAudio(null);
+    }
+  };
+
+  const toggleComments = (photo) => {
+    if (expandedComments === photo) {
+      setExpandedComments(null);
+    } else {
+      setExpandedComments(photo);
+    }
+  };
+
   // Cleanup audio on unmount
   useEffect(() => {
     return () => {
@@ -194,6 +242,16 @@ function TripRecap() {
       document.body.style.overflow = 'auto';
     }
   })
+
+  // Cleanup story audio on unmount
+  useEffect(() => {
+    return () => {
+      if (playingStoryAudio) {
+        playingStoryAudio.pause();
+        setPlayingStoryAudio(null);
+      }
+    };
+  }, [playingStoryAudio]);
 
   if (loading) return <div className="loading">Loading...</div>;
   if (error) return <div className="error">Error: {error}</div>;
@@ -328,24 +386,61 @@ function TripRecap() {
                               />
                             </div>
                           )}
-                          {(photo.comments?.length??0)>0 && (
+                        </div>}
+                        <p className="photo-story">
+                          {(photo.storyAudio?.length??0)>0 && (
                             <button 
-                              className="comments-button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleCommentClick(photo);
-                              }}
+                              className={`story-audio-button ${playingStoryAudio?.src === fileServer + photo.storyAudio ? 'playing' : ''}`}
+                              onClick={(e) => handleStoryAudioPlay(photo.storyAudio, e)}
                             >
-                              View Comments ({photo.comments?.length || 0})
+                              {playingStoryAudio?.src === fileServer + photo.storyAudio ? (
+                                <IoPause size={20} />
+                              ) : (
+                                <IoHeadsetOutline size={20} />
+                              )}
                             </button>
                           )}
-                        </div>}
-                        <p className="photo-story">{photo.story}</p>
-                        {(photo.storyAudio?.length??0)>0 &&
-                        <audio controls className="photo-audio">
-                          <source src={fileServer + photo.storyAudio} type="audio/mpeg" />
-                          Your browser does not support the audio element.
-                        </audio>}
+                          {photo.story}
+                        </p>
+                        {(photo.comments?.length??0)>0 && (
+                          <div className="comments-section">
+                            <button 
+                              className="comments-toggle-button"
+                              onClick={() => toggleComments(photo)}
+                            >
+                              {expandedComments === photo ? (
+                                <>
+                                  Hide Comments ({photo.comments?.length || 0})
+                                  <IoChevronUp size={16} />
+                                </>
+                              ) : (
+                                <>
+                                  View Comments ({photo.comments?.length || 0})
+                                  <IoChevronDown size={16} />
+                                </>
+                              )}
+                            </button>
+                            {expandedComments === photo && (
+                              <div className="comments-list">
+                                {photo.comments?.map((comment) => (
+                                  <div key={comment.id} className="comment">
+                                    <p><strong>{comment.username}</strong>: {comment.text}</p>
+                                    {comment.replies.length > 0 && (
+                                      <div className="replies">
+                                        <h3>Replies</h3>
+                                        {comment.replies.map((reply) => (
+                                          <div key={reply.id} className="reply">
+                                            <p><strong>{reply.username}</strong>: {reply.text}</p>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
