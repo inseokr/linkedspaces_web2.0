@@ -303,12 +303,12 @@ function TripRecap() {
                               onMouseLeave={handleAudioHoverEnd}
                               style={{
                                 position: 'absolute',
-                                top: '10px',
-                                right: '10px',
+                                top: '8px',
+                                right: '8px',
                                 border: 'none',
-                                borderRadius: '50%',
-                                width: '36px',
-                                height: '36px',
+                                borderRadius: '16px',
+                                width: '32px',
+                                height: '32px',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
@@ -317,23 +317,30 @@ function TripRecap() {
                                 transition: 'all 0.2s ease',
                                 backgroundColor: isPlaying && playingAudio?.src === fileServer + photo.audio 
                                   ? 'rgba(255, 255, 255, 0.9)' 
-                                  : 'rgba(0, 0, 0, 0.5)',
+                                  : 'rgba(0, 0, 0, 0.7)',
+                                backdropFilter: 'blur(4px)',
                                 boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)'
                               }}
                             >
                               <IoRadioOutline 
-                                size={24} 
+                                size={20} 
                                 color={isPlaying && playingAudio?.src === fileServer + photo.audio ? '#000' : '#fff'} 
                               />
                             </div>
                           )}
+                          {(photo.comments?.length??0)>0 && (
+                            <button 
+                              className="comments-button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleCommentClick(photo);
+                              }}
+                            >
+                              View Comments ({photo.comments?.length || 0})
+                            </button>
+                          )}
                         </div>}
                         <p className="photo-story">{photo.story}</p>
-                        {(photo.comments?.length??0)>0 &&
-                        <p className="photo-story">
-                        <button onClick={() => handleCommentClick(photo)}>
-                          View Comments ({photo.comments?.length || 0})
-                        </button></p>}
                         {(photo.storyAudio?.length??0)>0 &&
                         <audio controls className="photo-audio">
                           <source src={fileServer + photo.storyAudio} type="audio/mpeg" />
@@ -351,7 +358,11 @@ function TripRecap() {
       {isModalOpen && (
         <div className="modal" onClick={closeModal}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <img src={modalImageSrc} alt="Popup" className="modal-image" onClick={()=>{closeModal()}}/>
+            <img src={modalImageSrc} alt="Popup" className="modal-image" onClick={()=>{closeModal()}} style={{
+              '@media (max-width: 768px)': {
+                height: '40vh'
+              }
+            }}/>
           </div>
         </div>
       )}
