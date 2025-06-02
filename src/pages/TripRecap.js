@@ -48,10 +48,12 @@ function TripRecap() {
   const handleAudioPlay = async (audioUrl, event) => {
     event.stopPropagation(); // Prevent image click event
     
-    // If the same audio is already playing, just stop it
+    // If the same audio is already playing, stop it and reset state
     if (playingAudio && playingAudio.src === fileServer + audioUrl) {
       playingAudio.pause();
+      playingAudio.currentTime = 0;  // Reset the audio position
       playingAudio.removeEventListener('ended', handleAudioEnd);
+      playingAudio.src = '';  // Reset the src property
       setPlayingAudio(null);
       setIsPlaying(false);
       return;
@@ -61,6 +63,9 @@ function TripRecap() {
     if (playingAudio) {
       playingAudio.pause();
       playingAudio.removeEventListener('ended', handleAudioEnd);
+      playingAudio.src = '';  // Reset the src property
+      setPlayingAudio(null);
+      setIsPlaying(false);
     }
 
     const audio = new Audio(fileServer + audioUrl);
@@ -76,6 +81,8 @@ function TripRecap() {
 
   const handleAudioHover = async (audioUrl, event) => {
     event.stopPropagation();
+
+    console.warn(`handleAudioHover: `, audioUrl, playingAudio);
     
     // If the same audio is already playing, do nothing
     if (playingAudio && playingAudio.src === fileServer + audioUrl) {
@@ -357,33 +364,44 @@ function TripRecap() {
                           </style>
                           {(photo.audio?.length??0)>0 && (
                             <div 
-                              onMouseEnter={(e) => handleAudioHover(photo.audio, e)}
-                              onMouseLeave={handleAudioHoverEnd}
+                              onMouseEnter={!isMobile ? (e) => handleAudioHover(photo.audio, e) : undefined}
+                              onMouseLeave={!isMobile ? handleAudioHoverEnd : undefined}
+                              onClick={(e) => handleAudioPlay(photo.audio, e)}
                               style={{
                                 position: 'absolute',
-                                top: '8px',
-                                right: '8px',
-                                border: 'none',
-                                borderRadius: '16px',
-                                width: '32px',
-                                height: '32px',
+                                top: '0',
+                                right: '0',
+                                width: '48px',
+                                height: '48px',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 cursor: 'pointer',
-                                zIndex: 1000,
-                                transition: 'all 0.2s ease',
-                                backgroundColor: isPlaying && playingAudio?.src === fileServer + photo.audio 
-                                  ? 'rgba(255, 255, 255, 0.9)' 
-                                  : 'rgba(0, 0, 0, 0.7)',
-                                backdropFilter: 'blur(4px)',
-                                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)'
+                                zIndex: 1000
                               }}
                             >
-                              <IoRadioOutline 
-                                size={20} 
-                                color={isPlaying && playingAudio?.src === fileServer + photo.audio ? '#000' : '#fff'} 
-                              />
+                              <div
+                                style={{
+                                  border: 'none',
+                                  borderRadius: '16px',
+                                  width: '32px',
+                                  height: '32px',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  transition: 'all 0.2s ease',
+                                  backgroundColor: isPlaying && playingAudio?.src === fileServer + photo.audio 
+                                    ? 'rgba(255, 255, 255, 0.9)' 
+                                    : 'rgba(0, 0, 0, 0.7)',
+                                  backdropFilter: 'blur(4px)',
+                                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)'
+                                }}
+                              >
+                                <IoRadioOutline 
+                                  size={20} 
+                                  color={isPlaying && playingAudio?.src === fileServer + photo.audio ? '#000' : '#fff'} 
+                                />
+                              </div>
                             </div>
                           )}
                         </div>}
