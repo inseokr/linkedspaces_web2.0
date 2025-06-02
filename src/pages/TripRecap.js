@@ -307,18 +307,24 @@ function TripRecap() {
                                 right: '10px',
                                 border: 'none',
                                 borderRadius: '50%',
-                                width: '32px',
-                                height: '32px',
+                                width: '36px',
+                                height: '36px',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 cursor: 'pointer',
                                 zIndex: 1000,
-                                transition: 'background-color 0.2s',
-                                backgroundColor: isPlaying && playingAudio?.src === fileServer + photo.audio ? 'rgb(248, 244, 244)' : 'rgba(235, 222, 222, 0.1)'
+                                transition: 'all 0.2s ease',
+                                backgroundColor: isPlaying && playingAudio?.src === fileServer + photo.audio 
+                                  ? 'rgba(255, 255, 255, 0.9)' 
+                                  : 'rgba(0, 0, 0, 0.5)',
+                                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)'
                               }}
                             >
-                              <IoRadioOutline size={24} color="black" />
+                              <IoRadioOutline 
+                                size={24} 
+                                color={isPlaying && playingAudio?.src === fileServer + photo.audio ? '#000' : '#fff'} 
+                              />
                             </div>
                           )}
                         </div>}
