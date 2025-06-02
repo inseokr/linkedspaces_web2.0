@@ -3,6 +3,9 @@ import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet';
 import Modal from 'react-modal';
+import { FaMicrophoneAlt } from 'react-icons/fa';
+import { BsMusicNoteBeamed } from 'react-icons/bs';
+import { IoRadioOutline } from 'react-icons/io5';
 import 'leaflet/dist/leaflet.css';
 import './TripRecap.css';
 import { formatDate, reformatDate } from '../utils/DateUtils';
@@ -21,6 +24,8 @@ function TripRecap() {
   const [isMobile, setIsMobile] = useState(false);
   const [commentModalOpen, setCommentModalOpen] = useState(false);
   const [selectedPhoto, setSelectedPhoto] = useState(null);
+  const [playingAudio, setPlayingAudio] = useState(null);
+  const [isPlaying, setIsPlaying] = useState(false);
 
   const handleCommentClick = (photo) => {
     setSelectedPhoto(photo);
@@ -37,6 +42,109 @@ function TripRecap() {
   const closeModal = () => {
     setModalOpen(false);
   };
+
+  const handleAudioPlay = async (audioUrl, event) => {
+    event.stopPropagation(); // Prevent image click event
+    
+    // If the same audio is already playing, just stop it
+    if (playingAudio && playingAudio.src === fileServer + audioUrl) {
+      playingAudio.pause();
+      playingAudio.removeEventListener('ended', handleAudioEnd);
+      setPlayingAudio(null);
+      setIsPlaying(false);
+      return;
+    }
+
+    // If different audio is playing, stop it first
+    if (playingAudio) {
+      playingAudio.pause();
+      playingAudio.removeEventListener('ended', handleAudioEnd);
+    }
+
+    const audio = new Audio(fileServer + audioUrl);
+    audio.addEventListener('ended', handleAudioEnd);
+    try {
+      await audio.play();
+      setPlayingAudio(audio);
+      setIsPlaying(true);
+    } catch (error) {
+      console.error('Error playing audio:', error);
+    }
+  };
+
+  const handleAudioHover = async (audioUrl, event) => {
+    event.stopPropagation();
+    
+    // If the same audio is already playing, do nothing
+    if (playingAudio && playingAudio.src === fileServer + audioUrl) {
+      return;
+    }
+
+    // If different audio is playing, stop it first
+    if (playingAudio) {
+      playingAudio.pause();
+      playingAudio.removeEventListener('ended', handleAudioEnd);
+    }
+
+    const audio = new Audio(fileServer + audioUrl);
+    audio.loop = true; // Enable looping
+    audio.addEventListener('ended', handleAudioEnd);
+    try {
+      await audio.play();
+      setPlayingAudio(audio);
+      setIsPlaying(true);
+    } catch (error) {
+      console.error('Error playing hover audio:', error);
+    }
+  };
+
+  const handleAudioHoverEnd = () => {
+    if (playingAudio) {
+      playingAudio.pause();
+      playingAudio.removeEventListener('ended', handleAudioEnd);
+      setPlayingAudio(null);
+      setIsPlaying(false);
+    }
+  };
+
+  const handleAudioEnd = (audio) => {
+    if (audio && isPlaying) {
+      audio.currentTime = 0;
+      audio.play().catch(error => {
+        console.error('Error replaying audio:', error);
+        setIsPlaying(false);
+      });
+    }
+  };
+
+  // Cleanup audio on unmount
+  useEffect(() => {
+    return () => {
+      if (playingAudio) {
+        playingAudio.pause();
+        playingAudio.removeEventListener('ended', handleAudioEnd);
+        setPlayingAudio(null);
+        setIsPlaying(false);
+      }
+    };
+  }, [playingAudio]);
+
+  // Add scroll event listener to stop audio when scrolling
+  useEffect(() => {
+    const handleScroll = () => {
+      if (playingAudio) {
+        playingAudio.pause();
+        playingAudio.removeEventListener('ended', handleAudioEnd);
+        setPlayingAudio(null);
+        setIsPlaying(false);
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, [playingAudio]);
 
   useEffect(() => {
     // Check if the screen width is below 768px (commonly used mobile breakpoint)
@@ -166,23 +274,60 @@ function TripRecap() {
                     {place.photoList.map((photo, idx) => (
                       <div key={idx} className="photo-card">
                         {photo.uri &&
-                        <img
-                          src={fileServer + photo.uri}
-                          alt={`Photo ${photo.uri}`}
-                          className="photo"
-                          onClick={() => handleImageClick(fileServer + photo.uri)} 
-                        />}
+                        <div className="photo-container">
+                          <img
+                            src={fileServer + photo.uri}
+                            alt={`Photo ${photo.uri}`}
+                            className="photo"
+                            style={{
+                              transform: isPlaying && playingAudio?.src === fileServer + photo.audio ? 'scale(1.05)' : 'scale(1)',
+                              transition: 'transform 2s ease-in-out',
+                              animation: isPlaying && playingAudio?.src === fileServer + photo.audio ? 'zoomInOut 8s infinite' : 'none',
+                              zIndex: isPlaying && playingAudio?.src === fileServer + photo.audio ? 2 : 1,
+                              position: 'relative'
+                            }}
+                            onClick={() => handleImageClick(fileServer + photo.uri)} 
+                          />
+                          <style>
+                            {`
+                              @keyframes zoomInOut {
+                                0% { transform: scale(1); }
+                                50% { transform: scale(1.03); }
+                                100% { transform: scale(1); }
+                              }
+                            `}
+                          </style>
+                          {(photo.audio?.length??0)>0 && (
+                            <div 
+                              onMouseEnter={(e) => handleAudioHover(photo.audio, e)}
+                              onMouseLeave={handleAudioHoverEnd}
+                              style={{
+                                position: 'absolute',
+                                top: '10px',
+                                right: '10px',
+                                border: 'none',
+                                borderRadius: '50%',
+                                width: '32px',
+                                height: '32px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                cursor: 'pointer',
+                                zIndex: 1000,
+                                transition: 'background-color 0.2s',
+                                backgroundColor: isPlaying && playingAudio?.src === fileServer + photo.audio ? 'rgb(248, 244, 244)' : 'rgba(235, 222, 222, 0.1)'
+                              }}
+                            >
+                              <IoRadioOutline size={24} color="black" />
+                            </div>
+                          )}
+                        </div>}
                         <p className="photo-story">{photo.story}</p>
                         {(photo.comments?.length??0)>0 &&
                         <p className="photo-story">
                         <button onClick={() => handleCommentClick(photo)}>
                           View Comments ({photo.comments?.length || 0})
                         </button></p>}
-                        {(photo.audio?.length??0)>0 &&
-                        <audio controls className="photo-audio">
-                          <source src={fileServer + photo.audio} type="audio/mpeg" />
-                          Your browser does not support the audio element.
-                        </audio>}
                         {(photo.storyAudio?.length??0)>0 &&
                         <audio controls className="photo-audio">
                           <source src={fileServer + photo.storyAudio} type="audio/mpeg" />

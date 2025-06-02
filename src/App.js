@@ -163,9 +163,23 @@ function App() {
 
   return (
     <div className="App">
+      <div style={{ 
+        backgroundColor: '#f0f0f0', 
+        padding: '10px', 
+        marginBottom: '20px',
+        border: '1px solid #ccc',
+        borderRadius: '4px'
+      }}>
+        <h3>Debug Information:</h3>
+        <p>User ID: {userId}</p>
+        <p>Trip ID: {tripId}</p>
+        <p>Loading State: {loading ? 'Yes' : 'No'}</p>
+        <p>Error State: {error ? error : 'None'}</p>
+        <p>Last Updated: {new Date().toLocaleString()}</p>
+      </div>
       <header className="trip-header">
         <div className="trip-info">
-          <h1>{(recapData.trip.title?.length ?? 0 > 0) ? recapData.trip.title : 'Trip Recap from LinkedSpaces'}</h1>
+          <h1>{(recapData.trip.title?.length ?? 0 > 0) ? recapData.trip.title : 'Blogs from LinkedSpaces'}</h1>
           <p className="trip-dates">
             From {recapData.trip.startTimeString} to {recapData.trip.endTimeString}, {recapData.trip.startingYear}
           </p>
@@ -254,16 +268,32 @@ function App() {
                             onClick={() => handleImageClick(fileServer + photo.uri)}
                           />}
                         <p className="photo-story">{photo.story}</p>
-                        {(photo.audio?.length ?? 0) > 0 &&
-                          <audio controls className="photo-audio">
-                            <source src={fileServer + photo.audio} type="audio/mpeg" />
-                            Your browser does not support the audio element.
-                          </audio>}
-                        {(photo.storyAudio?.length ?? 0) > 0 &&
-                          <audio controls className="photo-audio">
-                            <source src={fileServer + photo.storyAudio} type="audio/mpeg" />
-                            Your browser does not support the audio element.
-                          </audio>}
+                        <div className="audio-container">
+                          {(photo.audio?.length ?? 0) > 0 && (
+                            <div className="audio-player ambient">
+                              <div className="audio-icon">🎵</div>
+                              <div style={{ flex: 1 }}>
+                                <div className="audio-label">Ambient Audio</div>
+                                <audio controls>
+                                  <source src={fileServer + photo.audio} type="audio/mpeg" />
+                                  Your browser does not support the audio element.
+                                </audio>
+                              </div>
+                            </div>
+                          )}
+                          {(photo.storyAudio?.length ?? 0) > 0 && (
+                            <div className="audio-player story">
+                              <div className="audio-icon">🎤</div>
+                              <div style={{ flex: 1 }}>
+                                <div className="audio-label">Story Audio</div>
+                                <audio controls>
+                                  <source src={fileServer + photo.storyAudio} type="audio/mpeg" />
+                                  Your browser does not support the audio element.
+                                </audio>
+                              </div>
+                            </div>
+                          )}
+                        </div>
                         <button onClick={() => handleCommentClick(photo)}>
                         <p className="photo-story">View Comments ({photo.comments?.length || 0})</p>
 
