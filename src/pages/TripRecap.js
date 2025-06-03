@@ -28,6 +28,13 @@ function TripRecap() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [playingStoryAudio, setPlayingStoryAudio] = useState(null);
   const [expandedComments, setExpandedComments] = useState(null);
+  const [zoomLevel, setZoomLevel] = useState(12);
+
+  const [mainZoomLevel, setMainZoomLevel] = useState(1);
+
+  const resetZoom = () => {
+    setMainZoomLevel(1);
+  }
 
   const handleCommentClick = (photo) => {
     setSelectedPhoto(photo);
@@ -242,13 +249,12 @@ function TripRecap() {
 
   useEffect(()=>{
     if(isModalOpen) {
-      console.warn(`hidden`);
       document.body.style.overflow = 'hidden';
     }
     else {
-      document.body.style.overflow = 'auto';
+      document.body.style.overflow = '';
     }
-  })
+  }, [isModalOpen])
 
   // Cleanup story audio on unmount
   useEffect(() => {
@@ -264,7 +270,11 @@ function TripRecap() {
   if (error) return <div className="error">Error: {error}</div>;
 
   return (
-    <div className="TripRecap">
+    <div className="TripRecap" style={{
+      backgroundColor: isModalOpen ? 'black' : 'transparent',
+      minHeight: '100vh',
+      transition: 'background-color 0.3s ease'
+    }}>
       <header className="trip-header">
         <div className="trip-info">
           <h1>{(recapData.trip.title?.length??0>0)? recapData.trip.title: 'Trip Recap from LinkedSpaces'}</h1>
@@ -289,8 +299,13 @@ function TripRecap() {
           <div className="map-container">
             <MapContainer
               center={[day.places[0].coordinate.latitude, day.places[0].coordinate.longitude]}
-              zoom={12}
+              zoom={zoomLevel}
               style={{ height: '400px', width: '100%' }}
+              whenCreated={(map) => {
+                map.on('zoomend', () => {
+                  setZoomLevel(map.getZoom());
+                });
+              }}
             >
               <TileLayer
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -469,13 +484,32 @@ function TripRecap() {
         </div>
       ))}
       {isModalOpen && (
-        <div className="modal" onClick={closeModal}>
+        <div className="modal" onClick={closeModal} style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 1)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 1000
+        }}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <img src={modalImageSrc} alt="Popup" className="modal-image" onClick={()=>{closeModal()}} style={{
-              '@media (max-width: 768px)': {
-                height: '40vh'
-              }
-            }}/>
+            <img 
+              src={modalImageSrc} 
+              alt="Popup" 
+              className="modal-image" 
+              onClick={()=>{closeModal()}} 
+              style={{
+                maxWidth: '95vw',
+                maxHeight: '95vh',
+                width: 'auto',
+                height: 'auto',
+                objectFit: 'contain'
+              }}
+            />
           </div>
         </div>
       )}

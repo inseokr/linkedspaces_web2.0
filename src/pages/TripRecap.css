@@ -304,8 +304,9 @@ button:hover {
     }
 
     .modal-image {
-        height: 40vh !important;
+        /* height: 40vh !important; */
         width: auto !important;
+        height: audo;
         object-fit: contain !important;
     }
 
