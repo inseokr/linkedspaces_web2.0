@@ -1,5 +1,380 @@
-/* PlacesMap.css */
+.map-container {
+    margin: 20px 0;
+    border-radius: 10px;
+    overflow: hidden;
+    height: 400px;
+    position: relative;
+    z-index: 1;
+}
 
+.comments-section {
+    margin-top: 12px;
+    border-top: 1px solid #eee;
+    padding: 12px 0;
+    width: 100%;
+}
+
+.comments-toggle-button {
+    background: none !important;
+    border: none !important;
+    padding: 0 !important;
+    color: #666;
+    font-size: 14px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    transition: color 0.2s ease;
+    line-height: 1.4;
+    width: 100%;
+    text-align: left;
+    justify-content: flex-start;
+}
+
+.comments-toggle-button:hover {
+    color: #000;
+}
+
+.comments-toggle-button svg {
+    width: 16px;
+    height: 16px;
+    margin-top: 2px;
+}
+
+.comments-list {
+    margin-top: 12px;
+    padding-left: 8px;
+    border-left: 2px solid #eee;
+    animation: slideDown 0.2s ease-out;
+    width: 100%;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.comment {
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #f5f5f5;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.comment:last-child {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+}
+
+.comment p {
+    margin: 0;
+    color: #333;
+}
+
+.comment strong {
+    color: #000;
+    font-weight: 600;
+    font-size: 13px;
+    letter-spacing: -0.2px;
+}
+
+.replies {
+    margin-top: 8px;
+    margin-left: 16px;
+    padding-left: 12px;
+    border-left: 1px solid #eee;
+}
+
+.replies h3 {
+    font-size: 12px;
+    color: #666;
+    margin: 0 0 8px 0;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.reply {
+    margin-bottom: 8px;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.reply:last-child {
+    margin-bottom: 0;
+}
+
+.reply p {
+    margin: 0;
+    color: #444;
+}
+
+.reply strong {
+    color: #000;
+    font-weight: 600;
+    font-size: 12px;
+    letter-spacing: -0.2px;
+}
+
+button {
+    background-color: #007bff;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: #0069d9;
+}
+
+/* Day container styling from App.css */
+.day-container {
+    margin: 5px auto;
+    max-width: 1200px;
+    padding: 10px;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.photo-card {
+    flex: 1 1 calc(50% - 10px);
+    margin-top: 10px;
+}
+
+.photo-container {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1;
+    overflow: hidden;
+}
+
+.comments-button {
+    position: absolute;
+    bottom: 8px;
+    left: 8px;
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+    padding: 6px 12px;
+    border: none;
+    border-radius: 16px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    z-index: 1000;
+    transition: all 0.2s ease;
+    backdrop-filter: blur(4px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.comments-button:hover {
+    background: rgba(0, 0, 0, 0.85);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* Photo styling from TripRecap.css - this overrides App.css responsive heights */
+.photo {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Photo hover effect from App.css */
+.photo {
+    cursor: pointer;
+    transition: transform 0.2s ease;
+}
+
+.photo:hover {
+    transform: scale(1.02); /* Slight zoom effect when hovering */
+}
+
+.audio-icon-button {
+    transition: transform 0.2s ease;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background: rgba(255, 255, 255, 0.8) !important;
+    border: none !important;
+    border-radius: 50% !important;
+    width: 32px !important;
+    height: 32px !important;
+    cursor: pointer !important;
+    z-index: 2 !important;
+}
+
+.audio-icon-button svg {
+    color: #007bff !important;
+    width: 20px !important;
+    height: 20px !important;
+}
+
+.audio-icon-button:hover {
+    transform: scale(1.1);
+}
+
+.photo-story {
+    margin-top: 10px;
+    width: 100%;
+    padding-right: 20px; /* Increase padding to ensure more space from the right boundary */
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    white-space: normal;
+    max-width: 100%;
+    box-sizing: border-box; /* Ensure padding is included in the width calculation */
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    line-height: 1.5;
+}
+
+.story-audio-button {
+    background: none !important;
+    border: none !important;
+    padding: 0 !important;
+    cursor: pointer;
+    color: #666;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: flex-start;
+    margin-top: 2px;
+    flex-shrink: 0;
+    border-radius: 0 !important;
+}
+
+.story-audio-button:hover {
+    color: #000;
+    transform: scale(1.1);
+    background: none !important;
+}
+
+.story-audio-button svg {
+    width: 20px;
+    height: 20px;
+}
+
+/* Style for playing state */
+.story-audio-button.playing {
+    color: #000;
+    animation: pulse 2s infinite;
+}
+
+.story-audio-button.playing:hover {
+    animation: none;
+    transform: scale(1.1);
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.1);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+/* Mobile styles */
+@media screen and (max-width: 768px) {
+    .photo-card {
+        padding: 0;
+        margin-bottom: 24px;
+        background: #fff;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+
+    .photo-container {
+        height: 40vh;
+        aspect-ratio: auto;
+    }
+
+    .photo {
+        height: 100%;
+        width: 100%;
+        object-fit: cover;
+    }
+
+    .photo-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+    }
+
+    .photo-story {
+        margin: 16px;
+        font-size: 15px;
+        line-height: 1.6;
+        color: #333;
+        gap: 10px;
+    }
+
+    .story-audio-button {
+        margin-top: 3px;
+    }
+
+    .modal-image {
+        /* height: 40vh !important; */
+        width: auto !important;
+        height: auto !important;
+        object-fit: contain !important;
+    }
+
+    .comments-section {
+        margin: 12px 0 0;
+        padding: 12px 16px;
+    }
+
+    .comments-toggle-button {
+        font-size: 13px;
+    }
+
+    .comments-list {
+        margin-top: 10px;
+    }
+
+    .comment {
+        margin-bottom: 12px;
+        padding-bottom: 10px;
+        font-size: 13px;
+    }
+}
+
+/* Add styles for the modal overlay */
+.ReactModal__Overlay {
+    z-index: 9998;
+    background-color: rgba(0, 0, 0, 0.5) !important;
+}
+
+.ReactModal__Content {
+    z-index: 9999;
+    position: relative;
+    background: white;
+    border-radius: 8px;
+    padding: 0 !important;
+    max-width: 90%;
+    max-height: 90vh;
+    margin: auto;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+}
+
+/* Container and layout styles */
 .container {
     margin: 5px auto;
     max-width: 1200px;
@@ -7,213 +382,78 @@
     background: white;
     border-radius: 10px;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-  }
+}
 
 .trip-header {
     display: flex;
     align-items: center;
-    justify-content: center; /* Centers the content */
-    position: relative; /* Needed for absolute positioning of the button */
+    justify-content: center;
+    position: relative;
     padding: 5;
     color: white;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-  }
-  
-  /* Left-aligned trip info */
-  .trip-info {
-    text-align: center; /* Centers the text inside */
-  }
-  
-  /* Title Styling */
-  .trip-header h1 {
+}
+
+.trip-info {
+    text-align: center;
+}
+
+.trip-header h1 {
     font-size: 1.7rem;
     margin-bottom: 8px;
     color: #34495e;
     font-weight: bold;
     text-shadow: 2px 2px 6px rgba(0, 0, 0, 0.2);
-  }
-  
-  /* Trip Dates Styling */
-  .trip-dates {
+}
+
+.trip-dates {
     font-size: 1rem;
     opacity: 0.85;
-     color: #232525; /* Gray for subtlety */
-  }
-  
-  .user-container {
+    color: #232525;
+}
+
+.user-container {
     display: flex;
     justify-content: center;
     align-items: center;
-  }
-  
-  .trip-user {
-    font-size: 1rem;
-    opacity: 0.85;
-    color: #232525; /* Gray for subtlety */
-    padding-right: 5px;
-  }
-
-.flex-1 {
-    flex: 1
 }
 
-.w-full {
-    width: 100%;
-  }
-  
-  .h-screen {
-    height: 100vh;
-  }
-  
-  .flex {
-    display: flex;
-  }
-  
-  .flex-col {
-    flex-direction: column;
-  }
-
-  .flex-row {
-    flex-direction: row;
-  }
-  
-  .md\\:flex-row {
-    flex-direction: row;
-  }
-  
-  .p-4 {
-    padding: 1rem;
-  }
-  
-  .overflow-auto {
-    overflow: auto;
-  }
-  
-  .border-r {
-    border-right: 1px solid #ccc;
-  }
-  
-  .bg-gray-100 {
-    background-color: #f7f7f7;
-  }
-  
-  .rounded {
-    border-radius: 0.5rem;
-  }
-  
-  .cursor-pointer {
-    cursor: pointer;
-  }
-  
-  .fixed {
-    position: fixed;
-  }
-  
-  .bottom-4 {
-    bottom: 1rem;
-  }
-  
-  .left-1\/2 {
-    left: 50%;
-  }
-  
-  .transform {
-    transform: translateX(-50%);
-  }
-  
-  .bg-blue-600 {
-    background-color: #2563eb;
-  }
-  
-  .text-white {
-    color: white;
-  }
-  
-  .text-gray-500 {
-    color: #6b7280;
-  }
-  
-  .text-lg {
-    font-size: 1.125rem;
-    font-weight: bold;
-  }
-  
-  .text-md {
+.trip-user {
     font-size: 1rem;
-  }
-  
-  .text-sm {
-    font-size: 0.875rem;
-  }
-  
-  .font-bold {
-    font-weight: bold;
-  }
-  
-  .p-2 {
-    padding: 0.5rem;
-  }
-  
-  .bg-black\/30 {
-    background-color: rgba(0, 0, 0, 0.3);
-  }
-  
-  .absolute {
-    position: absolute;
-  }
-  
-  .top-2 {
-    top: 0.5rem;
-  }
-  
-  .right-2 {
-    right: 0.5rem;
-  }
+    opacity: 0.85;
+    color: #232525;
+    padding-right: 5px;
+}
 
-  .map-container {
-    background-color: lightgray;
-  }
+.profile-picture {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+}
 
-  .places-container {
+/* Places container styling from App.css */
+.places-container {
     display: flex;
     flex-wrap: wrap;
     gap: 20px;
-  }
-  
-  .place-card {
+}
+
+.place-card {
     background: #fff;
     border-radius: 10px;
     padding: 15px;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
     flex: 1 1 calc(50% - 20px);
     margin-bottom: 15px;
-  }
-  
-  .photo-grid {
+}
+
+/* Photo grid styling from App.css */
+.photo-grid {
     display: flex;
     gap: 10px;
     flex-wrap: wrap;
-  }
-  
-  .photo-card {
-    flex: 1 1 calc(50% - 10px);
-    margin-top: 10px;
-  }
-  
-  .photo-backup {
-    width: 100%;
-    border-radius: 8px;
-    height: 30vh;
-    object-fit: cover;
-  }
-
-  .photo {
-    width: 100%;
-    border-radius: 8px;
-    aspect-ratio: 16 / 9; /* Keeps a consistent shape */
-    object-fit: cover;
 }
-  
 
 /* Modal Styling */
 .modal {
@@ -222,29 +462,34 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 1); /* Semi-transparent background */
+    background-color: rgba(0, 0, 0, 1);
     display: flex;
     justify-content: center;
     align-items: center;
     z-index: 1000;
-  }
-  
-  .modal-content {
+}
+
+.modal-content {
     position: relative;
-    max-width: 95%;
-    max-height: 95%;
+    max-width: 100%;
+    max-height: 100%;
     display: flex;
     justify-content: center;
     align-items: center;
-  }
-  
-  .modal-image {
     width: 100%;
+    height: 100%;
+}
+
+.modal-image {
+    max-width: 95vw;
+    max-height: 95vh;
+    width: auto;
     height: auto;
+    object-fit: contain;
     border-radius: 8px;
-  }
-  
-  .close-modal {
+}
+
+.close-modal {
     position: absolute;
     top: 10px;
     right: 10px;
@@ -254,16 +499,53 @@
     border: none;
     cursor: pointer;
     transition: color 0.3s ease;
-  }
-  
-  .close-modal:hover {
-    color: #ff6f61; /* Change color on hover */
-  }
+}
 
-  .photo-audio {
+.close-modal:hover {
+    color: #ff6f61;
+}
+
+.photo-audio {
     margin-bottom: 5px;
     margin: 0 auto;
-  }
-  
-  
-  
+}
+
+/* Popup photo grid styles from App.css */
+.popup-photo-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(30px, 1fr));
+    max-height: 30vh;
+    gap: 10px;
+    padding: 10px;
+    justify-items: center;
+    align-items: center;
+    background-color: #f9f9f9;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.popup-photo {
+    max-width: 100%;
+    height: auto;
+    max-height: 30vh;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.popup-photo:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .places-container {
+        flex-direction: column;
+    }
+
+    .place-card {
+        flex: 1 1 100%;
+    }
+} 
