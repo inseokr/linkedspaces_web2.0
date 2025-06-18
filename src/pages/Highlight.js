@@ -322,142 +322,144 @@ const Highlight = () => {
             </div>}
             
             {highlightData && (
-                <div className="places-container">
-                    {highlightData.data.flatMap((day) => day.places).map((place, placeIndex) => (
-                        <div key={placeIndex} className="place-card">
-                            <h3><a href={place.externalUrl} target="_blank" rel="noopener noreferrer" style={{ color: 'black', textDecorationLine: 'underline' }}>
-                                {place.placeName}
-                            </a></h3>
-                            <p><strong>Visited:</strong> {formatDate(place.digitizedTime)}</p>
-                            <div className="photo-grid">
-                                {place.photoList.map((photo, idx) => (
-                                    <div key={idx} className="photo-card">
-                                        {photo.uri &&
-                                        <div className="photo-container">
-                                            <img
-                                                src={fileServer + photo.uri}
-                                                alt={`Photo ${photo.uri}`}
-                                                className="photo"
-                                                style={{
-                                                    transform: isPlaying && playingAudio?.src === fileServer + photo.audio ? 'scale(1.05)' : 'scale(1)',
-                                                    transition: 'transform 2s ease-in-out',
-                                                    animation: isPlaying && playingAudio?.src === fileServer + photo.audio ? 'zoomInOut 8s infinite' : 'none',
-                                                    zIndex: isPlaying && playingAudio?.src === fileServer + photo.audio ? 2 : 1,
-                                                    position: 'relative'
-                                                }}
-                                                onClick={() => handleImageClick(fileServer + photo.uri)} 
-                                            />
-                                            <style>
-                                                {`
-                                                    @keyframes zoomInOut {
-                                                        0% { transform: scale(1); }
-                                                        50% { transform: scale(1.03); }
-                                                        100% { transform: scale(1); }
-                                                    }
-                                                `}
-                                            </style>
-                                            {(photo.audio?.length??0)>0 && (
-                                                <div 
-                                                    onMouseEnter={!isMobile ? (e) => handleAudioHover(photo.audio, e) : undefined}
-                                                    onMouseLeave={!isMobile ? handleAudioHoverEnd : undefined}
-                                                    onClick={(e) => handleAudioPlay(photo.audio, e)}
+                <div className="day-container">
+                    <div className="places-container">
+                        {highlightData.data.flatMap((day) => day.places).map((place, placeIndex) => (
+                            <div key={placeIndex} className="place-card">
+                                <h3><a href={place.externalUrl} target="_blank" rel="noopener noreferrer" style={{ color: 'black', textDecorationLine: 'underline' }}>
+                                    {place.placeName}
+                                </a></h3>
+                                <p><strong>Visited:</strong> {formatDate(place.digitizedTime)}</p>
+                                <div className="photo-grid">
+                                    {place.photoList.map((photo, idx) => (
+                                        <div key={idx} className="photo-card">
+                                            {photo.uri &&
+                                            <div className="photo-container">
+                                                <img
+                                                    src={fileServer + photo.uri}
+                                                    alt={`Photo ${photo.uri}`}
+                                                    className="photo"
                                                     style={{
-                                                        position: 'absolute',
-                                                        top: '0',
-                                                        right: '0',
-                                                        width: '48px',
-                                                        height: '48px',
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center',
-                                                        cursor: 'pointer',
-                                                        zIndex: 1000
+                                                        transform: isPlaying && playingAudio?.src === fileServer + photo.audio ? 'scale(1.05)' : 'scale(1)',
+                                                        transition: 'transform 2s ease-in-out',
+                                                        animation: isPlaying && playingAudio?.src === fileServer + photo.audio ? 'zoomInOut 8s infinite' : 'none',
+                                                        zIndex: isPlaying && playingAudio?.src === fileServer + photo.audio ? 2 : 1,
+                                                        position: 'relative'
                                                     }}
-                                                >
-                                                    <div
+                                                    onClick={() => handleImageClick(fileServer + photo.uri)} 
+                                                />
+                                                <style>
+                                                    {`
+                                                        @keyframes zoomInOut {
+                                                            0% { transform: scale(1); }
+                                                            50% { transform: scale(1.03); }
+                                                            100% { transform: scale(1); }
+                                                        }
+                                                    `}
+                                                </style>
+                                                {(photo.audio?.length??0)>0 && (
+                                                    <div 
+                                                        onMouseEnter={!isMobile ? (e) => handleAudioHover(photo.audio, e) : undefined}
+                                                        onMouseLeave={!isMobile ? handleAudioHoverEnd : undefined}
+                                                        onClick={(e) => handleAudioPlay(photo.audio, e)}
                                                         style={{
-                                                            border: 'none',
-                                                            borderRadius: '16px',
-                                                            width: '32px',
-                                                            height: '32px',
+                                                            position: 'absolute',
+                                                            top: '0',
+                                                            right: '0',
+                                                            width: '48px',
+                                                            height: '48px',
                                                             display: 'flex',
                                                             alignItems: 'center',
                                                             justifyContent: 'center',
-                                                            transition: 'all 0.2s ease',
-                                                            backgroundColor: isPlaying && playingAudio?.src === fileServer + photo.audio 
-                                                                ? 'rgba(255, 255, 255, 0.9)' 
-                                                                : 'rgba(0, 0, 0, 0.7)',
-                                                            backdropFilter: 'blur(4px)',
-                                                            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)'
+                                                            cursor: 'pointer',
+                                                            zIndex: 1000
                                                         }}
                                                     >
-                                                        <IoRadioOutline 
-                                                            size={20} 
-                                                            color={isPlaying && playingAudio?.src === fileServer + photo.audio ? '#000' : '#fff'} 
-                                                        />
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>}
-                                        <p className="photo-story">
-                                            {(photo.storyAudio?.length??0)>0 && (
-                                                <button 
-                                                    className={`story-audio-button ${playingStoryAudio?.src === fileServer + photo.storyAudio ? 'playing' : ''}`}
-                                                    onClick={(e) => handleStoryAudioPlay(photo.storyAudio, e)}
-                                                >
-                                                    {playingStoryAudio?.src === fileServer + photo.storyAudio ? (
-                                                        <IoPause size={20} />
-                                                    ) : (
-                                                        <IoHeadsetOutline size={20} />
-                                                    )}
-                                                </button>
-                                            )}
-                                            {photo.story}
-                                        </p>
-                                        {(photo.comments?.length??0)>0 && (
-                                            <div className="comments-section">
-                                                <button 
-                                                    className="comments-toggle-button"
-                                                    onClick={() => toggleComments(photo)}
-                                                >
-                                                    {expandedComments === photo ? (
-                                                        <>
-                                                            Hide Comments ({photo.comments?.length || 0})
-                                                            <IoChevronUp size={16} />
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            View Comments ({photo.comments?.length || 0})
-                                                            <IoChevronDown size={16} />
-                                                        </>
-                                                    )}
-                                                </button>
-                                                {expandedComments === photo && (
-                                                    <div className="comments-list">
-                                                        {photo.comments?.map((comment) => (
-                                                            <div key={comment.id} className="comment">
-                                                                <p><strong>{comment.username}</strong>: {comment.text}</p>
-                                                                {comment.replies.length > 0 && (
-                                                                    <div className="replies">
-                                                                        <h3>Replies</h3>
-                                                                        {comment.replies.map((reply) => (
-                                                                            <div key={reply.id} className="reply">
-                                                                                <p><strong>{reply.username}</strong>: {reply.text}</p>
-                                                                            </div>
-                                                                        ))}
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        ))}
+                                                        <div
+                                                            style={{
+                                                                border: 'none',
+                                                                borderRadius: '16px',
+                                                                width: '32px',
+                                                                height: '32px',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                transition: 'all 0.2s ease',
+                                                                backgroundColor: isPlaying && playingAudio?.src === fileServer + photo.audio 
+                                                                    ? 'rgba(255, 255, 255, 0.9)' 
+                                                                    : 'rgba(0, 0, 0, 0.7)',
+                                                                backdropFilter: 'blur(4px)',
+                                                                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)'
+                                                            }}
+                                                        >
+                                                            <IoRadioOutline 
+                                                                size={20} 
+                                                                color={isPlaying && playingAudio?.src === fileServer + photo.audio ? '#000' : '#fff'} 
+                                                            />
+                                                        </div>
                                                     </div>
                                                 )}
-                                            </div>
-                                        )}
-                                    </div>
-                                ))}
+                                            </div>}
+                                            <p className="photo-story">
+                                                {(photo.storyAudio?.length??0)>0 && (
+                                                    <button 
+                                                        className={`story-audio-button ${playingStoryAudio?.src === fileServer + photo.storyAudio ? 'playing' : ''}`}
+                                                        onClick={(e) => handleStoryAudioPlay(photo.storyAudio, e)}
+                                                    >
+                                                        {playingStoryAudio?.src === fileServer + photo.storyAudio ? (
+                                                            <IoPause size={20} />
+                                                        ) : (
+                                                            <IoHeadsetOutline size={20} />
+                                                        )}
+                                                    </button>
+                                                )}
+                                                {photo.story}
+                                            </p>
+                                            {(photo.comments?.length??0)>0 && (
+                                                <div className="comments-section">
+                                                    <button 
+                                                        className="comments-toggle-button"
+                                                        onClick={() => toggleComments(photo)}
+                                                    >
+                                                        {expandedComments === photo ? (
+                                                            <>
+                                                                Hide Comments ({photo.comments?.length || 0})
+                                                                <IoChevronUp size={16} />
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                View Comments ({photo.comments?.length || 0})
+                                                                <IoChevronDown size={16} />
+                                                            </>
+                                                        )}
+                                                    </button>
+                                                    {expandedComments === photo && (
+                                                        <div className="comments-list">
+                                                            {photo.comments?.map((comment) => (
+                                                                <div key={comment.id} className="comment">
+                                                                    <p><strong>{comment.username}</strong>: {comment.text}</p>
+                                                                    {comment.replies.length > 0 && (
+                                                                        <div className="replies">
+                                                                            <h3>Replies</h3>
+                                                                            {comment.replies.map((reply) => (
+                                                                                <div key={reply.id} className="reply">
+                                                                                    <p><strong>{reply.username}</strong>: {reply.text}</p>
+                                                                                </div>
+                                                                            ))}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
-                        </div>
-                    ))}
+                        ))}
+                    </div>
                 </div>
             )}
             
