@@ -25,6 +25,7 @@ function TripRecap() {
   const [playingStoryAudio, setPlayingStoryAudio] = useState(null);
   const [expandedComments, setExpandedComments] = useState(null);
   const [selectedPlace, setSelectedPlace] = useState(null);
+  const [isScrolled, setIsScrolled] = useState(false);
 
   const handleMarkerClick = (place, index) => {
     setSelectedPlace({ place, index });
@@ -178,6 +179,13 @@ function TripRecap() {
     }
   };
 
+  const handleDayNavigation = (dayIndex) => {
+    const dayElement = document.querySelector(`[data-day-index="${dayIndex}"]`);
+    if (dayElement) {
+      dayElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
   // Cleanup audio on unmount
   useEffect(() => {
     return () => {
@@ -190,7 +198,7 @@ function TripRecap() {
     };
   }, [playingAudio]);
 
-  // Add scroll event listener to stop audio when scrolling
+  // Add scroll event listener to stop audio when scrolling and detect scroll position
   useEffect(() => {
     const handleScroll = () => {
       if (playingAudio) {
@@ -199,6 +207,10 @@ function TripRecap() {
         setPlayingAudio(null);
         setIsPlaying(false);
       }
+      
+      // Check if scrolled past header (approximately 200px)
+      const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+      setIsScrolled(scrollTop > 200);
     };
 
     window.addEventListener('scroll', handleScroll);
@@ -276,22 +288,42 @@ function TripRecap() {
     }}>
       <header className="trip-header">
         <div className="trip-info">
-          <h1>{(recapData.trip.title?.length??0>0)? recapData.trip.title: 'Trip Recap from LinkedSpaces'}</h1>
-          <p className="trip-dates">
-          From {recapData.trip.startTimeString} to {recapData.trip.endTimeString}, {recapData.trip.startingYear}
-          </p>
-          <section className="user-container">
-          <p className="trip-user">
-            Shared from {recapData.trip.userName}
-          </p>
-          <img src={fileServer + recapData.trip.profilePicture} alt="Popup" className="profile-picture" onClick={()=>{}}/>
-          </section>
+          <div className="header-content">
+            <div className="title-section">
+              <div className="title-with-profile">
+                <h1>Travel Story from {recapData.trip.userName}</h1>
+                <img src={fileServer + recapData.trip.profilePicture} alt={recapData.trip.userName} className="profile-picture"/>
+              </div>
+              <button className="signup-button-header">
+                <a href={'https://linkedspaces.com'} target="_blank" rel="noopener noreferrer">Join LinkedSpaces</a>
+              </button>
+            </div>
           </div>
+        </div>
       </header>
+
+      {/* Sticky Day Navigation */}
+      {isScrolled && recapData && (
+        <div className="sticky-day-nav">
+          <div className="day-nav-container">
+            <div className="day-nav-buttons">
+              {recapData.days.map((day, dayIndex) => (
+                <button
+                  key={dayIndex}
+                  className="day-nav-button"
+                  onClick={() => handleDayNavigation(dayIndex)}
+                >
+                  Day {dayIndex + 1}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Display recap per day */}
       {recapData.days.map((day, dayIndex) => (
-        <div key={dayIndex} className="day-container">
+        <div key={dayIndex} className="day-container" data-day-index={dayIndex}>
           <h2>Day {dayIndex + 1}: {reformatDate(day.date)}</h2>
           {/* Map for the day */}
           {commentModalOpen===false && 
@@ -507,11 +539,6 @@ function TripRecap() {
           </div>
         )}
       </Modal>
-      <div>
-        <button className='signup-button'>
-          <a href={'https://linkedspaces.com'} target="_blank" rel="noopener noreferrer" style={{ color: 'white', textDecoration: 'none', fontSize: '1.1rem' }}>Sign up for LinkedSpaces</a>
-        </button>
-      </div>
     </div>
   );
 }
