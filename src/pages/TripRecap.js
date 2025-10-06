@@ -1,15 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
-import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet';
+import GoogleMap from '../components/GoogleMap';
 import Modal from 'react-modal';
-import { FaMicrophoneAlt } from 'react-icons/fa';
-import { BsMusicNoteBeamed } from 'react-icons/bs';
 import { IoRadioOutline, IoHeadsetOutline, IoPause, IoChevronDown, IoChevronUp } from 'react-icons/io5';
-import 'leaflet/dist/leaflet.css';
 import './TripRecap.css';
 import { formatDate, reformatDate } from '../utils/DateUtils';
-import { defaultIcon, polylineOptions } from '../constants/MapConstants';
 import { fileServer } from '../constants/ServerUrls';
 
 function TripRecap() {
@@ -28,13 +24,16 @@ function TripRecap() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [playingStoryAudio, setPlayingStoryAudio] = useState(null);
   const [expandedComments, setExpandedComments] = useState(null);
-  const [zoomLevel, setZoomLevel] = useState(12);
+  const [selectedPlace, setSelectedPlace] = useState(null);
 
-  const [mainZoomLevel, setMainZoomLevel] = useState(1);
-
-  const resetZoom = () => {
-    setMainZoomLevel(1);
-  }
+  const handleMarkerClick = (place, index) => {
+    setSelectedPlace({ place, index });
+    // Scroll to the corresponding place card
+    const placeCard = document.querySelector(`[data-place-index="${index}"]`);
+    if (placeCard) {
+      placeCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  };
 
   const handleCommentClick = (photo) => {
     setSelectedPhoto(photo);
@@ -296,56 +295,18 @@ function TripRecap() {
           <h2>Day {dayIndex + 1}: {reformatDate(day.date)}</h2>
           {/* Map for the day */}
           {commentModalOpen===false && 
-          <div className="map-container">
-            <MapContainer
-              center={[day.places[0].coordinate.latitude, day.places[0].coordinate.longitude]}
-              zoom={zoomLevel}
-              style={{ height: '400px', width: '100%' }}
-              whenCreated={(map) => {
-                map.on('zoomend', () => {
-                  setZoomLevel(map.getZoom());
-                });
-              }}
-            >
-              <TileLayer
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              />
-              {/* Polyline to connect places */}
-              <Polyline
-                positions={day.places.map(place => [place.coordinate.latitude, place.coordinate.longitude])}
-                pathOptions={polylineOptions}
-              />
-              {day.places.map((place, placeIndex) => (
-                <Marker
-                  key={placeIndex}
-                  position={[place.coordinate.latitude, place.coordinate.longitude]}
-                  icon={defaultIcon(placeIndex + 1)} 
-                >
-                  <Popup>
-                    <h3>{place.placeName}</h3>
-                    <p><strong>Visited:</strong> {formatDate(place.digitizedTime)}</p>
-                    <div className="popup-photo-grid">
-                      {place.photoList?.slice(0,2).map((photo, index) => (
-                        <img
-                          key={index}
-                          src={fileServer + photo.uri}
-                          alt={`Photo ${photo.uri}`}
-                          className="popup-photo"
-                        />
-                      ))}
-                    </div>
-                  </Popup>
-                </Marker>
-              ))}
-            </MapContainer>
-          </div>}
+          <GoogleMap 
+            places={day.places}
+            onMarkerClick={handleMarkerClick}
+            className="day-map"
+          />}
           {/* Stories and Photos for the day */}
           <div className="places-container">
             {day.places.map((place, placeIndex) => {
               // Alternate layout for each place
               const layoutClass = placeIndex % 2 === 0 ? 'layout-even' : 'layout-odd';
               return (
-                <div key={placeIndex} className={`place-card ${layoutClass}`}>
+                <div key={placeIndex} className={`place-card ${layoutClass}`} data-place-index={placeIndex}>
                   <h3><a href={place.externalUrl} target="_blank" rel="noopener noreferrer" style={{ color: 'black', textDecorationLine: 'underline' }}>
                     {place.placeName}
                   </a></h3>

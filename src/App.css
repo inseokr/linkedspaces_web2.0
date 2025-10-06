@@ -125,7 +125,7 @@ body {
 .photo {
   width: 100%;
   border-radius: 8px;
-  aspect-ratio: 16 / 9; /* Keeps a consistent shape */
+  aspect-ratio: 1 / 1.2; /* 1:1.2 aspect ratio */
   object-fit: cover;
 }
 
@@ -161,7 +161,7 @@ body {
 
 .popup-photo {
   max-width: 100%; /* Ensure images don't exceed their grid cell */
-  height: auto; /* Maintain aspect ratio */
+  aspect-ratio: 1 / 1.2; /* 1:1.2 aspect ratio - height slightly bigger than width */
   max-height: 30vh;
   border-radius: 8px; /* Rounded corners for photos */
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Slight shadow for depth */
@@ -173,7 +173,6 @@ body {
   transform: scale(1.05); /* Slight zoom effect on hover */
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); /* Enhanced shadow on hover */
 }
-
 
 .photo {
   width: 100%;

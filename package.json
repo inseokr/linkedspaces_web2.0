@@ -4,6 +4,7 @@
   "private": true,
   "dependencies": {
     "@headlessui/react": "^2.2.0",
+    "@vis.gl/react-google-maps": "^1.5.5",
     "axios": "^1.7.9",
     "cra-template": "1.2.0",
     "leaflet": "^1.9.4",

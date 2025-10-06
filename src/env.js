@@ -1,21 +1,10 @@
-
-const variables = {
-    development: {
-    },
- 
-    production: {
-        REACT_APP_FILE_SERVER_URL:'https://s3-us-west-1.amazonaws.com/linkedspaces.fs',
-    }
-}
-
 const getEnvVariables = () => {
-    return variables.production;
-
-    // if (__DEV__) {
-    //     return variables.development;
-    // }
-
-    // return variables.production;
+    // Always use environment variables - no hardcoded credentials
+    return {
+        REACT_APP_FILE_SERVER_URL: process.env.REACT_APP_FILE_SERVER_URL,
+        REACT_APP_GOOGLE_MAPS_API_KEY: process.env.REACT_APP_GOOGLE_MAPS_API_KEY,
+        REACT_APP_GOOGLE_MAPS_MAP_ID: process.env.REACT_APP_GOOGLE_MAPS_MAP_ID,
+    };
 }
 
 export default getEnvVariables;
