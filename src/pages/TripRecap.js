@@ -53,46 +53,53 @@ function TripRecap() {
   };
 
   const handleAudioPlay = async (audioUrl, event) => {
-    event.stopPropagation(); // Prevent image click event
+    event.stopPropagation();
     
-    // If the same audio is already playing, stop it and reset state
-    if (playingAudio && playingAudio.src === fileServer + audioUrl) {
+    const fullAudioUrl = fileServer + audioUrl;
+    
+    // If the same audio is already playing, stop it
+    if (playingAudio && playingAudio.src === fullAudioUrl) {
       playingAudio.pause();
-      playingAudio.currentTime = 0;  // Reset the audio position
+      playingAudio.currentTime = 0;
       playingAudio.removeEventListener('ended', handleAudioEnd);
-      playingAudio.src = '';  // Reset the src property
+      playingAudio.src = '';
       setPlayingAudio(null);
       setIsPlaying(false);
       return;
     }
 
-    // If different audio is playing, stop it first
+    // Stop any currently playing audio
     if (playingAudio) {
       playingAudio.pause();
       playingAudio.removeEventListener('ended', handleAudioEnd);
-      playingAudio.src = '';  // Reset the src property
+      playingAudio.src = '';
       setPlayingAudio(null);
       setIsPlaying(false);
     }
 
-    const audio = new Audio(fileServer + audioUrl);
+    // Create new audio instance
+    const audio = new Audio(fullAudioUrl);
+    audio.preload = 'none'; // Don't preload to save memory
     audio.addEventListener('ended', handleAudioEnd);
+    
     try {
       await audio.play();
       setPlayingAudio(audio);
       setIsPlaying(true);
     } catch (error) {
       console.error('Error playing audio:', error);
+      // Clean up on error
+      audio.src = '';
     }
   };
 
   const handleAudioHover = async (audioUrl, event) => {
     event.stopPropagation();
-
-    console.warn(`handleAudioHover: `, audioUrl, playingAudio);
+    
+    const fullAudioUrl = fileServer + audioUrl;
     
     // If the same audio is already playing, do nothing
-    if (playingAudio && playingAudio.src === fileServer + audioUrl) {
+    if (playingAudio && playingAudio.src === fullAudioUrl) {
       return;
     }
 
@@ -100,17 +107,24 @@ function TripRecap() {
     if (playingAudio) {
       playingAudio.pause();
       playingAudio.removeEventListener('ended', handleAudioEnd);
+      playingAudio.src = '';
+      setPlayingAudio(null);
+      setIsPlaying(false);
     }
 
-    const audio = new Audio(fileServer + audioUrl);
-    audio.loop = true; // Enable looping
+    const audio = new Audio(fullAudioUrl);
+    audio.preload = 'none'; // Don't preload to save memory
+    audio.loop = true;
     audio.addEventListener('ended', handleAudioEnd);
+    
     try {
       await audio.play();
       setPlayingAudio(audio);
       setIsPlaying(true);
     } catch (error) {
       console.error('Error playing hover audio:', error);
+      // Clean up on error
+      audio.src = '';
     }
   };
 
@@ -118,6 +132,7 @@ function TripRecap() {
     if (playingAudio) {
       playingAudio.pause();
       playingAudio.removeEventListener('ended', handleAudioEnd);
+      playingAudio.src = ''; // Clear src to free memory
       setPlayingAudio(null);
       setIsPlaying(false);
     }
@@ -136,10 +151,13 @@ function TripRecap() {
   const handleStoryAudioPlay = async (audioUrl, event) => {
     event.stopPropagation();
     
+    const fullAudioUrl = fileServer + audioUrl;
+    
     // If the same audio is already playing, stop it
-    if (playingStoryAudio && playingStoryAudio.src === fileServer + audioUrl) {
+    if (playingStoryAudio && playingStoryAudio.src === fullAudioUrl) {
       playingStoryAudio.pause();
       playingStoryAudio.removeEventListener('ended', handleStoryAudioEnd);
+      playingStoryAudio.src = ''; // Clear src to free memory
       setPlayingStoryAudio(null);
       return;
     }
@@ -148,17 +166,23 @@ function TripRecap() {
     if (playingStoryAudio) {
       playingStoryAudio.pause();
       playingStoryAudio.removeEventListener('ended', handleStoryAudioEnd);
+      playingStoryAudio.src = ''; // Clear src to free memory
+      setPlayingStoryAudio(null);
     }
 
-    const audio = new Audio(fileServer + audioUrl);
+    const audio = new Audio(fullAudioUrl);
+    audio.preload = 'none'; // Don't preload to save memory
     audio.addEventListener('ended', () => {
+      audio.src = ''; // Clear src to free memory
       setPlayingStoryAudio(null);
     });
+    
     try {
       await audio.play();
       setPlayingStoryAudio(audio);
     } catch (error) {
       console.error('Error playing story audio:', error);
+      audio.src = ''; // Clean up on error
       setPlayingStoryAudio(null);
     }
   };
@@ -167,6 +191,7 @@ function TripRecap() {
     if (playingStoryAudio) {
       playingStoryAudio.removeEventListener('ended', handleStoryAudioEnd);
       playingStoryAudio.removeEventListener('pause', handleStoryAudioEnd);
+      playingStoryAudio.src = ''; // Clear src to free memory
       setPlayingStoryAudio(null);
     }
   };
@@ -192,28 +217,39 @@ function TripRecap() {
       if (playingAudio) {
         playingAudio.pause();
         playingAudio.removeEventListener('ended', handleAudioEnd);
+        playingAudio.src = ''; // Clear src to free memory
         setPlayingAudio(null);
         setIsPlaying(false);
       }
     };
   }, [playingAudio]);
 
-  // Add scroll event listener to stop audio when scrolling and detect scroll position
+  // Add throttled scroll event listener to stop audio when scrolling and detect scroll position
   useEffect(() => {
+    let ticking = false;
+    
     const handleScroll = () => {
-      if (playingAudio) {
-        playingAudio.pause();
-        playingAudio.removeEventListener('ended', handleAudioEnd);
-        setPlayingAudio(null);
-        setIsPlaying(false);
+      if (!ticking) {
+        requestAnimationFrame(() => {
+          if (playingAudio) {
+            playingAudio.pause();
+            playingAudio.removeEventListener('ended', handleAudioEnd);
+            playingAudio.src = ''; // Clear src to free memory
+            setPlayingAudio(null);
+            setIsPlaying(false);
+          }
+          
+          // Check if scrolled past header (approximately 200px)
+          const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+          setIsScrolled(scrollTop > 200);
+          
+          ticking = false;
+        });
+        ticking = true;
       }
-      
-      // Check if scrolled past header (approximately 200px)
-      const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-      setIsScrolled(scrollTop > 200);
     };
 
-    window.addEventListener('scroll', handleScroll);
+    window.addEventListener('scroll', handleScroll, { passive: true });
     return () => {
       window.removeEventListener('scroll', handleScroll);
     };
@@ -272,6 +308,8 @@ function TripRecap() {
     return () => {
       if (playingStoryAudio) {
         playingStoryAudio.pause();
+        playingStoryAudio.removeEventListener('ended', handleStoryAudioEnd);
+        playingStoryAudio.src = ''; // Clear src to free memory
         setPlayingStoryAudio(null);
       }
     };
@@ -292,7 +330,7 @@ function TripRecap() {
             <div className="title-section">
               <div className="title-with-profile">
                 <h1>Travel Story from {recapData.trip.userName}</h1>
-                <img src={fileServer + recapData.trip.profilePicture} alt={recapData.trip.userName} className="profile-picture"/>
+                <img src={fileServer + recapData.trip.profilePicture} alt={recapData.trip.userName} className="profile-picture" loading="eager"/>
               </div>
               <button className="signup-button-header">
                 <a href={'https://linkedspaces.com'} target="_blank" rel="noopener noreferrer">Join LinkedSpaces</a>
@@ -352,6 +390,7 @@ function TripRecap() {
                             src={fileServer + photo.uri}
                             alt={`Photo ${photo.uri}`}
                             className="photo"
+                            loading="lazy"
                             style={{
                               transform: isPlaying && playingAudio?.src === fileServer + photo.audio ? 'scale(1.05)' : 'scale(1)',
                               transition: 'transform 2s ease-in-out',
