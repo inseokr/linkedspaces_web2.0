@@ -11,7 +11,7 @@ const NAV_ITEMS = [
 export function Header() {
   return (
     <header className="w-full h-[5.5rem] bg-white">
-      <div className="mx-auto flex max-w-6xl items-center px-0">
+      <div className="mx-auto flex items-center px-0">
         {/* Pills container */}
         <nav
           aria-label="Primary"
