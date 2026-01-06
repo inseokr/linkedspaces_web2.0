@@ -5,7 +5,8 @@ const NAV_ITEMS = [
   { label: "Our Story", href: "/#our-story" },
   { label: "Learn More", href: "/learn-more" },
   { label: "Blog", href: "/blog" },
-  { label: "Profile", href: "/profile" },
+  //{ label: "Profile", href: "/profile" },
+  { label: "Beta Sign Up 🚀", href: "/beta-sign-up" },
 ];
 
 export function Header() {
@@ -21,7 +22,7 @@ export function Header() {
             <Link
               key={item.href}
               href={item.href}
-              className="px-6.5 py-2.5 text-lg font-bold hover:text-[var(--color-main)]"
+              className="px-6.5 py-2.5 text-[18px] font-bold hover:text-[var(--color-main)]"
             >
               {item.label}
             </Link>

@@ -22,10 +22,14 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={`${montserrat.variable} ${poppins.variable}`}>
-      <body>
+      <body className="min-h-dvh flex flex-col overflow-y-auto">
         <Header />
-        <main>{children}</main>
-        <Footer />
+
+        <main className="flex-1">{children}</main>
+
+        <div className="pb-[74px]">
+          <Footer />
+        </div>
       </body>
     </html>
   );
