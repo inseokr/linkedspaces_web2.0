@@ -18,34 +18,30 @@ export function StoryBlock({
   reverse = false,
 }: StoryBlockProps) {
   return (
-    <div className="grid grid-cols-1 items-center gap-10 lg:grid-cols-2 lg:gap-16">
+    <div className="flex flex-col items-center lg:flex-row lg:items-center ">
       {/* Text */}
-      <div className={reverse ? "lg:order-2" : "lg:order-1"}>
+      <div
+        className={`flex w-full flex-col gap-4 text-black whitespace-pre-line lg:max-w-[520px] ${reverse ? "lg:order-2" : "lg:order-1"}`}
+      >
         {eyebrow ? (
-          <p className="text-xs font-semibold tracking-wide text-zinc-500">
-            {eyebrow}
-          </p>
+          <p className="text-lg font-normal tracking-wide">{eyebrow}</p>
         ) : null}
 
-        <h2 className="mt-2 text-3xl font-bold leading-tight text-zinc-900">
-          {title}
-        </h2>
+        <h2 className="text-[32px] font-bold leading-tight ">{title}</h2>
 
-        <p className="mt-4 max-w-xl text-base leading-relaxed text-zinc-600">
-          {description}
-        </p>
+        <p className="text-lg font-normal leading-tight">{description}</p>
       </div>
 
       {/* Media */}
-      <div className={reverse ? "lg:order-1" : "lg:order-2"}>
-        {/* Use a wrapper to control sizing like in Figma */}
-        <div className="relative mx-auto aspect-[4/3] w-full max-w-[560px]">
+      <div
+        className={`${reverse ? "lg:order-1" : "lg:order-2"} w-full lg:flex-1 lg:flex overflow-visible lg:justify-end`}
+      >
+        <div className="relative aspect-[4/3] w-full ">
           <Image
             src={imageSrc}
             alt={imageAlt}
             fill
             className="object-contain"
-            priority={false}
           />
         </div>
       </div>

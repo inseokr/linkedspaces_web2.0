@@ -3,23 +3,31 @@ import { StoryBlock } from "./StoryBlock";
 const STORY_BLOCKS = [
   {
     eyebrow: "MOMENTS FADE. WE MAKE THEM STICK",
-    title: "Capture the Moment, Effortlessly",
+    title: "Capture the\n Moment, Effortlessly",
     description:
-      "No more digging through your camera roll. Save places with context so nothing gets lost.",
-    imageSrc: "/public/images/studiomode.png",
+      "We figure out where you were, ranking the most\n likely spots so nothing gets lost. ",
+    imageSrc: "/images/studiomode.png",
     imageAlt: "App screens on phones",
     reverse: false,
   },
   {
     eyebrow: "YOUR PERSONAL AI AVATAR",
-    title: "Talk to Your Yourself, Literally",
+    title: "Talk to Yourself,\nLiterally",
     description:
-      "Ask natural questions about past moments and instantly pull up the right place and story.",
-    imageSrc: "/public/images/ls-agent.png",
+      'LinkedSpaces learns your taste, past moments, and how you speak, so later you can ask, "What was that seafood spot last summer?" and we\'ll pull it up instantly.',
+    imageSrc: "/images/ls-agent.png",
     imageAlt: "AI assistant interface on a phone",
     reverse: true,
   },
-  // Add more blocks as needed
+  {
+    eyebrow: "WE GENERATE RECAP BLOGS",
+    title: "Say Goodbye to Starting \n from Scratch",
+    description:
+      "As you save places from your trip, your blog builds itself. Wel'll do the rest. Ready to revisit or share.",
+    imageSrc: "/images/recap-blog-mockup2.png",
+    imageAlt: "Recap blog interface on a phone",
+    reverse: false,
+  },
 ];
 
 export function OurStorySection() {
