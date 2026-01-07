@@ -1,28 +1,44 @@
+import { StoryBlock } from "./StoryBlock";
+
+const STORY_BLOCKS = [
+  {
+    eyebrow: "MOMENTS FADE. WE MAKE THEM STICK",
+    title: "Capture the Moment, Effortlessly",
+    description:
+      "No more digging through your camera roll. Save places with context so nothing gets lost.",
+    imageSrc: "/public/images/studiomode.png",
+    imageAlt: "App screens on phones",
+    reverse: false,
+  },
+  {
+    eyebrow: "YOUR PERSONAL AI AVATAR",
+    title: "Talk to Your Yourself, Literally",
+    description:
+      "Ask natural questions about past moments and instantly pull up the right place and story.",
+    imageSrc: "/public/images/ls-agent.png",
+    imageAlt: "AI assistant interface on a phone",
+    reverse: true,
+  },
+  // Add more blocks as needed
+];
+
 export function OurStorySection() {
   return (
-    <section id="our-story">
-      <h2>LinkedSpaces 2025</h2>
-
-      <div>
-        <div>
-          <p>MOMENTS FADE. WE MAKE THEM STICK</p>
-          <h3>Capture the Moment, Effortlessly</h3>
-          <p>
-            We figure out where you were, ranking the most likely spots so
-            nothing gets lost.
-          </p>
-        </div>
-
-        <div>
-          <p>YOUR PERSONAL AI AVATAR</p>
-          <h3>Talk to Your Yourself, Literally</h3>
-          <p>LinkedSpaces learns your taste... we’ll pull it up instantly.</p>
-        </div>
-
-        <div>
-          <p>WE GENERATE RECAP BLOGS</p>
-          <h3>Say Goodbye to Starting from Scratch</h3>
-          <p>As you save places... Ready to revisit or share.</p>
+    <section className="w-full">
+      {/* Section container */}
+      <div className="mx-auto max-w-[1200px] px-6 py-20 lg:px-20">
+        <div className="space-y-24">
+          {STORY_BLOCKS.map((block) => (
+            <StoryBlock
+              key={block.title}
+              eyebrow={block.eyebrow}
+              title={block.title}
+              description={block.description}
+              imageSrc={block.imageSrc}
+              imageAlt={block.imageAlt}
+              reverse={block.reverse}
+            />
+          ))}
         </div>
       </div>
     </section>

@@ -19,7 +19,7 @@ export default function SemiRoundButton({
   const classes = cn(
     "inline-flex items-center justify-center rounded-[15px]",
     "font-bold transition-colors [font-family:var(--font-poppins)]",
-    "bg-[var(--color-main)] text-white hover:bg-blue-700",
+    "bg-[var(--color-main)] text-white hover:bg-[#85aded]",
     "disabled:opacity-50 disabled:pointer-events-none",
     className,
   );
