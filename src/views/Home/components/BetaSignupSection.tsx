@@ -1,6 +1,6 @@
 export function BetaSignupSection() {
   return (
-    <section>
+    <section id="beta-sign-up" className="scroll-mt-28">
       <h2>100 Spots, Join Beta Now!</h2>
 
       {/* <form onSubmit={(e) => e.preventDefault()}>

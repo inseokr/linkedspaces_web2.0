@@ -32,7 +32,7 @@ const STORY_BLOCKS = [
 
 export function OurStorySection() {
   return (
-    <section className="w-full">
+    <section id="our-story" className="w-full scroll-mt-20">
       {/* Section container */}
       <div className="mx-auto max-w-[1200px] px-6 py-20 lg:px-20">
         <div className="space-y-24">

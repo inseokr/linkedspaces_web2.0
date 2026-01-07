@@ -22,7 +22,6 @@ body {
   padding: 0;
 }
 
-/* Our Story 같은 앵커 이동 부드럽게 */
 html {
   scroll-behavior: smooth;
 }

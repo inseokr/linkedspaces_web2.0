@@ -19,7 +19,7 @@ export function HeroSection() {
             asChild
             className="justify-center items-center px-[26px] py-3 w-[275px] h-[59px] text-2xl"
           >
-            <Link href="/beta-sign-up">Request For Beta</Link>
+            <Link href="/#beta-sign-up">Request For Beta</Link>
           </SemiRoundButton>
 
           <SemiRoundButton
