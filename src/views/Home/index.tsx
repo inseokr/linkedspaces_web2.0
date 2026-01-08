@@ -2,6 +2,7 @@ import { HeroSection } from "./components/HeroSection";
 import { OurStorySection } from "./components/OurStorySection";
 import BetaSignUpSection from "./components/BetaSignupSection";
 import { ScrollManager } from "@/components/behavior/ScrollManager";
+import { VideoSection } from "./components/VideoSection";
 
 export default function HomeView() {
   return (
@@ -12,6 +13,7 @@ export default function HomeView() {
       <HeroSection />
       <OurStorySection />
       <BetaSignUpSection />
+      <VideoSection />
     </>
   );
 }
