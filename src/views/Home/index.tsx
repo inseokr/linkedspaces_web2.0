@@ -1,13 +1,15 @@
 import { HeroSection } from "./components/HeroSection";
 import { OurStorySection } from "./components/OurStorySection";
-import { BetaSignupSection } from "./components/BetaSignupSection";
+import BetaSignUpSection from "./components/BetaSignupSection";
+import { VideoSection } from "./components/VideoSection";
 
 export default function HomeView() {
   return (
     <>
       <HeroSection />
       <OurStorySection />
-      <BetaSignupSection />
+      <BetaSignUpSection />
+      <VideoSection />
     </>
   );
 }

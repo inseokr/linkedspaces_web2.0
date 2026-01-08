@@ -1,7 +1,7 @@
-import SemiRoundButton from "@/components/ui/SemiRoundButton";
+import Button from "@/components/ui/Button";
 import Link from "next/link";
-import Image from "next/image";
 import Tilt from "@/components/ui/Tilt";
+import Image from "next/image";
 
 export function HeroSection() {
   return (
@@ -15,19 +15,21 @@ export function HeroSection() {
           No more digging through your camera roll to find that place.
         </p>
         <section className="flex gap-12">
-          <SemiRoundButton
+          <Button
+            radius="md"
             asChild
             className="justify-center items-center px-[26px] py-3 w-[275px] h-[59px] text-2xl"
           >
             <Link href="/#beta-sign-up">Request For Beta</Link>
-          </SemiRoundButton>
+          </Button>
 
-          <SemiRoundButton
+          <Button
+            radius="md"
             asChild
             className="justify-center items-center px-[26px] py-3 w-[275px] h-[59px] text-2xl"
           >
             <Link href="/learn-more">Learn More</Link>
-          </SemiRoundButton>
+          </Button>
         </section>
       </section>
 
@@ -36,10 +38,13 @@ export function HeroSection() {
           <div className="flex items-center gap-8">
             {/* Phone / GIF */}
             <div className="w-[420px] h-[700px]">
-              <img
+              <Image
                 src="/gifs/landing-page.gif"
                 alt="demo"
+                width={420}
+                height={700}
                 className="block w-full h-full object-contain"
+                unoptimized
               />
             </div>
 

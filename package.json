@@ -12,6 +12,7 @@
     "format:check": "prettier . --check"
   },
   "dependencies": {
+    "@fontsource-variable/wix-madefor-text": "^5.2.8",
     "next": "16.1.1",
     "react": "19.2.3",
     "react-dom": "19.2.3"

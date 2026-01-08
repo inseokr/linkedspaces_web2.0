@@ -2,6 +2,7 @@ import "./global.css";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { Montserrat, Poppins } from "next/font/google";
+import "@fontsource-variable/wix-madefor-text";
 
 const montserrat = Montserrat({
   subsets: ["latin"],

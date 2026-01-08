@@ -4,6 +4,7 @@
   --background: #ffffff;
   --foreground: #171717;
   --color-main: #1b69e4;
+  --color-warning: #df3131;
   --font-sans: var(--font-montserrat);
 }
 
@@ -22,6 +23,10 @@ body {
   padding: 0;
 }
 
+.shadow-card {
+  box-shadow: 0.695px 3.939px 40px 7px rgba(0, 0, 0, 0.25);
+}
+
 html {
   scroll-behavior: smooth;
 }
@@ -30,6 +35,7 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family:
+    "Wix Madefor Text",
     var(--font-sans),
     system-ui,
     -apple-system,
