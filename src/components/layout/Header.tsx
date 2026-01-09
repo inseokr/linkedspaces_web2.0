@@ -7,7 +7,7 @@ const NAV_ITEMS = [
   { label: "Home", href: "/" },
   { label: "Our Story", href: "/#our-story" },
   { label: "Learn More", href: "/learn-more" },
-  { label: "Blog", href: "/blog" },
+  { label: "Contact", href: "/contact" },
   { label: "Beta Sign Up 🚀", href: "/beta-sign-up" },
 ];
 
@@ -36,7 +36,7 @@ export function Header() {
                 key={item.href}
                 href={item.href}
                 scroll={false}
-                className="px-6.5 py-2.5 text-[18px] font-bold hover:text-[var(--color-main)]"
+                className="px-6.5 py-2.5 text-[18px] font-bold hover:text-[var(--color-main)] focus:outline-none"
                 onClick={(e) => {
                   if (!isOurStory) return;
 

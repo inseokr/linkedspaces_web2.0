@@ -1,8 +1,8 @@
-import { HeroSection } from "./components/HeroSection";
-import { OurStorySection } from "./components/OurStorySection";
-import BetaSignUpSection from "./components/BetaSignupSection";
+import { HeroSection } from "@/views/Home/components/HeroSection";
+import { OurStorySection } from "@/views/Home/components/OurStorySection";
+import BetaSignUpSection from "@/components/BetaSignupCard";
 import { ScrollManager } from "@/components/behavior/ScrollManager";
-import { VideoSection } from "./components/VideoSection";
+import { VideoSection } from "@/views/Home/components/VideoSection";
 
 export default function HomeView() {
   return (

@@ -1,5 +1,5 @@
 "use client";
-import SignUpButton from "./SignUpButton";
+import SignUpButton from "../views/Home/components/SignUpButton";
 import { useRef, useState } from "react";
 
 export default function BetaSignupSection() {
