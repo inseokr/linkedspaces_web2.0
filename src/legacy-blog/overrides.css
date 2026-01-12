@@ -1,0 +1,42 @@
+/* Restore legacy defaults only inside LegacyBlog */
+.LegacyBlog {
+  font-family: Arial, sans-serif;
+  font-size: 16px;
+  line-height: 1.4;
+  color: #000;
+}
+
+/* Restore heading typography lost by Tailwind preflight */
+.LegacyBlog h1 {
+  font-size: 1.8rem;
+  font-weight: 700;
+  margin: 0.67em 0;
+}
+
+.LegacyBlog h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0.75em 0;
+}
+
+.LegacyBlog h3 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 0.75em 0 0.4em;
+}
+
+/* Optional: make paragraphs closer to legacy look */
+.LegacyBlog p {
+  font-size: 1rem;
+  font-weight: 400;
+  line-height: 1.6;
+}
+
+
+/* Tailwind preflight removes default margins; bring back what legacy expects */
+.LegacyBlog h1,
+.LegacyBlog h2,
+.LegacyBlog h3,
+.LegacyBlog p {
+  margin: 0;
+}
