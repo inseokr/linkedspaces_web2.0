@@ -1,3 +1,5 @@
+import BetaSignUpSection from "@/components/BetaSignupCard";
+
 export default function BetaSignUpView() {
-  return <p>beta sign up</p>;
+  return <BetaSignUpSection />;
 }
