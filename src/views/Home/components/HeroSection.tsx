@@ -5,7 +5,7 @@ import Image from "next/image";
 
 export function HeroSection() {
   return (
-    <div className="flex justify-between items-center">
+    <div className="flex justify-center gap-12 items-center">
       <section className="flex flex-col gap-8 ml-20 ">
         <h1 className="text-[clamp(32px,5vw,85px)] font-bold">
           <span className="block">Never Forget a</span>
