@@ -26,7 +26,7 @@ export default function RootLayout({
       <body className="min-h-dvh flex flex-col overflow-y-auto">
         <Header />
 
-        <main className="flex-1">{children}</main>
+        <main className="flex-1 px-4 md:px-20">{children}</main>
 
         <div className="pb-[74px]">
           <Footer />

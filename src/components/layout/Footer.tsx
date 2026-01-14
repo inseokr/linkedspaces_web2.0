@@ -6,7 +6,7 @@ import linkedinIcon from "@/assets/icons/linkedin.svg";
 
 export function Footer() {
   return (
-    <footer className="w-full bg-white inset-x-0 bottom-[74px] z-50">
+    <footer className="w-full bg-transparent inset-x-0 bottom-[74px] z-50">
       <div className="mx-auto flex items-center justify-center gap-2.5 pb-14">
         {/* Social icons */}
         <a

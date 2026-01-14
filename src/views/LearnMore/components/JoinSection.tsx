@@ -8,20 +8,21 @@ export default function JoinFutureSection() {
         {/* Title */}
 
         {/* Content */}
-        <div className="mt-12 grid items-start gap-12 md:grid-cols-2">
+        <div className="flex mt-12 items-start gap-12 ">
           {/* Left: Phone image */}
-          <div className="flex justify-center md:justify-start">
-            <div className="relative w-[320px] md:w-[420px]">
-              {/* <Image
-                src="/images/phone-mock.png" // <-- put your image in public/images/phone-mock.png
-                alt="LinkedSpaces app preview on phone"
-                width={840}
-                height={1200}
-                priority
-                className="h-auto w-full select-none"
-              /> */}
+          <Tilt className="rounded-2xl">
+            {/* Phone / GIF */}
+            <div className="w-[420px] h-[700px]">
+              <Image
+                src="/gifs/landing-page.gif" //change gif file later
+                alt="demo"
+                width={420}
+                height={700}
+                className="block w-full h-full object-contain"
+                unoptimized
+              />
             </div>
-          </div>
+          </Tilt>
 
           {/* Right: Text */}
           <div className="pt-2 flex flex-col gap-8">
