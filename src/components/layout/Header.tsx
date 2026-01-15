@@ -8,7 +8,8 @@ const NAV_ITEMS = [
   { label: "Our Story", href: "/#our-story" },
   { label: "Learn More", href: "/learn-more" },
   { label: "Contact", href: "/contact" },
-  { label: "Beta Sign Up 🚀", href: "/beta-sign-up" },
+  { label: "Sign In", href: "/sign-in" },
+  //{ label: "Beta Sign Up 🚀", href: "/beta-sign-up" },
 ];
 
 export function Header() {
@@ -22,7 +23,7 @@ export function Header() {
   };
 
   return (
-    <header className="w-full h-[5.5rem] bg-white">
+    <header className="w-full h-[5.5rem] bg-white relative z-50">
       <div className="mx-auto flex items-center px-0">
         <nav
           aria-label="Primary"

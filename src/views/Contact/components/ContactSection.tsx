@@ -11,7 +11,7 @@ export default function ContactSection({
   heroImageAlt = "App preview",
 }: Props) {
   return (
-    <section className="w-full bg-white">
+    <section className="w-full">
       <div className="mx-auto px-6 py-14">
         <div className="grid items-start gap-10 lg:grid-cols-[1.25fr_0.75fr]">
           <div className="relative min-h-[520px] overflow-hidden rounded-[18px]">

@@ -14,7 +14,7 @@ export default function JoinFutureSection() {
             {/* Phone / GIF */}
             <div className="w-[420px] h-[700px]">
               <Image
-                src="/gifs/landing-page.gif" //change gif file later
+                src="/gifs/learn-about.gif"
                 alt="demo"
                 width={420}
                 height={700}
