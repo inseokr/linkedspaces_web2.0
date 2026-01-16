@@ -4,15 +4,12 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
 const NAV_ITEMS = [
-  { label: "Home", href: "/" },
-  { label: "Our Story", href: "/#our-story" },
-  { label: "Learn More", href: "/learn-more" },
   { label: "Contact", href: "/contact" },
+  { label: "Profile", href: "/profile" },
   { label: "Sign In", href: "/sign-in" },
-  //{ label: "Beta Sign Up 🚀", href: "/beta-sign-up" },
 ];
 
-export function Header() {
+export function AfterLoginHeader() {
   const pathname = usePathname();
   const router = useRouter();
 
@@ -23,7 +20,7 @@ export function Header() {
   };
 
   return (
-    <header className="w-full h-[5.5rem] bg-white relative z-50">
+    <header className="w-full h-[5.5rem] bg-white">
       <div className="mx-auto flex items-center px-0">
         <nav
           aria-label="Primary"
