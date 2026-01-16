@@ -2,10 +2,103 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import VideoModal from "./VideoModal"; // 아까 만든 모달 컴포넌트 경로에 맞게 조정
+import VideoGuideModal from "./VideoModal";
+import { GoogleOAuthProvider, GoogleLogin } from "@react-oauth/google";
+import { useRouter } from "next/navigation";
+
+// Google OAuth 2.0 login
+const googleLogin = async (idToken: string, router: any) => {
+  try {
+    const response = await fetch(
+      "https://pocketverse.herokuapp.com/LS_API/oauth/google",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          idToken,
+        }),
+      },
+    );
+
+    const data = await response.json();
+
+    if (data.message === "ok") {
+      localStorage.setItem("authToken", data.token);
+      console.log("User info:", data.user);
+      // Redirect to profile or dashboard
+      router.push("/profile");
+    } else {
+      console.error("Authentication failed");
+      alert("Failed to log in with Google.");
+    }
+  } catch (error) {
+    console.error("Error during Google login:", error);
+  }
+};
+
+// JWT login
+
+const jwtLogin = async (username: string, password: string, router: any) => {
+  try {
+    const response = await fetch(
+      "https://pocketverse.herokuapp.com/LS_API/jwt_login_v1",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ username, password }),
+      },
+    );
+
+    // 401, 404 등 에러 핸들링
+    if (!response.ok) {
+      const errorDetail = await response.text();
+      console.error(`login failed status code: ${response.status}`);
+      alert("check username or password.");
+      return;
+    }
+
+    const data = await response.json();
+
+    if (data.message === "ok") {
+      localStorage.setItem("authToken", data.token);
+      console.log("User info:", data.user);
+      //  successfully logged in, redirect to profile or dashboard
+      router.push("/profile");
+    } else {
+      console.error("Authentication failed");
+      alert("login failed. Please try again.");
+    }
+  } catch (error) {
+    console.error("Error during JWT login:", error);
+  }
+};
 
 export default function SignInSection() {
   const [openGuide, setOpenGuide] = useState(false);
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const router = useRouter();
+
+  // Google login
+  const handleGoogleLogin = (response: any) => {
+    console.log("Google Response:", response);
+    const token = response.credential || response.tokenId;
+
+    if (token) {
+      googleLogin(token, router);
+    } else {
+      console.error("cannot find token in Google response");
+    }
+  };
+
+  // general login
+  const handleLogin = async () => {
+    await jwtLogin(username, password, router);
+  };
 
   return (
     <section className="relative min-h-dvh w-full">
@@ -16,12 +109,18 @@ export default function SignInSection() {
               LinkedSpaces
             </h1>
 
-            <button
-              type="button"
-              className="mt-8 w-full rounded-full border border-black/30 py-3 text-[14px] font-medium text-black hover:bg-black/[0.03] active:bg-black/[0.06] transition"
-            >
-              Sign in with Google
-            </button>
+            <GoogleOAuthProvider clientId="365835568807-9s56gicbdaj9vkn3kkbkvs2crt8k764e.apps.googleusercontent.com">
+              <div className="mt-8 flex justify-center">
+                <GoogleLogin
+                  onSuccess={handleGoogleLogin}
+                  useOneTap
+                  text="signin_with"
+                  shape="circle"
+                  theme="outline"
+                  width="380"
+                />
+              </div>
+            </GoogleOAuthProvider>
 
             <div className="my-6 flex items-center gap-4">
               <div className="h-px flex-1 border-t border-dashed border-black/30" />
@@ -33,6 +132,8 @@ export default function SignInSection() {
               <input
                 placeholder="User Name"
                 autoComplete="username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
                 className="w-full rounded-2xl border border-black/25 px-5 py-3 text-[14px] outline-none focus:border-black/50"
               />
 
@@ -40,6 +141,8 @@ export default function SignInSection() {
                 placeholder="Password"
                 type="password"
                 autoComplete="current-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 className="w-full rounded-2xl border border-black/25 px-5 py-3 text-[14px] outline-none focus:border-black/50"
               />
 
@@ -53,6 +156,7 @@ export default function SignInSection() {
 
               <button
                 type="button"
+                onClick={handleLogin} // Call general login
                 className="mt-2 w-full rounded-xl bg-[#4A69FF] py-3 text-[14px] font-semibold text-white hover:opacity-90 active:opacity-80 transition"
               >
                 Log in
@@ -85,7 +189,7 @@ export default function SignInSection() {
       </div>
 
       {/* Modal */}
-      <VideoModal
+      <VideoGuideModal
         open={openGuide}
         onClose={() => setOpenGuide(false)}
         title="Join to LinkedSpaces!"
