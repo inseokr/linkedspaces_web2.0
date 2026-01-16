@@ -1,17 +1,19 @@
 import { useState, useEffect } from "react";
 
 export function useAuth() {
+  // Initialize the state to null, representing the loading state or undefined status
   const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
 
   useEffect(() => {
+    // Retrieve user data from localStorage
     const user = localStorage.getItem("user");
-    const userLoggedIn = user !== null;
+    const userLoggedIn = user !== null; // Check if the user exists in localStorage
 
-    // 비동기적으로 상태 업데이트를 지연시켜서 문제 해결
+    // Asynchronously update the state to avoid synchronous state update issues
     setTimeout(() => {
-      setIsLoggedIn(userLoggedIn);
-    }, 0); // 0ms 후에 상태를 업데이트하여 동기적 호출을 피함
-  }, []); // 빈 배열로, 컴포넌트가 마운트될 때 한 번만 실행되도록
+      setIsLoggedIn(userLoggedIn); // Update the login status after a delay
+    }, 0); // 0ms delay to ensure state is updated asynchronously, avoiding synchronous calls
+  }, []); // Empty dependency array ensures the effect runs only once when the component mounts
 
-  return isLoggedIn;
+  return isLoggedIn; // Return the login status, `null` means the status is still being determined
 }
