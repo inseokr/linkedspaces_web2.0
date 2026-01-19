@@ -34,6 +34,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   const isLoggedIn = useAuth();
+  console.log("[RootLayout] render", {
+    isLoggedIn,
+    token:
+      typeof window !== "undefined"
+        ? localStorage.getItem("accessToken")
+        : null,
+    time: new Date().toISOString(),
+  });
 
   return (
     <html

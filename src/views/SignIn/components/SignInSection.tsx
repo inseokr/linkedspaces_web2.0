@@ -5,6 +5,7 @@ import { useState } from "react";
 import VideoGuideModal from "./VideoModal";
 import { GoogleOAuthProvider, GoogleLogin } from "@react-oauth/google";
 import { useRouter } from "next/navigation";
+import { notifyAuthChanged } from "@/hooks/useAuth";
 
 // Google OAuth 2.0 login
 const googleLogin = async (idToken: string, router: any) => {
@@ -25,8 +26,9 @@ const googleLogin = async (idToken: string, router: any) => {
     const data = await response.json();
 
     if (data.message === "ok") {
-      localStorage.setItem("authToken", data.token);
+      localStorage.setItem("token", data.token);
       console.log("User info:", data.user);
+      notifyAuthChanged();
       // Redirect to profile or dashboard
       router.push("/profile");
     } else {
@@ -64,8 +66,9 @@ const jwtLogin = async (username: string, password: string, router: any) => {
     const data = await response.json();
 
     if (data.message === "ok") {
-      localStorage.setItem("authToken", data.token);
+      localStorage.setItem("token", data.token);
       console.log("User info:", data.user);
+      notifyAuthChanged();
       //  successfully logged in, redirect to profile or dashboard
       router.push("/profile");
     } else {
