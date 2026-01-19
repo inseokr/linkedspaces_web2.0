@@ -3,7 +3,8 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
-  --color-main: #1b69e4;
+  --color-main: #0798ff;
+  --color-sub: #1b69e4;
   --color-warning: #df3131;
   --font-sans: var(--font-montserrat);
 }

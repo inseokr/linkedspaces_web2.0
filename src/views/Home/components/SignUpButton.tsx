@@ -16,7 +16,7 @@ export default function SignUpButton({ children, className, ...props }: Props) {
         "w-full h-[41px] px-3 py-4 rounded-full",
         "inline-flex items-center justify-center text-center",
         "text-base font-bold",
-        "bg-[var(--color-main)] text-white",
+        "bg-[var(--color-sub)] text-white",
         "border border-transparent",
         "transition-colors duration-200",
         "hover:bg-white hover:text-black hover:font-normal",

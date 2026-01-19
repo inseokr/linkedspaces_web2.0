@@ -37,7 +37,7 @@ export function BerforeLoginHeader() {
                 key={item.href}
                 href={item.href}
                 scroll={false}
-                className="px-6.5 py-2.5 text-[18px] font-bold hover:text-[var(--color-main)] focus:outline-none"
+                className="px-6.5 py-2.5 text-[18px] font-bold hover:text-[var(--color-sub)] focus:outline-none"
                 onClick={(e) => {
                   if (!isOurStory) return;
 

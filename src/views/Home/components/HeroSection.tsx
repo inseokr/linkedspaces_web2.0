@@ -16,6 +16,7 @@ export function HeroSection() {
         </p>
         <section className="flex gap-12">
           <Button
+            variant="sub"
             radius="md"
             asChild
             className="justify-center items-center px-[26px] py-3 w-[275px] h-[59px] text-2xl"
@@ -24,6 +25,7 @@ export function HeroSection() {
           </Button>
 
           <Button
+            variant="sub"
             radius="md"
             asChild
             className="justify-center items-center px-[26px] py-3 w-[275px] h-[59px] text-2xl"
