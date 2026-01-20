@@ -6,79 +6,8 @@ import VideoGuideModal from "./VideoModal";
 import { GoogleOAuthProvider, GoogleLogin } from "@react-oauth/google";
 import { useRouter } from "next/navigation";
 import { notifyAuthChanged } from "@/hooks/useAuth";
-
-// Google OAuth 2.0 login
-const googleLogin = async (idToken: string, router: any) => {
-  try {
-    const response = await fetch(
-      "https://pocketverse.herokuapp.com/LS_API/oauth/google",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          idToken,
-        }),
-      },
-    );
-
-    const data = await response.json();
-
-    if (data.message === "ok") {
-      localStorage.setItem("token", data.token);
-      console.log("User info:", data.user);
-      notifyAuthChanged();
-      // Redirect to profile or dashboard
-      router.push("/profile");
-    } else {
-      console.error("Authentication failed");
-      alert("Failed to log in with Google.");
-    }
-  } catch (error) {
-    console.error("Error during Google login:", error);
-  }
-};
-
-// JWT login
-
-const jwtLogin = async (username: string, password: string, router: any) => {
-  try {
-    const response = await fetch(
-      "https://pocketverse.herokuapp.com/LS_API/jwt_login_v1",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ username, password }),
-      },
-    );
-
-    // 401, 404 등 에러 핸들링
-    if (!response.ok) {
-      const errorDetail = await response.text();
-      console.error(`login failed status code: ${response.status}`);
-      alert("check username or password.");
-      return;
-    }
-
-    const data = await response.json();
-
-    if (data.message === "ok") {
-      localStorage.setItem("token", data.token);
-      console.log("User info:", data.user);
-      notifyAuthChanged();
-      //  successfully logged in, redirect to profile or dashboard
-      router.push("/profile");
-    } else {
-      console.error("Authentication failed");
-      alert("login failed. Please try again.");
-    }
-  } catch (error) {
-    console.error("Error during JWT login:", error);
-  }
-};
+import { loginWithGoogle, loginWithJwt, isLoginSuccess } from "@/api/auth";
+import { setCachedUser } from "@/api/user";
 
 export default function SignInSection() {
   const [openGuide, setOpenGuide] = useState(false);
@@ -87,20 +16,34 @@ export default function SignInSection() {
   const router = useRouter();
 
   // Google login
-  const handleGoogleLogin = (response: any) => {
-    console.log("Google Response:", response);
-    const token = response.credential || response.tokenId;
+  const handleGoogleLogin = async (response: any) => {
+    const idToken = response.credential || response.tokenId;
+    if (!idToken) return;
 
-    if (token) {
-      googleLogin(token, router);
+    const data = await loginWithGoogle(idToken);
+
+    if (isLoginSuccess(data)) {
+      localStorage.setItem("token", data.token);
+      setCachedUser(data.user);
+      notifyAuthChanged();
+      router.push("/profile");
     } else {
-      console.error("cannot find token in Google response");
+      alert("Failed to log in with Google.");
     }
   };
 
-  // general login
+  // JWT login button handler
   const handleLogin = async () => {
-    await jwtLogin(username, password, router);
+    const data = await loginWithJwt(username, password);
+
+    if (isLoginSuccess(data)) {
+      localStorage.setItem("token", data.token);
+      setCachedUser(data.user);
+      notifyAuthChanged();
+      router.push("/profile");
+    } else {
+      alert("check username or password.");
+    }
   };
 
   return (
