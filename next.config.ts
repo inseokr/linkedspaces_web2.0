@@ -20,8 +20,8 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       {
         protocol: "https",
-        hostname: "pocketverse.herokuapp.com",
-        pathname: "/public/user_resources/pictures/profile_pictures/**",
+        hostname: "s3-us-west-1.amazonaws.com",
+        pathname: "/linkedspaces.fs/**",
       },
     ],
   },
