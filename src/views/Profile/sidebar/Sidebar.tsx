@@ -1,4 +1,4 @@
-import ProfileSection from "@/views/Profile/sidebar/ProfileSection";
+import ProfileSectionContainer from "./ProfileSectionContainer";
 import MenuSection from "@/views/Profile/sidebar/MenuSection";
 import FooterSection from "@/views/Profile/sidebar/FooterSection";
 
@@ -40,15 +40,10 @@ export default function Sidebar() {
     <aside className="fixed left-0 top-[77px] z-40 h-[calc(100dvh-77px)] w-80 bg-white b">
       <div className="flex h-full flex-col overflow-hidden">
         <div className="shrink-0">
-          <ProfileSection
+          <ProfileSectionContainer
             name="USER"
             handle="user"
             avatarSrc="/images/profileImg.png"
-            stats={[
-              { label: "Countries", value: 4 },
-              { label: "Cities", value: 102 },
-              { label: "Places", value: 129 },
-            ]}
           />
         </div>
 

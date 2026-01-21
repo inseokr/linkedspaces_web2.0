@@ -15,6 +15,16 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  images: {
+    // 프로필 사진이 오는 외부 도메인 허용
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "s3-us-west-1.amazonaws.com",
+        pathname: "/linkedspaces.fs/**",
+      },
+    ],
+  },
 };
 
 export default nextConfig;
