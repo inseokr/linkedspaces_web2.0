@@ -15,6 +15,16 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  images: {
+    // 프로필 사진이 오는 외부 도메인 허용
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "pocketverse.herokuapp.com",
+        pathname: "/public/user_resources/pictures/profile_pictures/**",
+      },
+    ],
+  },
 };
 
 export default nextConfig;

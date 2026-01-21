@@ -1,5 +1,3 @@
-import { ReactNode } from "react";
-
 export type SidebarStat = {
   label: string;
   value: number | string;

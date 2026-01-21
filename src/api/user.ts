@@ -26,6 +26,8 @@ export type CityVisited = {
 
 export type User = {
   _id: string;
+  username: string;
+  profile_picture?: string;
   countriesVisited: CountryVisited[];
   citiesVisited: CityVisited[];
   // other fields exist, but we only type what we use for Travel Stats
