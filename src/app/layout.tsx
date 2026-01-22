@@ -10,6 +10,8 @@ import "@fontsource-variable/wix-madefor-text";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 
+import "mapbox-gl/dist/mapbox-gl.css"; // mapbox
+
 const montserrat = Montserrat({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],

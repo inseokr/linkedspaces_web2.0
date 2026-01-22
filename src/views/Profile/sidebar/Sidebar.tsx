@@ -6,7 +6,7 @@ const MENU_ITEMS = [
   {
     key: "stats",
     label: "Travel Stats",
-    href: "/profile/stats",
+    href: "/profile/travel-stats",
     iconSrc: "/icons/stats.svg",
   },
   {
