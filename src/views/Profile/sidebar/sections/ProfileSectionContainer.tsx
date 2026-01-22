@@ -11,20 +11,21 @@ import ProfileSection from "./ProfileSection";
 import type { SidebarProfileData } from "@/views/Profile/sidebar/types";
 import { getCachedUser } from "@/api/user";
 import { assetUrl } from "@/api/assets";
-// Reuse the same mapping logic used by Travel Stats page
 import { mapUserToTravelStatsVM } from "@/views/Profile/travel-stats/data/mapToViewModel";
+import { getEarnedBadges } from "@/views/Profile/sidebar/badgeMap";
 
 type Props = Omit<SidebarProfileData, "stats"> & { className?: string };
 
 export default function ProfileSectionContainer({ className }: Props) {
   const user = getCachedUser();
-  console.log(user);
 
-  const raw = user?.profile_picture ?? "";
   const vm = mapUserToTravelStatsVM(user);
   const name = user?.username ?? "User";
   const handle = user?.username ?? "";
   const avatarSrc = assetUrl(user?.profile_picture);
+
+  // Build earned badges (icon + label only)
+  const earnedBadges = getEarnedBadges(user?.badgeProgress);
 
   return (
     <ProfileSection
@@ -32,11 +33,13 @@ export default function ProfileSectionContainer({ className }: Props) {
       handle={handle}
       avatarSrc={avatarSrc}
       className={className}
+      earnedBadges={earnedBadges}
       stats={[
-        { label: "Countries", value: vm.totals.countries },
-        { label: "Cities", value: vm.totals.cities },
-        { label: "Places", value: vm.totals.places },
+        { label: "COUNTRIES", value: vm.totals.countries },
+        { label: "CITIES", value: vm.totals.cities },
+        { label: "PLACES", value: vm.totals.places },
       ]}
+      topCountries={vm.topCountries}
     />
   );
 }

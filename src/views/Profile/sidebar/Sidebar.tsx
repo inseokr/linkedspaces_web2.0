@@ -1,12 +1,12 @@
-import ProfileSectionContainer from "./ProfileSectionContainer";
-import MenuSection from "@/views/Profile/sidebar/MenuSection";
-import FooterSection from "@/views/Profile/sidebar/FooterSection";
+import ProfileSectionContainer from "./sections/ProfileSectionContainer";
+import MenuSection from "@/views/Profile/sidebar/sections/MenuSection";
+import FooterSection from "@/views/Profile/sidebar/sections/FooterSection";
 
 const MENU_ITEMS = [
   {
     key: "stats",
     label: "Travel Stats",
-    href: "/profile/stats",
+    href: "/profile/travel-stats",
     iconSrc: "/icons/stats.svg",
   },
   {
@@ -37,9 +37,9 @@ const MENU_ITEMS = [
 
 export default function Sidebar() {
   return (
-    <aside className="fixed left-0 top-[77px] z-40 h-[calc(100dvh-77px)] w-80 bg-white b">
+    <aside className="fixed pl-[11px] top-[77px] z-40 h-[calc(100dvh-77px)] w-80 bg-white b">
       <div className="flex h-full flex-col overflow-hidden">
-        <div className="shrink-0">
+        <div className="shrink-0 mt-[13px]">
           <ProfileSectionContainer
             name="USER"
             handle="user"
