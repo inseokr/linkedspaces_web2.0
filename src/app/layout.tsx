@@ -33,13 +33,10 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const isLoggedIn = useAuth();
+  const { isAuthenticated } = useAuth();
   console.log("[RootLayout] render", {
-    isLoggedIn,
-    token:
-      typeof window !== "undefined"
-        ? localStorage.getItem("accessToken")
-        : null,
+    isAuthenticated,
+    token: typeof window !== "undefined" ? localStorage.getItem("token") : null,
     time: new Date().toISOString(),
   });
 
@@ -50,7 +47,7 @@ export default function RootLayout({
     >
       <body className="min-h-screen flex flex-col overflow-y-auto">
         {/* Conditionally render Header based on login status */}
-        {isLoggedIn ? <AfterLoginHeader /> : <BerforeLoginHeader />}
+        {isAuthenticated ? <AfterLoginHeader /> : <BerforeLoginHeader />}
 
         <main className="flex-1">{children}</main>
 
