@@ -5,10 +5,12 @@ import "./global.css";
 import { BerforeLoginHeader } from "@/components/layout/BeforeLoginHeader";
 import { AfterLoginHeader } from "@/components/layout/AfterLoginHeader";
 import { Footer } from "@/components/layout/Footer";
-import { Montserrat, Poppins, Bakbak_One } from "next/font/google";
+import { Montserrat, Poppins, Inter } from "next/font/google";
 import "@fontsource-variable/wix-madefor-text";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
+
+import "mapbox-gl/dist/mapbox-gl.css"; // mapbox
 
 const montserrat = Montserrat({
   subsets: ["latin"],
@@ -22,10 +24,10 @@ const poppins = Poppins({
   variable: "--font-poppins",
 });
 
-const bakbakOne = Bakbak_One({
+const inter = Inter({
   subsets: ["latin"],
-  weight: ["400"],
-  variable: "--font-bakbak-one",
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-inter",
 });
 
 export default function RootLayout({
@@ -33,24 +35,21 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const isLoggedIn = useAuth();
+  const { isAuthenticated } = useAuth();
   console.log("[RootLayout] render", {
-    isLoggedIn,
-    token:
-      typeof window !== "undefined"
-        ? localStorage.getItem("accessToken")
-        : null,
+    isAuthenticated,
+    token: typeof window !== "undefined" ? localStorage.getItem("token") : null,
     time: new Date().toISOString(),
   });
 
   return (
     <html
       lang="en"
-      className={`${montserrat.variable} ${poppins.variable} ${bakbakOne.variable}`}
+      className={`${inter.variable} ${poppins.variable} ${montserrat.variable}`}
     >
       <body className="min-h-screen flex flex-col overflow-y-auto">
         {/* Conditionally render Header based on login status */}
-        {isLoggedIn ? <AfterLoginHeader /> : <BerforeLoginHeader />}
+        {isAuthenticated ? <AfterLoginHeader /> : <BerforeLoginHeader />}
 
         <main className="flex-1">{children}</main>
 
