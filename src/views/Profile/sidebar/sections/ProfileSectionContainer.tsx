@@ -1,12 +1,5 @@
 "use client";
 
-/**
- * ProfileSectionContainer
- * - Reads cached user
- * - Reuses Travel Stats view model mapper
- * - Injects totals into ProfileSection as stats props
- */
-
 import ProfileSection from "./ProfileSection";
 import type { SidebarProfileData } from "@/views/Profile/sidebar/types";
 import { getCachedUser } from "@/api/user";
@@ -14,9 +7,18 @@ import { assetUrl } from "@/api/assets";
 import { mapUserToTravelStatsVM } from "@/views/Profile/travel-stats/data/mapToViewModel";
 import { getEarnedBadges } from "@/views/Profile/sidebar/badgeMap";
 
-type Props = Omit<SidebarProfileData, "stats"> & { className?: string };
+// Added isOpen and onToggle to the Props type
+type Props = {
+  isOpen: boolean;
+  onToggle: () => void;
+  className?: string;
+};
 
-export default function ProfileSectionContainer({ className }: Props) {
+export default function ProfileSectionContainer({
+  isOpen,
+  onToggle,
+  className,
+}: Props) {
   const user = getCachedUser();
 
   const vm = mapUserToTravelStatsVM(user);
@@ -29,6 +31,8 @@ export default function ProfileSectionContainer({ className }: Props) {
 
   return (
     <ProfileSection
+      isOpen={isOpen}
+      onToggle={onToggle}
       name={name}
       handle={handle}
       avatarSrc={avatarSrc}
