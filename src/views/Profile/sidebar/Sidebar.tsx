@@ -1,6 +1,6 @@
-import ProfileSectionContainer from "./ProfileSectionContainer";
-import MenuSection from "@/views/Profile/sidebar/MenuSection";
-import FooterSection from "@/views/Profile/sidebar/FooterSection";
+import ProfileSectionContainer from "./sections/ProfileSectionContainer";
+import MenuSection from "@/views/Profile/sidebar/sections/MenuSection";
+import FooterSection from "@/views/Profile/sidebar/sections/FooterSection";
 
 const MENU_ITEMS = [
   {
@@ -35,16 +35,22 @@ const MENU_ITEMS = [
   },
 ];
 
-export default function Sidebar() {
+interface SidebarProps {
+  isOpen: boolean;
+  onToggle: () => void;
+}
+
+export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
   return (
-    <aside className="fixed left-0 top-[77px] z-40 h-[calc(100dvh-77px)] w-80 bg-white b">
+    <aside
+      className={`fixed left-0 top-[77px] z-40 h-[calc(100dvh-77px)] w-80 bg-white transition-transform duration-300 ease-in-out ${
+        isOpen ? "translate-x-0" : "-translate-x-full"
+      }`}
+    >
       <div className="flex h-full flex-col overflow-hidden">
-        <div className="shrink-0">
-          <ProfileSectionContainer
-            name="USER"
-            handle="user"
-            avatarSrc="/images/profileImg.png"
-          />
+        <div className="shrink-0 mt-[13px]">
+          {/* Pass the sidebar state down to the profile section */}
+          <ProfileSectionContainer isOpen={isOpen} onToggle={onToggle} />
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto">
