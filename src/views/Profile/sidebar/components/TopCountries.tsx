@@ -58,40 +58,26 @@ function getCountryName(countryCode?: string): string {
 }
 
 function CountryPill({ country }: { country: CountryVisited }) {
-  const countryCode = country?.countryCode;
-  const flag = country2flag(countryCode);
+  const countryCode = country?.countryCode?.toUpperCase();
   const countryName = getCountryName(countryCode);
 
-  // 디버깅: 브라우저 콘솔에서 확인
-  if (typeof window !== "undefined") {
-    console.log("CountryPill Debug:", {
-      countryCode,
-      flag,
-      flagType: typeof flag,
-      flagLength: flag?.length,
-      flagCharCodes: flag ? [...flag].map((c) => c.codePointAt(0)) : null,
-      testUS: country2flag("US"),
-      testKR: country2flag("KR"),
-    });
-  }
+  // svg image
+  const flagUrl = `https://flagcdn.com/w40/${countryCode.toLowerCase()}.png`;
 
   return (
-    <div className="inline-flex items-center gap-3 rounded-[26px] bg-[#F6F6F6] py-[7px] px-[15px] ">
-      <span
-        className="text-2xl leading-none select-none"
-        style={{
-          fontFamily: EMOJI_FONT,
-          lineHeight: "1",
-          display: "inline-block",
-          fontSize: "1.5rem",
-        }}
-        role="img"
-        aria-label={`Flag of ${countryName}`}
-      >
-        {flag || "🌍"}
-      </span>
-
-      <span className="text-xs text-[#3C3E41] leading-normal tracking-[-0.5px] font-semibold truncate">
+    <div className="inline-flex items-center gap-[5px] rounded-[26px] bg-[#F6F6F6] py-[7px] px-[15px]">
+      <div className="w-6 ">
+        <img
+          src={flagUrl}
+          alt={`Flag of ${countryName}`}
+          className="object-cover"
+          onError={(e) => {
+            (e.currentTarget as HTMLImageElement).src =
+              "data:image/svg+xml,...";
+          }}
+        />
+      </div>
+      <span className="text-xs text-[#3C3E41] font-semibold truncate">
         {countryName}
       </span>
     </div>
