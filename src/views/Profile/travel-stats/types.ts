@@ -1,5 +1,7 @@
 // src/views/Profile/travel-stats/types.ts
 import type { CountryVisited, CityVisited } from "@/api/user";
+import type { CountryStat } from "./section/MostVisitedSection";
+import type { CountryDetail } from "./section/AllCountry";
 
 export type TravelStatsVM = {
   totals: {
@@ -7,8 +9,15 @@ export type TravelStatsVM = {
     cities: number;
     places: number;
   };
-  topCountries: CountryVisited[];
+
+  // raw
   countriesVisited: CountryVisited[];
   citiesVisited: CityVisited[];
+
+  // derived
+  topCountries: CountryVisited[];
+  mostVisitedItems: CountryStat[];
+  allCountriesItems: CountryDetail[];
+
   hasData: boolean;
 };

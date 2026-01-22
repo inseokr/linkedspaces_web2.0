@@ -2,23 +2,15 @@
 
 import type { CountryVisited } from "@/api/user";
 import Flag from "@/components/ui/Flag";
+import { getCountryName } from "@/utils/countryName"; // Import the utility
 
 type Props = {
   countries?: CountryVisited[];
 };
 
-function getCountryName(countryCode?: string): string {
-  if (!countryCode || countryCode.length !== 2) return "Unknown";
-  try {
-    const displayNames = new Intl.DisplayNames(["en"], { type: "region" });
-    return displayNames.of(countryCode.toUpperCase()) || countryCode;
-  } catch {
-    return countryCode ?? "Unknown";
-  }
-}
-
 function CountryPill({ country }: { country: CountryVisited }) {
   const countryCode = country?.countryCode?.toUpperCase();
+  // Use the imported utility function
   const countryName = getCountryName(countryCode);
 
   return (
