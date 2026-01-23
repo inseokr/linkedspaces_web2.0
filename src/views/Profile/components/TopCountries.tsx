@@ -1,0 +1,49 @@
+"use client";
+
+import type { CountryVisited } from "@/api/user";
+import Flag from "@/components/ui/Flag";
+import { getCountryName } from "@/utils/countryName"; // Import the utility
+
+type Props = {
+  countries?: CountryVisited[];
+};
+
+function CountryPill({ country }: { country: CountryVisited }) {
+  const countryCode = country?.countryCode?.toUpperCase();
+  // Use the imported utility function
+  const countryName = getCountryName(countryCode);
+
+  return (
+    <div className="inline-flex items-center gap-[5px] rounded-[26px] bg-[#F6F6F6] py-[7px] px-[15px]">
+      <div className="w-6 flex items-center justify-center">
+        <Flag
+          countryCode={countryCode}
+          alt={`Flag of ${countryName}`}
+          size={24}
+        />
+      </div>
+
+      <span className="text-xs text-[#3C3E41] font-semibold truncate">
+        {countryName}
+      </span>
+    </div>
+  );
+}
+
+export default function TopCountries({ countries = [] }: Props) {
+  if (!countries.length) return null;
+
+  return (
+    <div className="mt-3">
+      <div className="text-xs font-medium text-gray-500">Top countries:</div>
+      <div className="mt-2 flex gap-3">
+        {countries.map((c) => (
+          <CountryPill
+            key={c._id ?? `${c.country}-${c.countryCode}`}
+            country={c}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}

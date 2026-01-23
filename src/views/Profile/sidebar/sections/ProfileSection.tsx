@@ -4,7 +4,7 @@ import Image from "next/image";
 import { useState } from "react";
 import { SidebarProfileData } from "@/views/Profile/sidebar/types";
 import EarnedBadges from "@/views/Profile/sidebar/EarnedBadges";
-import TopCountries from "../components/TopCountries";
+import TopCountries from "@/views/Profile/components/TopCountries";
 
 const DEFAULT_AVATAR = "/images/profileImg.png";
 

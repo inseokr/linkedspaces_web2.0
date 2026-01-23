@@ -1,80 +1,79 @@
-import OverallJourney from "@/views/Profile/travel-stats/components/OverallJourney";
+"use client";
 
-import MostVisitedSection, {
-  CountryStat,
-} from "@/views/Profile/travel-stats/section/MostVisitedSection";
-
-import AllCountriesSection, {
-  CountryDetail,
-} from "@/views/Profile/travel-stats/section/AllCountry";
-
-import MapboxMap from "@/views/Profile/travel-stats/components/MapBoxMap"; // mapbox
+import { useTravelStatsVM } from "@/views/Profile/travel-stats/hooks/useTravelStatsVM";
+import OverallJourney from "./components/OverallJourney";
+import MostVisitedSection from "./section/MostVisitedSection";
+import AllCountriesSection from "./section/AllCountry";
+import MapboxMap from "./components/MapBoxMap";
+import { getCountryName } from "@/utils/countryName";
 
 export default function ProfileStatsPageView() {
-  //test 데이터 start
-  const items: CountryStat[] = [
-    {
-      country: "United States",
-      visits: 47,
-      subtitle: "Your top destination",
-      flagEmoji: "🇺🇸",
-    },
-    { country: "United Kingdom", visits: 32, flagEmoji: "🇬🇧" },
-    { country: "France", visits: 28, flagEmoji: "🇫🇷" },
-  ];
+  const { vm } = useTravelStatsVM();
 
-  const allCountries: CountryDetail[] = [
-    {
-      country: "United States",
-      flagEmoji: "🇺🇸",
-      citiesCount: 12,
-      placesCount: 47,
-      cities: [
-        { city: "New York", places: 18 },
-        { city: "Los Angeles", places: 12 },
-        { city: "San Francisco", places: 9 },
-      ],
-    },
-    {
-      country: "United Kingdom",
-      flagEmoji: "🇬🇧",
-      citiesCount: 8,
-      placesCount: 32,
-      cities: [
-        { city: "London", places: 15 },
-        { city: "Edinburgh", places: 8 },
-      ],
-    },
-  ];
-  //test 데이터 end
+  // Handle empty state if no travel data exists
+  if (!vm.hasData) {
+    return <div>No travel history found.</div>;
+  }
+
+  // 1. Map VM data to MostVisitedSection items
+
+  const mostVisitedItems = vm.topCountries.map((c, index) => {
+    const code = c.countryCode?.toUpperCase();
+
+    return {
+      country: getCountryName(code),
+      countryCode: code,
+      visits: c.totalPlaces ?? 0,
+      highlight: index === 0,
+      subtitle: index === 0 ? "Your top destination" : undefined,
+    };
+  });
+
+  // 2. All Countries Section
+
+  const allCountriesDetail = vm.allCountries.map((c) => {
+    const code = c.countryCode?.toUpperCase();
+
+    return {
+      country: getCountryName(code),
+      countryCode: code,
+      citiesCount: c.cities?.length ?? 0, // This will now show the correct count (e.g., 12 cities)
+      placesCount: c.totalPlaces ?? 0,
+      // Cities are already sorted by 'totalPlaces' in the mapper
+      cities: c.cities.map((city: any) => ({
+        city: city.city, // "Fremont", "Seoul", etc.
+        places: city.totalPlaces ?? 0,
+      })),
+    };
+  });
 
   return (
     <div className="p-6 space-y-6">
-      {/* Title + OverallComment */}
+      {/* Header Section: Title and Insights */}
       <div className="flex items-start justify-start gap-6">
         <div className="space-y-1">
-          <h1 className="ml-6 font-[Inter] text-[24px] font-bold leading-[32px] tracking-[-0.5px] text-black">
+          <h1 className="ml-6 font-bold text-[24px] text-black">
             Your Travel Journey
           </h1>
-          <p className="ml-8 font-[Inter] text-[14px] font-normal leading-[20px] tracking-[-0.5px] text-[#8B949E]">
+          <p className="ml-8 text-[14px] text-[#8B949E]">
             Building memories around the world
           </p>
         </div>
 
         <div className="pt-1 ml-15">
+          {/* Note: deltaPlaces value can be linked to API later */}
           <OverallJourney deltaPlaces={12} />
         </div>
       </div>
 
-      {/* Most Visited */}
-      <MostVisitedSection items={items} />
+      {/* Top Destinations Section */}
+      <MostVisitedSection items={mostVisitedItems} />
 
-      <div className="ml-12 mr-12 w-full max-w-[930px] h-[320px] rounded-3xl overflow-hidden border border-black/10">
+      <div className="mx-12 w-full max-w-[930px] h-[320px] rounded-3xl overflow-hidden border border-black/10">
         <MapboxMap />
       </div>
 
-      {/* All Countries*/}
-      <AllCountriesSection items={allCountries} />
+      <AllCountriesSection items={allCountriesDetail} />
     </div>
   );
 }
