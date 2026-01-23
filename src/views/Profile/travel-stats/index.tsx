@@ -16,14 +16,15 @@ export default function ProfileStatsPageView() {
   }
 
   // 1. Map VM data to MostVisitedSection items
+
   const mostVisitedItems = vm.topCountries.map((c, index) => {
     const code = c.countryCode?.toUpperCase();
-    const name = getCountryName(code);
 
     return {
-      country: name,
+      country: getCountryName(code),
       countryCode: code,
       visits: c.totalPlaces ?? 0,
+      highlight: index === 0,
       subtitle: index === 0 ? "Your top destination" : undefined,
     };
   });

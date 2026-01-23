@@ -5,8 +5,7 @@ export type CountryStat = {
   country: string;
   visits: number;
   subtitle?: string;
-  flagEmoji?: string;
-  flagSrc?: string;
+  countryCode?: string;
 };
 
 type Props = {
@@ -28,8 +27,7 @@ export default function MostVisitedSection({ items, className = "" }: Props) {
             country={item.country}
             visits={item.visits}
             subtitle={item.subtitle}
-            flagEmoji={item.flagEmoji}
-            flagSrc={item.flagSrc}
+            countryCode={item.countryCode}
             highlight={idx === 0} // 첫 번째만 강조
             className="ml-12" // Most Visited 섹션에서만 오른쪽 이동
           />

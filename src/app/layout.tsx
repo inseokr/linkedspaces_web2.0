@@ -51,11 +51,13 @@ export default function RootLayout({
         {/* Conditionally render Header based on login status */}
         {isAuthenticated ? <AfterLoginHeader /> : <BerforeLoginHeader />}
 
-        <main className="flex-1">{children}</main>
+        <main className="flex-1">
+          {children}
 
-        <div className="pb-[74px]">
-          <Footer />
-        </div>
+          <div className="pb-[74px]">
+            <Footer />
+          </div>
+        </main>
       </body>
     </html>
   );

@@ -1,28 +1,38 @@
 import React from "react";
+import Flag from "@/components/ui/Flag";
 
 type Props = {
   country: string;
-  flagEmoji?: string;
+  countryCode?: string;
   citiesCount: number;
   placesCount: number;
   className?: string;
-  rightSlot?: React.ReactNode; // chevron 같은 거 꽂기용
+  rightSlot?: React.ReactNode;
 };
 
 export default function CountryHeaderRow({
   country,
-  flagEmoji,
+  countryCode,
   citiesCount,
   placesCount,
   className = "",
   rightSlot,
 }: Props) {
+  console.log(`🚩 [CountryHeaderRow] ${country}:`, {
+    countryCode,
+    citiesCount,
+    placesCount,
+  });
   return (
     <div className={`flex items-start justify-between gap-4 ${className}`}>
       <div className="flex items-start gap-3 min-w-0">
-        <span className="text-xl leading-none mt-[2px]">
-          {flagEmoji ?? "🏳️"}
-        </span>
+        <div className="shrink-0 mt-[2px]">
+          <Flag
+            countryCode={countryCode}
+            alt={`Flag of ${country}`}
+            size={30}
+          />
+        </div>
 
         <div className="min-w-0">
           <div className="font-[Inter] font-semibold text-slate-900 truncate">

@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { getCachedUser, type User } from "@/api/user";
-import { mapUserToTravelStatsVM } from "../mappers/mapUserToTravelStatsVM";
+import { mapUserToTravelStatsVM } from "@/views/Profile/travel-stats/mappers/mapToViewModel";
 
 export function useTravelStatsVM() {
   // 1. Use lazy initialization to avoid synchronous setState in useEffect
@@ -10,6 +10,5 @@ export function useTravelStatsVM() {
 
   // 2. Compute View Model only when user data exists
   const vm = useMemo(() => mapUserToTravelStatsVM(user), [user]);
-
   return { user, vm };
 }
