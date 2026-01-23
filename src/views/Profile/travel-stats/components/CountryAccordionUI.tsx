@@ -4,23 +4,21 @@ import React, { useId, useState } from "react";
 import CountryHeaderRow from "@/views/Profile/travel-stats/components/CountryHeaderRow";
 import CityRow from "@/views/Profile/travel-stats/components/CityRow";
 
-// city row, country header row 포함하는 컴포넌트
-
 export type CityStat = { city: string; places: number };
 
 type Props = {
   country: string;
-  flagEmoji?: string;
+  countryCode?: string;
   citiesCount: number;
   placesCount: number;
   cities: CityStat[];
   className?: string;
-  defaultOpen?: boolean; // 처음에 펼쳐둘지 (옵션)
+  defaultOpen?: boolean;
 };
 
 export default function CountryAccordionUI({
   country,
-  flagEmoji,
+  countryCode,
   citiesCount,
   placesCount,
   cities,
@@ -38,7 +36,6 @@ export default function CountryAccordionUI({
         className,
       ].join(" ")}
     >
-      {/* Header (clickable) */}
       <button
         type="button"
         className="w-full text-left"
@@ -48,7 +45,7 @@ export default function CountryAccordionUI({
       >
         <CountryHeaderRow
           country={country}
-          flagEmoji={flagEmoji}
+          countryCode={countryCode}
           citiesCount={citiesCount}
           placesCount={placesCount}
           rightSlot={
@@ -64,11 +61,9 @@ export default function CountryAccordionUI({
         />
       </button>
 
-      {/* Cities (collapsible) */}
       {isOpen ? (
         <>
           <div className="my-4 h-px bg-slate-200" />
-
           <div id={panelId}>
             {cities.map((c) => (
               <CityRow key={c.city} city={c.city} places={c.places} />

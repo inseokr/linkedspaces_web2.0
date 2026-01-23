@@ -4,7 +4,7 @@ import ProfileSection from "./ProfileSection";
 import type { SidebarProfileData } from "@/views/Profile/sidebar/types";
 import { getCachedUser } from "@/api/user";
 import { assetUrl } from "@/api/assets";
-import { mapUserToTravelStatsVM } from "@/views/Profile/travel-stats/data/mapToViewModel";
+import { mapUserToTravelStatsVM } from "@/views/Profile/travel-stats/mappers/mapToViewModel";
 import { getEarnedBadges } from "@/views/Profile/sidebar/badgeMap";
 
 // Added isOpen and onToggle to the Props type

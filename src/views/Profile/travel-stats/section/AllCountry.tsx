@@ -5,7 +5,7 @@ import CountryAccordionUI, {
 
 export type CountryDetail = {
   country: string;
-  flagEmoji?: string;
+  countryCode?: string;
   citiesCount: number;
   placesCount: number;
   cities: CityStat[];
@@ -26,9 +26,9 @@ export default function AllCountriesSection({ items, className = "" }: Props) {
       <div className="space-y-4">
         {items.map((c) => (
           <CountryAccordionUI
-            key={c.country}
+            key={`${c.country}-${c.countryCode ?? ""}`}
             country={c.country}
-            flagEmoji={c.flagEmoji}
+            countryCode={c.countryCode}
             citiesCount={c.citiesCount}
             placesCount={c.placesCount}
             cities={c.cities}
