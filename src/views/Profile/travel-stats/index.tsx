@@ -17,7 +17,7 @@ export default function ProfileStatsPageView() {
 
   // 1. Map VM data to MostVisitedSection items
 
-  const mostVisitedItems = vm.topCountries.map((c, index) => {
+  const mostVisitedItems = vm.topCountries.map((c: any, index: number) => {
     const code = c.countryCode?.toUpperCase();
 
     return {
@@ -31,7 +31,7 @@ export default function ProfileStatsPageView() {
 
   // 2. All Countries Section
 
-  const allCountriesDetail = vm.allCountries.map((c) => {
+  const allCountriesDetail = vm.allCountries.map((c: any) => {
     const code = c.countryCode?.toUpperCase();
 
     return {
@@ -69,8 +69,9 @@ export default function ProfileStatsPageView() {
       {/* Top Destinations Section */}
       <MostVisitedSection items={mostVisitedItems} />
 
-      <div className="mx-12 w-full max-w-[930px] h-[320px] rounded-3xl overflow-hidden border border-black/10">
-        <MapboxMap />
+      {/* MapBox */}
+      <div className="ml-12 mr-12 w-[90%] h-[400px] rounded-3xl overflow-hidden border border-black/10">
+        <MapboxMap highlightIso2={["US", "GB", "FR"]} worldview="KR" />
       </div>
 
       <AllCountriesSection items={allCountriesDetail} />
