@@ -2,14 +2,16 @@
 
 // 동적 지도, 드래그, 줌인, 줌아웃 가능
 // <MapboxMap highlightIso2=["US","KR"]/> 이렇게 index.tsx에서 강조하고싶은 나라들 넣어주기
+// <MapboxMap highlightIso2=["US","KR"] worldview="US"/> 이러면 맵의 중심에 오게 될 나라 설정 가능
+
 "use client";
 
 import mapboxgl from "mapbox-gl";
 import { useEffect, useRef } from "react";
 
 type Props = {
-  highlightIso2?: string[]; //여러 alpha-2 코드
-  worldview?: string; // 기본 "US"
+  highlightIso2?: string[];
+  worldview?: string;
 };
 
 export default function MapboxMap({
@@ -19,7 +21,6 @@ export default function MapboxMap({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
 
-  // 지도 생성 한 번만
   useEffect(() => {
     if (!containerRef.current) return;
     if (mapRef.current) return;
@@ -32,8 +33,8 @@ export default function MapboxMap({
       container: containerRef.current,
       style: "mapbox://styles/mapbox/streets-v12",
       center: [-98.5795, 39.8283],
-      zoom: 3,
-      renderWorldCopies: false, // 무한 맵 안생기게
+      zoom: 1,
+      renderWorldCopies: false,
     });
 
     map.addControl(new mapboxgl.NavigationControl(), "top-right");
@@ -46,8 +47,13 @@ export default function MapboxMap({
     el.addEventListener("mouseenter", onEnter);
     el.addEventListener("mouseleave", onLeave);
 
+    //컨테이너 크기 변하면 지도 리사이즈
+    const ro = new ResizeObserver(() => map.resize());
+    ro.observe(el);
+
     map.on("load", () => {
-      // map.setProjection("mercator"); // 2D 맵으로 받는 코드
+      map.setProjection("mercator"); // 2D
+
       if (!map.getSource("countries")) {
         map.addSource("countries", {
           type: "vector",
@@ -55,7 +61,6 @@ export default function MapboxMap({
         });
       }
 
-      //조건(conditions)만: spread해도 안전
       const baseConditions: any[] = [
         ["==", ["get", "disputed"], "false"],
         [
@@ -65,11 +70,9 @@ export default function MapboxMap({
         ],
       ];
 
-      //여러 국가 필터: in + literal
-      const isoFilter =
-        highlightIso2 && highlightIso2.length > 0
-          ? ["in", ["get", "iso_3166_1"], ["literal", highlightIso2]]
-          : null;
+      const isoFilter = highlightIso2?.length
+        ? ["in", ["get", "iso_3166_1"], ["literal", highlightIso2]]
+        : null;
 
       const countryFilter: any[] = isoFilter
         ? ["all", ...baseConditions, isoFilter]
@@ -82,10 +85,7 @@ export default function MapboxMap({
           source: "countries",
           "source-layer": "country_boundaries",
           filter: countryFilter,
-          paint: {
-            "fill-color": "#f97316",
-            "fill-opacity": 0.3,
-          },
+          paint: { "fill-color": "#f97316", "fill-opacity": 0.3 },
         });
       }
 
@@ -96,10 +96,7 @@ export default function MapboxMap({
           source: "countries",
           "source-layer": "country_boundaries",
           filter: countryFilter,
-          paint: {
-            "line-color": "#ea580c",
-            "line-width": 2.5,
-          },
+          paint: { "line-color": "#ea580c", "line-width": 2.5 },
         });
       }
     });
@@ -107,6 +104,7 @@ export default function MapboxMap({
     mapRef.current = map;
 
     return () => {
+      ro.disconnect(); //추가
       el.removeEventListener("mouseenter", onEnter);
       el.removeEventListener("mouseleave", onLeave);
       map.remove();
@@ -119,33 +117,27 @@ export default function MapboxMap({
     const map = mapRef.current;
     if (!map) return;
 
-    const applyFilter = () => {
-      if (!map.getLayer("country-highlight-fill")) return;
+    const baseConditions: any[] = [
+      ["==", ["get", "disputed"], "false"],
+      [
+        "any",
+        ["==", ["get", "worldview"], "all"],
+        ["in", worldview, ["get", "worldview"]],
+      ],
+    ];
 
-      const baseConditions: any[] = [
-        ["==", ["get", "disputed"], "false"],
-        [
-          "any",
-          ["==", ["get", "worldview"], "all"],
-          ["in", worldview, ["get", "worldview"]],
-        ],
-      ];
+    const isoFilter = highlightIso2?.length
+      ? ["in", ["get", "iso_3166_1"], ["literal", highlightIso2]]
+      : null;
 
-      const isoFilter =
-        highlightIso2 && highlightIso2.length > 0
-          ? ["in", ["get", "iso_3166_1"], ["literal", highlightIso2]]
-          : null;
+    const countryFilter: any[] = isoFilter
+      ? ["all", ...baseConditions, isoFilter]
+      : ["all", ...baseConditions];
 
-      const countryFilter: any[] = isoFilter
-        ? ["all", ...baseConditions, isoFilter]
-        : ["all", ...baseConditions];
-
+    if (map.getLayer("country-highlight-fill")) {
       map.setFilter("country-highlight-fill", countryFilter);
       map.setFilter("country-highlight-outline", countryFilter);
-    };
-
-    if (map.isStyleLoaded()) applyFilter();
-    else map.once("load", applyFilter);
+    }
   }, [highlightIso2, worldview]);
 
   return <div ref={containerRef} style={{ width: "100%", height: "100%" }} />;

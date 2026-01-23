@@ -33,7 +33,7 @@ export default function CountryAccordionUI({
   return (
     <div
       className={[
-        "w-[85%] rounded-2xl border border-slate-200 bg-white shadow-sm",
+        "w-[90%] rounded-2xl border border-slate-200 bg-white shadow-sm",
         "px-6 py-5",
         className,
       ].join(" ")}

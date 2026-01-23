@@ -69,8 +69,9 @@ export default function ProfileStatsPageView() {
       {/* Most Visited */}
       <MostVisitedSection items={items} />
 
-      <div className="ml-12 mr-12 w-[85%] max-w-[930px] h-[320px] rounded-3xl overflow-hidden border border-black/10">
-        <MapboxMap highlightIso2={["US", "UK", "FR"]} />
+      {/* MapBox */}
+      <div className="ml-12 mr-12 w-[90%] h-[400px] rounded-3xl overflow-hidden border border-black/10">
+        <MapboxMap highlightIso2={["US", "GB", "FR"]} worldview="KR" />
       </div>
 
       {/* All Countries*/}
