@@ -43,7 +43,7 @@ interface SidebarProps {
 export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
   return (
     <aside
-      className={`fixed left-0 top-[77px] z-40 h-[calc(100dvh-77px)] w-80 bg-white transition-transform duration-300 ease-in-out ${
+      className={`fixed left-0 top-[45px] z-40 h-[calc(100dvh-77px)] w-80 bg-white transition-transform duration-300 ease-in-out ${
         isOpen ? "translate-x-0" : "-translate-x-full"
       }`}
     >

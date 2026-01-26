@@ -61,22 +61,13 @@ export default function MapboxMap({
         });
       }
 
-      const baseConditions: any[] = [
-        ["==", ["get", "disputed"], "false"],
-        [
-          "any",
-          ["==", ["get", "worldview"], "all"],
-          ["in", worldview, ["get", "worldview"]],
-        ],
+      const baseConditions: any[] = [["==", ["get", "disputed"], "false"]];
+
+      const countryFilter: any[] = [
+        "all",
+        ...baseConditions,
+        ["in", ["get", "iso_3166_1"], ["literal", highlightIso2]],
       ];
-
-      const isoFilter = highlightIso2?.length
-        ? ["in", ["get", "iso_3166_1"], ["literal", highlightIso2]]
-        : null;
-
-      const countryFilter: any[] = isoFilter
-        ? ["all", ...baseConditions, isoFilter]
-        : ["all", ...baseConditions];
 
       if (!map.getLayer("country-highlight-fill")) {
         map.addLayer({

@@ -99,7 +99,7 @@ export default function ProfileSection({
       {/* Stats Section */}
       {stats.length > 0 && (
         <div
-          className="mt-3 h-[64px] w-[285px] rounded-[13px] flex items-center justify-between px-[13px] py-[13px]"
+          className="mt-3 h-[64px] w-[285px] rounded-[13px] flex items-center justify-between pl-[13px] py-[13px]"
           style={{ backgroundColor: "rgba(168, 178, 216, 0.24)" }}
         >
           {stats.map((s, idx) => (

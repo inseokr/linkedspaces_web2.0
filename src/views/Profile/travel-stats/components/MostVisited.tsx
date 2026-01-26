@@ -18,9 +18,10 @@ export default function CountryStatCard({
   highlight = false,
   className = "",
 }: CountryStatCardProps) {
+  console.log("[mostvisited] ${countryCode}");
   const base =
-    "w-[90%] rounded-2xl border border-slate-200 bg-white shadow-sm " + // 가로 크기 수정
-    "px-5 py-4 flex items-center justify-between gap-2 " + // 조금 작게
+    "w-[85%] rounded-2xl border border-slate-200 bg-white shadow-sm " +
+    "px-5 py-4 flex items-center justify-between gap-2 " +
     "transition hover:shadow-md hover:-translate-y-[1px]";
 
   const highlighted =
