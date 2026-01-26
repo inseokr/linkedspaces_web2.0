@@ -1,6 +1,6 @@
 "use client";
 import Sidebar from "@/views/Profile/sidebar/Sidebar";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 
 export default function ProfileLayout({
@@ -13,6 +13,16 @@ export default function ProfileLayout({
 
   // Constants for design consistency
   const SIDEBAR_WIDTH = "320px"; // w-80 in Tailwind
+  useEffect(() => {
+    document.documentElement.style.setProperty(
+      "--sidebar-offset",
+      isSidebarOpen ? SIDEBAR_WIDTH : "0px",
+    );
+
+    return () => {
+      document.documentElement.style.removeProperty("--sidebar-offset");
+    };
+  }, [isSidebarOpen]);
 
   return (
     <div className="relative flex min-h-screen">
@@ -48,7 +58,7 @@ export default function ProfileLayout({
           paddingLeft: isSidebarOpen ? SIDEBAR_WIDTH : "0px",
         }}
       >
-        <div className="w-full h-full min-h-[calc(100vh-77px)] mt-[77px]">
+        <div className="w-full h-full min-h-[calc(100vh-77px)] ">
           {children}
         </div>
       </main>

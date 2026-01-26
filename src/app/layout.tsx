@@ -6,11 +6,9 @@ import { BerforeLoginHeader } from "@/components/layout/BeforeLoginHeader";
 import { AfterLoginHeader } from "@/components/layout/AfterLoginHeader";
 import { Footer } from "@/components/layout/Footer";
 import { Montserrat, Poppins, Inter } from "next/font/google";
-import "@fontsource-variable/wix-madefor-text";
-import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 
-import "mapbox-gl/dist/mapbox-gl.css"; // mapbox
+import "mapbox-gl/dist/mapbox-gl.css";
 
 const montserrat = Montserrat({
   subsets: ["latin"],
@@ -36,28 +34,19 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   const { isAuthenticated } = useAuth();
-  console.log("[RootLayout] render", {
-    isAuthenticated,
-    token: typeof window !== "undefined" ? localStorage.getItem("token") : null,
-    time: new Date().toISOString(),
-  });
 
   return (
     <html
       lang="en"
       className={`${inter.variable} ${poppins.variable} ${montserrat.variable}`}
     >
-      <body className="min-h-screen flex flex-col overflow-y-auto">
-        {/* Conditionally render Header based on login status */}
+      {/*  min-h-screen + flex-col + main flex-1 + footer at bottom */}
+      <body className="min-h-screen flex flex-col overflow-x-hidden">
         {isAuthenticated ? <AfterLoginHeader /> : <BerforeLoginHeader />}
 
-        <main className="flex-1">
-          {children}
+        <main className="flex-1">{children}</main>
 
-          <div className="pb-[74px]">
-            <Footer />
-          </div>
-        </main>
+        <Footer />
       </body>
     </html>
   );

@@ -1,3 +1,4 @@
+// components/layout/Footer.tsx
 import Link from "next/link";
 import Image from "next/image";
 
@@ -6,9 +7,14 @@ import linkedinIcon from "@/assets/icons/linkedin.svg";
 
 export function Footer() {
   return (
-    <footer className="w-full bg-transparent inset-x-0 bottom-[74px] relative z-50">
-      <div className="mx-auto flex items-center justify-center gap-2.5 pb-14">
-        {/* Social icons */}
+    <footer
+      className="w-full bg-transparent"
+      style={{
+        marginLeft: "var(--sidebar-offset, 0px)",
+        width: "calc(100% - var(--sidebar-offset, 0px))",
+      }}
+    >
+      <div className="mx-auto flex items-center justify-center gap-2.5 pt-10 pb-6">
         <a
           href="https://www.instagram.com/linkedspaces/"
           target="_blank"
@@ -22,7 +28,6 @@ export function Footer() {
             width={39}
             height={39}
             className="h-[39px] w-[39px]"
-            priority={false}
           />
         </a>
 
@@ -43,7 +48,7 @@ export function Footer() {
         </a>
       </div>
 
-      <div className="mx-auto flex [font-family:var(--font-poppins)] text-base leading-[22.4px] font-semibold text-black items-center justify-center gap-2 px-4 pb-10">
+      <div className="mx-auto flex [font-family:var(--font-poppins)] text-base leading-[22.4px] font-semibold text-black items-center justify-center gap-2 px-4 pb-30">
         <span>© 2025 LinkedSpaces. All rights reserved.</span>
         <span>|</span>
         <Link href="/privacy" className="underline text-[var(--color-main)]">
