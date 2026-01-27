@@ -14,7 +14,7 @@ import RecapYearTabs, {
 } from "@/views/Profile/recap-blogs/components/RecapYearsTab";
 import type { Trip } from "@/views/Profile/recap-blogs/types";
 
-import { getCachedUser, PlaceVisitHistoryItem } from "@/api/user";
+import { getCachedUser } from "@/api/user";
 import {
   transformToAllBlogItems,
   transformToRecapItems,

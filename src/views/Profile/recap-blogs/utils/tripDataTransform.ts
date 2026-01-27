@@ -79,27 +79,12 @@ function resolveTripCoverUrl(
 ) {
   const explicit = trip.coverPhotoUri;
 
-  console.log("[resolveTripCoverUrl]", {
-    blogKey: trip.blogKey,
-    explicit,
-    placeListLen: trip.placeList?.length,
-    fallback,
-  });
-
   if (typeof explicit === "string" && explicit.trim().length > 0) {
-    const abs = toAbsoluteAssetUrl(explicit);
-
-    if (abs) return abs;
-    return abs;
+    return toAbsoluteAssetUrl(explicit) || fallback;
   }
 
   const fromPlaces = pickCoverFromPlaceVisitHistory(trip, placeVisitHistory);
-
-  if (fromPlaces) {
-    const abs = toAbsoluteAssetUrl(fromPlaces);
-    if (abs) return abs;
-    return abs;
-  }
+  if (fromPlaces) return toAbsoluteAssetUrl(fromPlaces) || fallback;
   return fallback;
 }
 
