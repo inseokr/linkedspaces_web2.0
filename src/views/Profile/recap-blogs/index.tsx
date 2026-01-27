@@ -18,90 +18,26 @@ import RecapYearTabs, {
   type RecapYearValue,
 } from "@/views/Profile/recap-blogs/components/RecapYearsTab";
 
-import MapboxMap from "@/views/Profile/travel-stats/components/MapBoxMap";
+import type { Trip } from "@/views/Profile/recap-blogs/types";
 
-// 420px 세로 컬럼
+import { getCachedUser } from "@/api/user";
+
+import {
+  transformToAllBlogItems,
+  transformToRecapItems,
+} from "@/views/Profile/recap-blogs/utils/tripDataTransform";
+
+import MapboxMap from "@/views/Profile/travel-stats/components/MapBoxMap";
 import RecapBlogColumn from "@/views/Profile/recap-blogs/section/RecapBlogColumn";
 
-// Daytab
-import DayTabs, {
-  type DayTab,
-  type DayValue,
-  getTripDayCountInclusive,
-} from "@/views/Profile/recap-blogs/BlogPage/components/DayTab";
-
 type Mode = "recap" | "allBlogs";
-type View = "grid" | "map" | "recapBlog";
-
-/** 단일 원천 데이터: 블로그 (lat/lng 추가) */
-type BlogItem = {
-  id: string;
-  href: string;
-  coverImageUrl: string;
-  title: string;
-
-  countryCode: string;
-  countryName: string;
-
-  visitedFrom: string;
-  visitedTo?: string;
-
-  locationLabel?: string;
-
-  /** 지도 마커용 좌표 */
-  lat: number;
-  lng: number;
-};
-
-function getYear(isoDate: string) {
-  return new Date(isoDate).getFullYear();
-}
-
-function formatDateLabel(fromISO: string, toISO?: string) {
-  const from = new Date(fromISO);
-  const to = toISO ? new Date(toISO) : null;
-
-  const monthNames = [
-    "Jan",
-    "Feb",
-    "Mar",
-    "Apr",
-    "May",
-    "Jun",
-    "Jul",
-    "Aug",
-    "Sep",
-    "Oct",
-    "Nov",
-    "Dec",
-  ];
-  const pad2 = (n: number) => String(n).padStart(2, "0");
-
-  const fromStr = `${from.getFullYear()} ${monthNames[from.getMonth()]} ${pad2(
-    from.getDate(),
-  )}`;
-
-  if (!to) return fromStr;
-
-  const toStr = `${monthNames[to.getMonth()]} ${pad2(to.getDate())}`;
-  return `${fromStr}-${toStr}`;
-}
-
-/** MapboxMap에 넘길 마커 데이터 타입 */
-type MarkerData = {
-  id: string;
-  lat: number;
-  lng: number;
-  year: number;
-  label: string;
-  imageUrl: string;
-};
+type View = "grid" | "map";
 
 export default function ProfileRecapBlogsView() {
   const [selectedYear, setSelectedYear] = useState<RecapYearValue>("ALL");
   const [mode, setMode] = useState<Mode>("recap");
 
-  /** grid ↔ map */
+  // grid ↔ map
   const [view, setView] = useState<View>("grid");
   const [selectedCountryCode, setSelectedCountryCode] = useState<string | null>(
     null,
@@ -117,187 +53,74 @@ export default function ProfileRecapBlogsView() {
     setSelectedCountryCode(null);
   };
 
-  /**단일 원천: blogItems (lat/lng 채워넣기) */
-  const blogItems: BlogItem[] = [
-    {
-      id: "blog-1",
-      href: "/blogs/1",
-      coverImageUrl: "/images/recap/kr.png",
-      title: "Exploring the Wonders of Swiss",
-      countryCode: "CH",
-      countryName: "Switzerland",
-      visitedFrom: "2024-12-27",
-      visitedTo: "2024-12-29",
-      locationLabel: "Swiss Alps",
-      lat: 46.8182,
-      lng: 8.2275,
-    },
-    {
-      id: "blog-2",
-      href: "/blogs/2",
-      coverImageUrl: "/images/recap/us.png",
-      title: "Road trip in California",
-      countryCode: "US",
-      countryName: "United States",
-      visitedFrom: "2025-01-10",
-      visitedTo: "2025-01-12",
-      locationLabel: "Big Sur",
-      lat: 36.2704,
-      lng: -121.8081,
-    },
-    {
-      id: "blog-3",
-      href: "/blogs/3",
-      coverImageUrl: "/images/recap/us.png",
-      title: "Road trip in California",
-      countryCode: "US",
-      countryName: "United States",
-      visitedFrom: "2025-01-10",
-      visitedTo: "2025-01-12",
-      locationLabel: "Near ND",
-      lat: 47.5515,
-      lng: -101.002,
-    },
-    {
-      id: "blog-4",
-      href: "/blogs/4",
-      coverImageUrl: "/images/recap/gb.png",
-      title: "London Walks",
-      countryCode: "GB",
-      countryName: "United Kingdom",
-      visitedFrom: "2024-06-01",
-      visitedTo: "2024-06-03",
-      locationLabel: "London",
-      lat: 51.5072,
-      lng: -0.1276,
-    },
-    {
-      id: "blog-5",
-      href: "/blogs/5",
-      coverImageUrl: "/images/recap/us.png",
-      title: "Road trip in California (2024)",
-      countryCode: "US",
-      countryName: "United States",
-      visitedFrom: "2024-01-10",
-      visitedTo: "2024-01-12",
-      locationLabel: "Big Sur2",
-      lat: 32.2704,
-      lng: -115.8081,
-    },
-  ];
+  // user cache
+  const user = useMemo(() => getCachedUser(), []);
+  const username = user?.username;
+  const placeVisitHistory = user?.placeVisitHistory ?? [];
 
-  /** years 탭도 blogItems에서 파생 */
-  const years = useMemo(() => {
+  // visible trips only
+  const visibleTrips: Trip[] = useMemo(() => {
+    const trips = (user?.trips ?? []) as Trip[];
+    return trips.filter((t) => t.privacyControl?.level !== "hidden");
+  }, [user]);
+
+  // years tab
+  const availableYears = useMemo(() => {
     const set = new Set<number>();
-    for (const b of blogItems) {
-      set.add(getYear(b.visitedFrom));
-      if (b.visitedTo) set.add(getYear(b.visitedTo));
-    }
+    visibleTrips.forEach((t) => {
+      const y = Number(t.startingYear);
+      if (Number.isFinite(y)) set.add(y);
+    });
     return Array.from(set).sort((a, b) => b - a);
-  }, [blogItems]);
+  }, [visibleTrips]);
 
-  /** 공통 필터: selectedYear 기준으로 blogItems만 필터 */
-  const filteredBlogItems = useMemo(() => {
-    if (selectedYear === "ALL") return blogItems;
+  // ✅ year filter should apply to recap / allBlogs / map consistently
+  const tripsFilteredByYear: Trip[] = useMemo(() => {
+    if (selectedYear === "ALL") return visibleTrips;
 
-    return blogItems.filter((b) => {
-      const y1 = getYear(b.visitedFrom);
-      const y2 = b.visitedTo ? getYear(b.visitedTo) : y1;
-      return y1 === selectedYear || y2 === selectedYear;
+    return visibleTrips.filter((t) => {
+      const y = Number(t.startingYear);
+      return Number.isFinite(y) && y === selectedYear;
     });
-  }, [blogItems, selectedYear]);
+  }, [visibleTrips, selectedYear]);
 
-  /** countryCode를 item에 싣기 위한 확장 타입 */
-  type CountryRecapItemWithCode = CountryRecapItem & { countryCode: string };
+  // recap items (country grouped) - already returns CountryRecapItem[]
+  const recapItems = useMemo(() => {
+    return transformToRecapItems(tripsFilteredByYear, placeVisitHistory);
+  }, [tripsFilteredByYear, placeVisitHistory]);
 
-  /** recap 모드에서 쓸 CountryRecapItem[] (filteredBlogItems에서 파생) */
-  const recapItems = useMemo<CountryRecapItemWithCode[]>(() => {
-    const map = new Map<
-      string,
-      { countryName: string; coverImageUrl: string; years: Set<number> }
-    >();
-
-    for (const b of filteredBlogItems) {
-      const key = b.countryCode;
-      const fromY = getYear(b.visitedFrom);
-      const toY = b.visitedTo ? getYear(b.visitedTo) : fromY;
-
-      if (!map.has(key)) {
-        map.set(key, {
-          countryName: b.countryName,
-          coverImageUrl: b.coverImageUrl,
-          years: new Set<number>(),
-        });
-      }
-
-      const entry = map.get(key)!;
-      entry.years.add(fromY);
-      entry.years.add(toY);
-    }
-
-    return Array.from(map.entries()).map(([countryCode, v]) => {
-      const yearsArr = Array.from(v.years).sort((a, b) => b - a);
-      return {
-        id: `${countryCode.toLowerCase()}-${yearsArr.join("-")}`,
-        countryCode,
-        countryName: v.countryName,
-        coverImageUrl: v.coverImageUrl,
-        years: yearsArr,
-        href: `/profile/recap-blog/${countryCode.toLowerCase()}`,
-      };
+  // all blogs items - href is single source of truth
+  const allBlogItems = useMemo(() => {
+    return transformToAllBlogItems(tripsFilteredByYear, {
+      username,
+      placeVisitHistory,
     });
-  }, [filteredBlogItems]);
+  }, [tripsFilteredByYear, username, placeVisitHistory]);
 
-  /** allBlogs 모드에서 쓸 AllBlogCardItem[] (filteredBlogItems에서 파생) */
-  const allBlogItems = useMemo<AllBlogCardItem[]>(() => {
-    return filteredBlogItems.map((b) => ({
-      id: b.id,
-      href: b.href,
-      coverImageUrl: b.coverImageUrl,
-      title: b.title,
-      locationLabel: b.locationLabel ?? b.countryName,
-      dateLabel: formatDateLabel(b.visitedFrom, b.visitedTo),
-    }));
-  }, [filteredBlogItems]);
-
-  /** map 뷰 왼쪽 리스트: (연도 필터 적용된) + 선택 나라만 */
-  const mapLeftBlogItems = useMemo<AllBlogCardItem[]>(() => {
+  // map left list: same AllBlogCardItem[] generator, filtered by selected country
+  const tripsForSelectedCountry: Trip[] = useMemo(() => {
     if (!selectedCountryCode) return [];
+    return tripsFilteredByYear.filter(
+      (t) =>
+        String(t.countryCode ?? "")
+          .trim()
+          .toUpperCase() === selectedCountryCode,
+    );
+  }, [tripsFilteredByYear, selectedCountryCode]);
 
-    return filteredBlogItems
-      .filter((b) => b.countryCode === selectedCountryCode)
-      .map((b) => ({
-        id: b.id,
-        href: b.href,
-        coverImageUrl: b.coverImageUrl,
-        title: b.title,
-        locationLabel: b.locationLabel ?? b.countryName,
-        dateLabel: formatDateLabel(b.visitedFrom, b.visitedTo),
-      }));
-  }, [filteredBlogItems, selectedCountryCode]);
+  const mapLeftBlogItems: AllBlogCardItem[] = useMemo(() => {
+    return transformToAllBlogItems(tripsForSelectedCountry, {
+      username,
+      placeVisitHistory,
+    });
+  }, [tripsForSelectedCountry, username, placeVisitHistory]);
 
-  /**map 뷰 마커: (연도 필터 적용된) + 선택 나라만 */
-  const mapMarkers = useMemo<MarkerData[]>(() => {
-    if (!selectedCountryCode) return [];
-
-    return filteredBlogItems
-      .filter((b) => b.countryCode === selectedCountryCode)
-      .map((b) => ({
-        id: b.id,
-        lat: b.lat,
-        lng: b.lng,
-        year: getYear(b.visitedFrom),
-        label: b.locationLabel ?? b.countryName,
-        imageUrl: b.coverImageUrl,
-      }));
-  }, [filteredBlogItems, selectedCountryCode]);
-
-  /** view가 map이면: 왼쪽 리스트 + 오른쪽 지도 */
   const renderGridOrMap = () => {
+    // map view
     if (view === "map") {
       return (
         <div className="flex flex-col gap-6 lg:flex-row">
-          {/* Left: 420px vertical column */}
+          {/* Left: blog list */}
           <aside className="w-full lg:w-[420px] shrink-0">
             <div className="h-[520px] overflow-y-auto pr-2">
               <RecapBlogColumn
@@ -315,30 +138,28 @@ export default function ProfileRecapBlogsView() {
             </div>
           </aside>
 
-          {/* Right: Map */}
+          {/* Right: map */}
           <section className="min-w-0 flex-1">
             <div className="h-[520px] w-full overflow-hidden rounded-2xl border border-black/10">
-              <MapboxMap
-                countryCode={selectedCountryCode ?? "US"}
-                markers={mapMarkers}
-                onMarkerClick={(id) => console.log("marker click:", id)}
-              />
+              {/* markers/country props 연결은 MapboxMap 시그니처에 맞춰 추후 연결 */}
+              <MapboxMap />
             </div>
           </section>
         </div>
       );
     }
 
-    // view === "grid"
+    // grid view
     if (mode === "recap") {
       return (
-        <ResponsiveRecapGrid<CountryRecapItemWithCode>
+        <ResponsiveRecapGrid<CountryRecapItem>
           items={recapItems}
-          minCardWidth={420}
+          minCardWidth={400}
           getKey={(it) => it.id}
           renderItem={(it) => (
             <CountryRecapCard
               item={it}
+              // ✅ it.id is countryCode in your transformToRecapItems
               onSelect={(code) => openMapForCountry(code)}
             />
           )}
@@ -346,11 +167,7 @@ export default function ProfileRecapBlogsView() {
       );
     }
 
-    if (view === "recapBlog") {
-      //TODO
-    }
-
-    // mode === "allBlogs"
+    // allBlogs mode
     return (
       <ResponsiveRecapGrid<AllBlogCardItem>
         items={allBlogItems}
@@ -360,7 +177,9 @@ export default function ProfileRecapBlogsView() {
           <AllBlogCard
             item={it}
             className="mx-auto max-w-[420px]"
-            onVisibilityClick={(blog) => console.log("toggle", blog.id)}
+            onVisibilityClick={(blog) =>
+              console.log("Toggle visibility for:", blog.id)
+            }
           />
         )}
       />
@@ -388,11 +207,8 @@ export default function ProfileRecapBlogsView() {
             ) : (
               <ViewAllBlogsButton
                 onClick={() => {
-                  if (view === "map") {
-                    backToGrid(); // map → grid
-                  } else {
-                    setMode("recap"); // allBlogs → recap
-                  }
+                  if (view === "map") backToGrid();
+                  else setMode("recap");
                 }}
               >
                 Go Back
@@ -403,7 +219,7 @@ export default function ProfileRecapBlogsView() {
 
         <RecapYearTabs
           value={selectedYear}
-          years={years}
+          years={availableYears}
           onChange={setSelectedYear}
           className="mr-6"
         />

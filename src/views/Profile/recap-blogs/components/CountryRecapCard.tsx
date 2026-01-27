@@ -71,8 +71,8 @@ export type CountryRecapItem = {
 };
 
 type Props = {
-  item: CountryRecapItem;
-  onSelect?: (countryCode: string) => void; //추가
+  item: CountryRecapItem & { countryCode?: string };
+  onSelect?: (countryCode: string) => void;
 };
 
 function formatYears(years: number[]) {
@@ -81,14 +81,18 @@ function formatYears(years: number[]) {
 }
 
 export default function CountryRecapCard({ item, onSelect }: Props) {
+  const src = item.coverImageUrl;
+  const unoptimized =
+    src?.toLowerCase().endsWith(".heic") ||
+    src?.toLowerCase().endsWith(".heif");
+  const code = (item.countryCode ?? item.id ?? "").toString().trim();
   return (
     <Link
       href={item.href}
       onClick={(e) => {
-        //onSelect가 있으면 "이동" 대신 "선택"으로 처리
         if (onSelect) {
-          e.preventDefault(); // 라우팅 막음?아마도
-          onSelect(item.countryCode); // 선택 정보 넘김
+          e.preventDefault();
+          if (code) onSelect(code);
         }
       }}
       className={[
@@ -100,11 +104,15 @@ export default function CountryRecapCard({ item, onSelect }: Props) {
       {/* 이미지 */}
       <div className="relative aspect-[5/4] w-full">
         <Image
-          src={item.coverImageUrl}
+          src={src}
           alt={item.countryName}
+          unoptimized={unoptimized}
           fill
           className="object-cover transition-transform duration-300 group-hover:scale-[1.02]"
           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+          onError={(e) => {
+            console.log("[CardRender] image error:", src, e);
+          }}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-black/10 to-transparent" />
       </div>
