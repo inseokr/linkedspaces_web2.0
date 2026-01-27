@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef } from "react";
 import { createRoot } from "react-dom/client";
 import CircleTripMarker from "@/views/Profile/recap-blogs/components/CircleTripMarker";
 
-type MarkerData = {
+export type MarkerData = {
   id: string;
   lat: number;
   lng: number;
@@ -19,10 +19,7 @@ type Props = {
   highlightIso2?: string[];
   worldview?: string;
 
-  // ✅ 추가: 지도 위 마커들
   markers?: MarkerData[];
-
-  // (옵션) 마커 클릭
   onMarkerClick?: (markerId: string) => void;
 };
 
