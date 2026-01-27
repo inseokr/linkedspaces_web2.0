@@ -57,7 +57,6 @@ export type BadgeProgress = {
 export type PlacePhoto = {
   uri?: string;
   selected?: boolean;
-  // 필요하면 나중에 digitizedTime, creationTime 등 추가
 };
 
 export type PlaceVisitHistoryItem = {
