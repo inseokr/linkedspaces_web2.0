@@ -26,6 +26,8 @@ type Props = {
 
   /** 눈 아이콘을 보여줄지 */
   showVisibilityButton?: boolean;
+
+  onSelect?: (item: AllBlogCardItem) => void; // 선택여부
 };
 
 export default function AllBlogCard({

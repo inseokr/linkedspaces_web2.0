@@ -84,10 +84,10 @@ export default function ProfileSection({
             className="z-[60] flex items-center justify-center transition-all duration-300 ease-in-out hover:opacity-70"
           >
             <Image
-              src="/icons/leftPanel.svg"
+              src="/icons/leftPanel.png"
               alt="toggle sidebar"
-              width={30}
-              height={30}
+              width={20}
+              height={20}
               className="transition-transform duration-300"
             />
           </button>
