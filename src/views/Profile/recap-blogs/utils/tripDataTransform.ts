@@ -123,6 +123,7 @@ export const transformToRecapItems = (
     string,
     {
       id: string;
+      countryCode: string;
       countryName: string;
       coverImageUrl: string;
       years: Set<number>;
@@ -139,6 +140,7 @@ export const transformToRecapItems = (
     if (!grouped[code]) {
       grouped[code] = {
         id: code,
+        countryCode: code,
         countryName: trip.country || code,
         coverImageUrl: resolveTripCoverUrl(
           trip,
@@ -166,6 +168,7 @@ export const transformToRecapItems = (
 
   return Object.values(grouped).map((item) => ({
     id: item.id,
+    countryCode: item.countryCode,
     countryName: item.countryName,
     coverImageUrl: item.coverImageUrl,
     href: item.href,

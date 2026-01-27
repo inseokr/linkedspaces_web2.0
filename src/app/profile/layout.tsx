@@ -39,10 +39,10 @@ export default function ProfileLayout({
           className="fixed left-0 top-[135px] z-[60] flex items-center justify-center bg-white rounded-r-md border border-l-0 border-gray-200 shadow-md w-10 h-10 transition-all duration-300 ease-in-out hover:bg-gray-50"
         >
           <Image
-            src="/icons/leftPanel.svg"
+            src="/icons/leftPanel.png"
             alt="toggle sidebar"
-            width={30}
-            height={30}
+            width={20}
+            height={20}
             className="rotate-180 transition-transform duration-300"
           />
         </button>

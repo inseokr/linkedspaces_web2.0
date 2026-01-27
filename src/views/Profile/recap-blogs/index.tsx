@@ -1,51 +1,70 @@
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState } from "react";
+
 import ResponsiveRecapGrid from "@/views/Profile/recap-blogs/section/ResponsiveRecapGrid";
+
 import CountryRecapCard, {
   type CountryRecapItem,
 } from "@/views/Profile/recap-blogs/components/CountryRecapCard";
+
 import AllBlogCard, {
   type AllBlogCardItem,
 } from "@/views/Profile/recap-blogs/components/RecapBlogCard";
+
 import ViewAllBlogsButton from "@/views/Profile/recap-blogs/components/ViewAllBlogsButton";
+
 import RecapYearTabs, {
   type RecapYearValue,
 } from "@/views/Profile/recap-blogs/components/RecapYearsTab";
+
 import type { Trip } from "@/views/Profile/recap-blogs/types";
 
 import { getCachedUser } from "@/api/user";
+
 import {
   transformToAllBlogItems,
   transformToRecapItems,
 } from "@/views/Profile/recap-blogs/utils/tripDataTransform";
 
+import MapboxMap from "@/views/Profile/travel-stats/components/MapBoxMap";
+import RecapBlogColumn from "@/views/Profile/recap-blogs/section/RecapBlogColumn";
+
 type Mode = "recap" | "allBlogs";
+type View = "grid" | "map";
 
 export default function ProfileRecapBlogsView() {
   const [selectedYear, setSelectedYear] = useState<RecapYearValue>("ALL");
   const [mode, setMode] = useState<Mode>("recap");
-  const user = useMemo(() => getCachedUser(), []);
 
+  // grid ↔ map
+  const [view, setView] = useState<View>("grid");
+  const [selectedCountryCode, setSelectedCountryCode] = useState<string | null>(
+    null,
+  );
+
+  const openMapForCountry = (countryCode: string) => {
+    setSelectedCountryCode(countryCode);
+    setView("map");
+  };
+
+  const backToGrid = () => {
+    setView("grid");
+    setSelectedCountryCode(null);
+  };
+
+  // user cache
+  const user = useMemo(() => getCachedUser(), []);
   const username = user?.username;
   const placeVisitHistory = user?.placeVisitHistory ?? [];
 
+  // visible trips only
   const visibleTrips: Trip[] = useMemo(() => {
     const trips = (user?.trips ?? []) as Trip[];
     return trips.filter((t) => t.privacyControl?.level !== "hidden");
   }, [user]);
 
-  const recapItems = useMemo(
-    () => transformToRecapItems(visibleTrips, placeVisitHistory),
-    [visibleTrips, placeVisitHistory],
-  );
-
-  const allBlogItems = useMemo(
-    () =>
-      transformToAllBlogItems(visibleTrips, { username, placeVisitHistory }),
-    [visibleTrips, username, placeVisitHistory],
-  );
-
+  // years tab
   const availableYears = useMemo(() => {
     const set = new Set<number>();
     visibleTrips.forEach((t) => {
@@ -55,12 +74,117 @@ export default function ProfileRecapBlogsView() {
     return Array.from(set).sort((a, b) => b - a);
   }, [visibleTrips]);
 
-  const filteredRecapItems = useMemo(() => {
-    if (selectedYear === "ALL") return recapItems;
-    return recapItems.filter((item) =>
-      item.years.includes(selectedYear as number),
+  // ✅ year filter should apply to recap / allBlogs / map consistently
+  const tripsFilteredByYear: Trip[] = useMemo(() => {
+    if (selectedYear === "ALL") return visibleTrips;
+
+    return visibleTrips.filter((t) => {
+      const y = Number(t.startingYear);
+      return Number.isFinite(y) && y === selectedYear;
+    });
+  }, [visibleTrips, selectedYear]);
+
+  // recap items (country grouped) - already returns CountryRecapItem[]
+  const recapItems = useMemo(() => {
+    return transformToRecapItems(tripsFilteredByYear, placeVisitHistory);
+  }, [tripsFilteredByYear, placeVisitHistory]);
+
+  // all blogs items - href is single source of truth
+  const allBlogItems = useMemo(() => {
+    return transformToAllBlogItems(tripsFilteredByYear, {
+      username,
+      placeVisitHistory,
+    });
+  }, [tripsFilteredByYear, username, placeVisitHistory]);
+
+  // map left list: same AllBlogCardItem[] generator, filtered by selected country
+  const tripsForSelectedCountry: Trip[] = useMemo(() => {
+    if (!selectedCountryCode) return [];
+    return tripsFilteredByYear.filter(
+      (t) =>
+        String(t.countryCode ?? "")
+          .trim()
+          .toUpperCase() === selectedCountryCode,
     );
-  }, [recapItems, selectedYear]);
+  }, [tripsFilteredByYear, selectedCountryCode]);
+
+  const mapLeftBlogItems: AllBlogCardItem[] = useMemo(() => {
+    return transformToAllBlogItems(tripsForSelectedCountry, {
+      username,
+      placeVisitHistory,
+    });
+  }, [tripsForSelectedCountry, username, placeVisitHistory]);
+
+  const renderGridOrMap = () => {
+    // map view
+    if (view === "map") {
+      return (
+        <div className="flex flex-col gap-6 lg:flex-row">
+          {/* Left: blog list */}
+          <aside className="w-full lg:w-[420px] shrink-0">
+            <div className="h-[520px] overflow-y-auto pr-2">
+              <RecapBlogColumn
+                items={mapLeftBlogItems}
+                gapClassName="gap-6"
+                onVisibilityClick={(item) => console.log("toggle", item.id)}
+                showVisibilityButton
+              />
+
+              {mapLeftBlogItems.length === 0 && (
+                <div className="mt-4 rounded-2xl border border-black/10 p-4 text-sm text-black/60">
+                  No blogs for this country in the selected year.
+                </div>
+              )}
+            </div>
+          </aside>
+
+          {/* Right: map */}
+          <section className="min-w-0 flex-1">
+            <div className="h-[520px] w-full overflow-hidden rounded-2xl border border-black/10">
+              {/* markers/country props 연결은 MapboxMap 시그니처에 맞춰 추후 연결 */}
+              <MapboxMap />
+            </div>
+          </section>
+        </div>
+      );
+    }
+
+    // grid view
+    if (mode === "recap") {
+      return (
+        <ResponsiveRecapGrid<CountryRecapItem>
+          items={recapItems}
+          minCardWidth={400}
+          getKey={(it) => it.id}
+          renderItem={(it) => (
+            <CountryRecapCard
+              item={it}
+              // ✅ it.id is countryCode in your transformToRecapItems
+              onSelect={(code) => openMapForCountry(code)}
+            />
+          )}
+        />
+      );
+    }
+
+    // allBlogs mode
+    return (
+      <ResponsiveRecapGrid<AllBlogCardItem>
+        items={allBlogItems}
+        minCardWidth={320}
+        getKey={(it) => it.id}
+        renderItem={(it) => (
+          <AllBlogCard
+            item={it}
+            className="mx-auto max-w-[420px]"
+            onVisibilityClick={(blog) =>
+              console.log("Toggle visibility for:", blog.id)
+            }
+          />
+        )}
+      />
+    );
+  };
 
   return (
     <div className="p-6 space-y-6">
@@ -76,11 +200,20 @@ export default function ProfileRecapBlogsView() {
           </div>
 
           <div className="ml-6">
-            <ViewAllBlogsButton
-              onClick={() => setMode(mode === "recap" ? "allBlogs" : "recap")}
-            >
-              {mode === "recap" ? "View All Blogs" : "Go Back"}
-            </ViewAllBlogsButton>
+            {mode === "recap" && view === "grid" ? (
+              <ViewAllBlogsButton onClick={() => setMode("allBlogs")}>
+                View All Blogs
+              </ViewAllBlogsButton>
+            ) : (
+              <ViewAllBlogsButton
+                onClick={() => {
+                  if (view === "map") backToGrid();
+                  else setMode("recap");
+                }}
+              >
+                Go Back
+              </ViewAllBlogsButton>
+            )}
           </div>
         </div>
 
@@ -92,29 +225,7 @@ export default function ProfileRecapBlogsView() {
         />
       </div>
 
-      {mode === "recap" ? (
-        <ResponsiveRecapGrid<CountryRecapItem>
-          items={filteredRecapItems}
-          minCardWidth={400}
-          getKey={(it) => it.id}
-          renderItem={(it) => <CountryRecapCard item={it} />}
-        />
-      ) : (
-        <ResponsiveRecapGrid<AllBlogCardItem>
-          items={allBlogItems}
-          minCardWidth={320}
-          getKey={(it) => it.id}
-          renderItem={(it) => (
-            <AllBlogCard
-              item={it}
-              className="mx-auto max-w-[420px]"
-              onVisibilityClick={(blog) =>
-                console.log("Toggle visibility for:", blog.id)
-              }
-            />
-          )}
-        />
-      )}
+      {renderGridOrMap()}
     </div>
   );
 }
