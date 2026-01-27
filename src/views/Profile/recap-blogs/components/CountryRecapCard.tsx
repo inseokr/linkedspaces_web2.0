@@ -19,6 +19,10 @@ function formatYears(years: number[]) {
 }
 
 export default function CountryRecapCard({ item }: { item: CountryRecapItem }) {
+  const src = item.coverImageUrl;
+  const unoptimized =
+    src?.toLowerCase().endsWith(".heic") ||
+    src?.toLowerCase().endsWith(".heif");
   return (
     <Link
       href={item.href}
@@ -31,11 +35,15 @@ export default function CountryRecapCard({ item }: { item: CountryRecapItem }) {
       {/* 이미지 */}
       <div className="relative aspect-[5/4] w-full">
         <Image
-          src={item.coverImageUrl}
+          src={src}
           alt={item.countryName}
+          unoptimized={unoptimized}
           fill
           className="object-cover transition-transform duration-300 group-hover:scale-[1.02]"
           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+          onError={(e) => {
+            console.log("[CardRender] image error:", src, e);
+          }}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-black/10 to-transparent" />
       </div>

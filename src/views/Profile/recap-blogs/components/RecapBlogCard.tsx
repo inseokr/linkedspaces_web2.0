@@ -34,6 +34,11 @@ export default function AllBlogCard({
   onVisibilityClick,
   showVisibilityButton = true,
 }: Props) {
+  const src = item.coverImageUrl;
+  const unoptimized =
+    src?.toLowerCase().endsWith(".heic") ||
+    src?.toLowerCase().endsWith(".heif");
+
   return (
     <article className={["w-full", className].join(" ")}>
       <Link href={item.href} className="block">
@@ -50,9 +55,13 @@ export default function AllBlogCard({
               src={item.coverImageUrl}
               alt={item.title}
               fill
+              unoptimized={unoptimized}
               className="object-cover transition-transform duration-300 group-hover:scale-[1.02]"
               sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
               priority={false}
+              onError={(e) => {
+                console.log("[CardRender] image error:", item.coverImageUrl, e);
+              }}
             />
 
             {/* 하단 가독성용 그라데이션 */}

@@ -7,6 +7,7 @@
  *
  * Note: localStorage is client-only. Avoid using getCachedUser() during SSR renders.
  */
+import { Trip } from "./trips";
 
 export type CountryVisited = {
   _id: string;
@@ -53,6 +54,23 @@ export type BadgeProgress = {
   lastUpdated?: string; // ISO string
 };
 
+export type PlacePhoto = {
+  uri?: string;
+  selected?: boolean;
+  // 필요하면 나중에 digitizedTime, creationTime 등 추가
+};
+
+export type PlaceVisitHistoryItem = {
+  placeIndex: number;
+  country?: string;
+  countryCode?: string;
+  city?: string;
+  state?: string;
+  visitedCity?: string;
+  photoList?: PlacePhoto[];
+  privacyControl?: { level?: string; allowedUserList?: string[] };
+};
+
 export type User = {
   _id: string;
   username: string;
@@ -60,8 +78,12 @@ export type User = {
   countriesVisited: CountryVisited[];
   citiesVisited: CityVisited[];
 
-  // Badge progress payload from API (optional)
   badgeProgress?: BadgeProgress;
+  placeVisitHistory?: Array<PlaceVisitHistoryItem | undefined>;
+  direct_friends?: {
+    trips?: Trip[];
+  };
+  trips?: Trip[];
 };
 
 const USER_KEY = "user";

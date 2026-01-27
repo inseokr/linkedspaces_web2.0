@@ -1,102 +1,65 @@
 "use client";
 
-import { useMemo, useState } from "react";
-
+import { useMemo, useState, useEffect } from "react";
 import ResponsiveRecapGrid from "@/views/Profile/recap-blogs/section/ResponsiveRecapGrid";
-
 import CountryRecapCard, {
   type CountryRecapItem,
 } from "@/views/Profile/recap-blogs/components/CountryRecapCard";
-
 import AllBlogCard, {
   type AllBlogCardItem,
-} from "@/views/Profile/recap-blogs/components/RecapBlogCard"; // 경로/파일명 맞춰
-
+} from "@/views/Profile/recap-blogs/components/RecapBlogCard";
 import ViewAllBlogsButton from "@/views/Profile/recap-blogs/components/ViewAllBlogsButton";
-
 import RecapYearTabs, {
   type RecapYearValue,
 } from "@/views/Profile/recap-blogs/components/RecapYearsTab";
+import type { Trip } from "@/views/Profile/recap-blogs/types";
+
+import { getCachedUser, PlaceVisitHistoryItem } from "@/api/user";
+import {
+  transformToAllBlogItems,
+  transformToRecapItems,
+} from "@/views/Profile/recap-blogs/utils/tripDataTransform";
 
 type Mode = "recap" | "allBlogs";
 
 export default function ProfileRecapBlogsView() {
-  // recap test data
-  const recapItems: CountryRecapItem[] = [
-    {
-      id: "us-2025-2024",
-      countryName: "United States",
-      coverImageUrl: "/images/recap/us.png",
-      years: [2025, 2024],
-      href: "/profile/recap-blog/us",
-    },
-    {
-      id: "kr-2024",
-      countryName: "Korea",
-      coverImageUrl: "/images/recap/kr.png",
-      years: [2024],
-      href: "/profile/recap-blog/kr",
-    },
-    {
-      id: "gb-2024",
-      countryName: "United Kingdom",
-      coverImageUrl: "/images/recap/gb.png",
-      years: [2024],
-      href: "/profile/recap-blog/gb",
-    },
-  ];
-
-  //all blogs test data (필요한 변수명: allBlogItems)
-  const allBlogItems: AllBlogCardItem[] = [
-    {
-      id: "blog-1",
-      href: "/blogs/1",
-      coverImageUrl: "/images/recap/kr.png",
-      title: "Exploring the Wonders of Swiss",
-      locationLabel: "Swiss Alps",
-      dateLabel: "2024 Dec 27-Dec 29",
-    },
-    {
-      id: "blog-2",
-      href: "/blogs/2",
-      coverImageUrl: "/images/recap/us.png",
-      title: "Road trip in California",
-      locationLabel: "Big Sur",
-      dateLabel: "2025 Jan 10-Jan 12",
-    },
-
-    {
-      id: "blog-3",
-      href: "/blogs/3",
-      coverImageUrl: "/images/recap/us.png",
-      title: "Road trip in California",
-      locationLabel: "Big Sur",
-      dateLabel: "2025 Jan 10-Jan 12",
-    },
-
-    {
-      id: "blog-4",
-      href: "/blogs/4",
-      coverImageUrl: "/images/recap/us.png",
-      title: "Road trip in California",
-      locationLabel: "Big Sur",
-      dateLabel: "2025 Jan 10-Jan 12",
-    },
-  ];
-
-  // years 탭 데이터
-  const years = useMemo(() => {
-    const set = new Set<number>();
-    for (const item of recapItems) for (const y of item.years) set.add(y);
-    return Array.from(set).sort((a, b) => b - a);
-  }, [recapItems]);
-
   const [selectedYear, setSelectedYear] = useState<RecapYearValue>("ALL");
   const [mode, setMode] = useState<Mode>("recap");
+  const user = useMemo(() => getCachedUser(), []);
 
-  const filteredItems = useMemo(() => {
+  const username = user?.username;
+  const placeVisitHistory = user?.placeVisitHistory ?? [];
+
+  const visibleTrips: Trip[] = useMemo(() => {
+    const trips = (user?.trips ?? []) as Trip[];
+    return trips.filter((t) => t.privacyControl?.level !== "hidden");
+  }, [user]);
+
+  const recapItems = useMemo(
+    () => transformToRecapItems(visibleTrips, placeVisitHistory),
+    [visibleTrips, placeVisitHistory],
+  );
+
+  const allBlogItems = useMemo(
+    () =>
+      transformToAllBlogItems(visibleTrips, { username, placeVisitHistory }),
+    [visibleTrips, username, placeVisitHistory],
+  );
+
+  const availableYears = useMemo(() => {
+    const set = new Set<number>();
+    visibleTrips.forEach((t) => {
+      const y = Number(t.startingYear);
+      if (Number.isFinite(y)) set.add(y);
+    });
+    return Array.from(set).sort((a, b) => b - a);
+  }, [visibleTrips]);
+
+  const filteredRecapItems = useMemo(() => {
     if (selectedYear === "ALL") return recapItems;
-    return recapItems.filter((item) => item.years.includes(selectedYear));
+    return recapItems.filter((item) =>
+      item.years.includes(selectedYear as number),
+    );
   }, [recapItems, selectedYear]);
 
   return (
@@ -113,22 +76,17 @@ export default function ProfileRecapBlogsView() {
           </div>
 
           <div className="ml-6">
-            {mode === "recap" ? (
-              <ViewAllBlogsButton onClick={() => setMode("allBlogs")}>
-                View All Blogs
-              </ViewAllBlogsButton>
-            ) : (
-              <ViewAllBlogsButton onClick={() => setMode("recap")}>
-                Go Back
-              </ViewAllBlogsButton>
-            )}
+            <ViewAllBlogsButton
+              onClick={() => setMode(mode === "recap" ? "allBlogs" : "recap")}
+            >
+              {mode === "recap" ? "View All Blogs" : "Go Back"}
+            </ViewAllBlogsButton>
           </div>
         </div>
 
-        {/* 필요하면 allBlogs 모드에서 숨기기 */}
         <RecapYearTabs
           value={selectedYear}
-          years={years}
+          years={availableYears}
           onChange={setSelectedYear}
           className="mr-6"
         />
@@ -136,7 +94,7 @@ export default function ProfileRecapBlogsView() {
 
       {mode === "recap" ? (
         <ResponsiveRecapGrid<CountryRecapItem>
-          items={filteredItems}
+          items={filteredRecapItems}
           minCardWidth={400}
           getKey={(it) => it.id}
           renderItem={(it) => <CountryRecapCard item={it} />}
@@ -150,7 +108,9 @@ export default function ProfileRecapBlogsView() {
             <AllBlogCard
               item={it}
               className="mx-auto max-w-[420px]"
-              onVisibilityClick={(blog) => console.log("toggle", blog.id)}
+              onVisibilityClick={(blog) =>
+                console.log("Toggle visibility for:", blog.id)
+              }
             />
           )}
         />
