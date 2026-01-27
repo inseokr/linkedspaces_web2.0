@@ -143,6 +143,16 @@ export default function MapboxMap({
     const map = mapRef.current;
     if (!map || !map.isStyleLoaded() || !map.getSource("countries")) return;
 
+    // 1. If there are no countries to highlight, remove the layers and exit
+    const hasHighlight = effectiveHighlightIso2.length > 0;
+    if (!hasHighlight) {
+      if (map.getLayer("country-highlight-fill"))
+        map.removeLayer("country-highlight-fill");
+      if (map.getLayer("country-highlight-outline"))
+        map.removeLayer("country-highlight-outline");
+      return;
+    }
+
     const disputedOk: any = [
       "any",
       ["==", ["get", "disputed"], false],
@@ -150,14 +160,12 @@ export default function MapboxMap({
       ["!", ["has", "disputed"]],
     ];
 
-    const hasHighlight = effectiveHighlightIso2.length > 0;
-    const countryFilter = hasHighlight
-      ? [
-          "all",
-          disputedOk,
-          ["in", ["get", "iso_3166_1"], ["literal", effectiveHighlightIso2]],
-        ]
-      : ["all", disputedOk];
+    // 2. Only countries included in effectiveHighlightIso2 will be filtered
+    const countryFilter = [
+      "all",
+      disputedOk,
+      ["in", ["get", "iso_3166_1"], ["literal", effectiveHighlightIso2]],
+    ];
 
     if (map.getLayer("country-highlight-fill")) {
       map.setFilter("country-highlight-fill", countryFilter as any);
