@@ -14,9 +14,15 @@ export type MarkerData = {
   imageUrl: string;
 };
 
+export interface CountryStat {
+  code: string;
+  value: number;
+}
+
 type Props = {
   countryCode?: string;
   highlightIso2?: string[];
+  countryStats?: CountryStat[];
   worldview?: string;
   markers?: MarkerData[];
   onMarkerClick?: (markerId: string) => void;
@@ -24,7 +30,7 @@ type Props = {
 
 export default function MapboxMap({
   countryCode,
-  highlightIso2,
+  countryStats = [],
   worldview = "US",
   markers = [],
   onMarkerClick,
@@ -42,10 +48,6 @@ export default function MapboxMap({
   useEffect(() => {
     onMarkerClickRef.current = onMarkerClick;
   }, [onMarkerClick]);
-
-  const effectiveHighlightIso2 = useMemo(() => {
-    return (highlightIso2 ?? []).map((c) => c.toUpperCase());
-  }, [highlightIso2]);
 
   // Moved outside or memoized to avoid dependency warnings
   const fallbackCenterByIso2: Record<string, [number, number]> = useMemo(
@@ -124,6 +126,7 @@ export default function MapboxMap({
     const map = mapRef.current;
     if (!map || !map.isStyleLoaded()) return;
 
+    // Initialize the country boundaries source if it doesn't exist
     if (!map.getSource("countries")) {
       map.addSource("countries", {
         type: "vector",
@@ -131,8 +134,8 @@ export default function MapboxMap({
       });
     }
 
-    const hasHighlight = effectiveHighlightIso2.length > 0;
-    if (!hasHighlight) {
+    // Remove highlight layers and exit if no country data is available
+    if (countryStats.length === 0) {
       if (map.getLayer("country-highlight-fill"))
         map.removeLayer("country-highlight-fill");
       if (map.getLayer("country-highlight-outline"))
@@ -140,42 +143,65 @@ export default function MapboxMap({
       return;
     }
 
-    const countryFilter = [
-      "all",
-      ["in", ["get", "iso_3166_1"], ["literal", effectiveHighlightIso2]],
-      [
-        "any",
-        ["==", ["get", "worldview"], "all"],
-        ["==", ["get", "worldview"], worldview],
-      ],
+    /**
+     * Define dynamic fill colors based on visit counts using a 'match' expression.
+     * Syntax: ["match", ["get", "property"], key1, value1, key2, value2, ..., default]
+     */
+    const fillColorExpression: any = ["match", ["get", "iso_3166_1"]];
+
+    countryStats.forEach((stat) => {
+      /**
+       * Calculate opacity using a logarithmic scale to ensure visual differentiation
+       * even for high visit counts (e.g., distinguishing between 10, 20, and 50 visits).
+       * Range: min ~0.15 to max 0.9
+       */
+      const opacity = Math.min(0.15 + Math.log10(stat.value + 1) * 0.5, 0.9);
+
+      fillColorExpression.push(stat.code);
+      fillColorExpression.push(`rgba(249, 115, 22, ${opacity})`); // Primary theme color (Orange)
+    });
+
+    // Default color for non-visited countries (transparent)
+    fillColorExpression.push("rgba(0, 0, 0, 0)");
+
+    /**
+     * Worldview filter ensures correct boundary rendering
+     * based on the specific regional viewpoint.
+     */
+    // MapboxMap.tsx 내부
+    const worldViewFilter = [
+      "any",
+      ["==", ["get", "worldview"], "all"],
+      ["==", ["get", "worldview"], "US"],
+      ["has", "iso_3166_1"],
     ];
 
+    // Apply or update the highlight layers on the map
     if (map.getLayer("country-highlight-fill")) {
-      map.setFilter("country-highlight-fill", countryFilter as any);
-      map.setFilter("country-highlight-outline", countryFilter as any);
+      map.setPaintProperty(
+        "country-highlight-fill",
+        "fill-color",
+        fillColorExpression,
+      );
+      map.setFilter("country-highlight-fill", worldViewFilter);
     } else {
+      // Add Fill Layer: Placed below 'country-label' to keep text readable
       map.addLayer(
         {
           id: "country-highlight-fill",
           type: "fill",
           source: "countries",
           "source-layer": "country_boundaries",
-          filter: countryFilter as any,
-          paint: { "fill-color": "#f97316", "fill-opacity": 0.3 },
+          filter: worldViewFilter,
+          paint: {
+            "fill-color": fillColorExpression,
+            "fill-outline-color": "rgba(234, 88, 12, 0.5)",
+          },
         },
         "country-label",
       );
-
-      map.addLayer({
-        id: "country-highlight-outline",
-        type: "line",
-        source: "countries",
-        "source-layer": "country_boundaries",
-        filter: countryFilter as any,
-        paint: { "line-color": "#ea580c", "line-width": 2.5 },
-      });
     }
-  }, [effectiveHighlightIso2, worldview]);
+  }, [countryStats, worldview]);
 
   const focusOnCountry = useCallback(
     (iso2: string) => {
