@@ -2,7 +2,6 @@
 
 import { useMemo, useEffect, useState } from "react";
 import { useTravelStatsVM } from "@/views/Profile/travel-stats/hooks/useTravelStatsVM";
-import OverallJourney from "./components/OverallJourney";
 import MostVisitedSection from "./section/MostVisitedSection";
 import AllCountriesSection from "./section/AllCountry";
 import MapboxMap, { CountryStat } from "./components/MapBoxMap";
@@ -93,10 +92,6 @@ export default function ProfileStatsPageView() {
           <p className="ml-8 text-[14px] text-[#8B949E]">
             Building memories around the world
           </p>
-        </div>
-
-        <div className="pt-1 ml-15">
-          <OverallJourney deltaPlaces={12} />
         </div>
       </div>
 

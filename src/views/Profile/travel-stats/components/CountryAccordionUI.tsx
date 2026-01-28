@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useId, useState } from "react";
+import React, { useId, useMemo, useState } from "react";
 import CountryHeaderRow from "@/views/Profile/travel-stats/components/CountryHeaderRow";
 import CityRow from "@/views/Profile/travel-stats/components/CityRow";
 
@@ -13,7 +13,12 @@ type Props = {
   placesCount: number;
   cities: CityStat[];
   className?: string;
-  defaultOpen?: boolean;
+
+  /**
+   * If true, show all cities by default.
+   * If false, show only top 3 cities by default.
+   */
+  defaultExpanded?: boolean;
 };
 
 export default function CountryAccordionUI({
@@ -23,10 +28,33 @@ export default function CountryAccordionUI({
   placesCount,
   cities,
   className = "",
-  defaultOpen = true,
+  defaultExpanded = false,
 }: Props) {
-  const [isOpen, setIsOpen] = useState(defaultOpen);
+  /**
+   * Collapsed means "show top 3 cities", not "show nothing".
+   * Expanded means "show all cities".
+   */
+  const [isExpanded, setIsExpanded] = useState(defaultExpanded);
   const panelId = useId();
+
+  /**
+   * Sort cities by places (descending) so top 3 is meaningful.
+   */
+  const sortedCities = useMemo(() => {
+    return [...(cities ?? [])].sort(
+      (a, b) => (b.places ?? 0) - (a.places ?? 0),
+    );
+  }, [cities]);
+
+  /**
+   * Collapsed: top 3 cities.
+   * Expanded: all cities.
+   */
+  const displayCities = useMemo(() => {
+    return isExpanded ? sortedCities : sortedCities.slice(0, 3);
+  }, [isExpanded, sortedCities]);
+
+  const hasMoreThan3 = (sortedCities?.length ?? 0) > 3;
 
   return (
     <div
@@ -39,8 +67,8 @@ export default function CountryAccordionUI({
       <button
         type="button"
         className="w-full text-left"
-        onClick={() => setIsOpen((v) => !v)}
-        aria-expanded={isOpen}
+        onClick={() => setIsExpanded((v) => !v)}
+        aria-expanded={isExpanded}
         aria-controls={panelId}
       >
         <CountryHeaderRow
@@ -52,7 +80,7 @@ export default function CountryAccordionUI({
             <span
               className={[
                 "text-[#8B949E] inline-block transition-transform duration-200 text-[20px]",
-                isOpen ? "rotate-180" : "rotate-0",
+                isExpanded ? "rotate-180" : "rotate-0",
               ].join(" ")}
             >
               ⌄
@@ -61,16 +89,13 @@ export default function CountryAccordionUI({
         />
       </button>
 
-      {isOpen ? (
-        <>
-          <div className="my-4 h-px bg-slate-200" />
-          <div id={panelId}>
-            {cities.map((c) => (
-              <CityRow key={c.city} city={c.city} places={c.places} />
-            ))}
-          </div>
-        </>
-      ) : null}
+      <div className="my-4 h-px bg-slate-200" />
+
+      <div id={panelId}>
+        {displayCities.map((c) => (
+          <CityRow key={c.city} city={c.city} places={c.places} />
+        ))}
+      </div>
     </div>
   );
 }
