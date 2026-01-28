@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-
+import { useRouter } from "next/navigation";
 import ResponsiveRecapGrid from "@/views/Profile/recap-blogs/section/ResponsiveRecapGrid";
 
 import CountryRecapCard, {
@@ -27,16 +27,65 @@ import {
   transformToRecapItems,
 } from "@/views/Profile/recap-blogs/utils/tripDataTransform";
 
-import MapboxMap from "@/views/Profile/travel-stats/components/MapBoxMap";
+import MapboxMap, {
+  type MarkerData,
+} from "@/views/Profile/travel-stats/components/MapBoxMap";
 import RecapBlogColumn from "@/views/Profile/recap-blogs/section/RecapBlogColumn";
 
 type Mode = "recap" | "allBlogs";
 type View = "grid" | "map";
 
+function normalizeIso2(v: string | null | undefined): string | null {
+  const s = v?.trim().toUpperCase();
+  if (!s) return null;
+  return s;
+}
+
+function pickTripCoordinate(
+  trip: Trip,
+  placeVisitHistory: Array<any | undefined>,
+): { lat: number; lng: number; label?: string } | null {
+  const placeList = trip.placeList;
+  if (!Array.isArray(placeList) || placeList.length === 0) return null;
+
+  const rawIdx = (placeList[0] as any)?.placeIndex;
+  const idx = Number(rawIdx);
+  if (!Number.isFinite(idx)) return null;
+
+  const place = placeVisitHistory[idx];
+  if (!place) return null;
+
+  // label 후보(장소명)
+  const placeName: string | undefined = place?.placeName || place?.visitedCity;
+
+  // 1) place.coordinate 우선
+  const c1 = place.coordinate;
+  if (c1?.latitude != null && c1?.longitude != null) {
+    return {
+      lat: Number(c1.latitude),
+      lng: Number(c1.longitude),
+      label: placeName,
+    };
+  }
+
+  // 2) photoList[0].location fallback
+  const p0 = place.photoList?.[0];
+  const c2 = p0?.location ?? p0?.coordinate;
+  if (c2?.latitude != null && c2?.longitude != null) {
+    return {
+      lat: Number(c2.latitude),
+      lng: Number(c2.longitude),
+      label: placeName,
+    };
+  }
+
+  return null;
+}
+
 export default function ProfileRecapBlogsView() {
   const [selectedYear, setSelectedYear] = useState<RecapYearValue>("ALL");
   const [mode, setMode] = useState<Mode>("recap");
-
+  const router = useRouter();
   // grid ↔ map
   const [view, setView] = useState<View>("grid");
   const [selectedCountryCode, setSelectedCountryCode] = useState<string | null>(
@@ -44,7 +93,7 @@ export default function ProfileRecapBlogsView() {
   );
 
   const openMapForCountry = (countryCode: string) => {
-    setSelectedCountryCode(countryCode);
+    setSelectedCountryCode(normalizeIso2(countryCode));
     setView("map");
   };
 
@@ -97,16 +146,19 @@ export default function ProfileRecapBlogsView() {
     });
   }, [tripsFilteredByYear, username, placeVisitHistory]);
 
+  const normalizedSelectedCountry = useMemo(
+    () => normalizeIso2(selectedCountryCode),
+    [selectedCountryCode],
+  );
+
   // map left list: same AllBlogCardItem[] generator, filtered by selected country
   const tripsForSelectedCountry: Trip[] = useMemo(() => {
-    if (!selectedCountryCode) return [];
-    return tripsFilteredByYear.filter(
-      (t) =>
-        String(t.countryCode ?? "")
-          .trim()
-          .toUpperCase() === selectedCountryCode,
-    );
-  }, [tripsFilteredByYear, selectedCountryCode]);
+    if (!normalizedSelectedCountry) return [];
+    return tripsFilteredByYear.filter((t) => {
+      const code = normalizeIso2(String(t.countryCode ?? ""));
+      return code === normalizedSelectedCountry;
+    });
+  }, [tripsFilteredByYear, normalizedSelectedCountry]);
 
   const mapLeftBlogItems: AllBlogCardItem[] = useMemo(() => {
     return transformToAllBlogItems(tripsForSelectedCountry, {
@@ -114,6 +166,53 @@ export default function ProfileRecapBlogsView() {
       placeVisitHistory,
     });
   }, [tripsForSelectedCountry, username, placeVisitHistory]);
+
+  // map markers: Trip -> MarkerData
+  const mapMarkers: MarkerData[] = useMemo(() => {
+    if (!normalizedSelectedCountry) return [];
+
+    const coverByBlogKey = new Map<string, string>();
+    for (const item of transformToAllBlogItems(tripsForSelectedCountry, {
+      username,
+      placeVisitHistory,
+    })) {
+      coverByBlogKey.set(String(item.id), item.coverImageUrl);
+    }
+
+    return tripsForSelectedCountry
+      .map((trip) => {
+        const coord = pickTripCoordinate(trip, placeVisitHistory);
+        if (!coord) return null;
+
+        const blogKey = String(trip.blogKey);
+        const year = Number(trip.startingYear);
+        const title =
+          trip.title?.trim() ||
+          coord.label?.trim() ||
+          trip.country?.trim() ||
+          normalizedSelectedCountry;
+
+        return {
+          id: blogKey, // markerId = blogKey
+          lat: coord.lat,
+          lng: coord.lng,
+          year: Number.isFinite(year) ? year : new Date().getFullYear(),
+          label: title,
+          imageUrl: coverByBlogKey.get(blogKey) || "/images/recap/kr.png",
+        };
+      })
+      .filter(Boolean) as MarkerData[];
+  }, [
+    normalizedSelectedCountry,
+    tripsForSelectedCountry,
+    placeVisitHistory,
+    username,
+  ]);
+
+  const goToBlogDetail = (blogKey: string) => {
+    if (username) router.push(`/trip/${username}/${blogKey}`);
+    else router.push(`/trip/${blogKey}`);
+  };
 
   const renderGridOrMap = () => {
     // map view
@@ -141,8 +240,11 @@ export default function ProfileRecapBlogsView() {
           {/* Right: map */}
           <section className="min-w-0 flex-1">
             <div className="h-[520px] w-full overflow-hidden rounded-2xl border border-black/10">
-              {/* markers/country props 연결은 MapboxMap 시그니처에 맞춰 추후 연결 */}
-              <MapboxMap />
+              <MapboxMap
+                countryCode={normalizedSelectedCountry ?? undefined}
+                markers={mapMarkers}
+                onMarkerClick={(markerId) => goToBlogDetail(markerId)}
+              />
             </div>
           </section>
         </div>

@@ -66,8 +66,14 @@ export type PlaceVisitHistoryItem = {
   city?: string;
   state?: string;
   visitedCity?: string;
+  coordinate?: GeoCoordinate;
   photoList?: PlacePhoto[];
   privacyControl?: { level?: string; allowedUserList?: string[] };
+};
+
+export type GeoCoordinate = {
+  latitude: number;
+  longitude: number;
 };
 
 export type User = {
