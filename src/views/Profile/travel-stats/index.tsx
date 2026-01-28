@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useEffect, useState } from "react";
 import { useTravelStatsVM } from "@/views/Profile/travel-stats/hooks/useTravelStatsVM";
 import OverallJourney from "./components/OverallJourney";
 import MostVisitedSection from "./section/MostVisitedSection";
@@ -18,6 +18,12 @@ type MostVisitedItem = {
 
 export default function ProfileStatsPageView() {
   const { vm } = useTravelStatsVM();
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setIsMounted(true);
+  }, []);
   const mostVisitedItems: MostVisitedItem[] = useMemo(() => {
     const topCountries = vm?.topCountries ?? [];
 
@@ -56,6 +62,10 @@ export default function ProfileStatsPageView() {
       };
     });
   }, [vm]);
+
+  if (!isMounted) {
+    return null;
+  }
 
   if (!vm?.hasData) {
     return <div>No travel history found.</div>;

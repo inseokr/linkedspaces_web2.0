@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { SidebarProfileData } from "@/views/Profile/sidebar/types";
 import EarnedBadges from "@/views/Profile/sidebar/EarnedBadges";
 import TopCountries from "@/views/Profile/components/TopCountries";
@@ -38,6 +38,16 @@ export default function ProfileSection({
   const handleError = () => {
     if (!hasError) setHasError(true);
   };
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setIsMounted(true);
+  }, []);
+
+  if (!isMounted) {
+    return <div className="placeholder" />;
+  }
 
   return (
     <div
