@@ -13,12 +13,17 @@ type Props = {
   onVisibilityClick?: (item: AllBlogCardItem) => void;
   showVisibilityButton?: boolean;
 
-  onExpand?: () => void;
   countryLabel?: string;
-
   showHeader?: boolean;
 
-  // ✅ 추가
+  // expand / collapse (토글)
+  isExpanded?: boolean;
+  onToggleExpand?: () => void;
+
+  // (하위 호환용) 열기 전용 콜백을 남겨두고 싶으면 사용
+  onExpand?: () => void;
+
+  // layout
   layout?: "list" | "grid";
   minCardWidth?: number; // grid 모드에서만 사용
   maxCardWidth?: number; // grid 모드에서만 사용
@@ -30,15 +35,19 @@ export default function RecapBlogColumn({
   gapClassName = "gap-6",
   onVisibilityClick,
   showVisibilityButton = true,
+
   countryLabel,
-  onExpand,
   showHeader = true,
+
+  isExpanded = false,
+  onToggleExpand,
+  onExpand,
 
   layout = "list",
   minCardWidth = 320,
   maxCardWidth,
 }: Props) {
-  const gridStyle =
+  const gridStyle: React.CSSProperties | undefined =
     layout === "grid"
       ? {
           gridTemplateColumns: `repeat(auto-fit, minmax(${minCardWidth}px, ${
@@ -46,6 +55,8 @@ export default function RecapBlogColumn({
           }))`,
         }
       : undefined;
+
+  const handleToggle = onToggleExpand ?? onExpand;
 
   return (
     <div className={["w-full", className].join(" ")}>
@@ -55,15 +66,15 @@ export default function RecapBlogColumn({
             {countryLabel}
           </h2>
 
-          {onExpand && (
+          {handleToggle && (
             <button
               type="button"
-              onClick={onExpand}
+              onClick={handleToggle}
               className="rounded-lg p-2 hover:bg-black/5 active:bg-black/10"
-              aria-label="Expand over map"
+              aria-label={isExpanded ? "Collapse" : "Expand"}
             >
               <span className="text-[#5B5B5B] text-[18px] font-bold leading-none">
-                &gt;
+                {isExpanded ? "<" : ">"}
               </span>
             </button>
           )}

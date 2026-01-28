@@ -237,10 +237,11 @@ export default function ProfileRecapBlogsView() {
                   onVisibilityClick={(item) => console.log("toggle", item.id)}
                   showVisibilityButton
                   countryLabel={selectedCountryCode ?? undefined}
-                  onExpand={() => setIsMapOverlayOpen(true)}
+                  isExpanded={isMapOverlayOpen}
+                  onToggleExpand={() => setIsMapOverlayOpen((v) => !v)}
                   layout={isMapOverlayOpen ? "grid" : "list"}
-                  minCardWidth={isMapOverlayOpen ? 300 : undefined}
-                  maxCardWidth={isMapOverlayOpen ? 420 : undefined}
+                  minCardWidth={isMapOverlayOpen ? 200 : undefined}
+                  maxCardWidth={isMapOverlayOpen ? 300 : undefined}
                 />
 
                 {mapLeftBlogItems.length === 0 && (
