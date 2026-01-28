@@ -5,16 +5,22 @@
 "use client";
 
 import React from "react";
+type CSSSize = number | string;
 
 type Props<T> = {
   items: T[];
   className?: string;
-  minCardWidth?: number;
-  maxCardWidth?: number; // 필요하면 사용
+  minCardWidth?: CSSSize;
+  maxCardWidth?: CSSSize; // 필요하면 사용
   gapClassName?: string;
   renderItem: (item: T, index: number) => React.ReactNode;
   getKey?: (item: T, index: number) => React.Key;
 };
+
+function toCssSize(v: CSSSize | undefined, fallback: string) {
+  if (v === undefined) return fallback;
+  return typeof v === "number" ? `${v}px` : v; // string은 그대로(10vw, clamp, %, px 등)
+}
 
 export default function ResponsiveRecapGrid<T>({
   items,
@@ -25,13 +31,17 @@ export default function ResponsiveRecapGrid<T>({
   renderItem,
   getKey,
 }: Props<T>) {
-  const maxPart = maxCardWidth ? `${maxCardWidth}px` : "1fr";
+  // const maxPart = maxCardWidth ? `${maxCardWidth}px` : "1fr";
+
+  const min = toCssSize(minCardWidth, "320px");
+  const max =
+    maxCardWidth !== undefined ? toCssSize(maxCardWidth, "1fr") : "1fr";
 
   return (
     <div
       className={["grid", gapClassName, className].join(" ")}
       style={{
-        gridTemplateColumns: `repeat(auto-fit, minmax(${minCardWidth}px, ${maxPart}))`,
+        gridTemplateColumns: `repeat(auto-fit, minmax(${min}, ${max}))`,
       }}
     >
       {items.map((item, index) => (
