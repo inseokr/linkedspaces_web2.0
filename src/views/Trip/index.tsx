@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import axios from "axios";
 
-import RecapBlogTopBar from "@/views/Trip/section/RecapBlogTopBar"; // 경로는 네 폴더에 맞게
+import RecapBlogTopBar from "@/views/Trip/section/RecapBlogTopBar";
 import type { DayTab } from "@/views/Trip/component/RecapDayTabs";
 import type { Crumb } from "@/views/Trip/component/RecapBlogCrumbBread";
 
@@ -10,61 +11,94 @@ import RecapBlogHero from "@/views/Trip/component/RecapBlog";
 import { RecapBlogDaySection } from "@/views/Trip/component/RecapBlogPlace";
 import MapboxMap from "@/views/Profile/travel-stats/components/MapBoxMap";
 
-export default function RecapBlogDetailPageExample() {
-  // ✅ 요청한 “연장 데이터”
-  const hero = {
-    coverImageUrl: "/images/hero/us.jpg",
-    title: "US Adventure",
-    dateText: "Dec 15–20, 2024",
-    locationText: "San Francisco",
-    authorName: "Username",
-    postedLabel: "Posted 5 days ago",
-    avatarUrl: "/images/avatar.png",
-  };
+interface TripRecapViewProps {
+  userId: string;
+  tripId: string;
+}
 
-  // ✅ 예시 Day/Entry 데이터
-  const day1Entries = [
-    {
-      id: "e-1",
-      placeName: "Zermatt Station",
-      timeRangeText: "9:30 - 9:40 AM",
-      categoryLabel: "Cafe",
-      liked: true,
-      likeCount: 5,
-      commentCount: 3,
-      caption:
-        "First glimpse of the Matterhorn! The iconic peak welcomed us as we stepped off the train. The air felt sharper, the town was quiet, and everything looked unreal—like a postcard. We grabbed a quick coffee and just stood there watching the clouds move across the ridge for a while.",
-      photos: ["/images/demo/zermatt-1.jpg", "/images/demo/zermatt-2.jpg"],
-    },
-    {
-      id: "e-2",
-      placeName: "Gornergrat Railway",
-      timeRangeText: "11:10 - 12:40 PM",
-      categoryLabel: "Scenic",
-      liked: false,
-      likeCount: 12,
-      commentCount: 2,
-      caption:
-        "Took the railway up and the views kept escalating every minute. Snow lines, tiny villages, and then—bam—full mountain theater. If you go, sit on the right side going up.",
-      photos: [
-        "/images/demo/gorner-1.jpg",
-        "/images/demo/gorner-2.jpg",
-        "/images/demo/gorner-3.jpg",
-      ],
-    },
-  ];
+type RecapApiResponse = any; // TODO: 나중에 실제 응답 타입으로 교체
 
-  // ✅ breadcrumb (예시)
+export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
+  const [recapData, setRecapData] = useState<RecapApiResponse | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function run() {
+      if (!userId || !tripId) return;
+
+      setLoading(true);
+      setError(null);
+
+      try {
+        // ✅ 기존 TripRecap.js의 API 그대로
+        const url = `https://pocketverse.herokuapp.com/LS_API/ls-beta-test/trip-recap/${userId}/${tripId}`;
+        const res = await axios.get(url);
+
+        if (cancelled) return;
+        setRecapData(res.data);
+      } catch (e: any) {
+        if (cancelled) return;
+        setError(e?.message ?? "Failed to load recap");
+      } finally {
+        if (cancelled) return;
+        setLoading(false);
+      }
+    }
+
+    run();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [userId, tripId]);
+
+  // --- 여기부터 “데이터 매핑” ---
+  // 우선은 fallback(예시 데이터) 유지하고,
+  // recapData 구조 파악되면 아래 hero/dayEntries를 실제 값으로 채우면 됨.
+
+  const hero = useMemo(() => {
+    // TODO: recapData에서 실제로 꺼내 쓰기
+    return {
+      coverImageUrl: "/images/hero/us.jpg",
+      title: recapData?.title ?? "US Adventure",
+      dateText: recapData?.dateText ?? "Dec 15–20, 2024",
+      locationText: recapData?.locationText ?? "San Francisco",
+      authorName: recapData?.authorName ?? "Username",
+      postedLabel: recapData?.postedLabel ?? "Posted 5 days ago",
+      avatarUrl: "/images/avatar.png",
+    };
+  }, [recapData]);
+
+  const day1Entries = useMemo(() => {
+    // TODO: recapData.dayList / recapData.timeline 같은 실제 구조로 교체
+    return [
+      {
+        id: "e-1",
+        placeName: "Zermatt Station",
+        timeRangeText: "9:30 - 9:40 AM",
+        categoryLabel: "Cafe",
+        liked: true,
+        likeCount: 5,
+        commentCount: 3,
+        caption:
+          "First glimpse of the Matterhorn! The iconic peak welcomed us as we stepped off the train...",
+        photos: ["/images/demo/zermatt-1.jpg", "/images/demo/zermatt-2.jpg"],
+      },
+    ];
+  }, [recapData]);
+
   const breadcrumbItems: Crumb[] = useMemo(
     () => [
-      { label: "United States", href: "/profile/recap-blogs" },
+      { label: "Recap Blogs", href: "/profile/recap-blogs" },
       { label: "Map", href: "/profile/recap-blogs?view=map" },
-      { label: `(${hero.title})` }, // 마지막은 링크 없이 텍스트
+      { label: `(${hero.title})` },
     ],
     [hero.title],
   );
 
-  // ✅ day tabs (예시)
   const dayTabs: DayTab[] = useMemo(
     () => [
       { id: "day-1", label: "Day 1" },
@@ -77,52 +111,57 @@ export default function RecapBlogDetailPageExample() {
   );
 
   const [activeDayId, setActiveDayId] = useState<string>("day-1");
-
-  // ✅ (선택) day 탭 클릭 시 해당 섹션으로 스크롤
   const day1Ref = useRef<HTMLDivElement | null>(null);
 
   const handleDayChange = (id: string) => {
     setActiveDayId(id);
-
-    // 예시로 day-1만 스크롤 연결
     if (id === "day-1") {
       day1Ref.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     }
   };
 
+  // --- 로딩/에러 처리 ---
+  if (loading) {
+    return <div className="p-6">Loading recap…</div>;
+  }
+
+  if (error) {
+    return (
+      <div className="p-6">
+        <div className="font-semibold">Failed to load recap</div>
+        <div className="mt-2 text-sm opacity-70">{error}</div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-white">
-      {/* ✅ 맨 위 TopBar */}
       <RecapBlogTopBar
         title="Recap Blog"
         breadcrumbItems={breadcrumbItems}
         dayTabs={dayTabs}
         activeDayId={activeDayId}
         onDayChange={handleDayChange}
-        onGoBack={() => history.back()} // 라우터 쓰고 싶으면 router.back()으로 교체
+        onGoBack={() => history.back()}
         className="sticky top-0 z-50"
       />
 
-      {/* 본문 */}
       <div className="space-y-10 p-6">
         <RecapBlogHero {...hero} />
 
-        {/* 5:5 레이아웃 */}
         <div className="flex flex-col gap-6 lg:flex-row">
-          {/* Left: Day cards */}
           <section className="min-w-0 flex-1" ref={day1Ref}>
             <div className="h-[750px]">
               <div className="h-full overflow-hidden">
                 <RecapBlogDaySection
                   dayIndex={1}
-                  title="Arrival in Zermatt"
+                  title="Day 1"
                   entries={day1Entries as any}
                 />
               </div>
             </div>
           </section>
 
-          {/* Right: Map */}
           <section className="min-w-0 flex-1">
             <div className="h-[650px] w-full overflow-hidden rounded-2xl border border-black/10">
               <MapboxMap />

@@ -3,12 +3,14 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
+import type { ReactNode } from "react";
 
 type MenuItem = {
   key: string;
   label: string;
   href: string;
-  iconSrc: string;
+  icon?: ReactNode;
+  iconSrc?: string;
   disabled?: boolean;
 };
 
