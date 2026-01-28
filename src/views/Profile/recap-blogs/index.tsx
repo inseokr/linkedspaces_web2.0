@@ -37,6 +37,8 @@ export default function ProfileRecapBlogsView() {
   const [selectedYear, setSelectedYear] = useState<RecapYearValue>("ALL");
   const [mode, setMode] = useState<Mode>("recap");
 
+  const [isMapOverlayOpen, setIsMapOverlayOpen] = useState(false);
+
   // grid ↔ map
   const [view, setView] = useState<View>("grid");
   const [selectedCountryCode, setSelectedCountryCode] = useState<string | null>(
@@ -119,29 +121,42 @@ export default function ProfileRecapBlogsView() {
     // map view
     if (view === "map") {
       return (
-        <div className="flex flex-col gap-6 lg:flex-row">
+        <div className="relative flex flex-col gap-4 lg:flex-row">
           {/* Left: blog list */}
-          <aside className="w-full lg:w-[420px] shrink-0">
-            <div className="h-[520px] overflow-y-auto pr-2">
-              <RecapBlogColumn
-                items={mapLeftBlogItems}
-                gapClassName="gap-6"
-                onVisibilityClick={(item) => console.log("toggle", item.id)}
-                showVisibilityButton
-              />
+          <aside
+            className={[
+              "shrink-0",
+              isMapOverlayOpen
+                ? "absolute inset-0 z-30 w-full" //확장: map 위로 덮기
+                : "w-full lg:w-[420px]", //기본: 왼쪽 패널
+            ].join(" ")}
+          >
+            <div className="rounded-2xl border border-black/10 bg-white">
+              <div className="h-[520px] overflow-y-auto pr-2 px-4 pt-2 pb-4">
+                <RecapBlogColumn
+                  items={mapLeftBlogItems}
+                  gapClassName="gap-6"
+                  onVisibilityClick={(item) => console.log("toggle", item.id)}
+                  showVisibilityButton
+                  countryLabel={selectedCountryCode ?? undefined}
+                  onExpand={() => setIsMapOverlayOpen(true)}
+                  layout={isMapOverlayOpen ? "grid" : "list"}
+                  minCardWidth={isMapOverlayOpen ? 300 : undefined}
+                  maxCardWidth={isMapOverlayOpen ? 420 : undefined}
+                />
 
-              {mapLeftBlogItems.length === 0 && (
-                <div className="mt-4 rounded-2xl border border-black/10 p-4 text-sm text-black/60">
-                  No blogs for this country in the selected year.
-                </div>
-              )}
+                {mapLeftBlogItems.length === 0 && (
+                  <div className="mt-4 rounded-2xl border border-black/10 p-4 text-sm text-black/60">
+                    No blogs for this country in the selected year.
+                  </div>
+                )}
+              </div>
             </div>
           </aside>
 
           {/* Right: map */}
           <section className="min-w-0 flex-1">
-            <div className="h-[520px] w-full overflow-hidden rounded-2xl border border-black/10">
-              {/* markers/country props 연결은 MapboxMap 시그니처에 맞춰 추후 연결 */}
+            <div className="relative h-[520px] w-full overflow-hidden rounded-2xl border border-black/10">
               <MapboxMap />
             </div>
           </section>
