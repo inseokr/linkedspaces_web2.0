@@ -6,6 +6,15 @@ import type { AllBlogCardItem } from "@/views/Profile/recap-blogs/components/Rec
 const DEFAULT_BLOG_COVER = "/images/recap/kr.png";
 const DEFAULT_RECAP_COVER = "/images/recap/kr.png";
 
+function toSlug(title: string): string {
+  return String(title ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/['"]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
 function pickCoverFromPlaceVisitHistory(
   trip: Trip,
   placeVisitHistory?: Array<PlaceVisitHistoryItem | undefined>,
@@ -97,22 +106,28 @@ export const transformToAllBlogItems = (
 ): AllBlogCardItem[] => {
   const username = args?.username;
 
-  return trips.map((trip) => ({
-    id: String(trip.blogKey),
-    href: username
-      ? `/trip/${username}/${trip.blogKey}`
-      : `/trip/${trip.blogKey}`, // username 없을 때 fallback
-    coverImageUrl: resolveTripCoverUrl(
-      trip,
-      args?.placeVisitHistory,
-      DEFAULT_BLOG_COVER,
-    ),
-    title: trip.title || `${trip.country ?? "Unknown"} Trip`,
-    locationLabel: trip.country || "Unknown",
-    dateLabel:
-      `${trip.startingYear ?? ""} ${trip.startTimeString ?? ""}-${trip.endTimeString ?? ""}`.trim(),
-    isPublic: trip.privacyControl?.level !== "hidden",
-  }));
+  return trips.map((trip) => {
+    const title = trip.title || `${trip.country ?? "Unknown"} Trip`;
+    const slug = toSlug(title);
+    const key = String(trip.blogKey);
+
+    return {
+      id: String(trip.blogKey),
+      href: username
+        ? `/trip/${username}/${key}-${slug}`
+        : `/trip/${key}-${slug}`,
+      coverImageUrl: resolveTripCoverUrl(
+        trip,
+        args?.placeVisitHistory,
+        DEFAULT_BLOG_COVER,
+      ),
+      title,
+      locationLabel: trip.country || "Unknown",
+      dateLabel:
+        `${trip.startingYear ?? ""} ${trip.startTimeString ?? ""}-${trip.endTimeString ?? ""}`.trim(),
+      isPublic: trip.privacyControl?.level !== "hidden",
+    };
+  });
 };
 
 export const transformToRecapItems = (

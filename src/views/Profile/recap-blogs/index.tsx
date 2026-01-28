@@ -74,7 +74,7 @@ export default function ProfileRecapBlogsView() {
     return Array.from(set).sort((a, b) => b - a);
   }, [visibleTrips]);
 
-  // ✅ year filter should apply to recap / allBlogs / map consistently
+  // year filter should apply to recap / allBlogs / map consistently
   const tripsFilteredByYear: Trip[] = useMemo(() => {
     if (selectedYear === "ALL") return visibleTrips;
 
@@ -155,11 +155,13 @@ export default function ProfileRecapBlogsView() {
         <ResponsiveRecapGrid<CountryRecapItem>
           items={recapItems}
           minCardWidth={400}
+          maxCardWidth={500} // 이걸 줘야 왼쪽 정렬 가능
+          // minCardWidth="clamp(240px, 10vw, 360px)"
+          // maxCardWidth="clamp(240px, 10vw, 360px)"
           getKey={(it) => it.id}
           renderItem={(it) => (
             <CountryRecapCard
               item={it}
-              // ✅ it.id is countryCode in your transformToRecapItems
               onSelect={(code) => openMapForCountry(code)}
             />
           )}
@@ -172,6 +174,7 @@ export default function ProfileRecapBlogsView() {
       <ResponsiveRecapGrid<AllBlogCardItem>
         items={allBlogItems}
         minCardWidth={320}
+        maxCardWidth={320}
         getKey={(it) => it.id}
         renderItem={(it) => (
           <AllBlogCard
