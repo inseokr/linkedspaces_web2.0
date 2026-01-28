@@ -108,14 +108,11 @@ export const transformToAllBlogItems = (
 
   return trips.map((trip) => {
     const title = trip.title || `${trip.country ?? "Unknown"} Trip`;
-    const slug = toSlug(title);
     const key = String(trip.blogKey);
 
     return {
-      id: String(trip.blogKey),
-      href: username
-        ? `/trip/${username}/${key}-${slug}`
-        : `/trip/${key}-${slug}`,
+      id: key,
+      href: username ? `/trip/${username}/${key}` : `/trip/${key}`,
       coverImageUrl: resolveTripCoverUrl(
         trip,
         args?.placeVisitHistory,
@@ -129,7 +126,6 @@ export const transformToAllBlogItems = (
     };
   });
 };
-
 export const transformToRecapItems = (
   trips: Trip[],
   placeVisitHistory?: Array<PlaceVisitHistoryItem | undefined>,
