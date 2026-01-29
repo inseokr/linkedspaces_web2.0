@@ -31,10 +31,10 @@ export default function RecapDayTabs({
             type="button"
             onClick={() => onChange(t.id)}
             className={[
-              "h-9 rounded-full px-4 text-[14px] font-semibold",
+              "h-8 rounded-full px-4 text-[14px] font-semibold",
               "transition",
               active
-                ? "bg-indigo-500 text-white shadow-sm"
+                ? "bg-[#0798FF] text-white shadow-sm"
                 : "bg-black/10 text-black/55 hover:bg-black/15",
             ].join(" ")}
             aria-pressed={active}

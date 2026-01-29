@@ -1,7 +1,6 @@
 "use client";
-
+import { normalizeImageSrc } from "@/utils/normalizeImageSrc";
 import Image from "next/image";
-import React from "react";
 
 /** 1) 작성자 배지 */
 export function AuthorBadge({
@@ -74,14 +73,16 @@ export default function RecapBlogHero({
   postedLabel: string;
   avatarUrl?: string;
 }) {
+  const { src, unoptimized } = normalizeImageSrc(coverImageUrl);
   return (
     <section className="relative w-full overflow-hidden rounded-3xl border border-black/10">
       {/* 배경 이미지 */}
       <div className="relative h-[220px] w-full sm:h-[280px] md:h-[320px]">
         <Image
-          src={coverImageUrl}
+          src={src}
           alt={title}
           fill
+          unoptimized={unoptimized}
           priority
           className="object-cover"
           sizes="(max-width: 768px) 100vw, 1200px"
