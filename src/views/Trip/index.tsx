@@ -674,8 +674,9 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
   const [error, setError] = useState<string | null>(null);
 
   /** TopBar 높이(임시) */
-  const TOPBAR_OFFSET_PX = 200;
-  const PANEL_HEIGHT = `calc(100vh - ${TOPBAR_OFFSET_PX}px)`;
+  const TOPBAR_OFFSET_PX = 250;
+  const PANEL_HEIGHT_OFFSET = 180;
+  const PANEL_HEIGHT = `calc(100vh - ${PANEL_HEIGHT_OFFSET}px)`;
 
   /** Day 섹션 DOM refs */
   const daySectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -693,7 +694,7 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
     activeDayIdRef.current = activeDayId;
   }, [activeDayId]);
 
-  // ✅ (추가) Map sticky(TopBar 아래에 닿아 붙었는지) 감지용 ref/state
+  // (추가) Map sticky(TopBar 아래에 닿아 붙었는지) 감지용 ref/state
   const mapStickyRef = useRef<HTMLElement | null>(null);
   const [isMapPinned, setIsMapPinned] = useState(false);
 
