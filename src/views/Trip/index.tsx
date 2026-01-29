@@ -1,5 +1,7 @@
 "use client";
 
+//0129 test 를 위해 demodata로 다 바꿔둠
+
 import React, {
   useEffect,
   useLayoutEffect,
@@ -188,6 +190,15 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
     { lat: number; lng: number } | undefined
   >(undefined);
 
+  // ✅ 장소(Entry) DOM refs: entryId -> element
+  const entryRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  // ✅ 현재 focus 중인 entryId(불필요한 setState 연속 호출 방지)
+  const activeEntryIdRef = useRef<string | null>(null);
+
+  // ✅ 스크롤 중 흔들림 방지용 타이머(선택이지만 추천)
+  const focusTimerRef = useRef<number | null>(null);
+
   useEffect(() => {
     let cancelled = false;
 
@@ -258,29 +269,71 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
     );
   }, [effectiveModel.days, baseCenter]);
 
-  // ✅ 최초 1회: 전체 첫 entry로 초기 포커스
+  // ✅ helper: entryId -> focusLatLng set (중복 set 방지)
+  const focusToEntryId = (entryId: string) => {
+    const m = markers.find((x) => x.id === entryId);
+    if (!m) return;
+
+    setFocusLatLng({ lat: m.lat, lng: m.lng });
+  };
+
+  // ✅ helper: left panel "가운데"에 가장 가까운 entry 찾기
+  const getClosestEntryToCenter = () => {
+    const root = leftScrollRef.current;
+    if (!root) return null;
+
+    const rootRect = root.getBoundingClientRect();
+    const centerY = rootRect.top + rootRect.height / 2;
+
+    let bestId: string | null = null;
+    let bestDist = Infinity;
+
+    for (const [id, el] of Object.entries(entryRefs.current)) {
+      if (!el) continue;
+      const r = el.getBoundingClientRect();
+      const entryCenterY = r.top + r.height / 2;
+
+      // root 영역 밖에 너무 멀리 있는 entry가 잡히는 걸 줄이려면(옵션)
+      // if (r.bottom < rootRect.top || r.top > rootRect.bottom) continue;
+
+      const dist = Math.abs(entryCenterY - centerY);
+      if (dist < bestDist) {
+        bestDist = dist;
+        bestId = id;
+      }
+    }
+
+    return bestId;
+  };
+
+  // ✅ helper: 디바운스(스크롤 중 과도한 이동 방지)
+  const scheduleFocusToEntry = (entryId: string) => {
+    if (focusTimerRef.current) window.clearTimeout(focusTimerRef.current);
+
+    focusTimerRef.current = window.setTimeout(() => {
+      // 동일 entry면 아무 것도 안 함
+      if (activeEntryIdRef.current === entryId) return;
+
+      activeEntryIdRef.current = entryId;
+      focusToEntryId(entryId);
+
+      // (옵션) entry 기준으로 day도 동기화하고 싶으면 아래 활성화
+      const dayId = entryIdToDayId.get(entryId);
+      if (dayId && dayId !== activeDayIdRef.current) {
+        setActiveDayId(dayId);
+      }
+    }, 120);
+  };
+
+  // ✅ 최초 1회: "전체 첫 entry"로 초기 포커스
   useEffect(() => {
     if (focusLatLng) return;
     if (!markers.length) return;
 
     const first = markers[0];
+    activeEntryIdRef.current = first.id;
     setFocusLatLng({ lat: first.lat, lng: first.lng });
   }, [markers, focusLatLng]);
-
-  // ✅ 방법 B 핵심: activeDayId가 바뀌면 항상 해당 day의 첫 entry로 포커스 이동
-  useEffect(() => {
-    const dayIndex = Number(activeDayId.replace("day-", ""));
-    const firstEntryId = effectiveModel.days.find(
-      (d) => d.dayIndex === dayIndex,
-    )?.entries?.[0]?.id;
-
-    if (!firstEntryId) return;
-
-    const m = markers.find((x) => x.id === firstEntryId);
-    if (!m) return;
-
-    setFocusLatLng({ lat: m.lat, lng: m.lng });
-  }, [activeDayId, effectiveModel.days, markers]);
 
   const breadcrumbItems: Crumb[] = useMemo(
     () => [
@@ -344,6 +397,7 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
     return () => cancelAnimationFrame(raf);
   }, [userInteracted]);
 
+  // ✅ 스크롤로 "Day" 잡는 로직 + "Entry(장소)" 포커스 로직을 한 군데에서 처리
   useEffect(() => {
     const root = leftScrollRef.current;
     if (!root) return;
@@ -354,6 +408,7 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
     const computeActiveTopPinned = () => {
       if (isProgrammaticScrollRef.current) return;
 
+      // --- (A) 기존: day 계산 ---
       const rootRect = root.getBoundingClientRect();
       const triggerY = rootRect.top + TRIGGER_PX;
 
@@ -364,7 +419,6 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
         if (!el) continue;
 
         const top = el.getBoundingClientRect().top;
-
         if (top <= triggerY) {
           chosen = t.id;
         } else {
@@ -375,10 +429,15 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
       if (!chosen) {
         const first = dayTabs[0]?.id;
         if (first && first !== activeDayIdRef.current) setActiveDayId(first);
-        return;
+      } else if (chosen !== activeDayIdRef.current) {
+        setActiveDayId(chosen);
       }
 
-      if (chosen !== activeDayIdRef.current) setActiveDayId(chosen);
+      // --- (B) ✅ 추가: entry(장소) 기준 카메라 포커스 ---
+      const closestEntryId = getClosestEntryToCenter();
+      if (closestEntryId) {
+        scheduleFocusToEntry(closestEntryId);
+      }
     };
 
     let ticking = false;
@@ -407,8 +466,10 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
       ro.disconnect();
       root.removeEventListener("scroll", onScroll);
       window.removeEventListener("resize", computeActiveTopPinned);
+      if (focusTimerRef.current) window.clearTimeout(focusTimerRef.current);
     };
-  }, [dayTabs]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dayTabs, markers, effectiveModel.days]);
 
   const scrollToDay = (id: string) => {
     const root = leftScrollRef.current;
@@ -432,9 +493,11 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
   const focusByMarkerId = (markerId: string) => {
     const m = markers.find((x) => x.id === markerId);
     if (!m) return;
+
+    activeEntryIdRef.current = markerId;
     setFocusLatLng({ lat: m.lat, lng: m.lng });
 
-    // (옵션) 클릭한 entry에 맞춰 day 탭도 동기화하고 싶으면 여기서 entryIdToDayId 활용
+    // (옵션) 클릭한 entry에 맞춰 day 탭도 동기화하고 싶으면:
     // const dayId = entryIdToDayId.get(markerId);
     // if (dayId && dayId !== activeDayIdRef.current) setActiveDayId(dayId);
   };
@@ -443,7 +506,16 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
     setActiveDayId(id);
     if (fromUser) scrollToDay(id);
 
-    // ✅ 포커스 이동은 useEffect([activeDayId])가 전담 (중복 방지)
+    // ✅ day 클릭 시에는 "그 day의 첫 entry"로 바로 맞추고 싶다면:
+    const dayIndex = Number(id.replace("day-", ""));
+    const firstEntryId = effectiveModel.days.find(
+      (d) => d.dayIndex === dayIndex,
+    )?.entries?.[0]?.id;
+
+    if (firstEntryId) {
+      activeEntryIdRef.current = firstEntryId;
+      focusToEntryId(firstEntryId);
+    }
   };
 
   useLayoutEffect(() => {
@@ -478,7 +550,6 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
       const isOnMap = !!(mapWrap && mapWrap.contains(e.target as Node));
 
       if (isOnMap && e.ctrlKey) return;
-
       if (!canScrollLeftPanel(delta)) return;
 
       e.preventDefault();
@@ -566,6 +637,10 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
                         dayIndex={d.dayIndex}
                         title={d.title}
                         entries={d.entries as any}
+                        // ✅ entry DOM ref 수집
+                        onEntryMount={(entryId, el) => {
+                          entryRefs.current[entryId] = el;
+                        }}
                       />
                     </div>
                   );
