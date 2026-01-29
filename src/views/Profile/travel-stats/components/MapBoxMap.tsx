@@ -454,7 +454,7 @@ export default function MapboxMap({
       container: containerRef.current,
       style: "mapbox://styles/mapbox/streets-v12",
       center: [-98.5795, 39.8283],
-      zoom: 1,
+      zoom: 5,
       renderWorldCopies: false,
     });
 

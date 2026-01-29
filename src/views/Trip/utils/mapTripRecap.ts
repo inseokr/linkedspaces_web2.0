@@ -9,7 +9,7 @@ import type {
   RecapDay,
   RecapEntry,
 } from "@/views/Trip/component/RecapBlogPlace";
-import { normalizeImageSrc } from "@/utils/normalizeImageSrc";
+import { normalizeImageSrc } from "@/utils/normalizeImageSrc"; // 너가 만든 유틸 경로에 맞게 수정
 
 export type RecapHeroModel = {
   coverImageUrl: string;
@@ -19,7 +19,6 @@ export type RecapHeroModel = {
   authorName: string;
   postedLabel: string;
   avatarUrl?: string;
-  startingYear?: number;
 };
 
 export type RecapPageModel = {
@@ -43,12 +42,12 @@ export function mapTripRecapToPageModel(
 
   const authorName = trip.userName || "User";
 
-  //  avatar는 normalizeImageSrc로 절대 URL /public 제거까지 정리
+  // ✅ avatar는 normalizeImageSrc로 절대 URL /public 제거까지 정리
   const avatarUrl = trip.profilePicture
     ? normalizeImageSrc(trip.profilePicture).src
     : undefined;
 
-  //  cover: trip에 coverPhotoUri 없음 → days/places/photoList에서 첫 사진으로 fallback
+  // ✅ cover: trip에 coverPhotoUri 없음 → days/places/photoList에서 첫 사진으로 fallback
   const coverImageUrl = pickCoverFromRecap(recapData) ?? "/images/hero/us.jpg";
 
   const locationText = "";
@@ -81,7 +80,6 @@ export function mapTripRecapToPageModel(
       authorName,
       postedLabel: "",
       avatarUrl,
-      startingYear: trip.startingYear ? Number(trip.startingYear) : undefined,
     },
     days,
     markers,
@@ -119,7 +117,7 @@ function mapPlaceToEntry(p: TripRecapPlace, fallbackId: string): RecapEntry {
 
   const caption = selectedPhoto?.story ?? p.story ?? "";
 
-  //  photos: normalizeImageSrc로 /public 제거 + host 붙인 "최종 src"만 넘김
+  // ✅ photos: normalizeImageSrc로 /public 제거 + host 붙인 "최종 src"만 넘김
   const photos = photoList
     .map((x: any) => (x?.uri ? normalizeImageSrc(x.uri).src : ""))
     .filter(Boolean);
@@ -159,7 +157,7 @@ function mapPlaceToEntry(p: TripRecapPlace, fallbackId: string): RecapEntry {
 }
 
 /**
- *  Hero cover fallback:
+ * ✅ Hero cover fallback:
  * - 전체 recap에서 "대표 이미지"를 하나 뽑음
  * - 우선순위: selected photo -> 첫 photo
  */

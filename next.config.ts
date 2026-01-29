@@ -33,12 +33,6 @@ const nextConfig: NextConfig = {
         hostname: "pocketverse.herokuapp.com",
         pathname: "/public/user_resources/**",
       },
-      {
-        protocol: "https",
-        hostname: "lh3.googleusercontent.com",
-        port: "",
-        pathname: "/a/**",
-      },
     ],
   },
 };
