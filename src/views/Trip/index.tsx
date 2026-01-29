@@ -6,10 +6,14 @@ import axios from "axios";
 import RecapBlogTopBar from "@/views/Trip/section/RecapBlogTopBar";
 import type { DayTab } from "@/views/Trip/component/RecapDayTabs";
 import type { Crumb } from "@/views/Trip/component/RecapBlogCrumbBread";
-
+import type { TripRecapResponse } from "@/api/trips";
 import RecapBlogHero from "@/views/Trip/component/RecapBlog";
-import { RecapBlogDaySection } from "@/views/Trip/component/RecapBlogPlace";
+import {
+  RecapBlogDaySection,
+  type RecapDay,
+} from "@/views/Trip/component/RecapBlogPlace";
 import MapboxMap from "@/views/Profile/travel-stats/components/MapBoxMap";
+import { mapTripRecapToPageModel } from "@/views/Trip/utils/mapTripRecap";
 
 interface TripRecapViewProps {
   userId: string;
@@ -22,6 +26,7 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
   const [recapData, setRecapData] = useState<RecapApiResponse | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [activeDayId, setActiveDayId] = useState<string>("day-1");
 
   useEffect(() => {
     let cancelled = false;
@@ -33,9 +38,9 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
       setError(null);
 
       try {
-        // ✅ 기존 TripRecap.js의 API 그대로
+        //  기존 TripRecap.js의 API 그대로
         const url = `https://pocketverse.herokuapp.com/LS_API/ls-beta-test/trip-recap/${userId}/${tripId}`;
-        const res = await axios.get(url);
+        const res = await axios.get<TripRecapResponse>(url);
 
         if (cancelled) return;
         setRecapData(res.data);
@@ -58,59 +63,40 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
   // --- 여기부터 “데이터 매핑” ---
   // 우선은 fallback(예시 데이터) 유지하고,
   // recapData 구조 파악되면 아래 hero/dayEntries를 실제 값으로 채우면 됨.
-
-  const hero = useMemo(() => {
-    // TODO: recapData에서 실제로 꺼내 쓰기
-    return {
-      coverImageUrl: "/images/hero/us.jpg",
-      title: recapData?.title ?? "US Adventure",
-      dateText: recapData?.dateText ?? "Dec 15–20, 2024",
-      locationText: recapData?.locationText ?? "San Francisco",
-      authorName: recapData?.authorName ?? "Username",
-      postedLabel: recapData?.postedLabel ?? "Posted 5 days ago",
-      avatarUrl: "/images/avatar.png",
-    };
+  const pageModel = useMemo(() => {
+    if (!recapData) return null;
+    return mapTripRecapToPageModel(recapData);
   }, [recapData]);
 
-  const day1Entries = useMemo(() => {
-    // TODO: recapData.dayList / recapData.timeline 같은 실제 구조로 교체
+  const activeDayIndex = useMemo(() => {
+    const n = Number(activeDayId.replace("day-", ""));
+    return Number.isFinite(n) ? n : 1;
+  }, [activeDayId]);
+
+  const activeDay: RecapDay | undefined = useMemo(() => {
+    return (
+      pageModel?.days?.find((d) => d.dayIndex === activeDayIndex) ??
+      pageModel?.days?.[0]
+    );
+  }, [pageModel?.days, activeDayIndex]);
+
+  const breadcrumbItems: Crumb[] = useMemo(() => {
+    const title = pageModel?.hero.title ?? "Trip";
     return [
-      {
-        id: "e-1",
-        placeName: "Zermatt Station",
-        timeRangeText: "9:30 - 9:40 AM",
-        categoryLabel: "Cafe",
-        liked: true,
-        likeCount: 5,
-        commentCount: 3,
-        caption:
-          "First glimpse of the Matterhorn! The iconic peak welcomed us as we stepped off the train...",
-        photos: ["/images/demo/zermatt-1.jpg", "/images/demo/zermatt-2.jpg"],
-      },
-    ];
-  }, [recapData]);
-
-  const breadcrumbItems: Crumb[] = useMemo(
-    () => [
       { label: "Recap Blogs", href: "/profile/recap-blogs" },
       { label: "Map", href: "/profile/recap-blogs?view=map" },
-      { label: `(${hero.title})` },
-    ],
-    [hero.title],
-  );
+      { label: `(${title})` },
+    ];
+  }, [pageModel?.hero.title]);
 
-  const dayTabs: DayTab[] = useMemo(
-    () => [
-      { id: "day-1", label: "Day 1" },
-      { id: "day-2", label: "Day 2" },
-      { id: "day-3", label: "Day 3" },
-      { id: "day-4", label: "Day 4" },
-      { id: "day-5", label: "Day 5" },
-    ],
-    [],
-  );
+  const dayTabs: DayTab[] = useMemo(() => {
+    const days = pageModel?.days ?? [];
+    return days.map((d) => ({
+      id: `day-${d.dayIndex}`,
+      label: `Day ${d.dayIndex}`,
+    }));
+  }, [pageModel?.days]);
 
-  const [activeDayId, setActiveDayId] = useState<string>("day-1");
   const day1Ref = useRef<HTMLDivElement | null>(null);
 
   const handleDayChange = (id: string) => {
@@ -134,6 +120,7 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
     );
   }
 
+  if (!pageModel) return <div className="p-6">No recap data</div>;
   return (
     <div className="min-h-screen bg-white">
       <RecapBlogTopBar
@@ -147,16 +134,16 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
       />
 
       <div className="space-y-10 p-6">
-        <RecapBlogHero {...hero} />
+        <RecapBlogHero {...pageModel.hero} />
 
         <div className="flex flex-col gap-6 lg:flex-row">
           <section className="min-w-0 flex-1" ref={day1Ref}>
             <div className="h-[750px]">
               <div className="h-full overflow-hidden">
                 <RecapBlogDaySection
-                  dayIndex={1}
-                  title="Day 1"
-                  entries={day1Entries as any}
+                  dayIndex={activeDay?.dayIndex ?? 1}
+                  title={activeDay?.title ?? ""}
+                  entries={activeDay?.entries ?? []}
                 />
               </div>
             </div>

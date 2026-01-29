@@ -23,6 +23,16 @@ const nextConfig: NextConfig = {
         hostname: "s3-us-west-1.amazonaws.com",
         pathname: "/linkedspaces.fs/**",
       },
+      {
+        protocol: "https",
+        hostname: "pocketverse.herokuapp.com",
+        pathname: "/user_resources/**",
+      },
+      {
+        protocol: "https",
+        hostname: "pocketverse.herokuapp.com",
+        pathname: "/public/user_resources/**",
+      },
     ],
   },
 };
