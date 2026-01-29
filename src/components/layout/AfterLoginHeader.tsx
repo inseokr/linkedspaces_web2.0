@@ -12,7 +12,7 @@ export function AfterLoginHeader() {
   const router = useRouter();
 
   return (
-    <header className="sticky top-0 z-[100] w-full bg-white border-b border-black">
+    <header className="top-0 z-[100] w-full bg-white border-b border-black">
       <div className="mx-auto h-[77px] flex items-center pl-6 lg:pl-10 ">
         <Link href="/" className="flex items-center gap-2 shrink-0">
           <div className="relative w-14 h-14">
