@@ -6,6 +6,7 @@ import React from "react";
 export type Crumb = {
   label: string;
   href?: string; // 있으면 링크, 없으면 텍스트
+  onClick?: () => void;
 };
 
 type Props = {
@@ -24,7 +25,14 @@ export default function RecapBlogBreadcrumb({ items, className = "" }: Props) {
     >
       {items.map((c, idx) => {
         const isLast = idx === items.length - 1;
-        const node = c.href ? (
+        const node = c.onClick ? (
+          <button
+            onClick={c.onClick}
+            className="hover:text-black/80 transition-colors"
+          >
+            {c.label}
+          </button>
+        ) : c.href ? (
           <Link href={c.href} className="hover:text-black/80 transition-colors">
             {c.label}
           </Link>
