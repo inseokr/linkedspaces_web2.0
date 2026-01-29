@@ -80,7 +80,7 @@ export default function SignInSection() {
                 autoComplete="username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className="w-full rounded-2xl border border-black/25 px-5 py-3 text-[14px] outline-none focus:border-black/50"
+                className="w-full rounded-2xl border border-black/25 px-5 py-3 text-[14px] placeholder:text-black/50 outline-none focus:border-black/50"
               />
 
               <input
@@ -89,7 +89,7 @@ export default function SignInSection() {
                 autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full rounded-2xl border border-black/25 px-5 py-3 text-[14px] outline-none focus:border-black/50"
+                className="w-full rounded-2xl border border-black/25 px-5 py-3 text-[14px] placeholder:text-black/50 outline-none focus:border-black/50"
               />
 
               <label className="flex items-center gap-3 pt-1 text-[14px] text-black/80">

@@ -17,7 +17,7 @@ export function AfterLoginHeader() {
         <Link href="/" className="flex items-center gap-2 shrink-0">
           <div className="relative w-14 h-14">
             <Image
-              src="/images/Ls_blue.png"
+              src="/images/LS_blue.png"
               alt="LinkedSpaces Logo"
               fill
               className="object-contain"
@@ -55,6 +55,8 @@ export function AfterLoginHeader() {
                 { label: "Our Story", href: "/#our-story" },
                 { label: "Learn More", href: "/learn-more" },
                 { label: "Contact Us", href: "/contact" },
+                { label: "Privacy Policy", href: "/privacy" },
+                { label: "Terms of Service", href: "/terms" },
               ]}
             />
           </div>
