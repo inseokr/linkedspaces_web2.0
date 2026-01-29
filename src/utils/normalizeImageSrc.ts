@@ -1,26 +1,38 @@
-const ASSET_HOST = "https://pocketverse.herokuapp.com"; // 실제 이미지 서빙 도메인
+// utils/normalizeImageSrc.ts
+
+// 1. S3 저장소 주소로 변경 (예전 해결 방식의 핵심)
+const ASSET_ORIGIN = "https://s3-us-west-1.amazonaws.com/linkedspaces.fs";
 
 export function normalizeImageSrc(src?: string) {
-  if (!src) return { src: "", unoptimized: false };
+  if (!src) return { src: "/images/hero/fallback.jpg", unoptimized: false };
 
-  // 1) /public 제거
-  let normalized = src.startsWith("/public/")
-    ? src.replace("/public", "")
-    : src;
+  // 이미 절대 주소(http...)인 경우 그대로 반환
+  if (/^https?:\/\//i.test(src)) return { src, unoptimized: false };
 
-  // 2) 절대 URL이면 그대로
-  const isAbsolute = /^https?:\/\//i.test(normalized);
+  let normalized = src;
 
-  // 3) 상대경로(/user_resources/...)면 백엔드 도메인 붙이기
-  if (!isAbsolute && normalized.startsWith("/")) {
-    normalized = `${ASSET_HOST}${normalized}`;
+  // 2. 예전 로직의 핵심: 경로 재조합
+  // API 응답이 "/public/..."으로 올 때 -> S3주소 + "/public/..."
+  if (normalized.startsWith("/public/")) {
+    normalized = `${ASSET_ORIGIN}${normalized}`;
+  }
+  // API 응답이 "/user_resources/..."로 올 때 -> S3주소 + "/public/user_resources/..."
+  else if (normalized.startsWith("/user_resources/")) {
+    normalized = `${ASSET_ORIGIN}/public${normalized}`;
+  }
+  // 기타 상대 경로 처리
+  else if (normalized.startsWith("/")) {
+    normalized = `${ASSET_ORIGIN}${normalized}`;
+  } else {
+    normalized = `${ASSET_ORIGIN}/${normalized}`;
   }
 
   const lower = normalized.toLowerCase();
   const isHeic = lower.endsWith(".heic") || lower.endsWith(".heif");
 
-  // user_resources면 next/image optimizer를 피하는 게 안전 (그리고 HEIC는 더더욱)
-  const unoptimized = isHeic || lower.includes("/user_resources/");
-
-  return { src: normalized, unoptimized };
+  // HEIC 파일이나 외부 리소스는 Next.js 최적화를 끄는 것이 안전함
+  return {
+    src: normalized,
+    unoptimized: isHeic || normalized.includes("amazonaws.com"),
+  };
 }
