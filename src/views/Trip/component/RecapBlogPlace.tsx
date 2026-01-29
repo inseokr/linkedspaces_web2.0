@@ -68,6 +68,12 @@ export type RecapEntry = {
   coordinate?: { latitude: number; longitude: number };
 };
 
+export type RecapDay = {
+  dayIndex: number;
+  title: string;
+  entries: RecapEntry[];
+};
+
 // >>>>>>> origin/develop
 type Props = {
   dayIndex: number;
