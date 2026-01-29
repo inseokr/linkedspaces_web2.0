@@ -7,7 +7,7 @@ import RecapBlogBreadcrumb, {
 import RecapDayTabs, { type DayTab } from "@/views/Trip/component/RecapDayTabs";
 
 type Props = {
-  title?: string; // "Recap Blog"
+  title?: string;
   onGoBack?: () => void;
 
   breadcrumbItems: Crumb[];
@@ -15,6 +15,10 @@ type Props = {
   dayTabs: DayTab[];
   activeDayId: string;
   onDayChange: (id: string) => void;
+
+  // 추가: 버튼 핸들러
+  onEditBlog?: () => void;
+  onShare?: () => void;
 
   className?: string;
 };
@@ -26,25 +30,41 @@ export default function RecapBlogTopBar({
   dayTabs,
   activeDayId,
   onDayChange,
+  onEditBlog,
+  onShare,
   className = "",
 }: Props) {
   return (
     <header
-      className={["w-full bg-white/85 backdrop-blur", className].join(" ")}
+      className={[
+        "sticky top-[78px] z-50", // 필요에 맞게 px 조정
+        "w-full bg-white/85 backdrop-blur border-b border-black/10",
+        className,
+      ].join(" ")}
     >
-      <div className="mx-auto flex max-w-[1200px] items-center justify-between gap-4 px-6 py-4">
-        {/* Left */}
-        <div className="min-w-0">
-          <div className="flex items-center gap-4">
+      <div className="mx-auto max-w-[1200px] px-6 py-4">
+        {/* 2행 2열 그리드 */}
+        <div className="grid grid-cols-[1fr_auto] grid-rows-2 gap-x-4 gap-y-2 items-start">
+          {/* Row 1, Col 1: Title + breadcrumb (desktop) */}
+          <div className="min-w-0 flex items-center gap-4">
             <h1 className="text-[18px] font-semibold text-black/70">{title}</h1>
-
             <RecapBlogBreadcrumb
               items={breadcrumbItems}
               className="hidden sm:flex"
             />
           </div>
 
-          <div className="mt-2">
+          {/* Row 1, Col 2: Day tabs */}
+          <div className="justify-self-end">
+            <RecapDayTabs
+              tabs={dayTabs}
+              activeId={activeDayId}
+              onChange={onDayChange}
+            />
+          </div>
+
+          {/* Row 2, Col 1: Go Back + mobile breadcrumb */}
+          <div className="min-w-0">
             <button
               type="button"
               onClick={onGoBack}
@@ -56,22 +76,37 @@ export default function RecapBlogTopBar({
             >
               Go Back
             </button>
+
+            <RecapBlogBreadcrumb
+              items={breadcrumbItems}
+              className="mt-2 sm:hidden"
+            />
           </div>
 
-          {/* 모바일에서는 아래로 breadcrumb */}
-          <RecapBlogBreadcrumb
-            items={breadcrumbItems}
-            className="mt-2 sm:hidden"
-          />
-        </div>
+          {/* Row 2, Col 2: Actions (Edit / Share) */}
+          <div className="justify-self-end flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onEditBlog}
+              className={[
+                "h-9 rounded-full px-4 text-[14px] font-semibold",
+              ].join(" ")}
+            >
+              Edit Blog
+            </button>
 
-        {/* Right */}
-        <div className="shrink-0">
-          <RecapDayTabs
-            tabs={dayTabs}
-            activeId={activeDayId}
-            onChange={onDayChange}
-          />
+            <button
+              type="button"
+              onClick={onShare}
+              className={[
+                "h-9 rounded-full px-4 text-[14px] font-semibold",
+                "border border-black/20 text-black/70",
+                "hover:bg-black/5 active:scale-[0.99] transition",
+              ].join(" ")}
+            >
+              Share
+            </button>
+          </div>
         </div>
       </div>
     </header>

@@ -343,32 +343,99 @@ type Props = {
   highlightIso2?: string[];
   countryStats?: CountryStat[];
   worldview?: string;
+
+  //mode 없으면 circle, mode="place"면 place
+  mode?: "place";
+
+  // circle markers
   markers?: MarkerData[];
   onMarkerClick?: (markerId: string) => void;
+
+  // place markers
+  placeMarkers?: MarkerData[];
+  onPlaceMarkerClick?: (markerId: string) => void;
 };
+
+function PlaceMarker({
+  imageUrl,
+  size = 72,
+}: {
+  imageUrl: string;
+  size?: number;
+}) {
+  return (
+    <div
+      style={{
+        width: size,
+        height: size,
+        borderRadius: 9999,
+        overflow: "hidden",
+        border: "3px solid rgba(255,255,255,0.9)",
+        boxShadow: "0 8px 20px rgba(0,0,0,0.18)",
+        background: "rgba(0,0,0,0.05)",
+      }}
+    >
+      <img
+        src={imageUrl}
+        alt=""
+        style={{
+          width: "100%",
+          height: "100%",
+          objectFit: "cover",
+          display: "block",
+        }}
+      />
+    </div>
+  );
+}
+
+const PLACE_PATH_SOURCE_ID = "place-path-src";
+const PLACE_PATH_LAYER_ID = "place-path-layer";
 
 export default function MapboxMap({
   countryCode,
   countryStats = [],
   worldview = "US",
+
+  mode, //undefined => circle / "place" => place
+
   markers = [],
   onMarkerClick,
+
+  placeMarkers = [],
+  onPlaceMarkerClick,
 }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
+
+  // 마커 핸들(기존)
   const markerHandlesRef = useRef<any[]>([]);
+
+  // refs
   const markersRef = useRef(markers);
+  const placeMarkersRef = useRef(placeMarkers);
+
   const onMarkerClickRef = useRef(onMarkerClick);
+  const onPlaceMarkerClickRef = useRef(onPlaceMarkerClick);
+
   const syncMarkersRef = useRef<() => void>(() => {});
 
   useEffect(() => {
     markersRef.current = markers;
   }, [markers]);
+
+  useEffect(() => {
+    placeMarkersRef.current = placeMarkers;
+  }, [placeMarkers]);
+
   useEffect(() => {
     onMarkerClickRef.current = onMarkerClick;
   }, [onMarkerClick]);
 
-  // Moved outside or memoized to avoid dependency warnings
+  useEffect(() => {
+    onPlaceMarkerClickRef.current = onPlaceMarkerClick;
+  }, [onPlaceMarkerClick]);
+
   const fallbackCenterByIso2: Record<string, [number, number]> = useMemo(
     () => ({
       US: [-98.5795, 39.8283],
@@ -380,35 +447,139 @@ export default function MapboxMap({
     [],
   );
 
+  const clearPlacePath = useCallback(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    if (map.getLayer(PLACE_PATH_LAYER_ID)) map.removeLayer(PLACE_PATH_LAYER_ID);
+    if (map.getSource(PLACE_PATH_SOURCE_ID))
+      map.removeSource(PLACE_PATH_SOURCE_ID);
+  }, []);
+
   const clearMarkers = useCallback(() => {
     markerHandlesRef.current.forEach((h) => {
       h.marker.remove();
-      setTimeout(() => {
-        h.unmount();
-      }, 0);
+      setTimeout(() => h.unmount(), 0);
       h.el.remove();
     });
     markerHandlesRef.current = [];
-  }, []);
 
-  // Fixed Hoisting: Define the function before it's used or use a ref for recursion
+    //place 모드에서만 쓰지만, 안전하게 항상 제거 시도
+    clearPlacePath();
+  }, [clearPlacePath]);
+
+  const syncPlacePath = useCallback(() => {
+    const map = mapRef.current;
+    if (!map || !map.isStyleLoaded()) return;
+
+    const coords = placeMarkersRef.current
+      .filter((m) => Number.isFinite(m.lng) && Number.isFinite(m.lat))
+      .map((m) => [m.lng, m.lat]);
+
+    // 2개 미만이면 라인 없음
+    if (coords.length < 2) {
+      clearPlacePath();
+      return;
+    }
+
+    const geojson: GeoJSON.FeatureCollection = {
+      type: "FeatureCollection",
+      features: [
+        {
+          type: "Feature",
+          properties: {},
+          geometry: { type: "LineString", coordinates: coords as any },
+        },
+      ],
+    };
+
+    // source 있으면 data만 갱신
+    const existing = map.getSource(PLACE_PATH_SOURCE_ID) as
+      | mapboxgl.GeoJSONSource
+      | undefined;
+    if (existing) {
+      existing.setData(geojson as any);
+    } else {
+      map.addSource(PLACE_PATH_SOURCE_ID, {
+        type: "geojson",
+        data: geojson as any,
+      });
+
+      //주황 점선
+      map.addLayer({
+        id: PLACE_PATH_LAYER_ID,
+        type: "line",
+        source: PLACE_PATH_SOURCE_ID,
+        layout: {
+          "line-join": "round",
+          "line-cap": "round",
+        },
+        paint: {
+          "line-color": "#F97316", // 주황
+          "line-width": 6,
+          "line-opacity": 0.9,
+          "line-dasharray": [2, 2], // 점선
+        },
+      });
+    }
+  }, [clearPlacePath]);
+
+  // 기존 syncMarkers를 "mode 기준"으로 확장 (나머지 로직은 그대로)
   const syncMarkers = useCallback(() => {
     const map = mapRef.current;
     if (!map) return;
 
     if (!map.isStyleLoaded()) {
-      // 변수 이름 대신 Ref를 사용하여 호출함으로써 Hoisting/TDZ 문제 해결
       map.once("idle", () => syncMarkersRef.current());
       return;
     }
 
     clearMarkers();
 
+    const isPlaceMode = mode === "place";
+
+    if (isPlaceMode) {
+      //place markers 렌더
+      placeMarkersRef.current.forEach((m) => {
+        if (!Number.isFinite(m.lat) || !Number.isFinite(m.lng)) return;
+
+        const el = document.createElement("div");
+        el.style.cursor = "pointer";
+
+        const handleClick = (e: MouseEvent) => {
+          e.stopPropagation();
+          onPlaceMarkerClickRef.current?.(m.id);
+        };
+        el.addEventListener("click", handleClick);
+
+        const root = createRoot(el);
+        root.render(<PlaceMarker imageUrl={m.imageUrl} size={72} />);
+
+        // circle UI라서 center anchor가 더 자연스러움
+        const marker = new mapboxgl.Marker({ element: el, anchor: "center" })
+          .setLngLat([m.lng, m.lat])
+          .addTo(map);
+
+        markerHandlesRef.current.push({
+          id: m.id,
+          marker,
+          el,
+          unmount: () => root.unmount(),
+        });
+      });
+
+      //생성 순서대로 점선 연결
+      syncPlacePath();
+      return;
+    }
+
+    //circle markers (기존 그대로)
     markersRef.current.forEach((m) => {
       if (!Number.isFinite(m.lat) || !Number.isFinite(m.lng)) return;
 
       const el = document.createElement("div");
       el.style.cursor = "pointer";
+
       const handleMarkerClick = (e: MouseEvent) => {
         e.stopPropagation();
         onMarkerClickRef.current?.(m.id);
@@ -435,7 +606,7 @@ export default function MapboxMap({
         unmount: () => root.unmount(),
       });
     });
-  }, [clearMarkers]);
+  }, [clearMarkers, mode, syncPlacePath]);
 
   useEffect(() => {
     syncMarkersRef.current = syncMarkers;
@@ -445,7 +616,6 @@ export default function MapboxMap({
     const map = mapRef.current;
     if (!map || !map.isStyleLoaded()) return;
 
-    // Initialize the country boundaries source if it doesn't exist
     if (!map.getSource("countries")) {
       map.addSource("countries", {
         type: "vector",
@@ -453,7 +623,6 @@ export default function MapboxMap({
       });
     }
 
-    // Remove highlight layers and exit if no country data is available
     if (countryStats.length === 0) {
       if (map.getLayer("country-highlight-fill"))
         map.removeLayer("country-highlight-fill");
@@ -462,32 +631,16 @@ export default function MapboxMap({
       return;
     }
 
-    /**
-     * Define dynamic fill colors based on visit counts using a 'match' expression.
-     * Syntax: ["match", ["get", "property"], key1, value1, key2, value2, ..., default]
-     */
     const fillColorExpression: any = ["match", ["get", "iso_3166_1"]];
 
     countryStats.forEach((stat) => {
-      /**
-       * Calculate opacity using a logarithmic scale to ensure visual differentiation
-       * even for high visit counts (e.g., distinguishing between 10, 20, and 50 visits).
-       * Range: min ~0.15 to max 0.9
-       */
       const opacity = Math.min(0.15 + Math.log10(stat.value + 1) * 0.5, 0.9);
-
       fillColorExpression.push(stat.code);
-      fillColorExpression.push(`rgba(249, 115, 22, ${opacity})`); // Primary theme color (Orange)
+      fillColorExpression.push(`rgba(249, 115, 22, ${opacity})`);
     });
 
-    // Default color for non-visited countries (transparent)
     fillColorExpression.push("rgba(0, 0, 0, 0)");
 
-    /**
-     * Worldview filter ensures correct boundary rendering
-     * based on the specific regional viewpoint.
-     */
-    // MapboxMap.tsx 내부
     const worldViewFilter = [
       "any",
       ["==", ["get", "worldview"], "all"],
@@ -495,7 +648,6 @@ export default function MapboxMap({
       ["has", "iso_3166_1"],
     ];
 
-    // Apply or update the highlight layers on the map
     if (map.getLayer("country-highlight-fill")) {
       map.setPaintProperty(
         "country-highlight-fill",
@@ -504,7 +656,6 @@ export default function MapboxMap({
       );
       map.setFilter("country-highlight-fill", worldViewFilter);
     } else {
-      // Add Fill Layer: Placed below 'country-label' to keep text readable
       map.addLayer(
         {
           id: "country-highlight-fill",
@@ -540,6 +691,7 @@ export default function MapboxMap({
               minY = Infinity,
               maxX = -Infinity,
               maxY = -Infinity;
+
             const walk = (arr: any) => {
               if (
                 typeof arr?.[0] === "number" &&
@@ -553,6 +705,7 @@ export default function MapboxMap({
               }
               for (const child of arr) walk(child);
             };
+
             features.forEach((f) => walk((f.geometry as any).coordinates));
 
             if (Number.isFinite(minX)) {
@@ -566,7 +719,7 @@ export default function MapboxMap({
               return;
             }
           }
-        } catch (e) {
+        } catch {
           /* fallback */
         }
 
@@ -587,9 +740,8 @@ export default function MapboxMap({
     const map = new mapboxgl.Map({
       container: containerRef.current,
       style: "mapbox://styles/mapbox/streets-v12",
-
       center: [-98.5795, 39.8283],
-      zoom: 1,
+      zoom: 5,
       renderWorldCopies: false,
     });
 
@@ -597,6 +749,9 @@ export default function MapboxMap({
 
     const handleStyleData = () => {
       syncHighlightLayers();
+      // style이 바뀌면 커스텀 source/layer가 날아갈 수 있어서,
+      // 현재 mode에 맞춰 마커/라인도 재동기화
+      syncMarkersRef.current();
     };
 
     map.on("load", () => {
@@ -628,12 +783,15 @@ export default function MapboxMap({
     clearMarkers,
   ]);
 
+  //데이터/모드 변화 시 동일 함수로 재동기화
   useEffect(() => {
     syncMarkers();
   }, [syncMarkers]);
+
   useEffect(() => {
     syncHighlightLayers();
   }, [syncHighlightLayers]);
+
   useEffect(() => {
     if (countryCode) focusOnCountry(countryCode);
   }, [countryCode, focusOnCountry]);
