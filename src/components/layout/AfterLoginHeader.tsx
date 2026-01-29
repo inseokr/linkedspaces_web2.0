@@ -17,7 +17,7 @@ export function AfterLoginHeader() {
         <Link href="/" className="flex items-center gap-2 shrink-0">
           <div className="relative w-14 h-14">
             <Image
-              src="/images/Ls_blue.png"
+              src="/images/LS_blue.png"
               alt="LinkedSpaces Logo"
               fill
               className="object-contain"
