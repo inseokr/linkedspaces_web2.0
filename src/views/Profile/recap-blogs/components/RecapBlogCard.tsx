@@ -4,7 +4,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import * as React from "react";
+import { normalizeImageSrc } from "@/utils/normalizeImageSrc";
 import { Eye, MapPin } from "lucide-react";
 
 export type AllBlogCardItem = {
@@ -36,10 +36,7 @@ export default function AllBlogCard({
   onVisibilityClick,
   showVisibilityButton = true,
 }: Props) {
-  const src = item.coverImageUrl;
-  const unoptimized =
-    src?.toLowerCase().endsWith(".heic") ||
-    src?.toLowerCase().endsWith(".heif");
+  const { src, unoptimized } = normalizeImageSrc(item.coverImageUrl);
 
   return (
     <article className={["w-full", className].join(" ")}>

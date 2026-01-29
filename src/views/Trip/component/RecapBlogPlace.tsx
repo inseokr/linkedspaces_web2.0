@@ -1,7 +1,9 @@
+// RecapBlogPlace.tsx
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useState } from "react";
 import Image from "next/image";
+
 import {
   MapPin,
   ThumbsUp,
@@ -14,104 +16,32 @@ import {
   ChevronRight,
 } from "lucide-react";
 
-//이미 있다고 가정 (이전 메시지에서 만든 Hero)
-import RecapBlogHero from "@/views/Trip/component/RecapBlog";
-
-/** ----------------------------
- *  데이터 타입 (Hero + Day/Entries)
- *  ---------------------------- */
-type RecapBlogPageData = {
-  hero: {
-    coverImageUrl: string;
-    title: string;
-    dateText: string;
-    locationText: string;
-    authorName: string;
-    postedLabel: string;
-    avatarUrl: string;
-  };
-  days: Array<{
-    dayIndex: number; // 1,2,3...
-    title: string; // "Arrival in Zermatt"
-    entries: Array<{
-      id: string;
-      placeName: string; // "Zermatt Station"
-      timeRangeText: string; // "9:30 - 9:40 AM"
-      categoryLabel?: string; // "Cafe"
-      liked?: boolean;
-      likeCount: number;
-      commentCount: number;
-      caption: string;
-      photos: string[]; // 이미지 슬라이더
-    }>;
-  }>;
+export type RecapEntry = {
+  id: string;
+  placeName: string;
+  timeRangeText: string;
+  categoryLabel?: string;
+  liked?: boolean;
+  likeCount: number;
+  commentCount: number;
+  caption: string;
+  photos: string[];
+  coordinate?: { latitude: number; longitude: number };
 };
 
-/** ----------------------------
- *  예시 데이터 (요청한 Hero props “연장” 형태)
- *  ---------------------------- */
-const demoData: RecapBlogPageData = {
-  hero: {
-    coverImageUrl: "/images/hero/us.jpg",
-    title: "US Adventure",
-    dateText: "Dec 15–20, 2024",
-    locationText: "San Francisco",
-    authorName: "Username",
-    postedLabel: "Posted 5 days ago",
-    avatarUrl: "/images/avatar.png",
-  },
-  days: [
-    {
-      dayIndex: 1,
-      title: "Arrival in Zermatt",
-      entries: [
-        {
-          id: "e-1",
-          placeName: "Zermatt Station",
-          timeRangeText: "9:30 - 9:40 AM",
-          categoryLabel: "Cafe",
-          liked: true,
-          likeCount: 5,
-          commentCount: 3,
-          caption:
-            "First glimpse of the Matterhorn! The iconic peak welcomed us as we stepped off the train. The air felt sharper, the town was quiet, and everything looked unreal—like a postcard. We grabbed a quick coffee and just stood there watching the clouds move across the ridge for a while.",
-          photos: ["/images/demo/zermatt-1.jpg", "/images/demo/zermatt-2.jpg"],
-        },
-        {
-          id: "e-2",
-          placeName: "Gornergrat Railway",
-          timeRangeText: "11:10 - 12:40 PM",
-          categoryLabel: "Scenic",
-          liked: false,
-          likeCount: 12,
-          commentCount: 2,
-          caption:
-            "Took the railway up and the views kept escalating every minute. Snow lines, tiny villages, and then—bam—full mountain theater. If you go, sit on the right side going up.",
-          photos: [
-            "/images/demo/gorner-1.jpg",
-            "/images/demo/gorner-2.jpg",
-            "/images/demo/gorner-3.jpg",
-          ],
-        },
-      ],
-    },
-  ],
+export type RecapDay = {
+  dayIndex: number;
+  title: string;
+  entries: RecapEntry[];
 };
 
-/** ----------------------------
- *  유틸: line-clamp 적용 여부 판단용(간단 버전)
- *  - 여기서는 'See More' 항상 노출해도 UX 괜찮으면 이 부분 제거 가능
- *  ---------------------------- */
-const clampClass = "line-clamp-2";
-
-/** ----------------------------
- *  컴포넌트: Day 섹션 (Horizontal scroll)
- *  ---------------------------- */
 type Props = {
   dayIndex: number;
   title: string;
-  entries: RecapBlogPageData["days"][number]["entries"];
+  entries: RecapEntry[];
 };
+
+const clampClass = "line-clamp-2";
 
 export function RecapBlogDaySection({ dayIndex, title, entries }: Props) {
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
@@ -119,8 +49,7 @@ export function RecapBlogDaySection({ dayIndex, title, entries }: Props) {
   const toggleExpanded = (id: string) => {
     setExpandedIds((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+      next.has(id) ? next.delete(id) : next.add(id);
       return next;
     });
   };
@@ -131,22 +60,15 @@ export function RecapBlogDaySection({ dayIndex, title, entries }: Props) {
         Day {dayIndex}: {title}
       </h2>
 
-      {/* ✅ viewport(스크롤 영역) */}
       <div className="relative">
         <div
           className={[
-            "flex overflow-x-auto",
-            "snap-x snap-mandatory",
-            "scroll-smooth", // 트랙패드/휠 느낌 개선
-            "pb-4",
-            "[&>*]:snap-start",
-            // gap 대신 padding으로 '페이지'처럼 넘기기
-            "gap-0",
+            "flex overflow-x-auto snap-x snap-mandatory scroll-smooth pb-4",
+            "[&>*]:snap-start gap-0",
             "scrollbar-thin scrollbar-thumb-black/10 scrollbar-track-transparent",
           ].join(" ")}
         >
           {entries.map((e) => (
-            // ✅ 한 페이지(=뷰포트) 폭을 강제: w-full + shrink-0
             <div key={e.id} className="w-full shrink-0 px-1">
               <RecapEntryCard
                 entry={e}
@@ -161,34 +83,30 @@ export function RecapBlogDaySection({ dayIndex, title, entries }: Props) {
   );
 }
 
-/** ----------------------------
- *  컴포넌트: 카드 (이미지 슬라이더 + See More)
- *  ---------------------------- */
 function RecapEntryCard({
   entry,
   expanded,
   onToggleExpanded,
 }: {
-  entry: RecapBlogPageData["days"][number]["entries"][number];
+  entry: RecapEntry;
   expanded: boolean;
   onToggleExpanded: () => void;
 }) {
   const [photoIdx, setPhotoIdx] = useState(0);
-  const total = entry.photos.length;
+  const total = Math.max(entry.photos.length, 1);
 
   const prev = () => setPhotoIdx((i) => (i - 1 + total) % total);
   const next = () => setPhotoIdx((i) => (i + 1) % total);
 
+  const currentPhoto = entry.photos[photoIdx] ?? "/images/hero/us.jpg";
+
   return (
     <article
       className={[
-        "w-full", // ✅ 화면폭에 맞춤
-        "max-w-[920px]", // ✅ 디자인 최대 폭만 제한(원하는 값으로)
-        "mx-auto", // ✅ 가운데 정렬
-        "overflow-hidden rounded-[28px] border border-black/15 bg-white shadow-sm",
+        "w-full max-w-[920px] mx-auto overflow-hidden",
+        "rounded-[28px] border border-black/15 bg-white shadow-sm",
       ].join(" ")}
     >
-      {/* 상단: 장소/시간/태그 */}
       <div className="px-6 pt-6">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
@@ -227,24 +145,23 @@ function RecapEntryCard({
         </div>
       </div>
 
-      {/* 이미지 슬라이더 */}
       <div className="relative mt-4">
         <div className="relative mx-6 aspect-[16/9] overflow-hidden rounded-2xl bg-black/5">
           <Image
-            src={entry.photos[photoIdx]}
+            src={currentPhoto}
             alt={`${entry.placeName} photo ${photoIdx + 1}`}
             fill
             className="object-cover"
             sizes="(max-width: 768px) 90vw, 680px"
           />
 
-          {/* 1/2 배지 */}
           <div className="absolute left-4 top-4 rounded-full bg-white/40 px-3 py-1 text-[14px] font-bold text-white backdrop-blur">
-            {photoIdx + 1}/{total}
+            {entry.photos.length
+              ? `${photoIdx + 1}/${entry.photos.length}`
+              : "—"}
           </div>
 
-          {/* 좌/우 버튼 */}
-          {total > 1 && (
+          {entry.photos.length > 1 && (
             <>
               <button
                 type="button"
@@ -267,7 +184,6 @@ function RecapEntryCard({
         </div>
       </div>
 
-      {/* 캡션 + See More */}
       <div className="px-6 pb-4 pt-5">
         <div className="flex items-end justify-between gap-6">
           <p
@@ -289,7 +205,6 @@ function RecapEntryCard({
         </div>
       </div>
 
-      {/* 하단 액션 바 */}
       <div className="flex items-center justify-between border-t border-black/10 px-6 py-4">
         <div className="flex items-center gap-5 text-black/70">
           <button
@@ -321,39 +236,5 @@ function RecapEntryCard({
         </div>
       </div>
     </article>
-  );
-}
-
-/** ----------------------------
- * 페이지 예시: Hero + Day UI 조합
- *  ---------------------------- */
-export default function RecapBlogDetailExample() {
-  const data = useMemo(() => demoData, []);
-
-  return (
-    <div className="space-y-10 p-6">
-      {/* 요청한 “연장 데이터” 형태 그대로 */}
-      <RecapBlogHero
-        coverImageUrl={data.hero.coverImageUrl}
-        title={data.hero.title}
-        dateText={data.hero.dateText}
-        locationText={data.hero.locationText}
-        authorName={data.hero.authorName}
-        postedLabel={data.hero.postedLabel}
-        avatarUrl={data.hero.avatarUrl}
-      />
-
-      {/* Day 섹션들 */}
-      <div className="space-y-12">
-        {data.days.map((d) => (
-          <RecapBlogDaySection
-            key={d.dayIndex}
-            dayIndex={d.dayIndex}
-            title={d.title}
-            entries={d.entries}
-          />
-        ))}
-      </div>
-    </div>
   );
 }

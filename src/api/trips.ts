@@ -1,3 +1,8 @@
+// trips.ts
+
+/** --------------------------------
+ *  Shared / User Trips (summary)
+ *  -------------------------------- */
 export type TripPrivacyControl = {
   level: "public" | "private" | "hidden" | string;
   allowedUserList: string[];
@@ -13,6 +18,10 @@ export type TripPlaceRef = {
   _id?: string;
 };
 
+/**
+ * User.trips[] 에 들어있는 "요약 Trip"
+ * - 목록/지도/국가별 recap 리스트용
+ */
 export type Trip = {
   blogKey: number;
   status: "saved" | string;
@@ -21,7 +30,7 @@ export type Trip = {
 
   startTimeString: string;
   endTimeString: string;
-  startingYear: number;
+  startingYear: number | string;
 
   startTimestamp?: string; // ISO
   endTimestamp?: string; // ISO
@@ -36,4 +45,73 @@ export type Trip = {
 
   coordinate?: TripCoordinate;
   placeList?: TripPlaceRef[];
+};
+
+/** --------------------------------
+ *  Trip Recap API (detail)
+ *  - /trip-recap/:userName/:blogKey 응답
+ *  -------------------------------- */
+
+/** photoList 원소 */
+export type TripRecapPhoto = {
+  uri: string; // "/public/..." (often HEIC)
+  story: string | null;
+  sentiment: number;
+  selected: boolean;
+  inAppPhoto: boolean;
+
+  creationTime: string; // ISO
+  digitizedTime: string; // "YYYY:MM:DD HH:mm:ss"
+
+  coordinate?: TripCoordinate;
+
+  audio: any | null;
+  storyAudio: any | null;
+  vibeEnabled: boolean;
+
+  comments: any[];
+  liked: Array<{ _id: string; username: string }>;
+  _id: string;
+};
+
+/** places 원소 */
+export type TripRecapPlace = {
+  placeName: string;
+  coordinate: TripCoordinate;
+
+  visitedTime: string; // ISO
+  digitizedTime: string; // "YYYY:MM:DD HH:mm:ss"
+
+  story: string | null; // place-level story (often null)
+  sentiment: number;
+  categories: string[];
+
+  externalUrl?: string;
+
+  photoList: TripRecapPhoto[];
+};
+
+/** days 원소 */
+export type TripRecapDay = {
+  date: string; // "2024:11:09"
+  places: TripRecapPlace[];
+};
+
+/** trip-recap 최상위 응답 */
+export type TripRecapResponse = {
+  trip: {
+    title: string;
+    highlight: string;
+
+    startTimeString: string;
+    endTimeString: string;
+    startingYear: string | number;
+
+    coordinate: TripCoordinate;
+    visitedPlaceName: string[];
+
+    userName: string;
+    profilePicture: string; // "/public/..."
+  };
+  days: TripRecapDay[];
 };
