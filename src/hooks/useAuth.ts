@@ -1,6 +1,6 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
+import { useSyncExternalStore, useState, useEffect } from "react";
 import { useRouter } from "next/navigation"; // Added for navigation
 import { clearCachedUser } from "@/api/user";
 
@@ -41,6 +41,13 @@ function subscribe(callback: () => void) {
 export function useAuth() {
   const token = useSyncExternalStore(subscribe, getSnapshot, () => null);
   const router = useRouter();
+  const [isMounted, setIsMounted] = useState(false);
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => {
+      setIsMounted(true);
+    });
+    return () => cancelAnimationFrame(raf);
+  }, []);
 
   const logout = () => {
     // 1. Clear the token
@@ -60,6 +67,7 @@ export function useAuth() {
   };
 
   return {
+    isLoading: !isMounted,
     isAuthenticated: Boolean(token),
     logout,
   };
