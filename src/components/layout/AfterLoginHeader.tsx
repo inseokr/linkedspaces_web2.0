@@ -21,6 +21,7 @@ export function AfterLoginHeader() {
               alt="LinkedSpaces Logo"
               fill
               className="object-contain"
+              unoptimized={true}
               priority
             />
           </div>

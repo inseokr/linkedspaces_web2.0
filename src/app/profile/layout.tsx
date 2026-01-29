@@ -25,7 +25,7 @@ export default function ProfileLayout({
   }, [isSidebarOpen]);
 
   return (
-    <div className="relative flex min-h-screen">
+    <div className="relative flex h-screen w-full overflow-hidden">
       {/* Sidebar Component with toggle props */}
       <Sidebar
         isOpen={isSidebarOpen}
@@ -53,14 +53,10 @@ export default function ProfileLayout({
           The transition must match the sidebar's animation speed.
       */}
       <main
-        className="flex-1 transition-all duration-300 ease-in-out bg-white"
-        style={{
-          paddingLeft: isSidebarOpen ? SIDEBAR_WIDTH : "0px",
-        }}
+        className="flex-1 h-full overflow-y-auto transition-all duration-300 ease-in-out bg-white"
+        style={{ paddingLeft: isSidebarOpen ? SIDEBAR_WIDTH : "0px" }}
       >
-        <div className="w-full h-full min-h-[calc(100vh-77px)] ">
-          {children}
-        </div>
+        <div className="w-full min-h-full flex flex-col">{children}</div>
       </main>
     </div>
   );
