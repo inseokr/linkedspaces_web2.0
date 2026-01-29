@@ -12,6 +12,10 @@ import MapboxMap from "@/views/Profile/travel-stats/components/MapBoxMap";
 import { mapTripRecapToPageModel } from "@/views/Trip/utils/mapTripRecap";
 import type { MarkerData } from "@/views/Profile/travel-stats/components/MapBoxMap";
 import type { TripRecapResponse } from "@/api/trips";
+import { useRouter } from "next/navigation";
+import { loadDraft } from "@/views/Trip/edit/utils/draftStorage";
+import { applyDraftToPageModel } from "@/views/Trip/edit/utils/editMappers";
+
 interface TripRecapViewProps {
   userId: string;
   tripId: string;
@@ -21,6 +25,7 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
   const [recapData, setRecapData] = useState<TripRecapResponse | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
 
   /** TopBar 높이(임시) */
   const TOPBAR_OFFSET_PX = 250;
@@ -84,9 +89,16 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
 
   const pageModel = useMemo(() => {
     if (!recapData) return null;
-    return mapTripRecapToPageModel(recapData);
-  }, [recapData]);
+    const pm = mapTripRecapToPageModel(recapData);
 
+    // if local draft exists, apply it
+    const draft = loadDraft(userId, tripId);
+    if (draft) {
+      return applyDraftToPageModel(pm, draft);
+    }
+
+    return pm;
+  }, [recapData, userId, tripId]);
   //(추가) “어느 도시 주변에 찍을지” 베이스 좌표, "데이터에 따라 알아서" 베이스 좌표를 결정
   const baseCenter = useMemo(() => {
     // 1. check if first entry has coordinate
@@ -103,9 +115,9 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
   const entryIdToDayId = useMemo(() => {
     const map = new Map<string, string>();
     if (!pageModel) return map;
-    pageModel.days.forEach((d) => {
+    pageModel.days.forEach((d: any) => {
       const dayId = `day-${d.dayIndex}`;
-      d.entries.forEach((e) => map.set(e.id, dayId));
+      d.entries.forEach((e: any) => map.set(e.id, dayId));
     });
     return map;
   }, [pageModel]);
@@ -117,8 +129,8 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
     // pageModel.hero에 심어둔 startingYear를 가져오거나, 정 없으면 올해 연도 사용
     const travelYear = pageModel.hero.startingYear ?? new Date().getFullYear();
 
-    return pageModel.days.flatMap((d) =>
-      d.entries.map((e) => ({
+    return pageModel.days.flatMap((d: any) =>
+      d.entries.map((e: any) => ({
         id: e.id,
         lat: e.coordinate?.latitude ?? baseCenter.lat,
         lng: e.coordinate?.longitude ?? baseCenter.lng,
@@ -149,7 +161,7 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
 
   const dayTabs: DayTab[] = useMemo(() => {
     return (
-      pageModel?.days.map((d) => ({
+      pageModel?.days.map((d: any) => ({
         id: `day-${d.dayIndex}`,
         label: `Day ${d.dayIndex}`,
       })) ?? []
@@ -298,7 +310,7 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
 
   const activeDay: RecapDay | undefined = useMemo(() => {
     return (
-      pageModel?.days?.find((d) => d.dayIndex === activeDayIndex) ??
+      pageModel?.days?.find((d: any) => d.dayIndex === activeDayIndex) ??
       pageModel?.days?.[0]
     );
   }, [pageModel?.days, activeDayIndex]);
@@ -328,6 +340,7 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
         activeDayId={activeDayId}
         onDayChange={handleDayChange}
         onGoBack={() => window.history.back()}
+        onEditBlog={() => router.push(`/trip/${userId}/${tripId}/edit`)}
         className="sticky top-0 z-50 border-b border-black/10"
       />
       <div className="space-y-10 p-6">
@@ -352,7 +365,7 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
               style={{ height: PANEL_HEIGHT }}
             >
               <div className="space-y-12 p-4">
-                {pageModel.days.map((d) => (
+                {pageModel.days.map((d: any) => (
                   <div
                     key={d.dayIndex}
                     data-day-id={`day-${d.dayIndex}`}
