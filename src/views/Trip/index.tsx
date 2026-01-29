@@ -315,7 +315,7 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
     );
   }, [effectiveModel.days, baseCenter]);
 
-  // ✅ helper: entryId -> focusLatLng set (중복 set 방지)
+  // helper: entryId -> focusLatLng set (중복 set 방지)
   const focusToEntryId = (entryId: string) => {
     const m = markers.find((x) => x.id === entryId);
     if (!m) return;
@@ -323,7 +323,7 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
     setFocusLatLng({ lat: m.lat, lng: m.lng });
   };
 
-  // ✅ helper: left panel "가운데"에 가장 가까운 entry 찾기
+  // helper: left panel "가운데"에 가장 가까운 entry 찾기
   const getClosestEntryToCenter = () => {
     const root = leftScrollRef.current;
     if (!root) return null;
@@ -352,7 +352,7 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
     return bestId;
   };
 
-  // ✅ helper: 디바운스(스크롤 중 과도한 이동 방지)
+  //helper: 디바운스(스크롤 중 과도한 이동 방지)
   const scheduleFocusToEntry = (entryId: string) => {
     if (focusTimerRef.current) window.clearTimeout(focusTimerRef.current);
 
@@ -371,7 +371,7 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
     }, 120);
   };
 
-  // ✅ 최초 1회: "전체 첫 entry"로 초기 포커스
+  //최초 1회: "전체 첫 entry"로 초기 포커스
   useEffect(() => {
     if (focusLatLng) return;
     if (!markers.length) return;
@@ -479,7 +479,7 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
         setActiveDayId(chosen);
       }
 
-      // --- (B) ✅ 추가: entry(장소) 기준 카메라 포커스 ---
+      // --- 추가: entry(장소) 기준 카메라 포커스 ---
       const closestEntryId = getClosestEntryToCenter();
       if (closestEntryId) {
         scheduleFocusToEntry(closestEntryId);
@@ -712,7 +712,7 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
                         dayIndex={d.dayIndex}
                         title={d.title}
                         entries={d.entries as any}
-                        // ✅ entry DOM ref 수집
+                        //entry DOM ref 수집
                         onEntryMount={(entryId, el) => {
                           entryRefs.current[entryId] = el;
                         }}

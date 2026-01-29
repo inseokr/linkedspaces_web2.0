@@ -47,13 +47,6 @@ export type RecapBlogPageData = {
   }>;
 };
 
-/** ----------------------------
- *  유틸: 캡션 라인 클램프
- *  ---------------------------- */
-
-/** ----------------------------
- *  컴포넌트: Day 섹션 (✅ 장소는 세로 배치)
- *  ---------------------------- */
 // =======
 export type RecapEntry = {
   id: string;
@@ -74,7 +67,6 @@ export type RecapDay = {
   entries: RecapEntry[];
 };
 
-// >>>>>>> origin/develop
 type Props = {
   dayIndex: number;
   title: string;
@@ -108,7 +100,6 @@ export function RecapBlogDaySection({
         Day {dayIndex}: {title}
       </div>
 
-      {/* <<<<<<< HEAD */}
       {/* 장소(Entry)들을 vertical로 쌓는다 */}
       <div className="space-y-10">
         {entries.map((entry) => (
@@ -129,18 +120,11 @@ export function RecapBlogDaySection({
   );
 }
 
-{
-  /* 
-<<<<<<< HEAD */
-}
 /** ----------------------------
  *  장소 블록: (카드 외부에 장소/시간/태그)
  *  - 아래에 사진 카드 캐러셀(가로)
  *  ---------------------------- */
 function RecapPlaceBlock({
-  // =======
-  // function RecapEntryCard({
-  // >>>>>>> origin/develop
   entry,
   expanded,
   onToggleExpanded,
@@ -149,10 +133,9 @@ function RecapPlaceBlock({
   expanded: boolean;
   onToggleExpanded: () => void;
 }) {
-  // <<<<<<< HEAD
   return (
     <div className="space-y-4">
-      {/* ✅ 장소/시간/태그는 카드 외부 */}
+      {/* 장소/시간/태그는 카드 외부 */}
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <div className="flex items-center gap-3">
@@ -163,35 +146,6 @@ function RecapPlaceBlock({
               </div>
               <div className="mt-1 text-[16px] font-medium text-black/70">
                 {entry.timeRangeText}
-                {/* =======
-  const [photoIdx, setPhotoIdx] = useState(0);
-  const total = Math.max(entry.photos.length, 1);
-
-  const prev = () => setPhotoIdx((i) => (i - 1 + total) % total);
-  const next = () => setPhotoIdx((i) => (i + 1) % total);
-
-  const currentPhoto = entry.photos[photoIdx] ?? "/images/hero/us.jpg";
-
-  return (
-    <article
-      className={[
-        "w-full max-w-[920px] mx-auto overflow-hidden",
-        "rounded-[28px] border border-black/15 bg-white shadow-sm",
-      ].join(" ")}
-    >
-      <div className="px-6 pt-6">
-        <div className="flex items-start justify-between gap-4">
-          <div className="min-w-0">
-            <div className="flex items-center gap-3">
-              <MapPin className="h-7 w-7 text-[#B84A2F]" />
-              <div className="min-w-0">
-                <div className="truncate text-[30px] font-extrabold text-black underline underline-offset-4">
-                  {entry.placeName}
-                </div>
-                <div className="mt-1 text-[16px] font-medium text-black/70">
-                  {entry.timeRangeText}
-                </div>
->>>>>>> origin/develop */}
               </div>
             </div>
           </div>
@@ -218,8 +172,7 @@ function RecapPlaceBlock({
         </div>
       </div>
 
-      {/* <<<<<<< HEAD */}
-      {/* ✅ 이 장소의 사진들은 horizontal 캐러셀 (카드 단위로 넘어감) */}
+      {/* 이 장소의 사진들은 horizontal 캐러셀 (카드 단위로 넘어감) */}
       <RecapPhotoCarousel
         entry={entry}
         expanded={expanded}
@@ -324,7 +277,6 @@ function RecapPhotoCarousel({
  *  카드에는 사진 1장 + 캡션 + 액션바만 포함
  *  (장소/시간/태그는 PlaceBlock에 있음)
  *  ---------------------------- */
-
 function RecapPhotoCard({
   entry,
   photoUrl,
@@ -340,6 +292,46 @@ function RecapPhotoCard({
   expanded: boolean;
   onToggleExpanded: () => void;
 }) {
+  // "2줄 넘을 때만 See More"를 위한 측정
+  const captionRef = useRef<HTMLParagraphElement | null>(null);
+  const [canExpand, setCanExpand] = useState(false);
+
+  useEffect(() => {
+    const el = captionRef.current;
+    if (!el) return;
+
+    const measure = () => {
+      // expanded 상태에서는 clamp가 풀리므로,
+      // "2줄 기준" 판별을 위해 clamp를 잠깐 강제해 측정
+      const hadClamp = el.classList.contains(clampClass);
+      if (!hadClamp) el.classList.add(clampClass);
+
+      const raf = requestAnimationFrame(() => {
+        const isClamped = el.scrollHeight > el.clientHeight + 1;
+        setCanExpand(isClamped);
+
+        if (!hadClamp) el.classList.remove(clampClass);
+      });
+
+      return () => cancelAnimationFrame(raf);
+    };
+
+    const cleanup = measure();
+
+    const ro = new ResizeObserver(() => {
+      measure();
+    });
+    ro.observe(el);
+
+    window.addEventListener("resize", measure);
+
+    return () => {
+      cleanup?.();
+      ro.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, [entry.caption]);
+
   return (
     <article
       className={[
@@ -355,20 +347,12 @@ function RecapPhotoCard({
           <Image
             src={photoUrl}
             alt={`${entry.placeName} photo ${photoIndex + 1}`}
-            // =======
-            //       <div className="relative mt-4">
-            //         <div className="relative mx-6 aspect-[16/9] overflow-hidden rounded-2xl bg-black/5">
-            //           <Image
-            //             src={currentPhoto}
-            //             alt={`${entry.placeName} photo ${photoIdx + 1}`}
-            // >>>>>>> origin/develop
             fill
             className="object-cover"
             sizes="(max-width: 768px) 90vw, 680px"
           />
 
           <div className="absolute left-4 top-4 rounded-full bg-white/40 px-3 py-1 text-[14px] font-bold text-white backdrop-blur">
-            {/* <<<<<<< HEAD */}
             {photoIndex + 1}/{totalPhotos}
           </div>
         </div>
@@ -376,39 +360,9 @@ function RecapPhotoCard({
 
       {/* 캡션 + See More */}
       <div className="px-6 pb-4">
-        {/* =======
-            {entry.photos.length
-              ? `${photoIdx + 1}/${entry.photos.length}`
-              : "—"}
-          </div>
-
-          {entry.photos.length > 1 && (
-            <>
-              <button
-                type="button"
-                onClick={prev}
-                className="absolute left-3 top-1/2 -translate-y-1/2 rounded-full bg-white/70 p-2 shadow-sm backdrop-blur hover:bg-white"
-                aria-label="Previous photo"
-              >
-                <ChevronLeft className="h-6 w-6 text-black/70" />
-              </button>
-              <button
-                type="button"
-                onClick={next}
-                className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-white/70 p-2 shadow-sm backdrop-blur hover:bg-white"
-                aria-label="Next photo"
-              >
-                <ChevronRight className="h-6 w-6 text-black/70" />
-              </button>
-            </>
-          )}
-        </div>
-      </div>
-
-      <div className="px-6 pb-4 pt-5">
->>>>>>> origin/develop */}
         <div className="flex items-end justify-between gap-6">
           <p
+            ref={captionRef}
             className={[
               "text-[22px] leading-[1.35] text-black/85",
               expanded ? "" : clampClass,
@@ -416,14 +370,17 @@ function RecapPhotoCard({
           >
             {entry.caption}
           </p>
-          {/* 
-          <button
-            type="button"
-            onClick={onToggleExpanded}
-            className="shrink-0 text-[22px] font-extrabold text-black hover:opacity-80"
-          >
-            {expanded ? "See Less" : "See More"}
-          </button> */}
+
+          {/*2줄 넘을 때만 보임 */}
+          {canExpand && (
+            <button
+              type="button"
+              onClick={onToggleExpanded}
+              className="shrink-0 text-[18px] font-extrabold text-black hover:opacity-80"
+            >
+              {expanded ? "See Less" : "See More"}
+            </button>
+          )}
         </div>
       </div>
 
