@@ -131,10 +131,19 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
 
   const breadcrumbItems: Crumb[] = useMemo(() => {
     const title = pageModel?.hero.title ?? "Trip";
+
     return [
-      { label: "Recap Blogs", href: "/profile/recap-blogs" },
-      { label: "Map", href: "/profile/recap-blogs?view=map" },
-      { label: `(${title})` },
+      {
+        label: "Recap Blogs",
+        href: "/profile/recap-blog",
+      },
+      {
+        label: "Map",
+        onClick: () => window.history.back(),
+      },
+      {
+        label: `(${title})`,
+      },
     ];
   }, [pageModel?.hero.title]);
 

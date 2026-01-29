@@ -1,9 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import ResponsiveRecapGrid from "@/views/Profile/recap-blogs/section/ResponsiveRecapGrid";
-
+import { useSearchParams } from "next/navigation";
 import CountryRecapCard, {
   type CountryRecapItem,
 } from "@/views/Profile/recap-blogs/components/CountryRecapCard";
@@ -83,30 +83,35 @@ function pickTripCoordinate(
 }
 
 export default function ProfileRecapBlogsView() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // 1.  setting view mode (grid/map) and selected country from URL parameters
+  const view = (searchParams.get("view") as View) === "map" ? "map" : "grid";
+  const selectedCountryCode = normalizeIso2(searchParams.get("country"));
+
   const [selectedYear, setSelectedYear] = useState<RecapYearValue>("ALL");
   const [mode, setMode] = useState<Mode>("recap");
   const [isMapOverlayOpen, setIsMapOverlayOpen] = useState(false);
-  const router = useRouter();
-  // grid ↔ map
-  const [view, setView] = useState<View>("grid");
-  const [selectedCountryCode, setSelectedCountryCode] = useState<string | null>(
-    null,
-  );
 
+  // 3. change url when country is selected or cleared
   const openMapForCountry = (countryCode: string) => {
-    setSelectedCountryCode(normalizeIso2(countryCode));
-    setView("map");
+    const code = normalizeIso2(countryCode);
+
+    router.push(`/profile/recap-blog?view=map&country=${code}`);
   };
 
   const backToGrid = () => {
-    setView("grid");
-    setSelectedCountryCode(null);
+    // clear country and switch to grid view
+    router.push("/profile/recap-blog");
   };
-
   // user cache
   const user = useMemo(() => getCachedUser(), []);
   const username = user?.username;
-  const placeVisitHistory = user?.placeVisitHistory ?? [];
+  const placeVisitHistory = useMemo(
+    () => user?.placeVisitHistory ?? [],
+    [user],
+  );
 
   // visible trips only
   const visibleTrips: Trip[] = useMemo(() => {
