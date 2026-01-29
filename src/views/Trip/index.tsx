@@ -10,11 +10,13 @@ import React, {
   useState,
 } from "react";
 import axios from "axios";
-
+import { apiFetch } from "@/api/client";
+import { RecapDay } from "@/views/Trip/component/RecapBlogPlace";
 import RecapBlogTopBar from "@/views/Trip/section/RecapBlogTopBar";
 import type { DayTab } from "@/views/Trip/component/RecapDayTabs";
 import type { Crumb } from "@/views/Trip/component/RecapBlogCrumbBread";
 import RecapBlogHero from "@/views/Trip/component/RecapBlogTopImage";
+
 import {
   RecapBlogDaySection,
   type RecapBlogPageData,
@@ -23,6 +25,8 @@ import MapboxMap, {
   type MarkerData,
 } from "@/views/Profile/travel-stats/components/MapBoxMap";
 import { mapTripRecapToPageModel } from "@/views/Trip/utils/mapTripRecap";
+
+// import type { TripRecapResponse}  from "@/api/trips";
 
 interface TripRecapViewProps {
   userId: string;
@@ -163,20 +167,30 @@ function fakeLatLng(seed: string, base: { lat: number; lng: number }) {
 }
 
 export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
-  const [recapData, setRecapData] = useState<RecapApiResponse | null>(null);
+  const [recapData, setRecapData] = useState<TripRecapResponse | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
   const TOPBAR_OFFSET_PX = 250;
+
   const PANEL_HEIGHT_OFFSET = 200;
+
   const PANEL_HEIGHT = `calc(100vh - ${PANEL_HEIGHT_OFFSET}px)`;
 
   const daySectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const leftScrollRef = useRef<HTMLDivElement | null>(null);
   const isProgrammaticScrollRef = useRef(false);
 
+  // <<<<<<< HEAD
+  // =======
+  //   // (추가) Map sticky(TopBar 아래에 닿아 붙었는지) 감지용 ref/state
+  //   const mapStickyRef = useRef<HTMLElement | null>(null);
+
+  //   /** active day */
+  // >>>>>>> origin/develop
   const [activeDayId, setActiveDayId] = useState<string>("day-1");
   const activeDayIdRef = useRef(activeDayId);
+  const [isMapPinned, setIsMapPinned] = useState(false);
   useEffect(() => {
     activeDayIdRef.current = activeDayId;
   }, [activeDayId]);
@@ -190,14 +204,16 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
     { lat: number; lng: number } | undefined
   >(undefined);
 
-  // ✅ 장소(Entry) DOM refs: entryId -> element
+  //장소(Entry) DOM refs: entryId -> element
   const entryRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
-  // ✅ 현재 focus 중인 entryId(불필요한 setState 연속 호출 방지)
+  // 현재 focus 중인 entryId(불필요한 setState 연속 호출 방지)
   const activeEntryIdRef = useRef<string | null>(null);
 
-  // ✅ 스크롤 중 흔들림 방지용 타이머(선택이지만 추천)
+  // 스크롤 중 흔들림 방지용 타이머(선택이지만 추천)
   const focusTimerRef = useRef<number | null>(null);
+
+  /** 1. Data Fetching */
 
   useEffect(() => {
     let cancelled = false;
@@ -209,12 +225,22 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
       setError(null);
 
       try {
+        // <<<<<<< HEAD
         const url = `https://pocketverse.herokuapp.com/LS_API/ls-beta-test/trip-recap/${userId}/${tripId}`;
         const res = await axios.get<TripRecapResponse>(url);
+        // =======
+        // apiFetch 사용
+        // path 인자에 '/ls-beta-test/...' 부터 시작하는 경로를 넣기
+        const data = await apiFetch<TripRecapResponse>(
+          `/ls-beta-test/trip-recap/${userId}/${tripId}`,
+        );
+
+        // >>>>>>> origin/develop
         if (cancelled) return;
-        setRecapData(res.data);
+        setRecapData(data);
       } catch (e: any) {
         if (cancelled) return;
+        // apiFetch에서 정의한 ApiError 형식을 처리
         setError(e?.message ?? "Failed to load recap");
       } finally {
         if (cancelled) return;
@@ -240,12 +266,32 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
   }, [pageModel, pageData]);
 
   const baseCenter = useMemo(() => {
+    //   const pageModel = useMemo(() => {
+    //     if (!recapData) return null;
+    //     return mapTripRecapToPageModel(recapData);
+    //   }, [recapData]);
+
+    //   //(추가) “어느 도시 주변에 찍을지” 베이스 좌표, "데이터에 따라 알아서" 베이스 좌표를 결정
+    //   const baseCenter = useMemo(() => {
+    //     // 1. check if first entry has coordinate
+    //     const firstPos = pageModel?.days?.[0]?.entries?.[0]?.coordinate;
+
+    //     if (firstPos?.latitude && firstPos?.longitude) {
+    //       return { lat: firstPos.latitude, lng: firstPos.longitude };
+    //     }
+    //     // 2. fallback: San Francisco 좌표
+    // >>>>>>> origin/develop
     return { lat: 37.7749, lng: -122.4194 };
-  }, []);
+  }, [pageModel]);
 
   const entryIdToDayId = useMemo(() => {
     const map = new Map<string, string>();
+
     effectiveModel.days.forEach((d) => {
+      // =======
+      //     if (!pageModel) return map;
+      //     pageModel.days.forEach((d) => {
+      // >>>>>>> origin/develop
       const dayId = `day-${d.dayIndex}`;
       d.entries.forEach((e: any) => map.set(e.id, dayId));
     });
@@ -369,7 +415,6 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
       setActiveDayId(dayTabs[0].id);
     }
   }, [dayTabs]);
-
   useLayoutEffect(() => {
     const root = leftScrollRef.current;
     if (!root) return;
@@ -397,7 +442,8 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
     return () => cancelAnimationFrame(raf);
   }, [userInteracted]);
 
-  // ✅ 스크롤로 "Day" 잡는 로직 + "Entry(장소)" 포커스 로직을 한 군데에서 처리
+  //스크롤로 "Day" 잡는 로직 + "Entry(장소)" 포커스 로직을 한 군데에서 처리
+
   useEffect(() => {
     const root = leftScrollRef.current;
     if (!root) return;
@@ -506,7 +552,7 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
     setActiveDayId(id);
     if (fromUser) scrollToDay(id);
 
-    // ✅ day 클릭 시에는 "그 day의 첫 entry"로 바로 맞추고 싶다면:
+    //day 클릭 시에는 "그 day의 첫 entry"로 바로 맞추기
     const dayIndex = Number(id.replace("day-", ""));
     const firstEntryId = effectiveModel.days.find(
       (d) => d.dayIndex === dayIndex,
@@ -561,7 +607,6 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
 
       root.scrollTop += delta;
     };
-
     const opts: AddEventListenerOptions = { passive: false, capture: true };
     window.addEventListener("wheel", onWheel, opts);
     document.addEventListener("wheel", onWheel, opts);
@@ -573,6 +618,32 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
   }, [TOPBAR_OFFSET_PX, userInteracted]);
 
   if (loading) return <div className="p-6">Loading recap…</div>;
+  // =======
+  //     window.addEventListener("wheel", onWheel, { passive: false });
+  //     return () => window.removeEventListener("wheel", onWheel);
+  //   }, [isMapPinned]);
+
+  //   // --- 여기부터 “데이터 매핑” ---
+  //   // 우선은 fallback(예시 데이터) 유지하고,
+  //   // recapData 구조 파악되면 아래 hero/dayEntries를 실제 값으로 채우면 됨.
+
+  //   const activeDayIndex = useMemo(() => {
+  //     const n = Number(activeDayId.replace("day-", ""));
+  //     return Number.isFinite(n) ? n : 1;
+  //   }, [activeDayId]);
+
+  //   const activeDay: RecapDay | undefined = useMemo(() => {
+  //     return (
+  //       pageModel?.days?.find((d) => d.dayIndex === activeDayIndex) ??
+  //       pageModel?.days?.[0]
+  //     );
+  //   }, [pageModel?.days, activeDayIndex]);
+
+  //   // --- 로딩/에러 처리 ---
+  //   if (loading) {
+  //     return <div className="p-6">Loading recap…</div>;
+  //   }
+  // >>>>>>> origin/develop
 
   if (error) {
     return (
@@ -594,6 +665,10 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
         activeDayId={activeDayId}
         onDayChange={(id) => handleDayChange(id, true)}
         onGoBack={() => history.back()}
+        // =======
+        //         onDayChange={handleDayChange}
+        //         onGoBack={() => window.history.back()}
+        // >>>>>>> origin/develop
         className="sticky top-0 z-50 border-b border-black/10"
       />
 
@@ -666,21 +741,29 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
                 mode="place"
                 placeMarkers={markers}
                 onPlaceMarkerClick={focusByMarkerId}
+                // =======
+                //                 mode="place"
+                //                 placeMarkers={markers}
+                //                 onPlaceMarkerClick={(markerId) => {
+                //                   console.log("클릭된 마커 ID:", markerId);
+                //                   console.log(
+                //                     "사전에 등록된 키값들:",
+                //                     Array.from(entryIdToDayId.keys()),
+                //                   );
+                //                   // 1. 마커 ID(entryId)로 해당 날짜 ID(dayId)를 찾음
+                //                   const targetDayId = entryIdToDayId.get(markerId);
+
+                //                   // 2. 해당 날짜 섹션으로 스크롤 이동 함수 호출
+                //                   if (targetDayId) {
+                //                     handleDayChange(targetDayId);
+                //                   }
+                //                 }}
+                // >>>>>>> origin/develop
               />
             </div>
           </section>
         </div>
       </div>
-
-      <style jsx>{`
-        .scrollbar-hide {
-          -ms-overflow-style: none;
-          scrollbar-width: none;
-        }
-        .scrollbar-hide::-webkit-scrollbar {
-          display: none;
-        }
-      `}</style>
     </div>
   );
 }
