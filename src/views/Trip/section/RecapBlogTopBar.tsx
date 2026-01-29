@@ -37,7 +37,7 @@ export default function RecapBlogTopBar({
   return (
     <header
       className={[
-        "sticky top-[78px] z-50", // 필요에 맞게 px 조정
+        "sticky top-[0px] z-50", // 필요에 맞게 px 조정
         "w-full bg-white/85 backdrop-blur border-b border-black/10",
         className,
       ].join(" ")}
