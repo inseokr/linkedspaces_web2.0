@@ -60,6 +60,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { normalizeImageSrc } from "@/utils/normalizeImageSrc";
 
 export type CountryRecapItem = {
   id: string;
@@ -81,10 +82,7 @@ function formatYears(years: number[]) {
 }
 
 export default function CountryRecapCard({ item, onSelect }: Props) {
-  const src = item.coverImageUrl;
-  const unoptimized =
-    src?.toLowerCase().endsWith(".heic") ||
-    src?.toLowerCase().endsWith(".heif");
+  const { src, unoptimized } = normalizeImageSrc(item.coverImageUrl);
   const code = (item.countryCode ?? item.id ?? "").toString().trim();
   return (
     <Link

@@ -4,6 +4,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import Image from "next/image";
+
 import {
   MapPin,
   ThumbsUp,
@@ -49,16 +50,32 @@ export type RecapBlogPageData = {
 /** ----------------------------
  *  유틸: 캡션 라인 클램프
  *  ---------------------------- */
-const clampClass = "line-clamp-2";
 
 /** ----------------------------
  *  컴포넌트: Day 섹션 (✅ 장소는 세로 배치)
  *  ---------------------------- */
+// =======
+export type RecapEntry = {
+  id: string;
+  placeName: string;
+  timeRangeText: string;
+  categoryLabel?: string;
+  liked?: boolean;
+  likeCount: number;
+  commentCount: number;
+  caption: string;
+  photos: string[];
+  coordinate?: { latitude: number; longitude: number };
+};
+
+// >>>>>>> origin/develop
 type Props = {
   dayIndex: number;
   title: string;
-  entries: RecapBlogPageData["days"][number]["entries"];
+  entries: RecapEntry[];
 };
+
+const clampClass = "line-clamp-2";
 
 export function RecapBlogDaySection({ dayIndex, title, entries }: Props) {
   // entry별 See More 상태
@@ -67,8 +84,7 @@ export function RecapBlogDaySection({ dayIndex, title, entries }: Props) {
   const toggleExpanded = (id: string) => {
     setExpandedIds((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+      next.has(id) ? next.delete(id) : next.add(id);
       return next;
     });
   };
@@ -79,6 +95,7 @@ export function RecapBlogDaySection({ dayIndex, title, entries }: Props) {
         Day {dayIndex}: {title}
       </div>
 
+      {/* <<<<<<< HEAD */}
       {/* 장소(Entry)들을 vertical로 쌓는다 */}
       <div className="space-y-10">
         {entries.map((entry) => (
@@ -89,24 +106,52 @@ export function RecapBlogDaySection({ dayIndex, title, entries }: Props) {
             onToggleExpanded={() => toggleExpanded(entry.id)}
           />
         ))}
+        {/* =======
+      <div className="relative">
+        <div
+          className={[
+            "flex overflow-x-auto snap-x snap-mandatory scroll-smooth pb-4",
+            "[&>*]:snap-start gap-0",
+            "scrollbar-thin scrollbar-thumb-black/10 scrollbar-track-transparent",
+          ].join(" ")}
+        >
+          {entries.map((e) => (
+            <div key={e.id} className="w-full shrink-0 px-1">
+              <RecapEntryCard
+                entry={e}
+                expanded={expandedIds.has(e.id)}
+                onToggleExpanded={() => toggleExpanded(e.id)}
+              />
+            </div>
+          ))}
+        </div>
+>>>>>>> origin/develop */}
       </div>
     </section>
   );
 }
 
+{
+  /* 
+<<<<<<< HEAD */
+}
 /** ----------------------------
  *  장소 블록: (카드 외부에 장소/시간/태그)
  *  - 아래에 사진 카드 캐러셀(가로)
  *  ---------------------------- */
 function RecapPlaceBlock({
+  // =======
+  // function RecapEntryCard({
+  // >>>>>>> origin/develop
   entry,
   expanded,
   onToggleExpanded,
 }: {
-  entry: RecapBlogPageData["days"][number]["entries"][number];
+  entry: RecapEntry;
   expanded: boolean;
   onToggleExpanded: () => void;
 }) {
+  // <<<<<<< HEAD
   return (
     <div className="space-y-4">
       {/* ✅ 장소/시간/태그는 카드 외부 */}
@@ -120,6 +165,35 @@ function RecapPlaceBlock({
               </div>
               <div className="mt-1 text-[16px] font-medium text-black/70">
                 {entry.timeRangeText}
+                {/* =======
+  const [photoIdx, setPhotoIdx] = useState(0);
+  const total = Math.max(entry.photos.length, 1);
+
+  const prev = () => setPhotoIdx((i) => (i - 1 + total) % total);
+  const next = () => setPhotoIdx((i) => (i + 1) % total);
+
+  const currentPhoto = entry.photos[photoIdx] ?? "/images/hero/us.jpg";
+
+  return (
+    <article
+      className={[
+        "w-full max-w-[920px] mx-auto overflow-hidden",
+        "rounded-[28px] border border-black/15 bg-white shadow-sm",
+      ].join(" ")}
+    >
+      <div className="px-6 pt-6">
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <div className="flex items-center gap-3">
+              <MapPin className="h-7 w-7 text-[#B84A2F]" />
+              <div className="min-w-0">
+                <div className="truncate text-[30px] font-extrabold text-black underline underline-offset-4">
+                  {entry.placeName}
+                </div>
+                <div className="mt-1 text-[16px] font-medium text-black/70">
+                  {entry.timeRangeText}
+                </div>
+>>>>>>> origin/develop */}
               </div>
             </div>
           </div>
@@ -146,6 +220,7 @@ function RecapPlaceBlock({
         </div>
       </div>
 
+      {/* <<<<<<< HEAD */}
       {/* ✅ 이 장소의 사진들은 horizontal 캐러셀 (카드 단위로 넘어감) */}
       <RecapPhotoCarousel
         entry={entry}
@@ -251,6 +326,7 @@ function RecapPhotoCarousel({
  *  카드에는 사진 1장 + 캡션 + 액션바만 포함
  *  (장소/시간/태그는 PlaceBlock에 있음)
  *  ---------------------------- */
+
 function RecapPhotoCard({
   entry,
   photoUrl,
@@ -281,13 +357,20 @@ function RecapPhotoCard({
           <Image
             src={photoUrl}
             alt={`${entry.placeName} photo ${photoIndex + 1}`}
+            // =======
+            //       <div className="relative mt-4">
+            //         <div className="relative mx-6 aspect-[16/9] overflow-hidden rounded-2xl bg-black/5">
+            //           <Image
+            //             src={currentPhoto}
+            //             alt={`${entry.placeName} photo ${photoIdx + 1}`}
+            // >>>>>>> origin/develop
             fill
             className="object-cover"
             sizes="(max-width: 768px) 90vw, 680px"
           />
 
-          {/* 1/2 배지 */}
           <div className="absolute left-4 top-4 rounded-full bg-white/40 px-3 py-1 text-[14px] font-bold text-white backdrop-blur">
+            {/* <<<<<<< HEAD */}
             {photoIndex + 1}/{totalPhotos}
           </div>
         </div>
@@ -295,6 +378,37 @@ function RecapPhotoCard({
 
       {/* 캡션 + See More */}
       <div className="px-6 pb-4">
+        {/* =======
+            {entry.photos.length
+              ? `${photoIdx + 1}/${entry.photos.length}`
+              : "—"}
+          </div>
+
+          {entry.photos.length > 1 && (
+            <>
+              <button
+                type="button"
+                onClick={prev}
+                className="absolute left-3 top-1/2 -translate-y-1/2 rounded-full bg-white/70 p-2 shadow-sm backdrop-blur hover:bg-white"
+                aria-label="Previous photo"
+              >
+                <ChevronLeft className="h-6 w-6 text-black/70" />
+              </button>
+              <button
+                type="button"
+                onClick={next}
+                className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-white/70 p-2 shadow-sm backdrop-blur hover:bg-white"
+                aria-label="Next photo"
+              >
+                <ChevronRight className="h-6 w-6 text-black/70" />
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+
+      <div className="px-6 pb-4 pt-5">
+>>>>>>> origin/develop */}
         <div className="flex items-end justify-between gap-6">
           <p
             className={[

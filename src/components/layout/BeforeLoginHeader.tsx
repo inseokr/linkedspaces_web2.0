@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import Image from "next/image";
 
 const NAV_ITEMS = [
   { label: "Home", href: "/" },
@@ -24,7 +25,21 @@ export function BerforeLoginHeader() {
 
   return (
     <header className="w-full h-[5.5rem] bg-white">
-      <div className="mx-auto flex items-center px-0">
+      <div className="mx-auto flex items-center  pl-6 lg:pl-10">
+        <Link href="/" className="flex items-center gap-2 shrink-0">
+          <div className="relative w-14 h-14">
+            <Image
+              src="/images/LS_blue.png"
+              alt="LinkedSpaces Logo"
+              fill
+              className="object-contain"
+              priority
+            />
+          </div>
+          <span className="text-[32px] font-bold tracking-tight text-black">
+            LinkedSpaces
+          </span>
+        </Link>
         <nav
           aria-label="Primary"
           className="flex items-center ml-auto gap-2 bg-white mb-3 mt-7 mr-0 p-1"

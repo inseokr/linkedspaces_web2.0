@@ -18,6 +18,6 @@ export type TravelStatsVM = {
   topCountries: CountryVisited[];
   mostVisitedItems: CountryStat[];
   allCountriesItems: CountryDetail[];
-
+  allCountries: any[];
   hasData: boolean;
 };

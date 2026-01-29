@@ -510,7 +510,6 @@
 //   );
 // }
 
-// index.tsx
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
@@ -519,20 +518,20 @@ import axios from "axios";
 import RecapBlogTopBar from "@/views/Trip/section/RecapBlogTopBar";
 import type { DayTab } from "@/views/Trip/component/RecapDayTabs";
 import type { Crumb } from "@/views/Trip/component/RecapBlogCrumbBread";
-
 import RecapBlogHero from "@/views/Trip/component/RecapBlogTopImage";
 import {
   RecapBlogDaySection,
   type RecapBlogPageData,
 } from "@/views/Trip/component/RecapBlogPlace";
 import MapboxMap from "@/views/Profile/travel-stats/components/MapBoxMap";
+import { mapTripRecapToPageModel } from "@/views/Trip/utils/mapTripRecap";
 
 interface TripRecapViewProps {
   userId: string;
   tripId: string;
 }
 
-type RecapApiResponse = any;
+// <<<<<<< HEAD
 
 import type { MarkerData } from "@/views/Profile/travel-stats/components/MapBoxMap";
 
@@ -727,10 +726,10 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
     };
   }, [userId, tripId]);
 
-  /** 지금은 demoData 우선 */
+  // /** 지금은 demoData 우선 */
   const pageData = useMemo(() => demoData, []);
 
-  // ✅ (추가) “어느 도시 주변에 찍을지” 베이스 좌표
+  //(추가) “어느 도시 주변에 찍을지” 베이스 좌표
   const baseCenter = useMemo(() => {
     // San Francisco
     return { lat: 37.7749, lng: -122.4194 };
@@ -854,7 +853,7 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
     }, 500);
   };
 
-  // ✅ (추가) Map 섹션이 TopBar 아래에 “붙었는지(pinned)” 감지
+  // (추가) Map 섹션이 TopBar 아래에 “붙었는지(pinned)” 감지
   useEffect(() => {
     const onScrollOrResize = () => {
       const el = mapStickyRef.current;
@@ -876,7 +875,7 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
     };
   }, [TOPBAR_OFFSET_PX]);
 
-  // ✅ (추가) Map이 pinned이면, window wheel을 좌측 패널 스크롤로 “우선 소비”
+  // (추가) Map이 pinned이면, window wheel을 좌측 패널 스크롤로 “우선 소비”
   useEffect(() => {
     if (!isMapPinned) return;
 
@@ -913,6 +912,109 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
     return () => window.removeEventListener("wheel", onWheel);
   }, [isMapPinned]);
 
+  // =======
+  type RecapApiResponse = any; // TODO: 나중에 실제 응답 타입으로 교체
+  type TripRecapResponse = any;
+
+  // export default function TripRecapView_CY({ userId, tripId }: TripRecapViewProps) {
+  // const [recapData, setRecapData] = useState<RecapApiResponse | null>(null);
+  // const [loading, setLoading] = useState<boolean>(true);
+  // const [error, setError] = useState<string | null>(null);
+  // const [activeDayId, setActiveDayId] = useState<string>("day-1");
+  useEffect(() => {
+    let cancelled = false;
+
+    async function run() {
+      if (!userId || !tripId) return;
+
+      setLoading(true);
+      setError(null);
+
+      try {
+        //  기존 TripRecap.js의 API 그대로
+        const url = `https://pocketverse.herokuapp.com/LS_API/ls-beta-test/trip-recap/${userId}/${tripId}`;
+        const res = await axios.get<TripRecapResponse>(url);
+
+        if (cancelled) return;
+        setRecapData(res.data);
+      } catch (e: any) {
+        if (cancelled) return;
+        setError(e?.message ?? "Failed to load recap");
+      } finally {
+        if (cancelled) return;
+        setLoading(false);
+      }
+    }
+
+    run();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [userId, tripId]);
+
+  // --- 여기부터 “데이터 매핑” ---
+  // 우선은 fallback(예시 데이터) 유지하고,
+  // recapData 구조 파악되면 아래 hero/dayEntries를 실제 값으로 채우면 됨.
+  const pageModel = useMemo(() => {
+    if (!recapData) return null;
+    return mapTripRecapToPageModel(recapData);
+  }, [recapData]);
+
+  const activeDayIndex = useMemo(() => {
+    const n = Number(activeDayId.replace("day-", ""));
+    return Number.isFinite(n) ? n : 1;
+  }, [activeDayId]);
+
+  const activeDay: RecapBlogPageData | undefined = useMemo(() => {
+    return (
+      pageModel?.days?.find((d) => d.dayIndex === activeDayIndex) ??
+      pageModel?.days?.[0]
+    );
+  }, [pageModel?.days, activeDayIndex]);
+
+  // const breadcrumbItems: Crumb[] = useMemo(() => {
+  //   const title = pageModel?.hero.title ?? "Trip";
+  //   return [
+  //     { label: "Recap Blogs", href: "/profile/recap-blogs" },
+  //     { label: "Map", href: "/profile/recap-blogs?view=map" },
+  //     { label: `(${title})` },
+  //   ];
+  // }, [pageModel?.hero.title]);
+
+  // const dayTabs: DayTab[] = useMemo(() => {
+  //   const days = pageModel?.days ?? [];
+  //   return days.map((d) => ({
+  //     id: `day-${d.dayIndex}`,
+  //     label: `Day ${d.dayIndex}`,
+  //   }));
+  // }, [pageModel?.days]);
+
+  // const day1Ref = useRef<HTMLDivElement | null>(null);
+
+  // const handleDayChange = (id: string) => {
+  //   setActiveDayId(id);
+  //   if (id === "day-1") {
+  //     day1Ref.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  //   }
+  // };
+
+  // --- 로딩/에러 처리 ---
+  if (loading) {
+    return <div className="p-6">Loading recap…</div>;
+  }
+
+  if (error) {
+    return (
+      <div className="p-6">
+        <div className="font-semibold">Failed to load recap</div>
+        <div className="mt-2 text-sm opacity-70">{error}</div>
+      </div>
+    );
+  }
+
+  if (!pageModel) return <div className="p-6">No recap data</div>;
+  // >>>>>>> origin/develop
   return (
     <div className="min-h-screen bg-white">
       <RecapBlogTopBar
@@ -922,11 +1024,11 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
         activeDayId={activeDayId}
         onDayChange={handleDayChange}
         onGoBack={() => history.back()}
+        // <<<<<<< HEAD papgeData.hero -> pageModel.Hero
         className="sticky top-0 z-50 border-b border-black/10"
       />
-
       <div className="space-y-10 p-6">
-        <RecapBlogHero {...pageData.hero} />
+        <RecapBlogHero {...pageModel.hero} />
 
         {(loading || error) && (
           <div className="rounded-2xl border border-black/10 bg-black/[0.02] p-4 text-sm">
@@ -947,7 +1049,7 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
               style={{ height: PANEL_HEIGHT }}
             >
               <div className="space-y-12 p-4">
-                {pageData.days.map((d) => {
+                {pageModel.days.map((d) => {
                   const id = `day-${d.dayIndex}`;
                   return (
                     <div
@@ -966,10 +1068,26 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
                     </div>
                   );
                 })}
+                {/* =======
+        className="sticky top-0 z-50"
+      />
+
+      <div className="space-y-10 p-6">
+        <RecapBlogHero {...pageModel.hero} />
+
+        <div className="flex flex-col gap-6 lg:flex-row">
+          <section className="min-w-0 flex-1" ref={day1Ref}>
+            <div className="h-[750px]">
+              <div className="h-full overflow-hidden">
+                <RecapBlogDaySection
+                  dayIndex={activeDay?.dayIndex ?? 1}
+                  title={activeDay?.title ?? ""}
+                  entries={activeDay?.entries ?? []}
+                />
+>>>>>>> origin/develop */}
               </div>
             </div>
           </section>
-
           {/* Right(Map): 동일한 top/height로 sticky */}
           <section
             ref={(el) => {

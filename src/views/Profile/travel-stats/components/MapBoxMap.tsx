@@ -6,7 +6,7 @@
 "use client";
 
 import mapboxgl from "mapbox-gl";
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import CircleTripMarker from "@/views/Profile/recap-blogs/components/CircleTripMarker";
 
@@ -109,6 +109,15 @@ export default function MapboxMap({
 
   // Ref: 한번 만든 걸 계속 들고 있는 상자
   // 지도 객체는 계속 만들면 부하 많이 걸림
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => {
+      setIsMounted(true);
+    });
+    return () => cancelAnimationFrame(raf);
+  }, []);
+
   useEffect(() => {
     markersRef.current = markers;
   }, [markers]);
@@ -116,15 +125,12 @@ export default function MapboxMap({
   useEffect(() => {
     placeMarkersRef.current = placeMarkers;
   }, [placeMarkers]);
-
   useEffect(() => {
     onMarkerClickRef.current = onMarkerClick;
   }, [onMarkerClick]);
-
   useEffect(() => {
     onPlaceMarkerClickRef.current = onPlaceMarkerClick;
   }, [onPlaceMarkerClick]);
-
   const fallbackCenterByIso2: Record<string, [number, number]> = useMemo(
     () => ({
       US: [-98.5795, 39.8283],
@@ -153,7 +159,6 @@ export default function MapboxMap({
       h.el.remove();
     });
     markerHandlesRef.current = [];
-
     //place 모드에서만 쓰지만, 안전하게 항상 제거 시도
     clearPlacePath();
   }, [clearPlacePath]);
@@ -216,17 +221,15 @@ export default function MapboxMap({
   }, [clearPlacePath]);
 
   // 기존 syncMarkers를 "mode 기준"으로 확장 - UI 컴포넌트 2개 사용하기 위함
+
   const syncMarkers = useCallback(() => {
     const map = mapRef.current;
     if (!map) return;
-
     if (!map.isStyleLoaded()) {
       map.once("idle", () => syncMarkersRef.current());
       return;
     }
-
     clearMarkers();
-
     const isPlaceMode = mode === "place";
 
     if (isPlaceMode) {
@@ -267,16 +270,17 @@ export default function MapboxMap({
     //circle markers (기존 그대로)
     markersRef.current.forEach((m) => {
       if (!Number.isFinite(m.lat) || !Number.isFinite(m.lng)) return;
-
       const el = document.createElement("div");
       el.style.cursor = "pointer";
+      // <<<<<<< HEAD
 
-      const handleMarkerClick = (e: MouseEvent) => {
+      //       const handleMarkerClick = (e: MouseEvent) => {
+      // =======
+      el.addEventListener("click", (e) => {
+        // >>>>>>> origin/develop
         e.stopPropagation();
         onMarkerClickRef.current?.(m.id);
-      };
-      el.addEventListener("click", handleMarkerClick);
-
+      });
       const root = createRoot(el);
       root.render(
         <CircleTripMarker
@@ -285,11 +289,9 @@ export default function MapboxMap({
           imageUrl={m.imageUrl}
         />,
       );
-
       const marker = new mapboxgl.Marker({ element: el, anchor: "bottom" })
         .setLngLat([m.lng, m.lat])
         .addTo(map);
-
       markerHandlesRef.current.push({
         id: m.id,
         marker,
@@ -307,32 +309,32 @@ export default function MapboxMap({
   const syncHighlightLayers = useCallback(() => {
     const map = mapRef.current;
     if (!map || !map.isStyleLoaded()) return;
-
     if (!map.getSource("countries")) {
       map.addSource("countries", {
         type: "vector",
         url: "mapbox://mapbox.country-boundaries-v1",
       });
     }
-
     if (countryStats.length === 0) {
       if (map.getLayer("country-highlight-fill"))
         map.removeLayer("country-highlight-fill");
-      if (map.getLayer("country-highlight-outline"))
-        map.removeLayer("country-highlight-outline");
       return;
     }
-
     const fillColorExpression: any = ["match", ["get", "iso_3166_1"]];
-
     countryStats.forEach((stat) => {
       const opacity = Math.min(0.15 + Math.log10(stat.value + 1) * 0.5, 0.9);
+      // <<<<<<< HEAD
       fillColorExpression.push(stat.code);
       fillColorExpression.push(`rgba(249, 115, 22, ${opacity})`);
     });
 
     fillColorExpression.push("rgba(0, 0, 0, 0)");
 
+    // =======
+    //       fillColorExpression.push(stat.code, `rgba(249, 115, 22, ${opacity})`);
+    //     });
+    //     fillColorExpression.push("rgba(0, 0, 0, 0)");
+    // >>>>>>> origin/develop
     const worldViewFilter = [
       "any",
       ["==", ["get", "worldview"], "all"],
@@ -370,26 +372,31 @@ export default function MapboxMap({
     (iso2: string) => {
       const map = mapRef.current;
       if (!map) return;
-      const target = iso2.toUpperCase();
-
       const runFocus = () => {
         try {
           const features = map.querySourceFeatures("countries", {
             sourceLayer: "country_boundaries",
-            filter: ["==", ["get", "iso_3166_1"], target] as any,
+            filter: ["==", ["get", "iso_3166_1"], iso2.toUpperCase()] as any,
           });
+          // <<<<<<< HEAD
 
-          if (features && features.length > 0) {
-            let minX = Infinity,
-              minY = Infinity,
-              maxX = -Infinity,
-              maxY = -Infinity;
+          //           if (features && features.length > 0) {
+          //             let minX = Infinity,
+          //               minY = Infinity,
+          //               maxX = -Infinity,
+          //               maxY = -Infinity;
 
+          // =======
+          if (features?.length > 0) {
+            let [minX, minY, maxX, maxY] = [
+              Infinity,
+              Infinity,
+              -Infinity,
+              -Infinity,
+            ];
+            // >>>>>>> origin/develop
             const walk = (arr: any) => {
-              if (
-                typeof arr?.[0] === "number" &&
-                typeof arr?.[1] === "number"
-              ) {
+              if (typeof arr?.[0] === "number") {
                 minX = Math.min(minX, arr[0]);
                 minY = Math.min(minY, arr[1]);
                 maxX = Math.max(maxX, arr[0]);
@@ -400,37 +407,49 @@ export default function MapboxMap({
             };
 
             features.forEach((f) => walk((f.geometry as any).coordinates));
-
-            if (Number.isFinite(minX)) {
-              map.fitBounds(
-                [
-                  [minX, minY],
-                  [maxX, maxY],
-                ],
-                { padding: 60, duration: 650, maxZoom: 5 },
-              );
-              return;
-            }
+            map.fitBounds(
+              [
+                [minX, minY],
+                [maxX, maxY],
+              ],
+              { padding: 60, duration: 650, maxZoom: 5 },
+            );
+            return;
           }
-        } catch {
-          /* fallback */
-        }
+          // <<<<<<< HEAD
+          //         } catch {
+          //           /* fallback */
+          //         }
 
-        const center = fallbackCenterByIso2[target] || [-98.5795, 39.8283];
-        map.easeTo({ center, zoom: 4, duration: 650 });
+          //         const center = fallbackCenterByIso2[target] || [-98.5795, 39.8283];
+          //         map.easeTo({ center, zoom: 4, duration: 650 });
+          // =======
+        } catch (e) {}
+        map.easeTo({
+          center: fallbackCenterByIso2[iso2.toUpperCase()] || [
+            -98.5795, 39.8283,
+          ],
+          zoom: 4,
+          duration: 650,
+        });
+        // >>>>>>> origin/develop
       };
-
       if (map.isStyleLoaded()) runFocus();
       else map.once("idle", runFocus);
     },
     [fallbackCenterByIso2],
   );
-
   // 지도 생성/이벤트/정리 흐름
   useEffect(() => {
-    if (!containerRef.current || mapRef.current) return;
+    if (!isMounted || !containerRef.current || mapRef.current) return;
 
-    mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN!;
+    const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+    if (!token) {
+      console.error("Mapbox token missing!");
+      return;
+    }
+
+    mapboxgl.accessToken = token;
     const map = new mapboxgl.Map({
       container: containerRef.current,
       style: "mapbox://styles/mapbox/streets-v12",
@@ -441,13 +460,13 @@ export default function MapboxMap({
 
     mapRef.current = map;
 
-    const handleStyleData = () => {
-      syncHighlightLayers();
-      // style이 바뀌면 커스텀 source/layer가 날아갈 수 있어서,
-      // 현재 mode에 맞춰 마커/라인도 재동기화
-      syncMarkersRef.current();
-    };
-
+    // add 0129
+    // const handleStyleData = () => {
+    //   syncHighlightLayers();
+    //   // style이 바뀌면 커스텀 source/layer가 날아갈 수 있어서,
+    //   // 현재 mode에 맞춰 마커/라인도 재동기화
+    //   syncMarkersRef.current();
+    // };
     map.on("load", () => {
       map.setProjection("globe");
       map.setFog({});
@@ -456,20 +475,17 @@ export default function MapboxMap({
       if (countryCode) focusOnCountry(countryCode);
     });
 
-    map.on("styledata", handleStyleData);
-
-    const elForResize = containerRef.current;
     const ro = new ResizeObserver(() => map.resize());
-    ro.observe(elForResize);
+    ro.observe(containerRef.current);
 
     return () => {
       ro.disconnect();
-      map.off("styledata", handleStyleData);
       clearMarkers();
       map.remove();
       mapRef.current = null;
     };
   }, [
+    isMounted,
     countryCode,
     focusOnCountry,
     syncHighlightLayers,
@@ -479,16 +495,25 @@ export default function MapboxMap({
 
   //데이터/모드 변화 시 동일 함수로 재동기화
   useEffect(() => {
-    syncMarkers();
+    if (mapRef.current?.isStyleLoaded()) syncMarkers();
   }, [syncMarkers]);
 
   useEffect(() => {
-    syncHighlightLayers();
+    if (mapRef.current?.isStyleLoaded()) syncHighlightLayers();
   }, [syncHighlightLayers]);
 
   useEffect(() => {
     if (countryCode) focusOnCountry(countryCode);
   }, [countryCode, focusOnCountry]);
+
+  // 3. SSR 방지를 위한 마운트 체크 분기
+  if (!isMounted) {
+    return (
+      <div
+        style={{ width: "100%", height: "100%", backgroundColor: "#f0f0f0" }}
+      />
+    );
+  }
 
   return <div ref={containerRef} style={{ width: "100%", height: "100%" }} />;
 }

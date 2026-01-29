@@ -21,6 +21,8 @@ export default function DropdownMenu({
     { label: "Our Story", href: "/#our-story" },
     { label: "Learn More", href: "/learn-more" },
     { label: "Contact Us", href: "/contact" },
+    { label: "Privacy Policy", href: "/privacy" },
+    { label: "Terms of Service", href: "/terms" },
   ],
   className,
 }: Props) {
@@ -87,14 +89,14 @@ export default function DropdownMenu({
       >
         <div
           className={cn(
-            "w-[206px] h-[353px] overflow-hidden rounded-[26px]",
+            "w-[206px] overflow-hidden rounded-[26px]",
             "backdrop-blur-md",
             "shadow-[0_18px_40px_rgba(0,0,0,0.35)]",
           )}
           style={{ backgroundColor: "rgba(21,21,21,0.75)" }}
         >
           <div className="h-full flex flex-col px-5 py-6">
-            <div className="flex-1 flex flex-col justify-center">
+            <div className="flex flex-col justify-center">
               {items.map((item, idx) => (
                 <div key={item.href}>
                   <Link
