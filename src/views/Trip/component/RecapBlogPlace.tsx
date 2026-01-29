@@ -28,7 +28,7 @@ export type RecapBlogPageData = {
     locationText: string;
     authorName: string;
     postedLabel: string;
-    avatarUrl: string;
+    avatarUrl?: string;
   };
   days: Array<{
     dayIndex: number;
