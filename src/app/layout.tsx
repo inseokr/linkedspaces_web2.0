@@ -40,13 +40,12 @@ export default function RootLayout({
       lang="en"
       className={`${inter.variable} ${poppins.variable} ${montserrat.variable}`}
     >
-      {/*  min-h-screen + flex-col + main flex-1 + footer at bottom */}
       <body className="min-h-screen flex flex-col overflow-x-hidden">
         {isAuthenticated ? <AfterLoginHeader /> : <BerforeLoginHeader />}
 
         <main className="flex-1">{children}</main>
 
-        <Footer />
+        {!isAuthenticated && <Footer />}
       </body>
     </html>
   );
