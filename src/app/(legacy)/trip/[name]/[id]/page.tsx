@@ -1,4 +1,4 @@
-import TripRecapView from "@/views/Trip";
+import TripRecapView from "@/views/Trip/index";
 
 type PageProps = {
   params: Promise<{ name: string; id: string }>;

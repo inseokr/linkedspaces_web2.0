@@ -7,8 +7,10 @@ import { AfterLoginHeader } from "@/components/layout/AfterLoginHeader";
 import { Footer } from "@/components/layout/Footer";
 import { Montserrat, Poppins, Inter } from "next/font/google";
 import { useAuth } from "@/hooks/useAuth";
-import { usePathname } from "next/navigation"; // 1. usePathname 추가
+import { usePathname } from "next/navigation";
 import "mapbox-gl/dist/mapbox-gl.css";
+
+import { LayoutModeProvider } from "@/components/layout/LayoutModeContext"; // 1029추가 - sidebar 없애기 위함
 
 const montserrat = Montserrat({
   subsets: ["latin"],
@@ -44,12 +46,15 @@ export default function RootLayout({
       className={`${inter.variable} ${poppins.variable} ${montserrat.variable}`}
     >
       <body className="min-h-screen flex flex-col overflow-x-hidden">
-        {!isAuthPage &&
-          (isAuthenticated ? <AfterLoginHeader /> : <BerforeLoginHeader />)}
+        {/* 여기서 Provider로 감싸기 */}
+        <LayoutModeProvider>
+          {!isAuthPage &&
+            (isAuthenticated ? <AfterLoginHeader /> : <BerforeLoginHeader />)}
 
-        <main className="flex-1">{children}</main>
+          <main className="flex-1">{children}</main>
 
-        {!isAuthenticated && <Footer />}
+          {!isAuthenticated && <Footer />}
+        </LayoutModeProvider>
       </body>
     </html>
   );

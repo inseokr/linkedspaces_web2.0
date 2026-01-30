@@ -10,6 +10,13 @@ import React, {
 import { useRouter } from "next/navigation";
 
 import { apiFetch } from "@/api/client";
+// <<<<<<< HEAD
+// import { RecapDay } from "./component/RecapBlogPlace";
+// import RecapBlogTopBar from "./section/RecapBlogTopBar";
+// import type { DayTab } from "./component/RecapDayTabs";
+// import type { Crumb } from "./component/RecapBlogCrumbBread";
+// import RecapBlogHero from "./component/RecapBlogTopImage";
+// =======
 import type { TripRecapResponse } from "@/api/trips";
 
 import RecapBlogTopBar from "@/views/Trip/section/RecapBlogTopBar";
@@ -35,6 +42,10 @@ interface TripRecapViewProps {
   userId: string;
   tripId: string;
 }
+
+import RecapLoginBar from "./component/GuestRBLoginBar";
+import GuestRecapPage from "./GuestModeIndex";
+import { useLayoutMode } from "@/components/layout/LayoutModeContext";
 
 export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
   const router = useRouter();
@@ -253,12 +264,14 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
     setFocusLatLng({ lat: m.lat, lng: m.lng });
   };
 
+  // helper: left panel "가운데"에 가장 가까운 entry 찾기
+
   const getClosestEntryToCenter = () => {
     const root = leftScrollRef.current;
     if (!root) return null;
 
     const rootRect = root.getBoundingClientRect();
-    const centerY = rootRect.top + rootRect.height / 2;
+    const centerY = rootRect.top + rootRect.height * 0.6;
 
     let bestId: string | null = null;
     let bestDist = Infinity;
@@ -277,6 +290,7 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
     return bestId;
   };
 
+  //helper: 디바운스(스크롤 중 과도한 이동 방지)
   const scheduleFocusToEntry = (entryId: string) => {
     if (focusTimerRef.current) window.clearTimeout(focusTimerRef.current);
 
@@ -371,6 +385,7 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
         setActiveDayId(chosen);
       }
 
+      // --- 추가: entry(장소) 기준 카메라 포커스 ---
       const closestEntryId = getClosestEntryToCenter();
       if (closestEntryId) scheduleFocusToEntry(closestEntryId);
     };

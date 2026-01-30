@@ -153,6 +153,7 @@ function RecapPlaceBlock({
 }) {
   return (
     <div className="space-y-4">
+      {/* 장소/시간/태그는 카드 외부 */}
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <div className="flex items-center gap-3">
@@ -291,6 +292,11 @@ function RecapPhotoCarousel({
   );
 }
 
+/** ----------------------------
+ *  카드:
+ *  카드에는 사진 1장 + 캡션 + 액션바만 포함
+ *  (장소/시간/태그는 PlaceBlock에 있음)
+ *  ---------------------------- */
 function RecapPhotoCard({
   entry,
   photoUrl,
