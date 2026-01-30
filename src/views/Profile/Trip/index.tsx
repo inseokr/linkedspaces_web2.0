@@ -19,23 +19,23 @@ import { apiFetch } from "@/api/client";
 // =======
 import type { TripRecapResponse } from "@/api/trips";
 
-import RecapBlogTopBar from "@/views/Trip/section/RecapBlogTopBar";
-import type { DayTab } from "@/views/Trip/component/RecapDayTabs";
-import type { Crumb } from "@/views/Trip/component/RecapBlogCrumbBread";
-import RecapBlogHero from "@/views/Trip/component/RecapBlogTopImage";
+import RecapBlogTopBar from "@/views/Profile/Trip/section/RecapBlogTopBar";
+import type { DayTab } from "@/views/Profile/Trip/component/RecapDayTabs";
+import type { Crumb } from "@/views/Profile/Trip/component/RecapBlogCrumbBread";
+import RecapBlogHero from "@/views/Profile/Trip/component/RecapBlogTopImage";
 
 import {
   RecapBlogDaySection,
   type RecapBlogPageData,
-} from "@/views/Trip/component/RecapBlogPlace";
+} from "@/views/Profile/Trip/component/RecapBlogPlace";
 
 import MapboxMap, {
   type MarkerData,
 } from "@/views/Profile/travel-stats/components/MapBoxMap";
 
-import { mapTripRecapToPageModel } from "@/views/Trip/utils/mapTripRecap";
-import { loadDraft } from "@/views/Trip/edit/utils/draftStorage";
-import { applyDraftToPageModel } from "@/views/Trip/edit/utils/editMappers";
+import { mapTripRecapToPageModel } from "@/views/Profile/Trip/utils/mapTripRecap";
+import { loadDraft } from "@/views/Profile/Trip/edit/utils/draftStorage";
+import { applyDraftToPageModel } from "@/views/Profile/Trip/edit/utils/editMappers";
 import { idbGetBlob } from "./edit/utils/imageIdb";
 
 interface TripRecapViewProps {
@@ -47,7 +47,9 @@ import RecapLoginBar from "./component/GuestRBLoginBar";
 import GuestRecapPage from "./GuestModeIndex";
 import { useLayoutMode } from "@/components/layout/LayoutModeContext";
 
-function GuestTripRecapShell() {
+import { useAuth } from "@/hooks/useAuth";
+
+function GuestTripRecapShell({ userId, tripId }: TripRecapViewProps) {
   const { setLayoutMode } = useLayoutMode();
 
   useEffect(() => {
@@ -55,19 +57,100 @@ function GuestTripRecapShell() {
     return () => setLayoutMode("profile");
   }, [setLayoutMode]);
 
-  return (
-    <div className="min-h-screen bg-white overflow-x-hidden lg:overflow-x-visible">
-      <GuestRecapPage />;
-    </div>
-  );
+  return <GuestRecapPage userId={userId} tripId={tripId} />;
 }
 
+import { getCachedUser } from "@/api/user";
+
 export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
+  const { isLoading: authLoading, isAuthenticated } = useAuth();
+
+  const [viewerId, setViewerId] = useState<string | null>(null);
+  const [viewerResolved, setViewerResolved] = useState(false);
+
+  // ✅ isOwner 계산을 훅들보다 아래로 미루지 말고, return들보다 위에서 계산
+  const isOwner =
+    isAuthenticated && viewerId != null && String(viewerId) === String(userId);
+
+  // ✅ (1) viewerId resolving
+  useEffect(() => {
+    if (authLoading) return;
+
+    let cancelled = false;
+    setViewerResolved(false);
+
+    (async () => {
+      // 로그인 안 했으면 => 게스트 확정
+      if (!isAuthenticated) {
+        if (!cancelled) {
+          setViewerId(null);
+          setViewerResolved(true);
+        }
+        return;
+      }
+
+      try {
+        const user = getCachedUser();
+        if (cancelled) return;
+        setViewerId(user?.username ?? null);
+      } catch {
+        if (cancelled) return;
+        setViewerId(null);
+      } finally {
+        if (cancelled) return;
+        setViewerResolved(true);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authLoading, isAuthenticated]);
+
+  // ✅ (2) 디버그 로그: "조건 return"보다 위에 있어야 훅 순서가 안 깨짐
+  useEffect(() => {
+    // viewerResolved 이후에만 찍히게 하면 노이즈 줄어듦
+    if (authLoading || !viewerResolved) return;
+
+    console.log("[OWNER CHECK]", {
+      isAuthenticated,
+      viewerResolved,
+      authLoading,
+      viewerId,
+      userId,
+      viewerIdStr: viewerId == null ? null : String(viewerId),
+      userIdStr: String(userId),
+      idEqual: viewerId != null && String(viewerId) === String(userId),
+      isOwner,
+      cachedUser: (() => {
+        try {
+          return getCachedUser();
+        } catch (e) {
+          return { error: e };
+        }
+      })(),
+    });
+  }, [authLoading, viewerResolved, isAuthenticated, viewerId, userId, isOwner]);
+
+  // ✅ 이제부터 조건 return 해도 훅 순서가 안 깨짐
+  if (authLoading || !viewerResolved)
+    return <div className="p-6">Loading…</div>;
+
+  // 소유자 불일치도 게스트
+  if (!isOwner) return <GuestTripRecapShell userId={userId} tripId={tripId} />;
+
+  // 소유자만 아래 오너 뷰 렌더
+  return <OwnerTripRecapView userId={userId} tripId={tripId} />;
+}
+
+function OwnerTripRecapView({ userId, tripId }: TripRecapViewProps) {
   const router = useRouter();
 
   const [recapData, setRecapData] = useState<TripRecapResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // 오너에서만 draft 쓰는 구조가 자연스럽고 안전
   const draft = useMemo(() => loadDraft(userId, tripId), [userId, tripId]);
   const [resolvedCoverUrl, setResolvedCoverUrl] = useState<string | null>(null);
 
@@ -530,14 +613,6 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
   }
 
   if (!effectiveModel) return <div className="p-6">No recap data</div>;
-
-  // guest mode
-
-  const isGuestMode = true;
-
-  if (isGuestMode) {
-    return <GuestTripRecapShell />;
-  }
 
   return (
     <div className="min-h-screen bg-white">

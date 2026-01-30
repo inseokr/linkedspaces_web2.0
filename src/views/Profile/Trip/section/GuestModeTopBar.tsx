@@ -1,7 +1,9 @@
 "use client";
 
 import React from "react";
-import RecapDayTabs, { type DayTab } from "@/views/Trip/component/RecapDayTabs";
+import RecapDayTabs, {
+  type DayTab,
+} from "@/views/Profile/Trip/component/RecapDayTabs";
 
 type Props = {
   dayTabs: DayTab[];

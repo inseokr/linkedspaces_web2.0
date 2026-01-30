@@ -1,5 +1,5 @@
 "use client";
-import { getBlogImageResolved } from "@/views/Trip/edit/utils/blogImageCache";
+import { getBlogImageResolved } from "@/views/Profile/Trip/edit/utils/blogImageCache";
 import Image from "next/image";
 
 /** 1) 작성자 배지 */

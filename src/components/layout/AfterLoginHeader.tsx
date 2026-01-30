@@ -8,12 +8,16 @@ import HeaderMenu from "@/components/layout/HeaderMenu";
 import HamburgerIcon from "@/assets/icons/hamburger.svg";
 import DropdownMenu from "@/components/ui/DropdownMenu";
 
+import { useLayoutMode } from "@/components/layout/LayoutModeContext";
+
 export function AfterLoginHeader() {
   const router = useRouter();
 
-  const hideSidebar = true;
+  const { layoutMode } = useLayoutMode();
 
-  if (hideSidebar) return null; // 여기서 차단
+  const hideTopbar = layoutMode === "bare";
+
+  if (hideTopbar) return null; // 여기서 차단
 
   return (
     <header className="top-0 z-[100] w-full bg-white border-b border-black">

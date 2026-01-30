@@ -2,7 +2,10 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import type { ImageValue } from "../types/editTypes";
-import { idbGetBlob, idbSetBlob } from "@/views/Trip/edit/utils/imageIdb";
+import {
+  idbGetBlob,
+  idbSetBlob,
+} from "@/views/Profile/Trip/edit/utils/imageIdb";
 import { getBlogImageResolved } from "../utils/blogImageCache";
 import Button from "@/components/ui/Button";
 

@@ -16,8 +16,8 @@ import {
 } from "lucide-react";
 
 import ConfirmModal from "@/components/ui/ConfirmModal";
-import { idbGetBlob } from "@/views/Trip/edit/utils/imageIdb";
-import TextRow from "@/views/Trip/edit/components/TextRow";
+import { idbGetBlob } from "@/views/Profile/Trip/edit/utils/imageIdb";
+import TextRow from "@/views/Profile/Trip/edit/components/TextRow";
 
 /** ----------------------------
  *  Types
