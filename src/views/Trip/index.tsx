@@ -1,18 +1,32 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { useRouter } from "next/navigation";
+
 import { apiFetch } from "@/api/client";
-import { RecapDay } from "@/views/Trip/component/RecapBlogPlace";
+import type { TripRecapResponse } from "@/api/trips";
+
 import RecapBlogTopBar from "@/views/Trip/section/RecapBlogTopBar";
 import type { DayTab } from "@/views/Trip/component/RecapDayTabs";
 import type { Crumb } from "@/views/Trip/component/RecapBlogCrumbBread";
 import RecapBlogHero from "@/views/Trip/component/RecapBlogTopImage";
-import { RecapBlogDaySection } from "@/views/Trip/component/RecapBlogPlace";
-import MapboxMap from "@/views/Profile/travel-stats/components/MapBoxMap";
+
+import {
+  RecapBlogDaySection,
+  type RecapBlogPageData,
+} from "@/views/Trip/component/RecapBlogPlace";
+
+import MapboxMap, {
+  type MarkerData,
+} from "@/views/Profile/travel-stats/components/MapBoxMap";
+
 import { mapTripRecapToPageModel } from "@/views/Trip/utils/mapTripRecap";
-import type { MarkerData } from "@/views/Profile/travel-stats/components/MapBoxMap";
-import type { TripRecapResponse } from "@/api/trips";
-import { useRouter } from "next/navigation";
 import { loadDraft } from "@/views/Trip/edit/utils/draftStorage";
 import { applyDraftToPageModel } from "@/views/Trip/edit/utils/editMappers";
 
@@ -22,37 +36,45 @@ interface TripRecapViewProps {
 }
 
 export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
-  const [recapData, setRecapData] = useState<TripRecapResponse | null>(null);
-  const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
-  /** TopBar 높이(임시) */
+  const [recapData, setRecapData] = useState<TripRecapResponse | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  /** Layout */
   const TOPBAR_OFFSET_PX = 250;
   const PANEL_HEIGHT_OFFSET = 220;
   const PANEL_HEIGHT = `calc(100vh - ${PANEL_HEIGHT_OFFSET}px)`;
 
-  /** Day 섹션 DOM refs */
-  const daySectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
-
-  /** Left 내부 스크롤 컨테이너 ref */
+  /** Refs */
   const leftScrollRef = useRef<HTMLDivElement | null>(null);
+  const daySectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const entryRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
-  /** programmatic scroll 락 */
+  const mapStickyRef = useRef<HTMLElement | null>(null);
+  const mapContainerRef = useRef<HTMLDivElement | null>(null);
+
   const isProgrammaticScrollRef = useRef(false);
 
-  // (추가) Map sticky(TopBar 아래에 닿아 붙었는지) 감지용 ref/state
-  const mapStickyRef = useRef<HTMLElement | null>(null);
-
-  /** active day */
+  /** Active day */
   const [activeDayId, setActiveDayId] = useState<string>("day-1");
   const activeDayIdRef = useRef(activeDayId);
-  const [isMapPinned, setIsMapPinned] = useState(false);
   useEffect(() => {
     activeDayIdRef.current = activeDayId;
   }, [activeDayId]);
 
-  /** 1. Data Fetching */
+  /** Map focus */
+  const [focusLatLng, setFocusLatLng] = useState<
+    { lat: number; lng: number } | undefined
+  >(undefined);
+  const [userInteracted, setUserInteracted] = useState(false);
+
+  /** Entry focus helpers */
+  const activeEntryIdRef = useRef<string | null>(null);
+  const focusTimerRef = useRef<number | null>(null);
+
+  /** 1) Fetch */
   useEffect(() => {
     let cancelled = false;
 
@@ -63,17 +85,13 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
       setError(null);
 
       try {
-        // apiFetch 사용
-        // path 인자에 '/ls-beta-test/...' 부터 시작하는 경로를 넣기
         const data = await apiFetch<TripRecapResponse>(
           `/ls-beta-test/trip-recap/${userId}/${tripId}`,
         );
-
         if (cancelled) return;
         setRecapData(data);
       } catch (e: any) {
         if (cancelled) return;
-        // apiFetch에서 정의한 ApiError 형식을 처리
         setError(e?.message ?? "Failed to load recap");
       } finally {
         if (cancelled) return;
@@ -87,49 +105,74 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
     };
   }, [userId, tripId]);
 
-  const pageModel = useMemo(() => {
+  /** 2) Effective model = API mapped + draft applied */
+  const effectiveModel: RecapBlogPageData | null = useMemo(() => {
     if (!recapData) return null;
+
     const pm = mapTripRecapToPageModel(recapData);
 
-    // if local draft exists, apply it
     const draft = loadDraft(userId, tripId);
-    if (draft) {
-      return applyDraftToPageModel(pm, draft);
-    }
-
-    return pm;
+    return draft ? applyDraftToPageModel(pm, draft) : pm;
   }, [recapData, userId, tripId]);
-  //(추가) “어느 도시 주변에 찍을지” 베이스 좌표, "데이터에 따라 알아서" 베이스 좌표를 결정
+
+  /** 3) Base center */
   const baseCenter = useMemo(() => {
-    // 1. check if first entry has coordinate
-    const firstPos = pageModel?.days?.[0]?.entries?.[0]?.coordinate;
-
-    if (firstPos?.latitude && firstPos?.longitude) {
-      return { lat: firstPos.latitude, lng: firstPos.longitude };
+    const first = effectiveModel?.days?.[0]?.entries?.[0]?.coordinate;
+    if (first?.latitude && first?.longitude) {
+      return { lat: first.latitude, lng: first.longitude };
     }
-    // 2. fallback: San Francisco 좌표
     return { lat: 37.7749, lng: -122.4194 };
-  }, [pageModel]);
+  }, [effectiveModel]);
 
-  //(추가) entryId -> dayId 매핑 (마커 클릭 시 day로 이동시키고 싶을 때 사용)
+  /** 4) Tabs / breadcrumb */
+  const dayTabs: DayTab[] = useMemo(() => {
+    return (
+      effectiveModel?.days.map((d) => ({
+        id: `day-${d.dayIndex}`,
+        label: `Day ${d.dayIndex}`,
+      })) ?? []
+    );
+  }, [effectiveModel]);
+
+  const breadcrumbItems: Crumb[] = useMemo(() => {
+    const title = effectiveModel?.hero?.title ?? "Trip";
+    return [
+      { label: "Recap Blogs", href: "/profile/recap-blogs" },
+      { label: "Map", onClick: () => window.history.back() },
+      { label: `(${title})` },
+    ];
+  }, [effectiveModel?.hero?.title]);
+
+  /** 5) Ensure active day valid */
+  useEffect(() => {
+    if (!dayTabs.length) return;
+    if (!dayTabs.some((t) => t.id === activeDayIdRef.current)) {
+      setActiveDayId(dayTabs[0].id);
+    }
+  }, [dayTabs]);
+
+  /** 6) entryId -> dayId */
   const entryIdToDayId = useMemo(() => {
     const map = new Map<string, string>();
-    if (!pageModel) return map;
-    pageModel.days.forEach((d: any) => {
+    if (!effectiveModel) return map;
+
+    for (const d of effectiveModel.days) {
       const dayId = `day-${d.dayIndex}`;
-      d.entries.forEach((e: any) => map.set(e.id, dayId));
-    });
+      for (const e of d.entries) map.set(e.id, dayId);
+    }
     return map;
-  }, [pageModel]);
+  }, [effectiveModel]);
 
-  //(추가) demoData 기반으로 “가상 좌표가 포함된 markers” 생성
+  /** 7) Markers */
   const markers = useMemo<MarkerData[]>(() => {
-    if (!pageModel) return [];
+    if (!effectiveModel) return [];
 
-    // pageModel.hero에 심어둔 startingYear를 가져오거나, 정 없으면 올해 연도 사용
-    const travelYear = pageModel.hero.startingYear ?? new Date().getFullYear();
+    const travelYear =
+      (typeof recapData?.trip?.startingYear === "number"
+        ? recapData.trip.startingYear
+        : Number(recapData?.trip?.startingYear)) || new Date().getFullYear();
 
-    return pageModel.days.flatMap((d: any) =>
+    return effectiveModel.days.flatMap((d) =>
       d.entries.map((e: any) => ({
         id: e.id,
         lat: e.coordinate?.latitude ?? baseCenter.lat,
@@ -139,133 +182,212 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
         imageUrl: e.photos?.[0] ?? "/images/avatar.png",
       })),
     );
-  }, [pageModel, baseCenter]);
+  }, [effectiveModel, baseCenter]);
 
-  const breadcrumbItems: Crumb[] = useMemo(() => {
-    const title = pageModel?.hero.title ?? "Trip";
-
-    return [
-      {
-        label: "Recap Blogs",
-        href: "/profile/recap-blog",
-      },
-      {
-        label: "Map",
-        onClick: () => window.history.back(),
-      },
-      {
-        label: `(${title})`,
-      },
-    ];
-  }, [pageModel?.hero.title]);
-
-  const dayTabs: DayTab[] = useMemo(() => {
-    return (
-      pageModel?.days.map((d: any) => ({
-        id: `day-${d.dayIndex}`,
-        label: `Day ${d.dayIndex}`,
-      })) ?? []
-    );
-  }, [pageModel?.days]);
-
-  /** dayTabs 준비되면 active 보정 */
-  useEffect(() => {
-    if (!dayTabs.length) return;
-    if (!dayTabs.some((t) => t.id === activeDayIdRef.current)) {
-      setActiveDayId(dayTabs[0].id);
-    }
-  }, [dayTabs]);
-
-  /**  Scroll Spy: left 내부 스크롤 기준 */
-  useEffect(() => {
-    const rootEl = leftScrollRef.current;
-    if (!rootEl || !dayTabs.length) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (isProgrammaticScrollRef.current) return;
-
-        const visible = entries
-          .filter((e) => e.isIntersecting)
-          .sort(
-            (a, b) => (b.intersectionRatio ?? 0) - (a.intersectionRatio ?? 0),
-          );
-
-        const el = visible[0]?.target as HTMLElement | undefined;
-        const id = el?.dataset?.dayId;
-
-        if (id && id !== activeDayIdRef.current) setActiveDayId(id);
-      },
-      {
-        root: rootEl,
-        rootMargin: `-12px 0px -55% 0px`,
-        threshold: [0.2, 0.35, 0.5, 0.65],
-      },
-    );
-
-    const raf = requestAnimationFrame(() => {
-      dayTabs.forEach((t) => {
-        const el = daySectionRefs.current[t.id];
-        if (el) observer.observe(el);
-      });
-    });
-
-    return () => {
-      cancelAnimationFrame(raf);
-      observer.disconnect();
-    };
-  }, [dayTabs]);
-
-  const handleDayChange = (id: string) => {
-    setActiveDayId(id);
-
+  /** helpers: scroll & focus */
+  const scrollToDay = (dayId: string) => {
     const root = leftScrollRef.current;
-    const el = daySectionRefs.current[id];
+    const el = daySectionRefs.current[dayId];
     if (!root || !el) return;
 
     isProgrammaticScrollRef.current = true;
 
-    //el이 root 안에서 어디 위치인지 계산해서 root만 스크롤
     const rootRect = root.getBoundingClientRect();
     const elRect = el.getBoundingClientRect();
-
-    // root 내부 기준 Y = (el의 화면상 top - root의 화면상 top) + 현재 scrollTop - 여백
     const PADDING = 12;
-    const nextTop = elRect.top - rootRect.top + root.scrollTop - PADDING;
 
+    const nextTop = elRect.top - rootRect.top + root.scrollTop - PADDING;
     root.scrollTo({ top: nextTop, behavior: "smooth" });
 
     window.setTimeout(() => {
       isProgrammaticScrollRef.current = false;
-    }, 500);
+    }, 650);
   };
 
-  // (추가) Map 섹션이 TopBar 아래에 “붙었는지(pinned)” 감지
-  useEffect(() => {
-    const onScrollOrResize = () => {
-      const el = mapStickyRef.current;
-      if (!el) return;
+  const focusToEntryId = (entryId: string) => {
+    const m = markers.find((x) => x.id === entryId);
+    if (!m) return;
+    setFocusLatLng({ lat: m.lat, lng: m.lng });
+  };
 
-      const rect = el.getBoundingClientRect();
-      // sticky 상태면 top이 TOPBAR_OFFSET_PX 근처(이하)로 유지됨
-      const pinnedNow = rect.top <= TOPBAR_OFFSET_PX + 1;
-      setIsMapPinned(pinnedNow);
+  const getClosestEntryToCenter = () => {
+    const root = leftScrollRef.current;
+    if (!root) return null;
+
+    const rootRect = root.getBoundingClientRect();
+    const centerY = rootRect.top + rootRect.height / 2;
+
+    let bestId: string | null = null;
+    let bestDist = Infinity;
+
+    for (const [id, el] of Object.entries(entryRefs.current)) {
+      if (!el) continue;
+      const r = el.getBoundingClientRect();
+      const entryCenterY = r.top + r.height / 2;
+      const dist = Math.abs(entryCenterY - centerY);
+
+      if (dist < bestDist) {
+        bestDist = dist;
+        bestId = id;
+      }
+    }
+    return bestId;
+  };
+
+  const scheduleFocusToEntry = (entryId: string) => {
+    if (focusTimerRef.current) window.clearTimeout(focusTimerRef.current);
+
+    focusTimerRef.current = window.setTimeout(() => {
+      if (activeEntryIdRef.current === entryId) return;
+
+      activeEntryIdRef.current = entryId;
+      focusToEntryId(entryId);
+
+      const dayId = entryIdToDayId.get(entryId);
+      if (dayId && dayId !== activeDayIdRef.current) setActiveDayId(dayId);
+    }, 120);
+  };
+
+  /** 8) initial focus to first marker */
+  useEffect(() => {
+    if (focusLatLng) return;
+    if (!markers.length) return;
+
+    const first = markers[0];
+    activeEntryIdRef.current = first.id;
+    setFocusLatLng({ lat: first.lat, lng: first.lng });
+  }, [markers, focusLatLng]);
+
+  /** 9) mark userInteracted once */
+  useEffect(() => {
+    const mark = () => setUserInteracted(true);
+    window.addEventListener("pointerdown", mark, { once: true });
+    window.addEventListener("keydown", mark, { once: true });
+    window.addEventListener("wheel", mark, { once: true, passive: true });
+    return () => {
+      window.removeEventListener("pointerdown", mark);
+      window.removeEventListener("keydown", mark);
+      window.removeEventListener("wheel", mark);
+    };
+  }, []);
+
+  /** 10) initial scroll stabilization (친구 로직 유지) */
+  useLayoutEffect(() => {
+    const root = leftScrollRef.current;
+    if (!root) return;
+
+    root.style.scrollBehavior = "auto";
+    root.scrollTop = 0;
+
+    let raf = 0;
+    const start = performance.now();
+
+    const pump = () => {
+      if (userInteracted) return;
+      if (isProgrammaticScrollRef.current) return;
+
+      if (root.scrollTop !== 0) root.scrollTop = 0;
+
+      const elapsed = performance.now() - start;
+      if (elapsed < 1200) raf = requestAnimationFrame(pump);
     };
 
-    onScrollOrResize();
-    window.addEventListener("scroll", onScrollOrResize, { passive: true });
-    window.addEventListener("resize", onScrollOrResize);
+    raf = requestAnimationFrame(pump);
+    return () => cancelAnimationFrame(raf);
+  }, [userInteracted]);
+
+  /** 11) scroll spy: day + entry center focus */
+  useEffect(() => {
+    const root = leftScrollRef.current;
+    if (!root) return;
+    if (!dayTabs.length) return;
+
+    const TRIGGER_PX = 16;
+
+    const computeActive = () => {
+      if (isProgrammaticScrollRef.current) return;
+
+      const rootRect = root.getBoundingClientRect();
+      const triggerY = rootRect.top + TRIGGER_PX;
+
+      let chosen: string | null = null;
+
+      for (const t of dayTabs) {
+        const el = daySectionRefs.current[t.id];
+        if (!el) continue;
+
+        const top = el.getBoundingClientRect().top;
+        if (top <= triggerY) chosen = t.id;
+        else break;
+      }
+
+      if (!chosen) {
+        const first = dayTabs[0]?.id;
+        if (first && first !== activeDayIdRef.current) setActiveDayId(first);
+      } else if (chosen !== activeDayIdRef.current) {
+        setActiveDayId(chosen);
+      }
+
+      const closestEntryId = getClosestEntryToCenter();
+      if (closestEntryId) scheduleFocusToEntry(closestEntryId);
+    };
+
+    let ticking = false;
+    const onScroll = () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        ticking = false;
+        computeActive();
+      });
+    };
+
+    const ro = new ResizeObserver(() => computeActive());
+    ro.observe(root);
+
+    requestAnimationFrame(computeActive);
+    setTimeout(computeActive, 150);
+    setTimeout(computeActive, 600);
+
+    root.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", computeActive);
 
     return () => {
-      window.removeEventListener("scroll", onScrollOrResize);
-      window.removeEventListener("resize", onScrollOrResize);
+      ro.disconnect();
+      root.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", computeActive);
+      if (focusTimerRef.current) window.clearTimeout(focusTimerRef.current);
     };
-  }, [TOPBAR_OFFSET_PX]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dayTabs, markers]);
 
-  // (추가) Map이 pinned이면, window wheel을 좌측 패널 스크롤로 “우선 소비”
-  useEffect(() => {
-    if (!isMapPinned) return;
+  /** 12) day change (tab click) */
+  const handleDayChange = (dayId: string, fromUser = false) => {
+    setActiveDayId(dayId);
+    if (fromUser) scrollToDay(dayId);
 
+    const dayIndex = Number(dayId.replace("day-", ""));
+    const firstEntryId = effectiveModel?.days.find(
+      (d) => d.dayIndex === dayIndex,
+    )?.entries?.[0]?.id;
+
+    if (firstEntryId) {
+      activeEntryIdRef.current = firstEntryId;
+      focusToEntryId(firstEntryId);
+    }
+  };
+
+  /** 13) marker click: focus + jump to day */
+  const focusByMarkerId = (markerId: string) => {
+    activeEntryIdRef.current = markerId;
+    focusToEntryId(markerId);
+
+    const targetDayId = entryIdToDayId.get(markerId);
+    if (targetDayId) handleDayChange(targetDayId, true);
+  };
+
+  /** 14) pinned map: wheel consumed by left panel first */
+  useLayoutEffect(() => {
     const root = leftScrollRef.current;
     if (!root) return;
 
@@ -274,51 +396,56 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
       const cur = root.scrollTop;
 
       if (maxTop <= 0) return false;
-
-      if (deltaY > 0 && cur >= maxTop - 1) return false; // 이미 바닥
-      if (deltaY < 0 && cur <= 0) return false; // 이미 천장
-
+      if (deltaY > 0 && cur >= maxTop - 1) return false;
+      if (deltaY < 0 && cur <= 0) return false;
       return true;
     };
 
     const onWheel = (e: WheelEvent) => {
+      if (!userInteracted) return;
       if (isProgrammaticScrollRef.current) return;
 
       const delta = e.deltaY;
       if (!delta) return;
 
-      // 좌측이 아직 스크롤 가능하면: window 스크롤을 막고 좌측만 스크롤
-      if (canScrollLeftPanel(delta)) {
-        e.preventDefault();
-        root.scrollTop += delta;
+      const mapEl = mapStickyRef.current;
+      if (!mapEl) return;
+
+      const rect = mapEl.getBoundingClientRect();
+      const pinnedNow = rect.top <= TOPBAR_OFFSET_PX + 1;
+      if (!pinnedNow) return;
+
+      const mapWrap = mapContainerRef.current;
+      const isOnMap = !!(mapWrap && mapWrap.contains(e.target as Node));
+
+      // ctrl+wheel => map zoom 허용
+      if (isOnMap && e.ctrlKey) return;
+
+      // left panel 더 못 가면 window scroll 허용
+      if (!canScrollLeftPanel(delta)) return;
+
+      e.preventDefault();
+
+      if (isOnMap) {
+        e.stopPropagation();
+        (e as any).stopImmediatePropagation?.();
       }
-      // 좌측이 끝(천장/바닥)이라 더 못 움직이면 preventDefault 안 함 → 자연스럽게 전체 스크롤로 전환
+
+      root.scrollTop += delta;
     };
 
-    window.addEventListener("wheel", onWheel, { passive: false });
-    return () => window.removeEventListener("wheel", onWheel);
-  }, [isMapPinned]);
+    const opts: AddEventListenerOptions = { passive: false, capture: true };
+    window.addEventListener("wheel", onWheel, opts);
+    document.addEventListener("wheel", onWheel, opts);
 
-  // --- 여기부터 “데이터 매핑” ---
-  // 우선은 fallback(예시 데이터) 유지하고,
-  // recapData 구조 파악되면 아래 hero/dayEntries를 실제 값으로 채우면 됨.
+    return () => {
+      window.removeEventListener("wheel", onWheel, opts);
+      document.removeEventListener("wheel", onWheel, opts);
+    };
+  }, [TOPBAR_OFFSET_PX, userInteracted, markers]);
 
-  const activeDayIndex = useMemo(() => {
-    const n = Number(activeDayId.replace("day-", ""));
-    return Number.isFinite(n) ? n : 1;
-  }, [activeDayId]);
-
-  const activeDay: RecapDay | undefined = useMemo(() => {
-    return (
-      pageModel?.days?.find((d: any) => d.dayIndex === activeDayIndex) ??
-      pageModel?.days?.[0]
-    );
-  }, [pageModel?.days, activeDayIndex]);
-
-  // --- 로딩/에러 처리 ---
-  if (loading) {
-    return <div className="p-6">Loading recap…</div>;
-  }
+  /** render */
+  if (loading) return <div className="p-6">Loading recap…</div>;
 
   if (error) {
     return (
@@ -329,8 +456,8 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
     );
   }
 
-  if (!pageModel) return <div className="p-6">No recap data</div>;
-  // >>>>>>> origin/develop
+  if (!effectiveModel) return <div className="p-6">No recap data</div>;
+
   return (
     <div className="min-h-screen bg-white">
       <RecapBlogTopBar
@@ -338,13 +465,14 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
         breadcrumbItems={breadcrumbItems}
         dayTabs={dayTabs}
         activeDayId={activeDayId}
-        onDayChange={handleDayChange}
+        onDayChange={(id) => handleDayChange(id, true)}
         onGoBack={() => window.history.back()}
         onEditBlog={() => router.push(`/trip/${userId}/${tripId}/edit`)}
         className="sticky top-0 z-50 border-b border-black/10"
       />
+
       <div className="space-y-10 p-6">
-        <RecapBlogHero {...pageModel.hero} />
+        <RecapBlogHero {...effectiveModel.hero} />
 
         {(loading || error) && (
           <div className="rounded-2xl border border-black/10 bg-black/[0.02] p-4 text-sm">
@@ -354,36 +482,48 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
         )}
 
         <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
-          {/* Left: sticky + internal scroll (옵션 1: scroll chaining 차단) */}
+          {/* Left */}
           <section
             className="min-w-0 flex-1 sticky self-start"
             style={{ top: TOPBAR_OFFSET_PX }}
           >
             <div
               ref={leftScrollRef}
-              className="w-full overflow-y-auto scrollbar-hide rounded-2xl"
-              style={{ height: PANEL_HEIGHT }}
+              className="w-full overflow-y-auto overscroll-contain touch-pan-y rounded-2xl"
+              style={{
+                height: PANEL_HEIGHT,
+                scrollBehavior: "auto",
+                overflowAnchor: "none",
+              }}
             >
               <div className="space-y-12 p-4">
-                {pageModel.days.map((d: any) => (
-                  <div
-                    key={d.dayIndex}
-                    data-day-id={`day-${d.dayIndex}`}
-                    ref={(el) => {
-                      daySectionRefs.current[`day-${d.dayIndex}`] = el;
-                    }}
-                  >
-                    <RecapBlogDaySection
-                      dayIndex={d.dayIndex}
-                      title={d.title}
-                      entries={d.entries as any}
-                    />
-                  </div>
-                ))}
+                {effectiveModel.days.map((d) => {
+                  const id = `day-${d.dayIndex}`;
+                  return (
+                    <div
+                      key={id}
+                      data-day-id={id}
+                      ref={(el) => {
+                        daySectionRefs.current[id] = el;
+                      }}
+                      style={{ scrollMarginTop: 12 }}
+                    >
+                      <RecapBlogDaySection
+                        dayIndex={d.dayIndex}
+                        title={d.title}
+                        entries={d.entries as any}
+                        onEntryMount={(entryId, el) => {
+                          entryRefs.current[entryId] = el;
+                        }}
+                      />
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </section>
-          {/* Right(Map): 동일한 top/height로 sticky */}
+
+          {/* Right (Map) */}
           <section
             ref={(el) => {
               mapStickyRef.current = el;
@@ -392,26 +532,15 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
             style={{ top: TOPBAR_OFFSET_PX }}
           >
             <div
+              ref={mapContainerRef}
               className="w-full overflow-hidden rounded-2xl border border-black/10"
               style={{ height: PANEL_HEIGHT }}
             >
               <MapboxMap
                 mode="place"
                 placeMarkers={markers}
-                onPlaceMarkerClick={(markerId) => {
-                  console.log("클릭된 마커 ID:", markerId);
-                  console.log(
-                    "사전에 등록된 키값들:",
-                    Array.from(entryIdToDayId.keys()),
-                  );
-                  // 1. 마커 ID(entryId)로 해당 날짜 ID(dayId)를 찾음
-                  const targetDayId = entryIdToDayId.get(markerId);
-
-                  // 2. 해당 날짜 섹션으로 스크롤 이동 함수 호출
-                  if (targetDayId) {
-                    handleDayChange(targetDayId);
-                  }
-                }}
+                focusLatLng={focusLatLng}
+                onPlaceMarkerClick={focusByMarkerId}
               />
             </div>
           </section>

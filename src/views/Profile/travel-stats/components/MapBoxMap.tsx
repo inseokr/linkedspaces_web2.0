@@ -30,7 +30,7 @@ type Props = {
   highlightIso2?: string[];
   countryStats?: CountryStat[]; // 채색할 데이터
   worldview?: string;
-
+  focusLatLng?: { lat: number; lng: number };
   mode?: "place"; //mode 없으면 circle, mode="place"면 place
 
   // circle markers
@@ -85,7 +85,7 @@ export default function MapboxMap({
   worldview = "US",
 
   mode, //undefined => circle / "place" => place
-
+  focusLatLng,
   markers = [],
   onMarkerClick,
 
@@ -101,7 +101,9 @@ export default function MapboxMap({
   // refs
   const markersRef = useRef(markers);
   const placeMarkersRef = useRef(placeMarkers);
+  const modeRef = useRef(mode);
 
+  const focusLatLngRef = useRef<Props["focusLatLng"]>(focusLatLng);
   const onMarkerClickRef = useRef(onMarkerClick);
   const onPlaceMarkerClickRef = useRef(onPlaceMarkerClick);
 
