@@ -262,6 +262,7 @@ function RecapPhotoCarousel({
               totalPhotos={total}
               expanded={expanded}
               onToggleExpanded={onToggleExpanded}
+              mode={"view"}
             />
           </div>
         ))}
@@ -297,6 +298,8 @@ function RecapPhotoCard({
   photoIndex,
   totalPhotos,
   expanded,
+  onToggleExpanded,
+  mode,
 }: {
   entry: RecapEntry;
   photoUrl: string;
@@ -304,10 +307,12 @@ function RecapPhotoCard({
   totalPhotos: number;
   expanded: boolean;
   onToggleExpanded: () => void;
+  mode: Mode;
 }) {
   const captionText =
     entry.captions?.[photoIndex] ??
     (photoIndex === 0 ? (entry.caption ?? "") : "");
+  const canToggle = (captionText?.trim().length ?? 0) > 120;
   return (
     <article
       className={[
@@ -339,6 +344,16 @@ function RecapPhotoCard({
           >
             {captionText}
           </p>
+
+          {mode === "view" && canToggle && (
+            <button
+              type="button"
+              onClick={onToggleExpanded}
+              className="shrink-0 text-[18px] font-extrabold text-black hover:opacity-80"
+            >
+              {expanded ? "" : "See More"}
+            </button>
+          )}
         </div>
       </div>
 
