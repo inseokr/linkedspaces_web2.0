@@ -34,8 +34,8 @@ export default function TextRow({
         <div
           className={
             isTitle
-              ? "mb-2 text-sm font-semibold"
-              : "mb-2 text-sm font-semibold"
+              ? "mb-3 text-2xl font-semibold"
+              : "mb-3 text-sm font-semibold"
           }
         >
           {label}

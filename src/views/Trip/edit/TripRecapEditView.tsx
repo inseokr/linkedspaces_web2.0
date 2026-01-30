@@ -251,23 +251,6 @@ export default function TripRecapEditView({
     });
   };
 
-  /** 7) map place draft -> recap entry (UI 컴포넌트가 요구하는 shape) */
-  const placeToEntry = (p: PlaceDraft): RecapEntry => {
-    return {
-      id: p.id,
-      placeName: (p as any).placeName ?? (p as any).title ?? "Place",
-      timeRangeText: (p as any).timeRangeText ?? (p as any).time ?? "",
-      categoryLabel: (p as any).categoryLabel ?? (p as any).category,
-      liked: (p as any).liked ?? false,
-      likeCount: (p as any).likeCount ?? 0,
-      commentCount: (p as any).commentCount ?? 0,
-      photos: (p as any).photos ?? [],
-      captions: (p as any).captions ?? [],
-      caption: (p as any).caption ?? "",
-      coordinate: (p as any).coordinate,
-    };
-  };
-
   /** render states */
   if (loading) return <div className="p-6">Loading…</div>;
 
