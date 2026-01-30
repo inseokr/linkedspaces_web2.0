@@ -20,41 +20,7 @@ import {
 /** ----------------------------
  *  데이터 타입 (Day/Entries)
  *  ---------------------------- */
-export type RecapBlogPageData = {
-  hero: {
-    coverImageUrl: string;
-    title: string;
-    dateText: string;
-    locationText: string;
-    authorName: string;
-    postedLabel: string;
-    avatarUrl: string;
-  };
-  days: Array<{
-    dayIndex: number;
-    title: string;
-    entries: Array<{
-      id: string;
-      placeName: string;
-      timeRangeText: string;
-      categoryLabel?: string;
-      liked?: boolean;
-      likeCount: number;
-      commentCount: number;
-      caption: string;
-      photos: string[];
-    }>;
-  }>;
-};
 
-/** ----------------------------
- *  유틸: 캡션 라인 클램프
- *  ---------------------------- */
-
-/** ----------------------------
- *  컴포넌트: Day 섹션 (✅ 장소는 세로 배치)
- *  ---------------------------- */
-// =======
 export type RecapEntry = {
   id: string;
   placeName: string;
@@ -74,16 +40,36 @@ export type RecapDay = {
   entries: RecapEntry[];
 };
 
+export type RecapBlogPageData = {
+  hero: {
+    coverImageUrl: string;
+    title: string;
+    dateText: string;
+    locationText: string;
+    authorName: string;
+    postedLabel: string;
+    avatarUrl: string;
+  };
+  days: RecapDay[];
+};
+
 // >>>>>>> origin/develop
 type Props = {
   dayIndex: number;
   title: string;
   entries: RecapEntry[];
+
+  onEntryMount?: (entryId: string, el: HTMLDivElement | null) => void; // 장소 별 맵 이동을 위한 콜백 추가
 };
 
 const clampClass = "line-clamp-2";
 
-export function RecapBlogDaySection({ dayIndex, title, entries }: Props) {
+export function RecapBlogDaySection({
+  dayIndex,
+  title,
+  entries,
+  onEntryMount,
+}: Props) {
   // entry별 See More 상태
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
@@ -105,33 +91,18 @@ export function RecapBlogDaySection({ dayIndex, title, entries }: Props) {
       {/* 장소(Entry)들을 vertical로 쌓는다 */}
       <div className="space-y-10">
         {entries.map((entry) => (
-          <RecapPlaceBlock
+          <div
             key={entry.id}
-            entry={entry}
-            expanded={expandedIds.has(entry.id)}
-            onToggleExpanded={() => toggleExpanded(entry.id)}
-          />
+            ref={(el) => onEntryMount?.(entry.id, el)}
+            data-entry-id={entry.id}
+          >
+            <RecapPlaceBlock
+              entry={entry}
+              expanded={expandedIds.has(entry.id)}
+              onToggleExpanded={() => toggleExpanded(entry.id)}
+            />
+          </div>
         ))}
-        {/* =======
-      <div className="relative">
-        <div
-          className={[
-            "flex overflow-x-auto snap-x snap-mandatory scroll-smooth pb-4",
-            "[&>*]:snap-start gap-0",
-            "scrollbar-thin scrollbar-thumb-black/10 scrollbar-track-transparent",
-          ].join(" ")}
-        >
-          {entries.map((e) => (
-            <div key={e.id} className="w-full shrink-0 px-1">
-              <RecapEntryCard
-                entry={e}
-                expanded={expandedIds.has(e.id)}
-                onToggleExpanded={() => toggleExpanded(e.id)}
-              />
-            </div>
-          ))}
-        </div>
->>>>>>> origin/develop */}
       </div>
     </section>
   );
