@@ -1,38 +1,48 @@
 "use client";
+
 import Sidebar from "@/views/Profile/sidebar/Sidebar";
 import { useState, useEffect } from "react";
 import Image from "next/image";
+import {
+  LayoutModeProvider,
+  useLayoutMode,
+} from "@/components/layout/LayoutModeContext";
 
-export default function ProfileLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  // Manage sidebar state at the layout level to sync with main content
+function ProfileLayoutInner({ children }: { children: React.ReactNode }) {
+  const { layoutMode } = useLayoutMode();
+  const hideSidebar = false;
+  // = layoutMode === "bare";
+
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const SIDEBAR_WIDTH = "320px";
 
-  // Constants for design consistency
-  const SIDEBAR_WIDTH = "320px"; // w-80 in Tailwind
   useEffect(() => {
     document.documentElement.style.setProperty(
       "--sidebar-offset",
-      isSidebarOpen ? SIDEBAR_WIDTH : "0px",
+      hideSidebar ? "0px" : isSidebarOpen ? SIDEBAR_WIDTH : "0px",
     );
 
     return () => {
       document.documentElement.style.removeProperty("--sidebar-offset");
     };
-  }, [isSidebarOpen]);
+  }, [isSidebarOpen, hideSidebar]);
+
+  //사이드바를 안 띄우고 싶을 때
+  if (hideSidebar) {
+    return (
+      <main className="min-h-screen w-full bg-white">
+        <div className="w-full min-h-full flex flex-col">{children}</div>
+      </main>
+    );
+  }
 
   return (
     <div className="relative flex h-screen w-full overflow-hidden">
-      {/* Sidebar Component with toggle props */}
       <Sidebar
         isOpen={isSidebarOpen}
         onToggle={() => setIsSidebarOpen(!isSidebarOpen)}
       />
 
-      {/* Toggle Button - Always visible when sidebar is closed */}
       {!isSidebarOpen && (
         <button
           onClick={() => setIsSidebarOpen(true)}
@@ -48,10 +58,6 @@ export default function ProfileLayout({
         </button>
       )}
 
-      {/* Main Content Area:
-          Use padding-left to create the "pushing" effect. 
-          The transition must match the sidebar's animation speed.
-      */}
       <main
         className="flex-1 h-full overflow-y-auto transition-all duration-300 ease-in-out bg-white"
         style={{ paddingLeft: isSidebarOpen ? SIDEBAR_WIDTH : "0px" }}
@@ -59,5 +65,17 @@ export default function ProfileLayout({
         <div className="w-full min-h-full flex flex-col">{children}</div>
       </main>
     </div>
+  );
+}
+
+export default function ProfileLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <LayoutModeProvider>
+      <ProfileLayoutInner>{children}</ProfileLayoutInner>
+    </LayoutModeProvider>
   );
 }

@@ -224,18 +224,18 @@ export default function ProfileRecapBlogsView() {
     // map view
     if (view === "map") {
       return (
-        <div className="relative flex flex-col gap-4 lg:flex-row">
+        <div className="relative flex h-[calc(100vh-180px)] min-h-[520px] flex-col gap-4 lg:flex-row">
           {/* Left: blog list */}
           <aside
             className={[
-              "shrink-0",
+              "shrink-0 h-full",
               isMapOverlayOpen
-                ? "absolute inset-0 z-30 w-full" //확장: map 위로 덮기
-                : "w-full lg:w-[420px]", //기본: 왼쪽 패널
+                ? "absolute inset-0 z-30 w-full" // 확장: map 위로 덮기
+                : "w-full lg:w-[420px]", // 기본: 왼쪽 패널
             ].join(" ")}
           >
-            <div className="rounded-2xl border border-black/10 bg-white">
-              <div className="h-[520px] overflow-y-auto pr-2 px-4 pt-2 pb-4">
+            <div className="h-full rounded-2xl border border-black/10 bg-white">
+              <div className="h-full min-h-[220px] overflow-y-auto pr-2 px-4 pt-2 pb-4">
                 <RecapBlogColumn
                   items={mapLeftBlogItems}
                   gapClassName="gap-6"
@@ -259,8 +259,8 @@ export default function ProfileRecapBlogsView() {
           </aside>
 
           {/* Right: map */}
-          <section className="min-w-0 flex-1">
-            <div className="h-[520px] w-full overflow-hidden rounded-2xl border border-black/10">
+          <section className="min-w-0 flex-1 h-full">
+            <div className="h-full w-full overflow-hidden rounded-2xl border border-black/10">
               <MapboxMap
                 countryCode={normalizedSelectedCountry ?? undefined}
                 markers={mapMarkers}

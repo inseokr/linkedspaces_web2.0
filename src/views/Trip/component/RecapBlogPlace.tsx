@@ -1,10 +1,8 @@
-//recapblogPlaces
-
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
-
+import DeleteIcon from "@/assets/icons/delete.svg";
 import {
   MapPin,
   ThumbsUp,
@@ -17,10 +15,13 @@ import {
   ChevronRight,
 } from "lucide-react";
 
-/** ----------------------------
- *  데이터 타입 (Day/Entries)
- *  ---------------------------- */
+import ConfirmModal from "@/components/ui/ConfirmModal";
+import { idbGetBlob } from "@/views/Trip/edit/utils/imageIdb";
+import TextRow from "@/views/Trip/edit/components/TextRow";
 
+/** ----------------------------
+ *  Types
+ *  ---------------------------- */
 export type RecapEntry = {
   id: string;
   placeName: string;
@@ -29,8 +30,16 @@ export type RecapEntry = {
   liked?: boolean;
   likeCount: number;
   commentCount: number;
-  caption: string;
+
+  // 기존 단일 캡션 호환
+  caption?: string;
+
+  // 사진별 캡션
+  captions?: string[];
+
+  // 사진: remote url or "idb:<key>"
   photos: string[];
+
   coordinate?: { latitude: number; longitude: number };
 };
 
@@ -53,24 +62,36 @@ export type RecapBlogPageData = {
   days: RecapDay[];
 };
 
-// >>>>>>> origin/develop
+type Mode = "view" | "edit";
+
 type Props = {
   dayIndex: number;
   title: string;
   entries: RecapEntry[];
+  mode?: Mode;
 
-  onEntryMount?: (entryId: string, el: HTMLDivElement | null) => void; // 장소 별 맵 이동을 위한 콜백 추가
+  onCaptionChange?: (entryId: string, photoIndex: number, next: string) => void;
+  onReplacePhoto?: (entryId: string, photoIndex: number, file: File) => void;
+  onRemovePhoto?: (entryId: string, photoIndex: number) => void;
+
+  onEntryMount?: (entryId: string, el: HTMLDivElement | null) => void;
 };
 
 const clampClass = "line-clamp-2";
 
+/** ----------------------------
+ *  Day section
+ *  ---------------------------- */
 export function RecapBlogDaySection({
   dayIndex,
   title,
   entries,
+  mode = "view",
+  onCaptionChange,
+  onReplacePhoto,
+  onRemovePhoto,
   onEntryMount,
 }: Props) {
-  // entry별 See More 상태
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
   const toggleExpanded = (id: string) => {
@@ -87,8 +108,6 @@ export function RecapBlogDaySection({
         Day {dayIndex}: {title}
       </div>
 
-      {/* <<<<<<< HEAD */}
-      {/* 장소(Entry)들을 vertical로 쌓는다 */}
       <div className="space-y-10">
         {entries.map((entry) => (
           <div
@@ -100,6 +119,10 @@ export function RecapBlogDaySection({
               entry={entry}
               expanded={expandedIds.has(entry.id)}
               onToggleExpanded={() => toggleExpanded(entry.id)}
+              mode={mode}
+              onCaptionChange={onCaptionChange}
+              onReplacePhoto={onReplacePhoto}
+              onRemovePhoto={onRemovePhoto}
             />
           </div>
         ))}
@@ -108,30 +131,29 @@ export function RecapBlogDaySection({
   );
 }
 
-{
-  /* 
-<<<<<<< HEAD */
-}
 /** ----------------------------
- *  장소 블록: (카드 외부에 장소/시간/태그)
- *  - 아래에 사진 카드 캐러셀(가로)
+ *  Place block
  *  ---------------------------- */
 function RecapPlaceBlock({
-  // =======
-  // function RecapEntryCard({
-  // >>>>>>> origin/develop
   entry,
   expanded,
   onToggleExpanded,
+  mode,
+  onCaptionChange,
+  onReplacePhoto,
+  onRemovePhoto,
 }: {
   entry: RecapEntry;
   expanded: boolean;
   onToggleExpanded: () => void;
+  mode: Mode;
+  onCaptionChange?: (entryId: string, photoIndex: number, next: string) => void;
+  onReplacePhoto?: (entryId: string, photoIndex: number, file: File) => void;
+  onRemovePhoto?: (entryId: string, photoIndex: number) => void;
 }) {
-  // <<<<<<< HEAD
   return (
     <div className="space-y-4">
-      {/* ✅ 장소/시간/태그는 카드 외부 */}
+      {/* 장소/시간/태그는 카드 외부 */}
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <div className="flex items-center gap-3">
@@ -142,35 +164,6 @@ function RecapPlaceBlock({
               </div>
               <div className="mt-1 text-[16px] font-medium text-black/70">
                 {entry.timeRangeText}
-                {/* =======
-  const [photoIdx, setPhotoIdx] = useState(0);
-  const total = Math.max(entry.photos.length, 1);
-
-  const prev = () => setPhotoIdx((i) => (i - 1 + total) % total);
-  const next = () => setPhotoIdx((i) => (i + 1) % total);
-
-  const currentPhoto = entry.photos[photoIdx] ?? "/images/hero/us.jpg";
-
-  return (
-    <article
-      className={[
-        "w-full max-w-[920px] mx-auto overflow-hidden",
-        "rounded-[28px] border border-black/15 bg-white shadow-sm",
-      ].join(" ")}
-    >
-      <div className="px-6 pt-6">
-        <div className="flex items-start justify-between gap-4">
-          <div className="min-w-0">
-            <div className="flex items-center gap-3">
-              <MapPin className="h-7 w-7 text-[#B84A2F]" />
-              <div className="min-w-0">
-                <div className="truncate text-[30px] font-extrabold text-black underline underline-offset-4">
-                  {entry.placeName}
-                </div>
-                <div className="mt-1 text-[16px] font-medium text-black/70">
-                  {entry.timeRangeText}
-                </div>
->>>>>>> origin/develop */}
               </div>
             </div>
           </div>
@@ -197,37 +190,40 @@ function RecapPlaceBlock({
         </div>
       </div>
 
-      {/* <<<<<<< HEAD */}
-      {/* ✅ 이 장소의 사진들은 horizontal 캐러셀 (카드 단위로 넘어감) */}
-      <RecapPhotoCarousel
-        entry={entry}
-        expanded={expanded}
-        onToggleExpanded={onToggleExpanded}
-      />
+      {mode === "edit" ? (
+        <RecapPhotoEditList
+          entry={entry}
+          onCaptionChange={onCaptionChange}
+          onReplacePhoto={onReplacePhoto}
+          onRemovePhoto={onRemovePhoto}
+        />
+      ) : (
+        <RecapPhotoCarousel
+          entry={entry}
+          expanded={expanded}
+          onToggleExpanded={onToggleExpanded}
+        />
+      )}
     </div>
   );
 }
 
 /** ----------------------------
- *  사진 캐러셀:
- *  - 사진 1장 = 카드 1개
- *  - 좌/우 버튼 누르면 다음 카드로 이동 (scrollIntoView)
+ *  View carousel
  *  ---------------------------- */
 function RecapPhotoCarousel({
   entry,
   expanded,
   onToggleExpanded,
 }: {
-  entry: RecapBlogPageData["days"][number]["entries"][number];
+  entry: RecapEntry;
   expanded: boolean;
   onToggleExpanded: () => void;
 }) {
   const total = entry.photos.length;
   const [activeIdx, setActiveIdx] = useState(0);
-
   const itemRefs = useRef<Array<HTMLDivElement | null>>([]);
 
-  // activeIdx가 바뀌면 해당 카드로 스크롤 이동
   useEffect(() => {
     itemRefs.current[activeIdx]?.scrollIntoView({
       behavior: "smooth",
@@ -238,7 +234,6 @@ function RecapPhotoCarousel({
 
   const prev = () => setActiveIdx((i) => (i - 1 + total) % total);
   const next = () => setActiveIdx((i) => (i + 1) % total);
-
   const showNav = total > 1;
 
   return (
@@ -273,7 +268,6 @@ function RecapPhotoCarousel({
         ))}
       </div>
 
-      {/* 좌/우 버튼: 카드 외부(캐러셀 위)에서 다음 카드로 */}
       {showNav && (
         <>
           <button
@@ -303,7 +297,6 @@ function RecapPhotoCarousel({
  *  카드에는 사진 1장 + 캡션 + 액션바만 포함
  *  (장소/시간/태그는 PlaceBlock에 있음)
  *  ---------------------------- */
-
 function RecapPhotoCard({
   entry,
   photoUrl,
@@ -311,14 +304,20 @@ function RecapPhotoCard({
   totalPhotos,
   expanded,
   onToggleExpanded,
+  mode = "view",
 }: {
-  entry: RecapBlogPageData["days"][number]["entries"][number];
+  entry: RecapEntry;
   photoUrl: string;
   photoIndex: number;
   totalPhotos: number;
   expanded: boolean;
-  onToggleExpanded: () => void;
+  onToggleExpanded?: () => void;
+  mode?: Mode;
 }) {
+  const captionText =
+    entry.captions?.[photoIndex] ??
+    (photoIndex === 0 ? (entry.caption ?? "") : "");
+  const canToggle = (captionText?.trim().length ?? 0) > 120;
   return (
     <article
       className={[
@@ -328,64 +327,19 @@ function RecapPhotoCard({
         "overflow-hidden rounded-[28px] border border-black/15 bg-white shadow-sm",
       ].join(" ")}
     >
-      {/* 사진 */}
       <div className="relative">
         <div className="relative m-6 aspect-[16/9] overflow-hidden rounded-2xl bg-black/5">
-          <Image
+          <ResolvedImage
             src={photoUrl}
             alt={`${entry.placeName} photo ${photoIndex + 1}`}
-            // =======
-            //       <div className="relative mt-4">
-            //         <div className="relative mx-6 aspect-[16/9] overflow-hidden rounded-2xl bg-black/5">
-            //           <Image
-            //             src={currentPhoto}
-            //             alt={`${entry.placeName} photo ${photoIdx + 1}`}
-            // >>>>>>> origin/develop
-            fill
-            className="object-cover"
-            sizes="(max-width: 768px) 90vw, 680px"
           />
-
           <div className="absolute left-4 top-4 rounded-full bg-white/40 px-3 py-1 text-[14px] font-bold text-white backdrop-blur">
-            {/* <<<<<<< HEAD */}
             {photoIndex + 1}/{totalPhotos}
           </div>
         </div>
       </div>
 
-      {/* 캡션 + See More */}
       <div className="px-6 pb-4">
-        {/* =======
-            {entry.photos.length
-              ? `${photoIdx + 1}/${entry.photos.length}`
-              : "—"}
-          </div>
-
-          {entry.photos.length > 1 && (
-            <>
-              <button
-                type="button"
-                onClick={prev}
-                className="absolute left-3 top-1/2 -translate-y-1/2 rounded-full bg-white/70 p-2 shadow-sm backdrop-blur hover:bg-white"
-                aria-label="Previous photo"
-              >
-                <ChevronLeft className="h-6 w-6 text-black/70" />
-              </button>
-              <button
-                type="button"
-                onClick={next}
-                className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-white/70 p-2 shadow-sm backdrop-blur hover:bg-white"
-                aria-label="Next photo"
-              >
-                <ChevronRight className="h-6 w-6 text-black/70" />
-              </button>
-            </>
-          )}
-        </div>
-      </div>
-
-      <div className="px-6 pb-4 pt-5">
->>>>>>> origin/develop */}
         <div className="flex items-end justify-between gap-6">
           <p
             className={[
@@ -393,20 +347,21 @@ function RecapPhotoCard({
               expanded ? "" : clampClass,
             ].join(" ")}
           >
-            {entry.caption}
+            {captionText}
           </p>
-          {/* 
-          <button
-            type="button"
-            onClick={onToggleExpanded}
-            className="shrink-0 text-[22px] font-extrabold text-black hover:opacity-80"
-          >
-            {expanded ? "See Less" : "See More"}
-          </button> */}
+
+          {mode === "view" && canToggle && (
+            <button
+              type="button"
+              onClick={onToggleExpanded}
+              className="shrink-0 text-[18px] font-extrabold text-black hover:opacity-80"
+            >
+              {expanded ? "See Less" : "See More"}
+            </button>
+          )}
         </div>
       </div>
 
-      {/* 액션 바 */}
       <div className="flex items-center justify-between border-t border-black/10 px-6 py-4">
         <div className="flex items-center gap-5 text-black/70">
           <button
@@ -440,5 +395,205 @@ function RecapPhotoCard({
         </div>
       </div>
     </article>
+  );
+}
+
+/** ----------------------------
+ *  Edit list (rows)
+ *  ---------------------------- */
+function RecapPhotoEditList({
+  entry,
+  onCaptionChange,
+  onReplacePhoto,
+  onRemovePhoto,
+}: {
+  entry: RecapEntry;
+  onCaptionChange?: (entryId: string, photoIndex: number, next: string) => void;
+  onReplacePhoto?: (entryId: string, photoIndex: number, file: File) => void;
+  onRemovePhoto?: (entryId: string, photoIndex: number) => void;
+}) {
+  const normalizedCaptions = useMemo(() => {
+    return Array.from({ length: entry.photos.length }, (_, i) => {
+      const c = entry.captions?.[i];
+      if (typeof c === "string") return c;
+      if (i === 0 && entry.caption) return entry.caption;
+      return "";
+    });
+  }, [entry.photos.length, entry.captions, entry.caption]);
+
+  const [removeTarget, setRemoveTarget] = useState<{
+    photoIndex: number;
+  } | null>(null);
+
+  return (
+    <>
+      <div className="space-y-4">
+        {entry.photos.map((photoUrl, idx) => (
+          <PhotoCaptionRow
+            key={`${entry.id}-row-${idx}`}
+            entryId={entry.id}
+            photoUrl={photoUrl}
+            index={idx}
+            total={entry.photos.length}
+            caption={normalizedCaptions[idx]}
+            onCaptionChange={onCaptionChange}
+            onReplacePhoto={onReplacePhoto}
+            onRequestRemove={() => setRemoveTarget({ photoIndex: idx })}
+          />
+        ))}
+      </div>
+
+      <ConfirmModal
+        open={!!removeTarget}
+        message={"Do you want to remove this place\n from this blog?"}
+        confirmText="Yes"
+        cancelText="No"
+        onClose={() => setRemoveTarget(null)}
+        onConfirm={() => {
+          if (!removeTarget) return;
+          onRemovePhoto?.(entry.id, removeTarget.photoIndex);
+          setRemoveTarget(null);
+        }}
+      />
+    </>
+  );
+}
+
+function PhotoCaptionRow({
+  entryId,
+  photoUrl,
+  index,
+  total,
+  caption,
+  onCaptionChange,
+  onReplacePhoto,
+  onRequestRemove,
+}: {
+  entryId: string;
+  photoUrl: string;
+  index: number;
+  total: number;
+  caption: string;
+  onCaptionChange?: (entryId: string, photoIndex: number, next: string) => void;
+  onReplacePhoto?: (entryId: string, photoIndex: number, file: File) => void;
+  onRequestRemove: () => void;
+}) {
+  const fileRef = useRef<HTMLInputElement | null>(null);
+
+  return (
+    <div className="flex gap-4 items-center">
+      <button
+        type="button"
+        className="relative h-[150px] w-[150px] shrink-0 overflow-hidden rounded-2xl bg-black/10"
+        onClick={() => fileRef.current?.click()}
+        aria-label={`Replace photo ${index + 1}`}
+      >
+        <ResolvedImage src={photoUrl} alt="" />
+        <div className="absolute left-2 top-2 rounded-full bg-white/40 px-2 py-0.5 text-[12px] font-bold text-white backdrop-blur">
+          {index + 1}/{total}
+        </div>
+      </button>
+
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (!file) return;
+          onReplacePhoto?.(entryId, index, file);
+          e.currentTarget.value = "";
+        }}
+      />
+
+      <div className="w-full">
+        <TextRow
+          label=""
+          value={caption}
+          multiline
+          placeholder="Write a caption"
+          onChange={(v) => onCaptionChange?.(entryId, index, v)}
+        />
+      </div>
+
+      <button
+        type="button"
+        className="mt-2 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full hover:bg-black/5"
+        onClick={onRequestRemove}
+        aria-label="Remove photo"
+      >
+        <Image src={DeleteIcon} alt="delete" className="h-8 w-8 " />
+      </button>
+    </div>
+  );
+}
+
+/** ----------------------------
+ *  Resolved image (supports idb:<key>)
+ *  ---------------------------- */
+function ResolvedImage({ src, alt }: { src: string; alt: string }) {
+  const [resolved, setResolved] = useState<string>(src);
+  const revokeRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function run() {
+      if (revokeRef.current) {
+        URL.revokeObjectURL(revokeRef.current);
+        revokeRef.current = null;
+      }
+
+      if (!src?.startsWith("idb:")) {
+        setResolved(src);
+        return;
+      }
+
+      const key = src.replace(/^idb:/, "");
+      const blob = await idbGetBlob(key);
+      if (!blob) {
+        setResolved("");
+        return;
+      }
+
+      const url = URL.createObjectURL(blob);
+      revokeRef.current = url;
+      if (!cancelled) setResolved(url);
+    }
+
+    run();
+    return () => {
+      cancelled = true;
+      if (revokeRef.current) {
+        URL.revokeObjectURL(revokeRef.current);
+        revokeRef.current = null;
+      }
+    };
+  }, [src]);
+
+  if (!resolved) return <div className="h-full w-full bg-black/10" />;
+
+  //  blob은 img로 (안전)
+  if (resolved.startsWith("blob:")) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={resolved}
+        alt={alt}
+        className="absolute inset-0 h-full w-full object-cover"
+      />
+    );
+  }
+
+  //  일반 url은 next/image
+  return (
+    <Image
+      src={resolved}
+      alt={alt}
+      fill
+      className="object-cover"
+      sizes="(max-width: 768px) 90vw, 680px"
+    />
   );
 }

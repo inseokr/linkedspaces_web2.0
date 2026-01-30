@@ -6,6 +6,11 @@ const ASSET_ORIGIN = "https://s3-us-west-1.amazonaws.com/linkedspaces.fs";
 export function normalizeImageSrc(src?: string) {
   if (!src) return { src: "/images/hero/fallback.jpg", unoptimized: false };
 
+  //  로컬 프리뷰(blob/data)는 그대로 써야 함
+  if (src.startsWith("blob:") || src.startsWith("data:")) {
+    return { src, unoptimized: true };
+  }
+
   // 이미 절대 주소(http...)인 경우 그대로 반환
   if (/^https?:\/\//i.test(src)) return { src, unoptimized: false };
 

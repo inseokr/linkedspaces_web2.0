@@ -10,6 +10,13 @@ import React, {
 import { useRouter } from "next/navigation";
 
 import { apiFetch } from "@/api/client";
+// <<<<<<< HEAD
+// import { RecapDay } from "./component/RecapBlogPlace";
+// import RecapBlogTopBar from "./section/RecapBlogTopBar";
+// import type { DayTab } from "./component/RecapDayTabs";
+// import type { Crumb } from "./component/RecapBlogCrumbBread";
+// import RecapBlogHero from "./component/RecapBlogTopImage";
+// =======
 import type { TripRecapResponse } from "@/api/trips";
 
 import RecapBlogTopBar from "@/views/Trip/section/RecapBlogTopBar";
@@ -29,11 +36,16 @@ import MapboxMap, {
 import { mapTripRecapToPageModel } from "@/views/Trip/utils/mapTripRecap";
 import { loadDraft } from "@/views/Trip/edit/utils/draftStorage";
 import { applyDraftToPageModel } from "@/views/Trip/edit/utils/editMappers";
+import { idbGetBlob } from "./edit/utils/imageIdb";
 
 interface TripRecapViewProps {
   userId: string;
   tripId: string;
 }
+
+import RecapLoginBar from "./component/GuestRBLoginBar";
+import GuestRecapPage from "./GuestModeIndex";
+import { useLayoutMode } from "@/components/layout/LayoutModeContext";
 
 export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
   const router = useRouter();
@@ -41,6 +53,8 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
   const [recapData, setRecapData] = useState<TripRecapResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const draft = useMemo(() => loadDraft(userId, tripId), [userId, tripId]);
+  const [resolvedCoverUrl, setResolvedCoverUrl] = useState<string | null>(null);
 
   /** Layout */
   const TOPBAR_OFFSET_PX = 250;
@@ -73,6 +87,38 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
   /** Entry focus helpers */
   const activeEntryIdRef = useRef<string | null>(null);
   const focusTimerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    let urlToRevoke: string | null = null;
+
+    async function run() {
+      setResolvedCoverUrl(null);
+
+      if (!draft) return;
+      if (draft.coverPhoto.kind !== "local") return;
+
+      // 같은 세션에서 previewUrl이 있으면 그걸 우선 사용
+      if (draft.coverPhoto.previewUrl) {
+        setResolvedCoverUrl(draft.coverPhoto.previewUrl);
+        return;
+      }
+
+      const key = draft.coverPhoto.previewKey;
+      if (!key) return;
+
+      const blob = await idbGetBlob(key);
+      if (!blob) return;
+
+      urlToRevoke = URL.createObjectURL(blob);
+      setResolvedCoverUrl(urlToRevoke);
+    }
+
+    run();
+
+    return () => {
+      if (urlToRevoke) URL.revokeObjectURL(urlToRevoke);
+    };
+  }, [draft?.coverPhoto.kind, (draft?.coverPhoto as any)?.previewKey]);
 
   /** 1) Fetch */
   useEffect(() => {
@@ -111,7 +157,6 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
 
     const pm = mapTripRecapToPageModel(recapData);
 
-    const draft = loadDraft(userId, tripId);
     return draft ? applyDraftToPageModel(pm, draft) : pm;
   }, [recapData, userId, tripId]);
 
@@ -142,6 +187,15 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
       { label: `(${title})` },
     ];
   }, [effectiveModel?.hero?.title]);
+
+  const heroProps = useMemo(() => {
+    if (!effectiveModel?.hero) return null;
+
+    return {
+      ...effectiveModel.hero,
+      coverImageUrl: resolvedCoverUrl ?? effectiveModel.hero.coverImageUrl,
+    };
+  }, [effectiveModel?.hero, resolvedCoverUrl]);
 
   /** 5) Ensure active day valid */
   useEffect(() => {
@@ -210,12 +264,14 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
     setFocusLatLng({ lat: m.lat, lng: m.lng });
   };
 
+  // helper: left panel "가운데"에 가장 가까운 entry 찾기
+
   const getClosestEntryToCenter = () => {
     const root = leftScrollRef.current;
     if (!root) return null;
 
     const rootRect = root.getBoundingClientRect();
-    const centerY = rootRect.top + rootRect.height / 2;
+    const centerY = rootRect.top + rootRect.height * 0.6;
 
     let bestId: string | null = null;
     let bestDist = Infinity;
@@ -234,6 +290,7 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
     return bestId;
   };
 
+  //helper: 디바운스(스크롤 중 과도한 이동 방지)
   const scheduleFocusToEntry = (entryId: string) => {
     if (focusTimerRef.current) window.clearTimeout(focusTimerRef.current);
 
@@ -328,6 +385,7 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
         setActiveDayId(chosen);
       }
 
+      // --- 추가: entry(장소) 기준 카메라 포커스 ---
       const closestEntryId = getClosestEntryToCenter();
       if (closestEntryId) scheduleFocusToEntry(closestEntryId);
     };
@@ -472,7 +530,7 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
       />
 
       <div className="space-y-10 p-6">
-        <RecapBlogHero {...effectiveModel.hero} />
+        {heroProps && <RecapBlogHero {...heroProps} />}
 
         {(loading || error) && (
           <div className="rounded-2xl border border-black/10 bg-black/[0.02] p-4 text-sm">
