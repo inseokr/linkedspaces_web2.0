@@ -1,7 +1,7 @@
 export type ImageValue =
   | { kind: "keep"; url: string }
-  | { kind: "remove" }
-  | { kind: "local"; file?: File; previewUrl: string };
+  | { kind: "remove"; reason?: "user" | "sanitize" }
+  | { kind: "local"; previewUrl?: string; previewKey?: string };
 
 export type PlaceDraft = {
   id: string;

@@ -54,7 +54,7 @@ export function applyDraftToPageModel(pageModel: any, draft: RecapEditDraft) {
   } else if (draft.coverPhoto.kind === "keep") {
     setHeroCover(next.hero, draft.coverPhoto.url);
   } else if (draft.coverPhoto.kind === "local") {
-    setHeroCover(next.hero, draft.coverPhoto.previewUrl);
+    // setHeroCover(next.hero, draft.coverPhoto.previewUrl);
   }
 
   // days and places

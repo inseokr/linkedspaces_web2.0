@@ -19,6 +19,7 @@ import TextRow from "./components/TextRow";
 import PlaceCaptionList from "./components/PlaceCaptionList";
 import Image from "next/image";
 import deleteIcon from "@/assets/icons/delete.svg";
+import { idbGetBlob } from "@/views/Trip/edit/utils/imageIdb";
 
 export default function TripRecapEditView({
   userId,
@@ -81,15 +82,62 @@ export default function TripRecapEditView({
   const [activeDayId, setActiveDayId] = useState("day-1");
 
   useEffect(() => {
+    let urlToRevoke: string | null = null;
+
+    async function run() {
+      if (!draft) return;
+      if (draft.coverPhoto.kind !== "local") return;
+
+      const key = draft.coverPhoto.previewKey;
+      if (!key) return;
+
+      // previewUrl이 이미 있으면 복원 필요 없음
+      if (draft.coverPhoto.previewUrl) return;
+
+      const blob = await idbGetBlob(key);
+      if (!blob) return;
+
+      urlToRevoke = URL.createObjectURL(blob);
+
+      setDraft((prev) => {
+        if (!prev) return prev;
+        if (prev.coverPhoto.kind !== "local") return prev;
+        // 여전히 같은 key일 때만 주입 (레이스 방지)
+        if (prev.coverPhoto.previewKey !== key) return prev;
+
+        return {
+          ...prev,
+          coverPhoto: { ...prev.coverPhoto, previewUrl: urlToRevoke! },
+        };
+      });
+    }
+
+    run();
+
+    // 이 cleanup은 "key가 바뀌거나 컴포넌트 unmount"될 때만 실행되게 할 것
+    return () => {
+      if (urlToRevoke) URL.revokeObjectURL(urlToRevoke);
+    };
+    //  previewUrl 제외: kind + previewKey만 추적
+  }, [draft?.coverPhoto.kind, (draft?.coverPhoto as any)?.previewKey]);
+
+  useEffect(() => {
     if (!pageModel) return;
 
     const saved = loadDraft(userId, tripId);
+    console.log("[saved.days.length]", saved?.days?.length);
+    console.log("[saved.coverPhoto]", saved?.coverPhoto);
+
     const heroCover = pageModel.hero?.coverImageUrl ?? "";
     if (saved) {
-      const repaired: RecapEditDraft =
-        saved.coverPhoto?.kind === "remove" && heroCover
-          ? { ...saved, coverPhoto: { kind: "keep", url: heroCover } }
-          : saved;
+      const shouldRepair =
+        saved.coverPhoto?.kind === "remove" &&
+        heroCover &&
+        (saved.coverPhoto as any)?.reason === "sanitize"; // sanitize일 때만 복구
+
+      const repaired: RecapEditDraft = shouldRepair
+        ? { ...saved, coverPhoto: { kind: "keep", url: heroCover } }
+        : saved;
       setDraft(repaired);
 
       // Ensure activeDayId is valid for the saved draft
@@ -303,9 +351,12 @@ export default function TripRecapEditView({
           <div className="mb-2 text-sm font-medium">Cover Photo</div>
           <ImageFieldEditor
             value={draft.coverPhoto}
-            onChange={(coverPhoto) =>
-              setDraft({ ...draft, updatedAt: Date.now(), coverPhoto })
-            }
+            userId={userId}
+            tripId={tripId}
+            onChange={(coverPhoto) => {
+              console.log("[coverPhoto from editor]", coverPhoto);
+              setDraft({ ...draft, updatedAt: Date.now(), coverPhoto });
+            }}
           />
         </div>
 

@@ -2,7 +2,7 @@
 
 import React, { useRef, useEffect } from "react";
 import type { ImageValue } from "../types/editTypes";
-
+import { idbSetBlob } from "@/views/Trip/edit/utils/imageIdb";
 import { getBlogImageResolved } from "../utils/blogImageCache";
 
 function getSrc(v: ImageValue): string | null {
@@ -10,46 +10,53 @@ function getSrc(v: ImageValue): string | null {
     const { src } = getBlogImageResolved(v.url);
     return src;
   }
-  if (v.kind === "local") return v.previewUrl;
+  if (v.kind === "local") return v.previewUrl ?? null;
   return null;
 }
 
 export default function ImageFieldEditor({
   value,
   onChange,
+  userId,
+  tripId,
 }: {
   value: ImageValue;
   onChange: (v: ImageValue) => void;
+  userId: string;
+  tripId: string;
 }) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const src = getSrc(value);
   useEffect(() => {
-    return () => {
-      if (value.kind === "local" && value.previewUrl?.startsWith("blob:")) {
-        URL.revokeObjectURL(value.previewUrl);
-      }
-    };
+    return () => {};
   }, [value]);
 
   const handlePick = () => inputRef.current?.click();
-
-  const handleFile = (file: File | null) => {
+  const coverKey = (userId: string, tripId: string) =>
+    `cover:${userId}:${tripId}`;
+  const handleFile = async (file: File | null) => {
     if (!file) return;
 
-    // 기존 objectURL이 local이면 revoke
-    if (value.kind === "local" && value.previewUrl?.startsWith("blob:")) {
-      URL.revokeObjectURL(value.previewUrl);
+    // 프리뷰는 blob URL로 (가볍고 빠름)
+    const previewUrl = URL.createObjectURL(file);
+
+    // 원본은 IndexedDB에 저장
+    const key = coverKey(userId, tripId);
+    try {
+      await idbSetBlob(key, file);
+      console.log("[idb saved]", key);
+    } catch (e) {
+      console.log("[idb save failed]", e);
     }
 
-    const previewUrl = URL.createObjectURL(file);
-    onChange({ kind: "local", file, previewUrl });
+    onChange({ kind: "local", previewUrl, previewKey: key });
   };
 
   const handleRemove = () => {
     if (value.kind === "local" && value.previewUrl?.startsWith("blob:")) {
       URL.revokeObjectURL(value.previewUrl);
     }
-    onChange({ kind: "remove" });
+    onChange({ kind: "remove", reason: "user" });
   };
 
   return (
