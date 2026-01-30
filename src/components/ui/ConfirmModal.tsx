@@ -2,6 +2,7 @@
 
 import React, { useEffect } from "react";
 import Image from "next/image";
+import Button from "./Button";
 
 type Variant = "default" | "danger";
 
@@ -26,7 +27,7 @@ export default function ConfirmModal({
   onConfirm: () => void;
   logoSrc?: string;
 }) {
-  // ESC 닫기
+  // ESC / Enter
   useEffect(() => {
     if (!open) return;
 
@@ -41,7 +42,8 @@ export default function ConfirmModal({
 
   if (!open) return null;
 
-  const yesBtn =
+  // danger일 때는 Button variant가 없으니 클래스 오버라이드
+  const confirmOverride =
     variant === "danger"
       ? "bg-[#FF4D4F] text-white hover:brightness-95"
       : "bg-[#2F7BFF] text-white hover:brightness-95";
@@ -60,13 +62,13 @@ export default function ConfirmModal({
       <div
         role="dialog"
         aria-modal="true"
-        className="relative w-[420px] h-[344px] rounded-[13px] bg-[#F6F7F9] shadow-2xl"
+        className="relative h-[344px] w-[420px] rounded-[13px] bg-[#F6F7F9] shadow-2xl"
       >
         {/* Inner card */}
         <div className="h-full w-full rounded-[13px] bg-white p-4">
           {/* Header (logo + title) */}
-          <div className="mt-4 flex flex-col items-center gap-3">
-            <div className="relative h-10 w-10">
+          <div className="mt-10 flex items-center justify-start pl-10 gap-3">
+            <div className="relative h-[57px] w-[57px]">
               <Image
                 src={logoSrc}
                 alt="LinkedSpaces"
@@ -75,31 +77,35 @@ export default function ConfirmModal({
                 priority
               />
             </div>
-            <div className="text-[22px] font-extrabold text-black">{title}</div>
+            <div className="text-[32px] font-bold text-black">{title}</div>
           </div>
 
           {/* Message */}
-          <div className="mt-8 px-8 text-center text-[14px] leading-[1.5] text-black/70">
+          <div className="mt-14 px-8 text-center text-[17px] whitespace-pre-wrap leading-[1.5] text-black">
             {message}
           </div>
 
           {/* Buttons */}
-          <div className="mt-10 flex items-center justify-between px-10">
-            <button
+          <div className="mt-10 flex items-center justify-between px-8">
+            <Button
               type="button"
-              className="h-[44px] w-[120px] rounded-full bg-[#D9D9D9] text-[14px] font-semibold text-black/70 hover:brightness-95"
+              radius="full"
+              variant="neutral"
+              className="h-[44px] w-[120px] text-[14px] font-semibold text-black/70"
               onClick={onClose}
             >
               {cancelText}
-            </button>
+            </Button>
 
-            <button
+            <Button
               type="button"
-              className={`h-[44px] w-[120px] rounded-full text-[14px] font-semibold ${yesBtn}`}
+              radius="full"
+              variant="main"
+              className={`h-[44px] w-[120px] text-[14px] font-semibold ${confirmOverride}`}
               onClick={onConfirm}
             >
               {confirmText}
-            </button>
+            </Button>
           </div>
         </div>
       </div>

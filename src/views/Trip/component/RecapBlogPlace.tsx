@@ -439,10 +439,9 @@ function RecapPhotoEditList({
 
       <ConfirmModal
         open={!!removeTarget}
-        title="Remove this photo?"
-        message="This photo will be removed from the recap blog draft."
-        confirmText="Remove"
-        cancelText="Cancel"
+        message={"Do you want to remove this place\n from this blog?"}
+        confirmText="Yes"
+        cancelText="No"
         onClose={() => setRemoveTarget(null)}
         onConfirm={() => {
           if (!removeTarget) return;
