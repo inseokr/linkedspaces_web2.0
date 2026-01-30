@@ -46,20 +46,18 @@ import RecapLoginBar from "./component/GuestRBLoginBar";
 import GuestRecapPage from "./GuestModeIndex";
 import { useLayoutMode } from "@/components/layout/LayoutModeContext";
 
+function GuestTripRecapShell() {
+  const { setLayoutMode } = useLayoutMode();
+
+  useEffect(() => {
+    setLayoutMode("bare");
+    return () => setLayoutMode("profile");
+  }, [setLayoutMode]);
+
+  return <GuestRecapPage />;
+}
+
 export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
-  // // guest mode
-  // const { setLayoutMode } = useLayoutMode();
-  // const isGuestMode = true;
-
-  // useEffect(() => {
-  //   setLayoutMode(isGuestMode ? "bare" : "profile");
-  //   return () => setLayoutMode("profile");
-  //   }, [isGuestMode, setLayoutMode]);
-
-  // if (isGuestMode) {
-  //   return <GuestRecapPage />;
-  //   }
-
   const router = useRouter();
 
   const [recapData, setRecapData] = useState<TripRecapResponse | null>(null);
@@ -485,6 +483,12 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
   }
 
   if (!effectiveModel) return <div className="p-6">No recap data</div>;
+
+  const isGuestMode = true;
+
+  if (isGuestMode) {
+    return <GuestTripRecapShell />;
+  }
 
   return (
     <div className="min-h-screen bg-white">

@@ -170,8 +170,6 @@ function fakeLatLng(seed: string, base: { lat: number; lng: number }) {
 }
 
 export default function GuestRecapPage() {
-  const isDesktop = useIsDesktopLg();
-
   const [isSignInOpen, setIsSignInOpen] = useState(false);
 
   const openSignIn = () => setIsSignInOpen(true);
@@ -468,8 +466,6 @@ export default function GuestRecapPage() {
   };
 
   useLayoutEffect(() => {
-    if (!isDesktop) return;
-
     const root = leftScrollRef.current;
     if (!root) return;
 
@@ -561,28 +557,19 @@ export default function GuestRecapPage() {
       <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
         {/* Left panel */}
         <section
-          className={[
-            "min-w-0 flex-1",
-            isDesktop ? "sticky self-start order-1 lg:order-1" : "order-2",
-          ].join(" ")}
-          style={isDesktop ? { top: TOPBAR_OFFSET_PX } : undefined}
+          className="min-w-0 flex-1 sticky self-start"
+          style={{ top: TOPBAR_OFFSET_PX }}
         >
           <div
             ref={leftScrollRef}
-            className={[
-              "w-full rounded-2xl",
-              isDesktop
-                ? "overflow-y-auto overscroll-contain"
-                : "overflow-visible",
-              "touch-pan-y",
-            ].join(" ")}
+            className="w-full overflow-y-auto overscroll-contain touch-pan-y rounded-2xl"
             style={{
-              height: isDesktop ? PANEL_HEIGHT : "auto",
+              height: PANEL_HEIGHT,
               scrollBehavior: "auto",
               overflowAnchor: "none",
             }}
           >
-            <div className={["space-y-8", isDesktop ? "p-4" : "p-3"].join(" ")}>
+            <div className="space-y-12 p-4">
               {effectiveModel.days.map((d) => {
                 const dayId = `day-${d.dayIndex}`;
                 return (
@@ -613,21 +600,13 @@ export default function GuestRecapPage() {
           ref={(el) => {
             mapStickyRef.current = el;
           }}
-          className={[
-            "min-w-0 flex-1",
-            isDesktop ? "sticky self-start order-2 lg:order-2" : "order-1",
-          ].join(" ")}
-          style={isDesktop ? { top: TOPBAR_OFFSET_PX } : undefined}
+          className="min-w-0 flex-1 sticky self-start"
+          style={{ top: TOPBAR_OFFSET_PX }}
         >
           <div
             ref={mapContainerRef}
-            className={[
-              "w-full overflow-hidden rounded-2xl border border-black/10",
-              isDesktop ? "lg:w-[98%]" : "",
-            ].join(" ")}
-            style={{
-              height: isDesktop ? PANEL_HEIGHT : "42vh", // 모바일 맵 높이(원하면 35~50vh로 조절)
-            }}
+            className="w-[98%] overflow-hidden rounded-2xl border border-black/10"
+            style={{ height: PANEL_HEIGHT }}
           >
             <MapboxMap
               focusLatLng={focusLatLng ?? undefined}
