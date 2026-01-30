@@ -21,7 +21,10 @@ import MapboxMap, {
   type MarkerData,
 } from "@/views/Profile/travel-stats/components/MapBoxMap";
 
-import SignInHeroCard from "./component/SignInHeroCard";
+import SignInHeroCard from "./component/GuestSignInHeroCard";
+
+import SignInModal from "./component/GuestSignInModal";
+import DownloadVideoModal from "./component/GuestDownloadVideoModal";
 
 const demoData: RecapBlogPageData = {
   hero: {
@@ -127,6 +130,21 @@ const demoData: RecapBlogPageData = {
   ],
 };
 
+//모바일 감지 훅 추가
+function useIsDesktopLg() {
+  const [isLg, setIsLg] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 1024px)"); // tailwind lg
+    const onChange = () => setIsLg(mq.matches);
+    onChange();
+    mq.addEventListener?.("change", onChange);
+    return () => mq.removeEventListener?.("change", onChange);
+  }, []);
+
+  return isLg;
+}
+
 function hash01(input: string) {
   let h = 2166136261;
   for (let i = 0; i < input.length; i++) {
@@ -152,6 +170,18 @@ function fakeLatLng(seed: string, base: { lat: number; lng: number }) {
 }
 
 export default function GuestRecapPage() {
+  const isDesktop = useIsDesktopLg();
+
+  const [isSignInOpen, setIsSignInOpen] = useState(false);
+
+  const openSignIn = () => setIsSignInOpen(true);
+  const closeSignIn = () => setIsSignInOpen(false);
+
+  const [isDownloadOpen, setIsDownloadOpen] = useState(false);
+
+  const openDownload = () => setIsDownloadOpen(true);
+  const closeDownload = () => setIsDownloadOpen(false);
+
   // ===== layout constants =====
   const TOPBAR_OFFSET_PX = 200; // GuestTopBar 자체가 sticky top=0이므로 0 추천
   const PANEL_HEIGHT_OFFSET = 100;
@@ -438,6 +468,8 @@ export default function GuestRecapPage() {
   };
 
   useLayoutEffect(() => {
+    if (!isDesktop) return;
+
     const root = leftScrollRef.current;
     if (!root) return;
 
@@ -500,7 +532,7 @@ export default function GuestRecapPage() {
     <div className="min-h-screen bg-white">
       {/*맨 위 Login Bar */}
       <RecapLoginBar
-        onSignIn={() => console.log("sign in")}
+        onSignIn={openSignIn}
         onMenuClick={() => console.log("menu")}
       />
 
@@ -529,19 +561,28 @@ export default function GuestRecapPage() {
       <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
         {/* Left panel */}
         <section
-          className="min-w-0 flex-1 sticky self-start"
-          style={{ top: TOPBAR_OFFSET_PX }}
+          className={[
+            "min-w-0 flex-1",
+            isDesktop ? "sticky self-start order-1 lg:order-1" : "order-2",
+          ].join(" ")}
+          style={isDesktop ? { top: TOPBAR_OFFSET_PX } : undefined}
         >
           <div
             ref={leftScrollRef}
-            className="w-full overflow-y-auto overscroll-contain touch-pan-y rounded-2xl"
+            className={[
+              "w-full rounded-2xl",
+              isDesktop
+                ? "overflow-y-auto overscroll-contain"
+                : "overflow-visible",
+              "touch-pan-y",
+            ].join(" ")}
             style={{
-              height: PANEL_HEIGHT,
+              height: isDesktop ? PANEL_HEIGHT : "auto",
               scrollBehavior: "auto",
               overflowAnchor: "none",
             }}
           >
-            <div className="space-y-12 p-4">
+            <div className={["space-y-8", isDesktop ? "p-4" : "p-3"].join(" ")}>
               {effectiveModel.days.map((d) => {
                 const dayId = `day-${d.dayIndex}`;
                 return (
@@ -572,13 +613,21 @@ export default function GuestRecapPage() {
           ref={(el) => {
             mapStickyRef.current = el;
           }}
-          className="min-w-0 flex-1 sticky self-start"
-          style={{ top: TOPBAR_OFFSET_PX }}
+          className={[
+            "min-w-0 flex-1",
+            isDesktop ? "sticky self-start order-2 lg:order-2" : "order-1",
+          ].join(" ")}
+          style={isDesktop ? { top: TOPBAR_OFFSET_PX } : undefined}
         >
           <div
             ref={mapContainerRef}
-            className="w-[98%] overflow-hidden rounded-2xl border border-black/10"
-            style={{ height: PANEL_HEIGHT }}
+            className={[
+              "w-full overflow-hidden rounded-2xl border border-black/10",
+              isDesktop ? "lg:w-[98%]" : "",
+            ].join(" ")}
+            style={{
+              height: isDesktop ? PANEL_HEIGHT : "42vh", // 모바일 맵 높이(원하면 35~50vh로 조절)
+            }}
           >
             <MapboxMap
               focusLatLng={focusLatLng ?? undefined}
@@ -599,13 +648,32 @@ export default function GuestRecapPage() {
             subtitle={"We turn your photos into travel\nrecap blogs"}
             primaryLabel="Sign in"
             secondaryLabel="Download app"
-            onPrimaryClick={() => console.log("sign in")}
-            onSecondaryClick={() => console.log("download app")}
+            onPrimaryClick={openSignIn}
+            onSecondaryClick={openDownload}
             // 배경 이미지가 이미 기본값이라면 생략 가능
             backgroundSrc="/images/sign-in-bg2.png"
           />
         </div>
       </div>
+      <SignInModal
+        open={isSignInOpen}
+        onClose={closeSignIn}
+        onGoogleSignIn={() => console.log("google sign in")}
+        onLogin={({ username, password, remember }) => {
+          console.log("login", { username, password, remember });
+          closeSignIn();
+        }}
+        onForgotPassword={() => console.log("forgot pw")}
+        onCreateAccount={() => console.log("create account")}
+      />
+
+      <DownloadVideoModal
+        open={isDownloadOpen}
+        onClose={closeDownload}
+        title="Join to LinkedSpaces!"
+        videoSrc="/videos/download.mp4"
+        loop
+      />
     </div>
   );
 }

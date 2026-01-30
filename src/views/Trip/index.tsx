@@ -47,6 +47,19 @@ import GuestRecapPage from "./GuestModeIndex";
 import { useLayoutMode } from "@/components/layout/LayoutModeContext";
 
 export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
+  // // guest mode
+  // const { setLayoutMode } = useLayoutMode();
+  // const isGuestMode = true;
+
+  // useEffect(() => {
+  //   setLayoutMode(isGuestMode ? "bare" : "profile");
+  //   return () => setLayoutMode("profile");
+  //   }, [isGuestMode, setLayoutMode]);
+
+  // if (isGuestMode) {
+  //   return <GuestRecapPage />;
+  //   }
+
   const router = useRouter();
 
   const [recapData, setRecapData] = useState<TripRecapResponse | null>(null);

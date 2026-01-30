@@ -20,8 +20,8 @@ type Props = {
 };
 
 export default function SignInHeroCard({
-  title = "Save your moments\non LinkedSpaces.",
-  subtitle = "We turn your photos into travel\nrecap blogs",
+  title = "Save your moments \n on LinkedSpaces.",
+  subtitle = "We turn your photos into travel \n recap blogs",
   primaryLabel = "Sign in",
   secondaryLabel = "Download app",
   onPrimaryClick,
@@ -33,8 +33,8 @@ export default function SignInHeroCard({
   return (
     <section
       className={[
-        "relative w-full overflow-hidden rounded-[36px]",
-        "h-[60vh]",
+        "relative mx-auto w-[90%] rounded-[36px] rounded-[36px] overflow-hidden",
+        "h-[80vh]",
         className,
       ].join(" ")}
     >
@@ -48,7 +48,7 @@ export default function SignInHeroCard({
       />
 
       {/* Contrast overlay (subtle, left-heavy) */}
-      <div className="pointer-events-none absolute inset-0">
+      {/* <div className="pointer-events-none absolute inset-0">
         <div className="absolute inset-0 bg-white/10" />
         <div
           className="absolute inset-0"
@@ -57,11 +57,11 @@ export default function SignInHeroCard({
               "linear-gradient(90deg, rgba(0,0,0,0.40) 0%, rgba(0,0,0,0.18) 42%, rgba(0,0,0,0.00) 72%)",
           }}
         />
-      </div>
+      </div> */}
 
       {/* Content */}
       <div className="relative z-10 flex h-full w-full items-center">
-        <div className="w-full max-w-[720px] p-8 md:p-12">
+        <div className="w-full max-w-[8000px] p-8 md:p-30">
           {/* Title */}
           <h1
             className={[
@@ -70,7 +70,8 @@ export default function SignInHeroCard({
               "leading-[1.16]",
               "tracking-[-0.75px]",
               "font-['Nunito_Sans']",
-              "text-[75px]",
+              "!text-[60px]",
+              "whitespace-pre-line",
             ].join(" ")}
             style={{
               textShadow: "0 4px 4px rgba(0, 0, 0, 0.75)",
@@ -80,29 +81,21 @@ export default function SignInHeroCard({
           </h1>
 
           {/* Subtitle */}
-          <p
-            className={[
-              "mt-12 whitespace-pre-line",
-              "text-white/95",
-              "text-[18px] md:text-[22px]",
-              "font-semibold tracking-wide",
-              "drop-shadow-[0_3px_10px_rgba(0,0,0,0.35)]",
-            ].join(" ")}
-          >
+          <p className='!mt-5 text-white leading-[1.16] tracking-[-0.75px] !font-["Nunito_Sans"] !text-[20px] font-bold leading-[1.32] tracking-[2.4px] whitespace-pre-line'>
             {subtitle}
           </p>
 
           {/* Buttons */}
-          <div className="mt-10 flex flex-col gap-4 sm:flex-row sm:items-center">
+          <div className="mt-25 flex flex-col gap-4 sm:flex-row sm:items-center">
             <button
               type="button"
               onClick={onPrimaryClick}
               className={[
-                "h-14 w-full sm:w-[280px]",
+                "h-20 w-full sm:w-[280px]",
                 "rounded-2xl",
                 "bg-white/90 hover:bg-white",
                 "text-[#2F6BFF]",
-                "text-[22px] font-semibold",
+                "text-[30px] font-semibold",
                 "shadow-[0_10px_30px_rgba(0,0,0,0.18)]",
                 "transition",
                 "backdrop-blur-md",
@@ -115,11 +108,11 @@ export default function SignInHeroCard({
               type="button"
               onClick={onSecondaryClick}
               className={[
-                "h-14 w-full sm:w-[280px]",
+                "h-20 w-full sm:w-[280px]",
                 "rounded-2xl",
                 "bg-white/90 hover:bg-white",
                 "text-[#2F6BFF]",
-                "text-[22px] font-semibold",
+                "text-[30px] font-semibold",
                 "shadow-[0_10px_30px_rgba(0,0,0,0.18)]",
                 "transition",
                 "backdrop-blur-md",

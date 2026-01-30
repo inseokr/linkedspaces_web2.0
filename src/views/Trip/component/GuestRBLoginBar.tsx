@@ -27,7 +27,7 @@ export default function RecapLoginBar({
       ].join(" ")}
     >
       {/* mx-auto + max-w 제거!!!!!!! 어디선가 1200px으로 제한중임...하... */}
-      <div className="flex h-[72px] w-full items-center px-6">
+      <div className="flex h-[74px] w-full items-center px-6">
         <div className="ml-auto flex items-center gap-4">
           <span className="max-w-[520px] truncate text-[18px] font-semibold text-black/70">
             {message}
