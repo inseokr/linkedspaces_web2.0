@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-
+import Image from "next/image";
 import { apiFetch } from "@/api/client";
 import type { TripRecapResponse } from "@/api/trips";
 import { mapTripRecapToPageModel } from "@/views/Trip/utils/mapTripRecap";
@@ -17,7 +17,7 @@ import { loadDraft, saveDraft, clearDraft } from "./utils/draftStorage";
 
 import ImageFieldEditor from "./components/ImageFieldEditor";
 import TextRow from "./components/TextRow";
-
+import deleteIcon from "@/assets/icons/delete.svg";
 import {
   RecapBlogDaySection,
   type RecapEntry,
@@ -299,8 +299,45 @@ export default function TripRecapEditView({
 
       <div className="mx-auto max-w-[1200px] p-6">
         {/* Settings header */}
-        <div className="flex items-center justify-between">
+        <div className="flex justify-between">
           <div className="text-3xl font-bold">Recap Blog Settings</div>
+          <div className="flex items-center text-[var(--color-warning)]">
+            <div className="text-2xl font-bold ">Remove Blog</div>
+            <button className="ml-3">
+              <Image src={deleteIcon} alt="Delete" width={32} height={32} />
+            </button>
+          </div>
+        </div>
+        <div className="mt-6 flex gap-10 pl-0 p-4">
+          <div className="font-bold text-2xl">Shared with friends</div>
+          <label className="relative inline-flex cursor-pointer">
+            <input
+              type="checkbox"
+              className="sr-only"
+              checked={draft.sharedWithFriends}
+              onChange={(e) =>
+                setDraft({
+                  ...draft,
+                  updatedAt: Date.now(),
+                  sharedWithFriends: e.target.checked,
+                })
+              }
+            />
+            <span
+              className={[
+                "h-[29px] w-[56px] rounded-full transition-colors",
+                draft.sharedWithFriends ? "bg-[#0798FF]" : "bg-black/20",
+              ].join(" ")}
+            />
+            <span
+              className={[
+                "absolute left-[3px] top-[3px] h-[23px] w-[23px] rounded-full bg-white shadow-sm transition-transform",
+                draft.sharedWithFriends
+                  ? "translate-x-[27px]"
+                  : "translate-x-0",
+              ].join(" ")}
+            />
+          </label>
         </div>
 
         {/* Cover photo */}
