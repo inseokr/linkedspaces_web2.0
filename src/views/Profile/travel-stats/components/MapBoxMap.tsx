@@ -104,7 +104,6 @@ export default function MapboxMap({
 
   const focusLatLngRef = useRef<Props["focusLatLng"]>(focusLatLng);
   const countryCodeRef = useRef<Props["countryCode"]>(countryCode);
-
   const onMarkerClickRef = useRef(onMarkerClick);
   const onPlaceMarkerClickRef = useRef(onPlaceMarkerClick);
 
