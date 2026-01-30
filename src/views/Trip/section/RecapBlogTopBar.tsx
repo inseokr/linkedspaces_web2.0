@@ -3,8 +3,11 @@
 import React from "react";
 import RecapBlogBreadcrumb, {
   type Crumb,
-} from "../component/RecapBlogCrumbBread";
-import RecapDayTabs, { type DayTab } from "../component/RecapDayTabs";
+} from "@/views/Trip/component/RecapBlogCrumbBread";
+import RecapDayTabs, { type DayTab } from "@/views/Trip/component/RecapDayTabs";
+import Image from "next/image";
+import editIcon from "@/assets/icons/edit.svg";
+import shareIcon from "@/assets/icons/share.svg";
 
 type Props = {
   title?: string;
@@ -20,6 +23,10 @@ type Props = {
   onEditBlog?: () => void;
   onShare?: () => void;
 
+  onCloseEdit?: () => void;
+  onUpdate?: () => void;
+  mode?: "view" | "edit";
+
   className?: string;
 };
 
@@ -32,6 +39,9 @@ export default function RecapBlogTopBar({
   onDayChange,
   onEditBlog,
   onShare,
+  mode = "view",
+  onCloseEdit,
+  onUpdate,
   className = "",
 }: Props) {
   return (
@@ -84,28 +94,88 @@ export default function RecapBlogTopBar({
           </div>
 
           {/* Row 2, Col 2: Actions (Edit / Share) */}
-          <div className="justify-self-end flex items-center gap-2">
-            <button
-              type="button"
-              onClick={onEditBlog}
-              className={[
-                "h-9 rounded-full px-4 text-[14px] font-semibold",
-              ].join(" ")}
-            >
-              Edit Blog
-            </button>
 
-            <button
-              type="button"
-              onClick={onShare}
-              className={[
-                "h-9 rounded-full px-4 text-[14px] font-semibold",
-                "border border-black/20 text-black/70",
-                "hover:bg-black/5 active:scale-[0.99] transition",
-              ].join(" ")}
-            >
-              Share
-            </button>
+          <div className="justify-self-end flex items-center gap-2">
+            {mode === "edit" ? (
+              <>
+                <button
+                  type="button"
+                  onClick={onCloseEdit}
+                  className={[
+                    "h-9 rounded-full px-4 text-[14px] font-semibold",
+                    "border border-black/20 text-black/70",
+                    "hover:bg-black/5 active:scale-[0.99] transition",
+                  ].join(" ")}
+                >
+                  Close
+                </button>
+
+                <button
+                  type="button"
+                  onClick={onUpdate}
+                  className={[
+                    "h-9 rounded-full px-4 text-[14px] font-semibold",
+                    "bg-[#FF6A00] text-white",
+                    "hover:opacity-90 active:scale-[0.99] transition",
+                    "inline-flex items-center gap-2",
+                  ].join(" ")}
+                >
+                  <Image
+                    src="/icons/update.png"
+                    alt="Update"
+                    width={22}
+                    height={22}
+                    className="opacity-80"
+                  />
+                  Update
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={() => {
+                    console.log("Edit clicked");
+                    onEditBlog?.();
+                  }}
+                  className={[
+                    "h-9 rounded-full px-4 text-[14px] font-semibold",
+                    "border border-black/20 text-black/70",
+                    "hover:bg-black/5 active:scale-[0.99] transition",
+                    "inline-flex items-center gap-2",
+                  ].join(" ")}
+                >
+                  <Image
+                    src={editIcon}
+                    alt="Edit"
+                    width={24}
+                    height={24}
+                    className="opacity-80"
+                  />
+                  Edit Blog
+                </button>
+
+                <button
+                  type="button"
+                  onClick={onShare}
+                  className={[
+                    "h-9 rounded-full px-4 text-[14px] font-semibold",
+                    "border border-black/20 text-black/70",
+                    "hover:bg-black/5 active:scale-[0.99] transition",
+                    "inline-flex items-center gap-2",
+                  ].join(" ")}
+                >
+                  <Image
+                    src={shareIcon}
+                    alt="Share"
+                    width={24}
+                    height={24}
+                    className="opacity-80"
+                  />
+                  Share
+                </button>
+              </>
+            )}
           </div>
         </div>
       </div>

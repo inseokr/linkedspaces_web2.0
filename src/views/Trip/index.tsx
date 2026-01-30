@@ -1,7 +1,5 @@
 "use client";
 
-//0129 test 를 위해 demodata로 다 바꿔둠
-
 import React, {
   useEffect,
   useLayoutEffect,
@@ -9,235 +7,85 @@ import React, {
   useRef,
   useState,
 } from "react";
-import axios from "axios";
+import { useRouter } from "next/navigation";
+
 import { apiFetch } from "@/api/client";
-import { RecapDay } from "./component/RecapBlogPlace";
-import RecapBlogTopBar from "./section/RecapBlogTopBar";
-import type { DayTab } from "./component/RecapDayTabs";
-import type { Crumb } from "./component/RecapBlogCrumbBread";
-import RecapBlogHero from "./component/RecapBlogTopImage";
+// <<<<<<< HEAD
+// import { RecapDay } from "./component/RecapBlogPlace";
+// import RecapBlogTopBar from "./section/RecapBlogTopBar";
+// import type { DayTab } from "./component/RecapDayTabs";
+// import type { Crumb } from "./component/RecapBlogCrumbBread";
+// import RecapBlogHero from "./component/RecapBlogTopImage";
+// =======
+import type { TripRecapResponse } from "@/api/trips";
+
+import RecapBlogTopBar from "@/views/Trip/section/RecapBlogTopBar";
+import type { DayTab } from "@/views/Trip/component/RecapDayTabs";
+import type { Crumb } from "@/views/Trip/component/RecapBlogCrumbBread";
+import RecapBlogHero from "@/views/Trip/component/RecapBlogTopImage";
 
 import {
   RecapBlogDaySection,
   type RecapBlogPageData,
-} from "./component/RecapBlogPlace";
+} from "@/views/Trip/component/RecapBlogPlace";
+
 import MapboxMap, {
   type MarkerData,
 } from "@/views/Profile/travel-stats/components/MapBoxMap";
-import { mapTripRecapToPageModel } from "./utils/mapTripRecap";
 
-// import type { TripRecapResponse}  from "@/api/trips";
+import { mapTripRecapToPageModel } from "@/views/Trip/utils/mapTripRecap";
+import { loadDraft } from "@/views/Trip/edit/utils/draftStorage";
+import { applyDraftToPageModel } from "@/views/Trip/edit/utils/editMappers";
 
 interface TripRecapViewProps {
   userId: string;
   tripId: string;
 }
 
-type RecapApiResponse = any;
-type TripRecapResponse = any;
-
-const demoData: RecapBlogPageData = {
-  hero: {
-    coverImageUrl: "/images/recap/us.png",
-    title: "US Adventure",
-    dateText: "Dec 15–20, 2024",
-    locationText: "San Francisco",
-    authorName: "Username",
-    postedLabel: "Posted 5 days ago",
-    avatarUrl: "/images/recap/kr.png",
-  },
-  days: [
-    {
-      dayIndex: 1,
-      title: "Arrival & First Walk",
-      entries: [
-        {
-          id: "d1-e1",
-          placeName: "Zermatt Station",
-          timeRangeText: "9:30 - 10:10 AM",
-          categoryLabel: "Cafe",
-          liked: true,
-          likeCount: 5,
-          commentCount: 3,
-          caption:
-            "First landing moment. Warm coffee, crisp air, and that postcard feeling hits instantly.",
-          photos: ["/images/recap/kr.png", "/images/recap/kr.png"],
-        },
-        {
-          id: "d1-e2",
-          placeName: "Old Town Stroll",
-          timeRangeText: "11:20 AM - 12:10 PM",
-          categoryLabel: "Walk",
-          liked: false,
-          likeCount: 12,
-          commentCount: 2,
-          caption:
-            "Slow wandering through quiet streets, little shops, and the best kind of unplanned detours.",
-          photos: ["/images/recap/kr.png", "/images/recap/kr.png"],
-        },
-      ],
-    },
-    {
-      dayIndex: 2,
-      title: "Views & Golden Hour",
-      entries: [
-        {
-          id: "d2-e1",
-          placeName: "Gornergrat Railway",
-          timeRangeText: "9:40 - 11:05 AM",
-          categoryLabel: "Scenic",
-          liked: true,
-          likeCount: 21,
-          commentCount: 4,
-          caption:
-            "The climb keeps escalating. Sit on the right side going up—layers of mountain theater.",
-          photos: ["/images/recap/kr.png", "/images/recap/kr.png"],
-        },
-        {
-          id: "d2-e2",
-          placeName: "Riverside Photo Spot",
-          timeRangeText: "4:50 - 5:30 PM",
-          categoryLabel: "Photo",
-          liked: true,
-          likeCount: 18,
-          commentCount: 1,
-          caption:
-            "Golden hour reflections. Stayed way longer than planned because the light kept changing.",
-          photos: ["/images/recap/kr.png", "/images/recap/kr.png"],
-        },
-      ],
-    },
-    {
-      dayIndex: 3,
-      title: "Short Hike & Comfort Food",
-      entries: [
-        {
-          id: "d3-e1",
-          placeName: "Panorama Trailhead",
-          timeRangeText: "10:15 - 12:05 PM",
-          categoryLabel: "Hike",
-          liked: false,
-          likeCount: 9,
-          commentCount: 0,
-          caption:
-            "A short hike with big payoff. Quiet, steady pace, and a view that makes the effort feel free.",
-          photos: ["/images/recap/kr.png", "/images/recap/kr.png"],
-        },
-        {
-          id: "d3-e2",
-          placeName: "Local Dinner Spot",
-          timeRangeText: "6:20 - 7:40 PM",
-          categoryLabel: "Food",
-          liked: true,
-          likeCount: 15,
-          commentCount: 2,
-          caption:
-            "Comfort food finale. Warm, hearty, and exactly what you want after a long day outside.",
-          photos: ["/images/recap/kr.png", "/images/recap/kr.png"],
-        },
-      ],
-    },
-  ],
-};
-
-// 문자열 -> 0~1 난수처럼 쓰는 안정적 hash
-function hash01(input: string) {
-  let h = 2166136261;
-  for (let i = 0; i < input.length; i++) {
-    h ^= input.charCodeAt(i);
-    h = Math.imul(h, 16777619);
-  }
-  return (h >>> 0) / 4294967295;
-}
-
-// 베이스 좌표 주변으로 퍼지게 가상 lat/lng 생성
-function fakeLatLng(seed: string, base: { lat: number; lng: number }) {
-  const r1 = hash01(seed + ":lat");
-  const r2 = hash01(seed + ":lng");
-
-  const latJitter = (r1 - 0.5) * 0.06;
-  const lngJitter = (r2 - 0.5) * 0.06;
-
-  const lngScale = Math.cos((base.lat * Math.PI) / 180) || 1;
-
-  return {
-    lat: base.lat + latJitter,
-    lng: base.lng + lngJitter / lngScale,
-  };
-}
-
-// guest mode
-
 import RecapLoginBar from "./component/GuestRBLoginBar";
 import GuestRecapPage from "./GuestModeIndex";
 import { useLayoutMode } from "@/components/layout/LayoutModeContext";
 
 export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
-  // const { setLayoutMode } = useLayoutMode();
-
-  // //게스트인지 확인
-  // const isGuestMode = false;
-
-  // useEffect(() => {
-  //   // 게스트면 bare, 아니면 profile
-  //   setLayoutMode(isGuestMode ? "bare" : "profile");
-
-  //   // 페이지 unmount 시 원복
-  //   return () => setLayoutMode("profile");
-  // }, [isGuestMode, setLayoutMode]);
-
-  // if (isGuestMode) {
-  //   return <GuestRecapPage />;
-  // }
+  const router = useRouter();
 
   const [recapData, setRecapData] = useState<TripRecapResponse | null>(null);
-  const [loading, setLoading] = useState<boolean>(false);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  /** Layout */
   const TOPBAR_OFFSET_PX = 250;
-
-  const PANEL_HEIGHT_OFFSET = 200;
-
+  const PANEL_HEIGHT_OFFSET = 220;
   const PANEL_HEIGHT = `calc(100vh - ${PANEL_HEIGHT_OFFSET}px)`;
 
-  const daySectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  /** Refs */
   const leftScrollRef = useRef<HTMLDivElement | null>(null);
-  const isProgrammaticScrollRef = useRef(false);
-
-  // <<<<<<< HEAD
-  // =======
-  //   // (추가) Map sticky(TopBar 아래에 닿아 붙었는지) 감지용 ref/state
-  //   const mapStickyRef = useRef<HTMLElement | null>(null);
-
-  //   /** active day */
-  // >>>>>>> origin/develop
-  const [activeDayId, setActiveDayId] = useState<string>("day-1");
-  const activeDayIdRef = useRef(activeDayId);
-  const [isMapPinned, setIsMapPinned] = useState(false);
-  useEffect(() => {
-    activeDayIdRef.current = activeDayId;
-  }, [activeDayId]);
+  const daySectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const entryRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   const mapStickyRef = useRef<HTMLElement | null>(null);
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
 
-  const [userInteracted, setUserInteracted] = useState(false);
+  const isProgrammaticScrollRef = useRef(false);
 
+  /** Active day */
+  const [activeDayId, setActiveDayId] = useState<string>("day-1");
+  const activeDayIdRef = useRef(activeDayId);
+  useEffect(() => {
+    activeDayIdRef.current = activeDayId;
+  }, [activeDayId]);
+
+  /** Map focus */
   const [focusLatLng, setFocusLatLng] = useState<
     { lat: number; lng: number } | undefined
   >(undefined);
+  const [userInteracted, setUserInteracted] = useState(false);
 
-  //장소(Entry) DOM refs: entryId -> element
-  const entryRefs = useRef<Record<string, HTMLDivElement | null>>({});
-
-  // 현재 focus 중인 entryId(불필요한 setState 연속 호출 방지)
+  /** Entry focus helpers */
   const activeEntryIdRef = useRef<string | null>(null);
-
-  // 스크롤 중 흔들림 방지용 타이머(선택이지만 추천)
   const focusTimerRef = useRef<number | null>(null);
 
-  /** 1. Data Fetching */
-
+  /** 1) Fetch */
   useEffect(() => {
     let cancelled = false;
 
@@ -248,11 +96,6 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
       setError(null);
 
       try {
-        const url = `https://pocketverse.herokuapp.com/LS_API/ls-beta-test/trip-recap/${userId}/${tripId}`;
-        const res = await axios.get<TripRecapResponse>(url);
-        // =======
-        // apiFetch 사용
-        // path 인자에 '/ls-beta-test/...' 부터 시작하는 경로를 넣기
         const data = await apiFetch<TripRecapResponse>(
           `/ls-beta-test/trip-recap/${userId}/${tripId}`,
         );
@@ -260,7 +103,6 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
         setRecapData(data);
       } catch (e: any) {
         if (cancelled) return;
-        // apiFetch에서 정의한 ApiError 형식을 처리
         setError(e?.message ?? "Failed to load recap");
       } finally {
         if (cancelled) return;
@@ -274,57 +116,113 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
     };
   }, [userId, tripId]);
 
-  const pageData = useMemo(() => demoData, []);
-
-  const pageModel = useMemo(() => {
+  /** 2) Effective model = API mapped + draft applied */
+  const effectiveModel: RecapBlogPageData | null = useMemo(() => {
     if (!recapData) return null;
-    return mapTripRecapToPageModel(recapData);
-  }, [recapData]);
 
-  const effectiveModel: RecapBlogPageData = useMemo(() => {
-    return pageModel ?? pageData;
-  }, [pageModel, pageData]);
+    const pm = mapTripRecapToPageModel(recapData);
 
+    const draft = loadDraft(userId, tripId);
+    return draft ? applyDraftToPageModel(pm, draft) : pm;
+  }, [recapData, userId, tripId]);
+
+  /** 3) Base center */
   const baseCenter = useMemo(() => {
+    const first = effectiveModel?.days?.[0]?.entries?.[0]?.coordinate;
+    if (first?.latitude && first?.longitude) {
+      return { lat: first.latitude, lng: first.longitude };
+    }
     return { lat: 37.7749, lng: -122.4194 };
-  }, [pageModel]);
+  }, [effectiveModel]);
 
+  /** 4) Tabs / breadcrumb */
+  const dayTabs: DayTab[] = useMemo(() => {
+    return (
+      effectiveModel?.days.map((d) => ({
+        id: `day-${d.dayIndex}`,
+        label: `Day ${d.dayIndex}`,
+      })) ?? []
+    );
+  }, [effectiveModel]);
+
+  const breadcrumbItems: Crumb[] = useMemo(() => {
+    const title = effectiveModel?.hero?.title ?? "Trip";
+    return [
+      { label: "Recap Blogs", href: "/profile/recap-blogs" },
+      { label: "Map", onClick: () => window.history.back() },
+      { label: `(${title})` },
+    ];
+  }, [effectiveModel?.hero?.title]);
+
+  /** 5) Ensure active day valid */
+  useEffect(() => {
+    if (!dayTabs.length) return;
+    if (!dayTabs.some((t) => t.id === activeDayIdRef.current)) {
+      setActiveDayId(dayTabs[0].id);
+    }
+  }, [dayTabs]);
+
+  /** 6) entryId -> dayId */
   const entryIdToDayId = useMemo(() => {
     const map = new Map<string, string>();
+    if (!effectiveModel) return map;
 
-    effectiveModel.days.forEach((d) => {
+    for (const d of effectiveModel.days) {
       const dayId = `day-${d.dayIndex}`;
-      d.entries.forEach((e: any) => map.set(e.id, dayId));
-    });
+      for (const e of d.entries) map.set(e.id, dayId);
+    }
     return map;
-  }, [effectiveModel.days]);
+  }, [effectiveModel]);
 
+  /** 7) Markers */
   const markers = useMemo<MarkerData[]>(() => {
-    const year = 2024;
-    return effectiveModel.days.flatMap((d) =>
-      d.entries.map((e: any) => {
-        const { lat, lng } = fakeLatLng(e.id, baseCenter);
-        return {
-          id: e.id,
-          lat,
-          lng,
-          year,
-          label: e.placeName,
-          imageUrl: e.photos?.[0] ?? "/images/avatar.png",
-        };
-      }),
-    );
-  }, [effectiveModel.days, baseCenter]);
+    if (!effectiveModel) return [];
 
-  // helper: entryId -> focusLatLng set (중복 set 방지)
+    const travelYear =
+      (typeof recapData?.trip?.startingYear === "number"
+        ? recapData.trip.startingYear
+        : Number(recapData?.trip?.startingYear)) || new Date().getFullYear();
+
+    return effectiveModel.days.flatMap((d) =>
+      d.entries.map((e: any) => ({
+        id: e.id,
+        lat: e.coordinate?.latitude ?? baseCenter.lat,
+        lng: e.coordinate?.longitude ?? baseCenter.lng,
+        year: travelYear,
+        label: e.placeName,
+        imageUrl: e.photos?.[0] ?? "/images/avatar.png",
+      })),
+    );
+  }, [effectiveModel, baseCenter]);
+
+  /** helpers: scroll & focus */
+  const scrollToDay = (dayId: string) => {
+    const root = leftScrollRef.current;
+    const el = daySectionRefs.current[dayId];
+    if (!root || !el) return;
+
+    isProgrammaticScrollRef.current = true;
+
+    const rootRect = root.getBoundingClientRect();
+    const elRect = el.getBoundingClientRect();
+    const PADDING = 12;
+
+    const nextTop = elRect.top - rootRect.top + root.scrollTop - PADDING;
+    root.scrollTo({ top: nextTop, behavior: "smooth" });
+
+    window.setTimeout(() => {
+      isProgrammaticScrollRef.current = false;
+    }, 650);
+  };
+
   const focusToEntryId = (entryId: string) => {
     const m = markers.find((x) => x.id === entryId);
     if (!m) return;
-
     setFocusLatLng({ lat: m.lat, lng: m.lng });
   };
 
   // helper: left panel "가운데"에 가장 가까운 entry 찾기
+
   const getClosestEntryToCenter = () => {
     const root = leftScrollRef.current;
     if (!root) return null;
@@ -339,17 +237,13 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
       if (!el) continue;
       const r = el.getBoundingClientRect();
       const entryCenterY = r.top + r.height / 2;
-
-      // root 영역 밖에 너무 멀리 있는 entry가 잡히는 걸 줄이려면(옵션)
-      // if (r.bottom < rootRect.top || r.top > rootRect.bottom) continue;
-
       const dist = Math.abs(entryCenterY - centerY);
+
       if (dist < bestDist) {
         bestDist = dist;
         bestId = id;
       }
     }
-
     return bestId;
   };
 
@@ -358,21 +252,17 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
     if (focusTimerRef.current) window.clearTimeout(focusTimerRef.current);
 
     focusTimerRef.current = window.setTimeout(() => {
-      // 동일 entry면 아무 것도 안 함
       if (activeEntryIdRef.current === entryId) return;
 
       activeEntryIdRef.current = entryId;
       focusToEntryId(entryId);
 
-      // (옵션) entry 기준으로 day도 동기화하고 싶으면 아래 활성화
       const dayId = entryIdToDayId.get(entryId);
-      if (dayId && dayId !== activeDayIdRef.current) {
-        setActiveDayId(dayId);
-      }
+      if (dayId && dayId !== activeDayIdRef.current) setActiveDayId(dayId);
     }, 120);
   };
 
-  //최초 1회: "전체 첫 entry"로 초기 포커스
+  /** 8) initial focus to first marker */
   useEffect(() => {
     if (focusLatLng) return;
     if (!markers.length) return;
@@ -382,22 +272,7 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
     setFocusLatLng({ lat: first.lat, lng: first.lng });
   }, [markers, focusLatLng]);
 
-  const breadcrumbItems: Crumb[] = useMemo(
-    () => [
-      { label: "Recap Blogs", href: "/profile/recap-blogs" },
-      { label: "Map", href: "/profile/recap-blogs?view=map" },
-      { label: `(${effectiveModel.hero.title})` },
-    ],
-    [effectiveModel.hero.title],
-  );
-
-  const dayTabs: DayTab[] = useMemo(() => {
-    return effectiveModel.days.map((d) => ({
-      id: `day-${d.dayIndex}`,
-      label: `Day ${d.dayIndex}`,
-    }));
-  }, [effectiveModel.days]);
-
+  /** 9) mark userInteracted once */
   useEffect(() => {
     const mark = () => setUserInteracted(true);
     window.addEventListener("pointerdown", mark, { once: true });
@@ -410,12 +285,7 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
     };
   }, []);
 
-  useEffect(() => {
-    if (!dayTabs.length) return;
-    if (!dayTabs.some((t) => t.id === activeDayIdRef.current)) {
-      setActiveDayId(dayTabs[0].id);
-    }
-  }, [dayTabs]);
+  /** 10) initial scroll stabilization (친구 로직 유지) */
   useLayoutEffect(() => {
     const root = leftScrollRef.current;
     if (!root) return;
@@ -433,18 +303,14 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
       if (root.scrollTop !== 0) root.scrollTop = 0;
 
       const elapsed = performance.now() - start;
-      if (elapsed < 1200) {
-        raf = requestAnimationFrame(pump);
-      }
+      if (elapsed < 1200) raf = requestAnimationFrame(pump);
     };
 
     raf = requestAnimationFrame(pump);
-
     return () => cancelAnimationFrame(raf);
   }, [userInteracted]);
 
-  //스크롤로 "Day" 잡는 로직 + "Entry(장소)" 포커스 로직을 한 군데에서 처리
-
+  /** 11) scroll spy: day + entry center focus */
   useEffect(() => {
     const root = leftScrollRef.current;
     if (!root) return;
@@ -452,10 +318,9 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
 
     const TRIGGER_PX = 16;
 
-    const computeActiveTopPinned = () => {
+    const computeActive = () => {
       if (isProgrammaticScrollRef.current) return;
 
-      // --- (A) 기존: day 계산 ---
       const rootRect = root.getBoundingClientRect();
       const triggerY = rootRect.top + TRIGGER_PX;
 
@@ -466,11 +331,8 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
         if (!el) continue;
 
         const top = el.getBoundingClientRect().top;
-        if (top <= triggerY) {
-          chosen = t.id;
-        } else {
-          break;
-        }
+        if (top <= triggerY) chosen = t.id;
+        else break;
       }
 
       if (!chosen) {
@@ -482,9 +344,7 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
 
       // --- 추가: entry(장소) 기준 카메라 포커스 ---
       const closestEntryId = getClosestEntryToCenter();
-      if (closestEntryId) {
-        scheduleFocusToEntry(closestEntryId);
-      }
+      if (closestEntryId) scheduleFocusToEntry(closestEntryId);
     };
 
     let ticking = false;
@@ -493,69 +353,36 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
       ticking = true;
       requestAnimationFrame(() => {
         ticking = false;
-        computeActiveTopPinned();
+        computeActive();
       });
     };
 
-    const ro = new ResizeObserver(() => {
-      computeActiveTopPinned();
-    });
+    const ro = new ResizeObserver(() => computeActive());
     ro.observe(root);
 
-    requestAnimationFrame(() => computeActiveTopPinned());
-    setTimeout(() => computeActiveTopPinned(), 150);
-    setTimeout(() => computeActiveTopPinned(), 600);
+    requestAnimationFrame(computeActive);
+    setTimeout(computeActive, 150);
+    setTimeout(computeActive, 600);
 
     root.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("resize", computeActiveTopPinned);
+    window.addEventListener("resize", computeActive);
 
     return () => {
       ro.disconnect();
       root.removeEventListener("scroll", onScroll);
-      window.removeEventListener("resize", computeActiveTopPinned);
+      window.removeEventListener("resize", computeActive);
       if (focusTimerRef.current) window.clearTimeout(focusTimerRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dayTabs, markers, effectiveModel.days]);
+  }, [dayTabs, markers]);
 
-  const scrollToDay = (id: string) => {
-    const root = leftScrollRef.current;
-    const el = daySectionRefs.current[id];
-    if (!root || !el) return;
+  /** 12) day change (tab click) */
+  const handleDayChange = (dayId: string, fromUser = false) => {
+    setActiveDayId(dayId);
+    if (fromUser) scrollToDay(dayId);
 
-    isProgrammaticScrollRef.current = true;
-
-    const rootRect = root.getBoundingClientRect();
-    const elRect = el.getBoundingClientRect();
-    const PADDING = 12;
-
-    const nextTop = elRect.top - rootRect.top + root.scrollTop - PADDING;
-    root.scrollTo({ top: nextTop, behavior: "smooth" });
-
-    window.setTimeout(() => {
-      isProgrammaticScrollRef.current = false;
-    }, 650);
-  };
-
-  const focusByMarkerId = (markerId: string) => {
-    const m = markers.find((x) => x.id === markerId);
-    if (!m) return;
-
-    activeEntryIdRef.current = markerId;
-    setFocusLatLng({ lat: m.lat, lng: m.lng });
-
-    // (옵션) 클릭한 entry에 맞춰 day 탭도 동기화하고 싶으면:
-    // const dayId = entryIdToDayId.get(markerId);
-    // if (dayId && dayId !== activeDayIdRef.current) setActiveDayId(dayId);
-  };
-
-  const handleDayChange = (id: string, fromUser = false) => {
-    setActiveDayId(id);
-    if (fromUser) scrollToDay(id);
-
-    //day 클릭 시에는 "그 day의 첫 entry"로 바로 맞추기
-    const dayIndex = Number(id.replace("day-", ""));
-    const firstEntryId = effectiveModel.days.find(
+    const dayIndex = Number(dayId.replace("day-", ""));
+    const firstEntryId = effectiveModel?.days.find(
       (d) => d.dayIndex === dayIndex,
     )?.entries?.[0]?.id;
 
@@ -565,6 +392,16 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
     }
   };
 
+  /** 13) marker click: focus + jump to day */
+  const focusByMarkerId = (markerId: string) => {
+    activeEntryIdRef.current = markerId;
+    focusToEntryId(markerId);
+
+    const targetDayId = entryIdToDayId.get(markerId);
+    if (targetDayId) handleDayChange(targetDayId, true);
+  };
+
+  /** 14) pinned map: wheel consumed by left panel first */
   useLayoutEffect(() => {
     const root = leftScrollRef.current;
     if (!root) return;
@@ -596,7 +433,10 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
       const mapWrap = mapContainerRef.current;
       const isOnMap = !!(mapWrap && mapWrap.contains(e.target as Node));
 
+      // ctrl+wheel => map zoom 허용
       if (isOnMap && e.ctrlKey) return;
+
+      // left panel 더 못 가면 window scroll 허용
       if (!canScrollLeftPanel(delta)) return;
 
       e.preventDefault();
@@ -608,6 +448,7 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
 
       root.scrollTop += delta;
     };
+
     const opts: AddEventListenerOptions = { passive: false, capture: true };
     window.addEventListener("wheel", onWheel, opts);
     document.addEventListener("wheel", onWheel, opts);
@@ -616,8 +457,9 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
       window.removeEventListener("wheel", onWheel, opts);
       document.removeEventListener("wheel", onWheel, opts);
     };
-  }, [TOPBAR_OFFSET_PX, userInteracted]);
+  }, [TOPBAR_OFFSET_PX, userInteracted, markers]);
 
+  /** render */
   if (loading) return <div className="p-6">Loading recap…</div>;
 
   if (error) {
@@ -639,7 +481,8 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
         dayTabs={dayTabs}
         activeDayId={activeDayId}
         onDayChange={(id) => handleDayChange(id, true)}
-        onGoBack={() => history.back()}
+        onGoBack={() => window.history.back()}
+        onEditBlog={() => router.push(`/trip/${userId}/${tripId}/edit`)}
         className="sticky top-0 z-50 border-b border-black/10"
       />
 
@@ -654,6 +497,7 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
         )}
 
         <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
+          {/* Left */}
           <section
             className="min-w-0 flex-1 sticky self-start"
             style={{ top: TOPBAR_OFFSET_PX }}
@@ -683,7 +527,6 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
                         dayIndex={d.dayIndex}
                         title={d.title}
                         entries={d.entries as any}
-                        //entry DOM ref 수집
                         onEntryMount={(entryId, el) => {
                           entryRefs.current[entryId] = el;
                         }}
@@ -695,6 +538,7 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
             </div>
           </section>
 
+          {/* Right (Map) */}
           <section
             ref={(el) => {
               mapStickyRef.current = el;
@@ -708,9 +552,9 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
               style={{ height: PANEL_HEIGHT }}
             >
               <MapboxMap
-                focusLatLng={focusLatLng ?? undefined}
                 mode="place"
                 placeMarkers={markers}
+                focusLatLng={focusLatLng}
                 onPlaceMarkerClick={focusByMarkerId}
               />
             </div>

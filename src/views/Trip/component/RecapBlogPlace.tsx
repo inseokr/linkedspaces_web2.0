@@ -20,34 +20,7 @@ import {
 /** ----------------------------
  *  데이터 타입 (Day/Entries)
  *  ---------------------------- */
-export type RecapBlogPageData = {
-  hero: {
-    coverImageUrl: string;
-    title: string;
-    dateText: string;
-    locationText: string;
-    authorName: string;
-    postedLabel: string;
-    avatarUrl?: string;
-  };
-  days: Array<{
-    dayIndex: number;
-    title: string;
-    entries: Array<{
-      id: string;
-      placeName: string;
-      timeRangeText: string;
-      categoryLabel?: string;
-      liked?: boolean;
-      likeCount: number;
-      commentCount: number;
-      caption: string;
-      photos: string[];
-    }>;
-  }>;
-};
 
-// =======
 export type RecapEntry = {
   id: string;
   placeName: string;
@@ -65,6 +38,19 @@ export type RecapDay = {
   dayIndex: number;
   title: string;
   entries: RecapEntry[];
+};
+
+export type RecapBlogPageData = {
+  hero: {
+    coverImageUrl: string;
+    title: string;
+    dateText: string;
+    locationText: string;
+    authorName: string;
+    postedLabel: string;
+    avatarUrl: string;
+  };
+  days: RecapDay[];
 };
 
 type Props = {
