@@ -1,7 +1,7 @@
 import { ButtonHTMLAttributes, ReactElement, ReactNode } from "react";
 
 type Radius = "md" | "full";
-type Variant = "main" | "sub";
+type Variant = "main" | "sub" | "neutral";
 
 type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   children: ReactNode;
@@ -17,6 +17,7 @@ function cn(...classes: Array<string | undefined | false | null>) {
 const VARIANT_CLASSES: Record<Variant, string> = {
   main: "bg-[var(--color-main)] text-white hover:bg-[#85aded]",
   sub: "bg-[var(--color-sub)] text-white hover:opacity-90",
+  neutral: "bg-[var(--color-neutral)] text-black hover:bg-black/10",
 };
 
 export default function Button({

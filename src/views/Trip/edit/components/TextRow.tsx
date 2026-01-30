@@ -1,40 +1,58 @@
 "use client";
 
-import React from "react";
+type Variant = "default" | "title";
 
 export default function TextRow({
   label,
   value,
   onChange,
-  multiline,
   placeholder,
+  multiline,
+  variant = "default",
 }: {
-  label: string;
+  label?: string;
   value: string;
-  onChange: (v: string) => void;
-  multiline?: boolean;
+  onChange: (next: string) => void;
   placeholder?: string;
+  multiline?: boolean;
+  variant?: Variant;
 }) {
-  return (
-    <div className="space-y-2">
-      <div className="text-sm font-medium">{label}</div>
+  const FieldTag: any = multiline ? "textarea" : "input";
 
-      {multiline ? (
-        <textarea
-          className="w-full rounded-2xl border border-black/10 bg-white p-3 text-sm outline-none focus:ring-2 focus:ring-black/10"
-          rows={4}
-          value={value}
-          placeholder={placeholder}
-          onChange={(e) => onChange(e.target.value)}
-        />
-      ) : (
-        <input
-          className="w-full rounded-2xl border border-black/10 bg-white p-3 text-sm outline-none focus:ring-2 focus:ring-black/10"
-          value={value}
-          placeholder={placeholder}
-          onChange={(e) => onChange(e.target.value)}
-        />
-      )}
+  const isTitle = variant === "title";
+
+  const baseField =
+    "w-full rounded-[18px] border border-transparent bg-[#F0F0F0] outline-none focus:ring-2 focus:ring-black/10";
+
+  const fieldSize = isTitle
+    ? "px-6 py-5 text-[40px] font-bold leading-[1.1]"
+    : "px-5 py-4 text-[16px] leading-[1.5]";
+
+  return (
+    <div>
+      {label ? (
+        <div
+          className={
+            isTitle
+              ? "mb-2 text-sm font-semibold"
+              : "mb-2 text-sm font-semibold"
+          }
+        >
+          {label}
+        </div>
+      ) : null}
+
+      <FieldTag
+        className={[
+          baseField,
+          fieldSize,
+          multiline ? "min-h-[150px] resize-none" : "",
+        ].join(" ")}
+        value={value}
+        placeholder={placeholder}
+        rows={multiline ? 3 : undefined}
+        onChange={(e: any) => onChange(e.target.value)}
+      />
     </div>
   );
 }

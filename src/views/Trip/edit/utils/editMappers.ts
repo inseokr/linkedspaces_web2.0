@@ -5,29 +5,61 @@ function getHeroTitle(hero: any) {
 }
 
 function getShared(hero: any): boolean {
-  // default to true
   const v = hero?.sharedWithFriends;
   return typeof v === "boolean" ? v : true;
+}
+
+function normalizeCaptions(e: any) {
+  const photos: string[] = Array.isArray(e?.photos) ? e.photos : [];
+  const captionsFromArray: string[] = Array.isArray(e?.captions)
+    ? e.captions
+    : [];
+
+  // photos 길이에 맞춰 captions를 항상 확보
+  const captions = Array.from({ length: photos.length }, (_, i) => {
+    const c = captionsFromArray[i];
+    if (typeof c === "string") return c;
+    if (i === 0 && typeof e?.caption === "string") return e.caption; // 단일 caption 호환
+    return "";
+  });
+
+  return { photos, captions };
 }
 
 export function draftFromPageModel(pageModel: any): RecapEditDraft {
   const hero = pageModel?.hero ?? {};
   const coverImageUrl: string = hero.coverImageUrl ?? "";
+
   const coverPhoto: ImageValue = coverImageUrl
     ? { kind: "keep", url: coverImageUrl }
-    : { kind: "remove" };
+    : ({ kind: "remove", reason: "system" } as any);
 
   const days: DayDraft[] = (pageModel?.days ?? []).map((d: any) => {
     const id = `day-${d.dayIndex ?? 1}`;
+
     return {
       id,
       dayIndex: Number(d.dayIndex ?? 1),
       title: d.title ?? `Day ${d.dayIndex ?? 1}`,
-      places: (d.entries ?? []).map((e: any) => ({
-        id: e.id,
-        placeName: e.placeName ?? e.label ?? "",
-        caption: e.caption ?? "",
-      })),
+
+      //  여기서 place에 photos/captions까지 넣어줘야 edit UI에 썸네일이 뜸
+      places: (d.entries ?? []).map((e: any) => {
+        const { photos, captions } = normalizeCaptions(e);
+
+        return {
+          id: e.id,
+          placeName: e.placeName ?? e.label ?? "",
+          timeRangeText: e.timeRangeText ?? e.time ?? "",
+          categoryLabel: e.categoryLabel ?? e.category ?? undefined,
+
+          photos,
+          captions,
+
+          // 호환용: 첫 번째 캡션을 caption으로도 유지
+          caption: captions[0] ?? e.caption ?? "",
+          coordinate: e.coordinate,
+        };
+      }),
     };
   });
 
@@ -54,32 +86,45 @@ export function applyDraftToPageModel(pageModel: any, draft: RecapEditDraft) {
   } else if (draft.coverPhoto.kind === "keep") {
     setHeroCover(next.hero, draft.coverPhoto.url);
   } else if (draft.coverPhoto.kind === "local") {
-    setHeroCover(next.hero, draft.coverPhoto.previewUrl);
+    // previewUrl은 세션 blob일 수 있어 pageModel에 박아두기 애매함
+    // => 화면 표시용은 edit/view 컴포넌트에서 resolvedCoverUrl로 처리하는 게 안전
   }
 
-  // days and places
+  // ✅ days and places
   const dayById = new Map(draft.days.map((d) => [d.id, d]));
+
   (next.days ?? []).forEach((d: any) => {
     const id = `day-${d.dayIndex ?? 1}`;
     const dd = dayById.get(id);
     if (!dd) return;
 
-    const captionByPlaceId = new Map(dd.places.map((p) => [p.id, p.caption]));
-    (d.entries ?? []).forEach((e: any) => {
-      if (captionByPlaceId.has(e.id)) {
-        e.caption = captionByPlaceId.get(e.id);
-      }
-    });
-
-    // day title
+    // 네가 “day title은 수정 불가”로 갈 거면,
+    // 여기 d.title = dd.title 이 라인만 빼면 됨.
     d.title = dd.title;
+
+    const placeById = new Map(dd.places.map((p: any) => [p.id, p]));
+
+    (d.entries ?? []).forEach((e: any) => {
+      const p = placeById.get(e.id);
+      if (!p) return;
+
+      // ✅ 캡션 (단일 + 배열 둘 다 반영)
+      if (Array.isArray(p.captions)) e.captions = p.captions;
+      if (typeof p.caption === "string") e.caption = p.caption;
+
+      // ✅ 사진도 draft에서 바뀌었으면 반영 (replacePhoto가 idb:로 바꾸는 구조)
+      if (Array.isArray(p.photos)) e.photos = p.photos;
+
+      // (옵션) timeRangeText/categoryLabel도 draft에서 바꾸는 편집이 있으면 여기도 반영 가능
+      // e.timeRangeText = p.timeRangeText ?? e.timeRangeText;
+      // e.categoryLabel = p.categoryLabel ?? e.categoryLabel;
+    });
   });
 
   return next;
 }
 
 function setHeroCover(hero: any, url: string) {
-  // Prefer the exact field used by RecapBlogHero
   if ("coverImageUrl" in hero) hero.coverImageUrl = url;
   else if ("coverImage" in hero) hero.coverImage = url;
   else if ("coverUrl" in hero) hero.coverUrl = url;
@@ -88,7 +133,6 @@ function setHeroCover(hero: any, url: string) {
 }
 
 function structuredCloneSafe<T>(obj: T): T {
-  // structuredClone is not supported in some environments (e.g., older Node.js versions)
   try {
     // @ts-ignore
     if (typeof structuredClone === "function") return structuredClone(obj);
