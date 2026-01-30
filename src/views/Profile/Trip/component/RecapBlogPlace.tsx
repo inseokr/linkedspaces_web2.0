@@ -16,8 +16,8 @@ import {
 } from "lucide-react";
 
 import ConfirmModal from "@/components/ui/ConfirmModal";
-import { idbGetBlob } from "@/views/Trip/edit/utils/imageIdb";
-import TextRow from "@/views/Trip/edit/components/TextRow";
+import { idbGetBlob } from "@/views/Profile/Trip/edit/utils/imageIdb";
+import TextRow from "@/views/Profile/Trip/edit/components/TextRow";
 
 /** ----------------------------
  *  Types
@@ -237,15 +237,14 @@ function RecapPhotoCarousel({
   const showNav = total > 1;
 
   return (
-    <div className="relative">
+    <div className="relative w-full mx-auto max-w-full lg:max-w-[920px] 2xl:max-w-[1100px]">
       <div
         className={[
-          "flex overflow-x-auto",
+          "flex w-full min-w-0 overflow-x-auto",
           "snap-x snap-mandatory",
           "scroll-smooth",
           "gap-4 pb-2",
           "scrollbar-thin scrollbar-thumb-black/10 scrollbar-track-transparent",
-          "[&>*]:snap-start",
         ].join(" ")}
       >
         {entry.photos.map((photoUrl, idx) => (
@@ -254,7 +253,7 @@ function RecapPhotoCarousel({
             ref={(el) => {
               itemRefs.current[idx] = el;
             }}
-            className="w-full shrink-0"
+            className="w-full flex-none min-w-0 snap-start"
           >
             <RecapPhotoCard
               entry={entry}
@@ -322,8 +321,6 @@ function RecapPhotoCard({
     <article
       className={[
         "w-full",
-        "max-w-[920px]",
-        "mx-auto",
         "overflow-hidden rounded-[28px] border border-black/15 bg-white shadow-sm",
       ].join(" ")}
     >

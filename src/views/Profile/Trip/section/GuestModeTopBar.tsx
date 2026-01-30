@@ -1,7 +1,9 @@
 "use client";
 
 import React from "react";
-import RecapDayTabs, { type DayTab } from "@/views/Trip/component/RecapDayTabs";
+import RecapDayTabs, {
+  type DayTab,
+} from "@/views/Profile/Trip/component/RecapDayTabs";
 
 type Props = {
   dayTabs: DayTab[];
@@ -17,7 +19,15 @@ export default function GuestRecapTopBar({
   className = "",
 }: Props) {
   return (
-    <div className={["bg-transparent", className].join(" ")}>
+    <div
+      className={[
+        "inline-flex",
+        "rounded-full bg-white/70 backdrop-blur-md",
+        "border border-white/40",
+        "px-2 py-2",
+        className,
+      ].join(" ")}
+    >
       <RecapDayTabs
         tabs={dayTabs}
         activeId={activeDayId}

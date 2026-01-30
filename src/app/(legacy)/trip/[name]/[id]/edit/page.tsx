@@ -1,4 +1,4 @@
-import TripRecapEditView from "@/views/Trip/edit/TripRecapEditView";
+import TripRecapEditView from "@/views/Profile/Trip/edit/TripRecapEditView";
 
 export default async function Page({
   params,
