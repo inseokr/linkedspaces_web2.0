@@ -6,7 +6,12 @@ export type ImageValue =
 export type PlaceDraft = {
   id: string;
   placeName: string;
-  caption: string;
+  timeRangeText?: string;
+  categoryLabel?: string;
+  caption?: string;
+  photos: string[];
+  captions: string[];
+  coordinate?: { latitude: number; longitude: number };
 };
 
 export type DayDraft = {
