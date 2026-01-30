@@ -202,7 +202,7 @@ function RecapPhotoCarousel({
   const showNav = total > 1;
 
   return (
-    <div className="relative w-full max-w-[920px] mx-auto">
+    <div className="relative w-full mx-auto max-w-full lg:max-w-[920px] 2xl:max-w-[1100px]">
       <div
         className={[
           "flex w-full min-w-0 overflow-x-auto",
