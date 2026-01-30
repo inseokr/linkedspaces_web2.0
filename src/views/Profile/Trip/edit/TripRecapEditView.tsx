@@ -5,11 +5,11 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { apiFetch } from "@/api/client";
 import type { TripRecapResponse } from "@/api/trips";
-import { mapTripRecapToPageModel } from "@/views/Trip/utils/mapTripRecap";
+import { mapTripRecapToPageModel } from "@/views/Profile/Trip/utils/mapTripRecap";
 
-import RecapBlogTopBar from "@/views/Trip/section/RecapBlogTopBar";
-import type { Crumb } from "@/views/Trip/component/RecapBlogCrumbBread";
-import type { DayTab } from "@/views/Trip/component/RecapDayTabs";
+import RecapBlogTopBar from "@/views/Profile/Trip/section/RecapBlogTopBar";
+import type { Crumb } from "@/views/Profile/Trip/component/RecapBlogCrumbBread";
+import type { DayTab } from "@/views/Profile/Trip/component/RecapDayTabs";
 
 import type { RecapEditDraft, PlaceDraft } from "./types/editTypes";
 import { draftFromPageModel } from "./utils/editMappers";
@@ -21,8 +21,11 @@ import deleteIcon from "@/assets/icons/delete.svg";
 import {
   RecapBlogDaySection,
   type RecapEntry,
-} from "@/views/Trip/component/RecapBlogPlace";
-import { idbPutBlob, makeImageKey } from "@/views/Trip/edit/utils/imageIdb";
+} from "@/views/Profile/Trip/component/RecapBlogPlace";
+import {
+  idbPutBlob,
+  makeImageKey,
+} from "@/views/Profile/Trip/edit/utils/imageIdb";
 
 export default function TripRecapEditView({
   userId,

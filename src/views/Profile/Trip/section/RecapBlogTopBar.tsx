@@ -3,8 +3,10 @@
 import React from "react";
 import RecapBlogBreadcrumb, {
   type Crumb,
-} from "@/views/Trip/component/RecapBlogCrumbBread";
-import RecapDayTabs, { type DayTab } from "@/views/Trip/component/RecapDayTabs";
+} from "@/views/Profile/Trip/component/RecapBlogCrumbBread";
+import RecapDayTabs, {
+  type DayTab,
+} from "@/views/Profile/Trip/component/RecapDayTabs";
 import Image from "next/image";
 import editIcon from "@/assets/icons/edit.svg";
 import shareIcon from "@/assets/icons/share.svg";
