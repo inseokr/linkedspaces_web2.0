@@ -74,6 +74,9 @@ export default function RecapBlogHero({
   avatarUrl?: string;
 }) {
   const { src, unoptimized } = getBlogImageResolved(coverImageUrl);
+  console.log("[Hero props coverImageUrl]", coverImageUrl);
+  console.log("[Hero final src]", src, "unoptimized:", unoptimized);
+
   return (
     <section className="relative w-full overflow-hidden rounded-3xl border border-black/10">
       {/* 배경 이미지 */}

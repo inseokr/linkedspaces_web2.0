@@ -11,7 +11,9 @@ export function draftKey(userId: string, tripId: string) {
 
 function sanitizeImageForStorage(img: ImageValue): ImageValue {
   if (img.kind === "local") {
-    return { kind: "remove" };
+    return img.previewKey
+      ? { kind: "local", previewKey: img.previewKey } // key는 남김
+      : { kind: "remove" };
   }
   return img;
 }
