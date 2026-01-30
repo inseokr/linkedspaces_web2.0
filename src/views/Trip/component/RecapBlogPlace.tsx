@@ -297,17 +297,21 @@ function RecapPhotoCard({
   photoIndex,
   totalPhotos,
   expanded,
+  onToggleExpanded,
+  mode = "view",
 }: {
   entry: RecapEntry;
   photoUrl: string;
   photoIndex: number;
   totalPhotos: number;
   expanded: boolean;
-  onToggleExpanded: () => void;
+  onToggleExpanded?: () => void;
+  mode?: Mode;
 }) {
   const captionText =
     entry.captions?.[photoIndex] ??
     (photoIndex === 0 ? (entry.caption ?? "") : "");
+  const canToggle = (captionText?.trim().length ?? 0) > 120;
   return (
     <article
       className={[
@@ -339,6 +343,16 @@ function RecapPhotoCard({
           >
             {captionText}
           </p>
+
+          {mode === "view" && canToggle && (
+            <button
+              type="button"
+              onClick={onToggleExpanded}
+              className="shrink-0 text-[18px] font-extrabold text-black hover:opacity-80"
+            >
+              {expanded ? "See Less" : "See More"}
+            </button>
+          )}
         </div>
       </div>
 
@@ -462,7 +476,7 @@ function PhotoCaptionRow({
   const fileRef = useRef<HTMLInputElement | null>(null);
 
   return (
-    <div className="flex items-center gap-4">
+    <div className="flex gap-4 items-center">
       <button
         type="button"
         className="relative h-[150px] w-[150px] shrink-0 overflow-hidden rounded-2xl bg-black/10"
