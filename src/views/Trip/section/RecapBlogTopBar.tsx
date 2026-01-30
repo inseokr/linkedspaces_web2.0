@@ -3,8 +3,8 @@
 import React from "react";
 import RecapBlogBreadcrumb, {
   type Crumb,
-} from "@/views/Trip/component/RecapBlogCrumbBread";
-import RecapDayTabs, { type DayTab } from "@/views/Trip/component/RecapDayTabs";
+} from "../component/RecapBlogCrumbBread";
+import RecapDayTabs, { type DayTab } from "../component/RecapDayTabs";
 
 type Props = {
   title?: string;

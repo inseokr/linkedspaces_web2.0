@@ -11,6 +11,10 @@ import DropdownMenu from "@/components/ui/DropdownMenu";
 export function AfterLoginHeader() {
   const router = useRouter();
 
+  const hideSidebar = false;
+
+  if (hideSidebar) return null; // 여기서 차단
+
   return (
     <header className="top-0 z-[100] w-full bg-white border-b border-black">
       <div className="mx-auto h-[77px] flex items-center pl-6 lg:pl-10 ">

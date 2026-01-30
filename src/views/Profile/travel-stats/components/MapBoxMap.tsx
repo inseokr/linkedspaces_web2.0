@@ -159,7 +159,7 @@ export default function MapboxMap({
     [],
   );
 
-  // ✅ “전체 첫 entry” (첫 유효 마커) — modeRef를 보므로 deps 없이 안전
+  //“전체 첫 entry” (첫 유효 마커) — modeRef를 보므로 deps 없이 안전
   const getFirstValidEntryLatLng = useCallback(() => {
     const arr =
       modeRef.current === "place"
@@ -473,7 +473,7 @@ export default function MapboxMap({
     [fallbackCenterByIso2],
   );
 
-  // ✅ 핵심: 지도 생성/cleanup은 “최초 1회만”
+  // 핵심: 지도 생성/cleanup은 “최초 1회만”
   useEffect(() => {
     if (!isMounted || !containerRef.current || mapRef.current) return;
 
@@ -546,7 +546,7 @@ export default function MapboxMap({
     if (mapRef.current?.isStyleLoaded()) syncHighlightLayersRef.current();
   }, [countryStats, worldview]);
 
-  // ✅ 핵심: lat/lng 들어올 때는 cleanup 없이 “카메라만 이동”
+  //핵심: lat/lng 들어올 때는 cleanup 없이 “카메라만 이동”
   useEffect(() => {
     if (!mapRef.current) return;
 

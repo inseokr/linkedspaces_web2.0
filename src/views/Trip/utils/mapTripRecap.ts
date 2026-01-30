@@ -5,10 +5,7 @@ import type {
   TripRecapPhoto,
 } from "@/api/trips";
 
-import type {
-  RecapDay,
-  RecapEntry,
-} from "@/views/Trip/component/RecapBlogPlace";
+import type { RecapDay, RecapEntry } from "../component/RecapBlogPlace";
 import { normalizeImageSrc } from "@/utils/normalizeImageSrc";
 
 export type RecapHeroModel = {

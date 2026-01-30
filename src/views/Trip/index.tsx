@@ -11,20 +11,20 @@ import React, {
 } from "react";
 import axios from "axios";
 import { apiFetch } from "@/api/client";
-import { RecapDay } from "@/views/Trip/component/RecapBlogPlace";
-import RecapBlogTopBar from "@/views/Trip/section/RecapBlogTopBar";
-import type { DayTab } from "@/views/Trip/component/RecapDayTabs";
-import type { Crumb } from "@/views/Trip/component/RecapBlogCrumbBread";
-import RecapBlogHero from "@/views/Trip/component/RecapBlogTopImage";
+import { RecapDay } from "./component/RecapBlogPlace";
+import RecapBlogTopBar from "./section/RecapBlogTopBar";
+import type { DayTab } from "./component/RecapDayTabs";
+import type { Crumb } from "./component/RecapBlogCrumbBread";
+import RecapBlogHero from "./component/RecapBlogTopImage";
 
 import {
   RecapBlogDaySection,
   type RecapBlogPageData,
-} from "@/views/Trip/component/RecapBlogPlace";
+} from "./component/RecapBlogPlace";
 import MapboxMap, {
   type MarkerData,
 } from "@/views/Profile/travel-stats/components/MapBoxMap";
-import { mapTripRecapToPageModel } from "@/views/Trip/utils/mapTripRecap";
+import { mapTripRecapToPageModel } from "./utils/mapTripRecap";
 
 // import type { TripRecapResponse}  from "@/api/trips";
 
@@ -166,7 +166,30 @@ function fakeLatLng(seed: string, base: { lat: number; lng: number }) {
   };
 }
 
+// guest mode
+
+import RecapLoginBar from "./component/GuestRBLoginBar";
+import GuestRecapPage from "./GuestModeIndex";
+import { useLayoutMode } from "@/components/layout/LayoutModeContext";
+
 export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
+  // const { setLayoutMode } = useLayoutMode();
+
+  // //게스트인지 확인
+  // const isGuestMode = false;
+
+  // useEffect(() => {
+  //   // 게스트면 bare, 아니면 profile
+  //   setLayoutMode(isGuestMode ? "bare" : "profile");
+
+  //   // 페이지 unmount 시 원복
+  //   return () => setLayoutMode("profile");
+  // }, [isGuestMode, setLayoutMode]);
+
+  // if (isGuestMode) {
+  //   return <GuestRecapPage />;
+  // }
+
   const [recapData, setRecapData] = useState<TripRecapResponse | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -225,7 +248,6 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
       setError(null);
 
       try {
-        // <<<<<<< HEAD
         const url = `https://pocketverse.herokuapp.com/LS_API/ls-beta-test/trip-recap/${userId}/${tripId}`;
         const res = await axios.get<TripRecapResponse>(url);
         // =======
@@ -234,8 +256,6 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
         const data = await apiFetch<TripRecapResponse>(
           `/ls-beta-test/trip-recap/${userId}/${tripId}`,
         );
-
-        // >>>>>>> origin/develop
         if (cancelled) return;
         setRecapData(data);
       } catch (e: any) {
@@ -266,21 +286,6 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
   }, [pageModel, pageData]);
 
   const baseCenter = useMemo(() => {
-    //   const pageModel = useMemo(() => {
-    //     if (!recapData) return null;
-    //     return mapTripRecapToPageModel(recapData);
-    //   }, [recapData]);
-
-    //   //(추가) “어느 도시 주변에 찍을지” 베이스 좌표, "데이터에 따라 알아서" 베이스 좌표를 결정
-    //   const baseCenter = useMemo(() => {
-    //     // 1. check if first entry has coordinate
-    //     const firstPos = pageModel?.days?.[0]?.entries?.[0]?.coordinate;
-
-    //     if (firstPos?.latitude && firstPos?.longitude) {
-    //       return { lat: firstPos.latitude, lng: firstPos.longitude };
-    //     }
-    //     // 2. fallback: San Francisco 좌표
-    // >>>>>>> origin/develop
     return { lat: 37.7749, lng: -122.4194 };
   }, [pageModel]);
 
@@ -288,10 +293,6 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
     const map = new Map<string, string>();
 
     effectiveModel.days.forEach((d) => {
-      // =======
-      //     if (!pageModel) return map;
-      //     pageModel.days.forEach((d) => {
-      // >>>>>>> origin/develop
       const dayId = `day-${d.dayIndex}`;
       d.entries.forEach((e: any) => map.set(e.id, dayId));
     });
@@ -329,7 +330,7 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
     if (!root) return null;
 
     const rootRect = root.getBoundingClientRect();
-    const centerY = rootRect.top + rootRect.height / 2;
+    const centerY = rootRect.top + rootRect.height * 0.6;
 
     let bestId: string | null = null;
     let bestDist = Infinity;
@@ -618,32 +619,6 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
   }, [TOPBAR_OFFSET_PX, userInteracted]);
 
   if (loading) return <div className="p-6">Loading recap…</div>;
-  // =======
-  //     window.addEventListener("wheel", onWheel, { passive: false });
-  //     return () => window.removeEventListener("wheel", onWheel);
-  //   }, [isMapPinned]);
-
-  //   // --- 여기부터 “데이터 매핑” ---
-  //   // 우선은 fallback(예시 데이터) 유지하고,
-  //   // recapData 구조 파악되면 아래 hero/dayEntries를 실제 값으로 채우면 됨.
-
-  //   const activeDayIndex = useMemo(() => {
-  //     const n = Number(activeDayId.replace("day-", ""));
-  //     return Number.isFinite(n) ? n : 1;
-  //   }, [activeDayId]);
-
-  //   const activeDay: RecapDay | undefined = useMemo(() => {
-  //     return (
-  //       pageModel?.days?.find((d) => d.dayIndex === activeDayIndex) ??
-  //       pageModel?.days?.[0]
-  //     );
-  //   }, [pageModel?.days, activeDayIndex]);
-
-  //   // --- 로딩/에러 처리 ---
-  //   if (loading) {
-  //     return <div className="p-6">Loading recap…</div>;
-  //   }
-  // >>>>>>> origin/develop
 
   if (error) {
     return (
@@ -665,10 +640,6 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
         activeDayId={activeDayId}
         onDayChange={(id) => handleDayChange(id, true)}
         onGoBack={() => history.back()}
-        // =======
-        //         onDayChange={handleDayChange}
-        //         onGoBack={() => window.history.back()}
-        // >>>>>>> origin/develop
         className="sticky top-0 z-50 border-b border-black/10"
       />
 
@@ -741,24 +712,6 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
                 mode="place"
                 placeMarkers={markers}
                 onPlaceMarkerClick={focusByMarkerId}
-                // =======
-                //                 mode="place"
-                //                 placeMarkers={markers}
-                //                 onPlaceMarkerClick={(markerId) => {
-                //                   console.log("클릭된 마커 ID:", markerId);
-                //                   console.log(
-                //                     "사전에 등록된 키값들:",
-                //                     Array.from(entryIdToDayId.keys()),
-                //                   );
-                //                   // 1. 마커 ID(entryId)로 해당 날짜 ID(dayId)를 찾음
-                //                   const targetDayId = entryIdToDayId.get(markerId);
-
-                //                   // 2. 해당 날짜 섹션으로 스크롤 이동 함수 호출
-                //                   if (targetDayId) {
-                //                     handleDayChange(targetDayId);
-                //                   }
-                //                 }}
-                // >>>>>>> origin/develop
               />
             </div>
           </section>
