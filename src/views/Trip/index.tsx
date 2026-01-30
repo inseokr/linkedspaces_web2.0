@@ -54,7 +54,11 @@ function GuestTripRecapShell() {
     return () => setLayoutMode("profile");
   }, [setLayoutMode]);
 
-  return <GuestRecapPage />;
+  return (
+    <div className="min-h-screen bg-white overflow-x-hidden lg:overflow-x-visible">
+      <GuestRecapPage />;
+    </div>
+  );
 }
 
 export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
@@ -483,6 +487,8 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
   }
 
   if (!effectiveModel) return <div className="p-6">No recap data</div>;
+
+  // guest mode
 
   const isGuestMode = true;
 

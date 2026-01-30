@@ -77,7 +77,7 @@ export default function RecapBlogHero({
   return (
     <section className="relative w-full overflow-hidden rounded-3xl border border-black/10">
       {/* 배경 이미지 */}
-      <div className="relative h-[220px] w-full sm:h-[280px] md:h-[320px]">
+      <div className="relative w-full aspect-[16/5] sm:aspect-[16/6] md:aspect-[16/5]">
         {src ? (
           <Image
             src={src}

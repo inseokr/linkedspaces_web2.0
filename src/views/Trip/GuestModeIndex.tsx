@@ -523,6 +523,27 @@ export default function GuestRecapPage() {
     };
   }, [TOPBAR_OFFSET_PX, userInteracted]);
 
+  console.log(
+    "vw",
+    window.innerWidth,
+    "scrollWidth",
+    document.documentElement.scrollWidth,
+  );
+  useEffect(() => {
+    const log = () => {
+      console.log(
+        "vw",
+        window.innerWidth,
+        "scrollWidth",
+        document.documentElement.scrollWidth,
+      );
+    };
+
+    log(); // 최초 1번
+    window.addEventListener("resize", log);
+    return () => window.removeEventListener("resize", log);
+  }, []);
+
   // ===== render =====
   return (
     <div className="min-h-screen bg-white">
@@ -555,7 +576,7 @@ export default function GuestRecapPage() {
 
       {/* 본문 (left list + map) 그대로 */}
       <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
-        {/* Left panel */}
+        {/* Left */}
         <section
           className="min-w-0 flex-1 sticky self-start"
           style={{ top: TOPBAR_OFFSET_PX }}
@@ -571,12 +592,13 @@ export default function GuestRecapPage() {
           >
             <div className="space-y-12 p-4">
               {effectiveModel.days.map((d) => {
-                const dayId = `day-${d.dayIndex}`;
+                const id = `day-${d.dayIndex}`;
                 return (
                   <div
-                    key={dayId}
+                    key={id}
+                    data-day-id={id}
                     ref={(el) => {
-                      daySectionRefs.current[dayId] = el;
+                      daySectionRefs.current[id] = el;
                     }}
                     style={{ scrollMarginTop: 12 }}
                   >
@@ -634,6 +656,7 @@ export default function GuestRecapPage() {
           />
         </div>
       </div>
+
       <SignInModal
         open={isSignInOpen}
         onClose={closeSignIn}

@@ -11,7 +11,7 @@ import DropdownMenu from "@/components/ui/DropdownMenu";
 export function AfterLoginHeader() {
   const router = useRouter();
 
-  const hideSidebar = false;
+  const hideSidebar = true;
 
   if (hideSidebar) return null; // 여기서 차단
 
