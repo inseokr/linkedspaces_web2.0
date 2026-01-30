@@ -1,10 +1,15 @@
 "use client";
 
-import React, { useRef } from "react";
+import React, { useRef, useEffect } from "react";
 import type { ImageValue } from "../types/editTypes";
 
+import { getBlogImageResolved } from "../utils/blogImageCache";
+
 function getSrc(v: ImageValue): string | null {
-  if (v.kind === "keep") return v.url;
+  if (v.kind === "keep") {
+    const { src } = getBlogImageResolved(v.url);
+    return src;
+  }
   if (v.kind === "local") return v.previewUrl;
   return null;
 }
@@ -18,6 +23,13 @@ export default function ImageFieldEditor({
 }) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const src = getSrc(value);
+  useEffect(() => {
+    return () => {
+      if (value.kind === "local" && value.previewUrl?.startsWith("blob:")) {
+        URL.revokeObjectURL(value.previewUrl);
+      }
+    };
+  }, [value]);
 
   const handlePick = () => inputRef.current?.click();
 

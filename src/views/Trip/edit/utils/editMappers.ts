@@ -4,17 +4,6 @@ function getHeroTitle(hero: any) {
   return hero?.title ?? hero?.recapTitle ?? "";
 }
 
-function getHeroCoverUrl(hero: any): string {
-  return (
-    hero?.coverImage ??
-    hero?.coverUrl ??
-    hero?.imageUrl ??
-    hero?.topImage ??
-    hero?.heroImage ??
-    ""
-  );
-}
-
 function getShared(hero: any): boolean {
   // default to true
   const v = hero?.sharedWithFriends;
@@ -23,9 +12,9 @@ function getShared(hero: any): boolean {
 
 export function draftFromPageModel(pageModel: any): RecapEditDraft {
   const hero = pageModel?.hero ?? {};
-  const coverUrl = getHeroCoverUrl(hero);
-  const coverPhoto: ImageValue = coverUrl
-    ? { kind: "keep", url: coverUrl }
+  const coverImageUrl: string = hero.coverImageUrl ?? "";
+  const coverPhoto: ImageValue = coverImageUrl
+    ? { kind: "keep", url: coverImageUrl }
     : { kind: "remove" };
 
   const days: DayDraft[] = (pageModel?.days ?? []).map((d: any) => {
@@ -90,11 +79,12 @@ export function applyDraftToPageModel(pageModel: any, draft: RecapEditDraft) {
 }
 
 function setHeroCover(hero: any, url: string) {
-  // set the cover URL in a best-effort way
-  if ("coverImage" in hero) hero.coverImage = url;
+  // Prefer the exact field used by RecapBlogHero
+  if ("coverImageUrl" in hero) hero.coverImageUrl = url;
+  else if ("coverImage" in hero) hero.coverImage = url;
   else if ("coverUrl" in hero) hero.coverUrl = url;
   else if ("imageUrl" in hero) hero.imageUrl = url;
-  else hero.coverImage = url;
+  else hero.coverImageUrl = url;
 }
 
 function structuredCloneSafe<T>(obj: T): T {

@@ -120,6 +120,13 @@ export default function RecapBlogTopBar({
                     "inline-flex items-center gap-2",
                   ].join(" ")}
                 >
+                  <Image
+                    src="/icons/update.png"
+                    alt="Update"
+                    width={22}
+                    height={22}
+                    className="opacity-80"
+                  />
                   Update
                 </button>
               </>

@@ -17,6 +17,8 @@ import { loadDraft, saveDraft, clearDraft } from "./utils/draftStorage";
 import ImageFieldEditor from "./components/ImageFieldEditor";
 import TextRow from "./components/TextRow";
 import PlaceCaptionList from "./components/PlaceCaptionList";
+import Image from "next/image";
+import deleteIcon from "@/assets/icons/delete.svg";
 
 export default function TripRecapEditView({
   userId,
@@ -82,12 +84,17 @@ export default function TripRecapEditView({
     if (!pageModel) return;
 
     const saved = loadDraft(userId, tripId);
+    const heroCover = pageModel.hero?.coverImageUrl ?? "";
     if (saved) {
-      setDraft(saved);
+      const repaired: RecapEditDraft =
+        saved.coverPhoto?.kind === "remove" && heroCover
+          ? { ...saved, coverPhoto: { kind: "keep", url: heroCover } }
+          : saved;
+      setDraft(repaired);
 
       // Ensure activeDayId is valid for the saved draft
-      const firstDayId = saved.days?.[0]?.id ?? "day-1";
-      const nextActive = saved.days.some((d) => d.id === activeDayId)
+      const firstDayId = repaired.days?.[0]?.id ?? "day-1";
+      const nextActive = repaired.days.some((d) => d.id === activeDayId)
         ? activeDayId
         : firstDayId;
 
@@ -141,6 +148,24 @@ export default function TripRecapEditView({
   const handleDayChange = (id: string) => {
     setActiveDayId(id);
   };
+
+  useEffect(() => {
+    if (!pageModel) return;
+    console.log("[hero keys]", Object.keys(pageModel.hero || {}));
+    console.log("[hero coverImageUrl]", pageModel.hero?.coverImageUrl);
+    console.log("[hero coverImageUrl raw hero]", pageModel.hero);
+  }, [pageModel]);
+
+  useEffect(() => {
+    if (!draft) return;
+    console.log("[draft]", draft);
+    console.log("[draft.coverPhoto.kind]", draft.coverPhoto?.kind);
+    console.log("[draft.coverPhoto.url]", (draft.coverPhoto as any)?.url);
+    console.log(
+      "[draft.coverPhoto.previewUrl]",
+      (draft.coverPhoto as any)?.previewUrl,
+    );
+  }, [draft]);
 
   // -----------------------------
   // 4) Draft update helpers
@@ -227,28 +252,50 @@ export default function TripRecapEditView({
       />
 
       <div className="mx-auto max-w-[1200px] p-6">
-        <div className="text-2xl font-semibold">Recap Blog Settings</div>
+        <div className="flex justify-between">
+          <div className="text-3xl font-bold">Recap Blog Settings</div>
+          <div className="flex items-center text-[var(--color-warning)]">
+            <div className="text-2xl font-bold ">Remove Blog</div>
+            <button className="ml-3">
+              <Image src={deleteIcon} alt="Delete" width={32} height={32} />
+            </button>
+          </div>
+        </div>
 
         {/* Shared toggle */}
-        <div className="mt-6 flex items-center justify-between rounded-3xl border border-black/10 p-4">
+        <div className="mt-6 flex gap-10 pl-0 p-4">
           <div>
-            <div className="font-medium">Shared with friends</div>
-            <div className="mt-1 text-xs opacity-60">
-              Local-only for now (DB update comes later)
-            </div>
+            <div className="font-bold text-2xl">Shared with friends</div>
           </div>
 
-          <input
-            type="checkbox"
-            checked={draft.sharedWithFriends}
-            onChange={(e) =>
-              setDraft({
-                ...draft,
-                updatedAt: Date.now(),
-                sharedWithFriends: e.target.checked,
-              })
-            }
-          />
+          <label className="relative inline-flex cursor-pointer">
+            <input
+              type="checkbox"
+              className="sr-only"
+              checked={draft.sharedWithFriends}
+              onChange={(e) =>
+                setDraft({
+                  ...draft,
+                  updatedAt: Date.now(),
+                  sharedWithFriends: e.target.checked,
+                })
+              }
+            />
+            <span
+              className={[
+                "h-[29px] w-[56px] rounded-full transition-colors",
+                draft.sharedWithFriends ? "bg-[#0798FF]" : "bg-black/20",
+              ].join(" ")}
+            />
+            <span
+              className={[
+                "absolute left-[3px] top-[3px] h-[23px] w-[23px] rounded-full bg-white shadow-sm transition-transform",
+                draft.sharedWithFriends
+                  ? "translate-x-[27px]"
+                  : "translate-x-0",
+              ].join(" ")}
+            />
+          </label>
         </div>
 
         {/* Cover photo */}

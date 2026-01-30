@@ -1,5 +1,5 @@
 "use client";
-import { normalizeImageSrc } from "@/utils/normalizeImageSrc";
+import { getBlogImageResolved } from "@/views/Trip/edit/utils/blogImageCache";
 import Image from "next/image";
 
 /** 1) 작성자 배지 */
@@ -73,20 +73,26 @@ export default function RecapBlogHero({
   postedLabel: string;
   avatarUrl?: string;
 }) {
-  const { src, unoptimized } = normalizeImageSrc(coverImageUrl);
+  const { src, unoptimized } = getBlogImageResolved(coverImageUrl);
   return (
     <section className="relative w-full overflow-hidden rounded-3xl border border-black/10">
       {/* 배경 이미지 */}
       <div className="relative h-[220px] w-full sm:h-[280px] md:h-[320px]">
-        <Image
-          src={src}
-          alt={title}
-          fill
-          unoptimized={unoptimized}
-          priority
-          className="object-cover"
-          sizes="(max-width: 768px) 100vw, 1200px"
-        />
+        {src ? (
+          <Image
+            src={src}
+            alt={title}
+            fill
+            unoptimized={unoptimized}
+            priority
+            className="object-cover"
+            sizes="(max-width: 768px) 100vw, 1200px"
+          />
+        ) : (
+          <div className="absolute inset-0 flex h-full w-full items-center justify-center bg-black/5 text-sm text-black/50">
+            No image
+          </div>
+        )}
 
         {/* 오버레이: 가독성 */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/25 to-black/10" />

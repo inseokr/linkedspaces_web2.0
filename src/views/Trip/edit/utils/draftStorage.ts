@@ -11,7 +11,7 @@ export function draftKey(userId: string, tripId: string) {
 
 function sanitizeImageForStorage(img: ImageValue): ImageValue {
   if (img.kind === "local") {
-    return { kind: "keep", url: img.previewUrl };
+    return { kind: "remove" };
   }
   return img;
 }
