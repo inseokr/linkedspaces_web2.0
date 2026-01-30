@@ -44,6 +44,23 @@ export default function RecapBlogTopBar({
   onUpdate,
   className = "",
 }: Props) {
+  const handleShare = async () => {
+    const url = window.location.href;
+
+    if (typeof window.navigator.share === "function") {
+      await window.navigator.share({ title, url });
+      return;
+    }
+
+    if (window.navigator.clipboard?.writeText) {
+      await window.navigator.clipboard.writeText(url);
+      console.log("Link copied:", url);
+      return;
+    }
+
+    window.prompt("Copy this link:", url);
+  };
+
   return (
     <header
       className={[
@@ -157,7 +174,7 @@ export default function RecapBlogTopBar({
 
                 <button
                   type="button"
-                  onClick={onShare}
+                  onClick={onShare ?? handleShare}
                   className={[
                     "h-9 rounded-full px-4 text-[14px] font-semibold",
                     "border border-black/20 text-black/70",
