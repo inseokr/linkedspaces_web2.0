@@ -69,6 +69,8 @@ export type CountryRecapItem = {
   coverImageUrl: string;
   years: number[];
   href: string;
+  /** Latest trip date range for this country (e.g. "Aug 3 ~ Aug 5, 2025") */
+  latestTripDateLabel?: string;
 };
 
 type Props = {
@@ -104,6 +106,7 @@ export default function CountryRecapCard({
   const { src, unoptimized } = normalizeImageSrc(item.coverImageUrl);
   const code = (item.countryCode ?? item.id ?? "").toString().trim();
   const yearsSummary = formatYearsSummary(item.years);
+  const latestTripDateLabel = String(item.latestTripDateLabel ?? "").trim();
   return (
     <Link
       href={item.href}
@@ -141,11 +144,12 @@ export default function CountryRecapCard({
           <div className="text-[24px] font-semibold tracking-[-0.4px] text-white drop-shadow">
             {item.countryName}
           </div>
-          {showTripSummary && (
+          {/* Prefer showing latest trip date range when available */}
+          {!!latestTripDateLabel ? (
             <div className="mt-2 flex justify-center">
               <div
                 className={[
-                  "max-w-[260px]",
+                  "max-w-[320px]",
                   "truncate whitespace-nowrap",
                   "rounded-full",
                   "border border-white/20",
@@ -154,11 +158,31 @@ export default function CountryRecapCard({
                   "shadow-[0_10px_24px_rgba(0,0,0,0.25)]",
                   "backdrop-blur-sm",
                 ].join(" ")}
-                title={yearsSummary.full}
+                title={latestTripDateLabel}
               >
-                {yearsSummary.display}
+                {latestTripDateLabel}
               </div>
             </div>
+          ) : (
+            showTripSummary && (
+              <div className="mt-2 flex justify-center">
+                <div
+                  className={[
+                    "max-w-[260px]",
+                    "truncate whitespace-nowrap",
+                    "rounded-full",
+                    "border border-white/20",
+                    "bg-black/35 px-3 py-1.5",
+                    "text-[12px] font-semibold leading-none text-white/90",
+                    "shadow-[0_10px_24px_rgba(0,0,0,0.25)]",
+                    "backdrop-blur-sm",
+                  ].join(" ")}
+                  title={yearsSummary.full}
+                >
+                  {yearsSummary.display}
+                </div>
+              </div>
+            )
           )}
         </div>
       </div>

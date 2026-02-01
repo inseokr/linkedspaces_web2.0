@@ -7,7 +7,11 @@ import type {
 
 import type { RecapDay, RecapEntry } from "../component/RecapBlogPlace";
 import { normalizeImageSrc } from "@/utils/normalizeImageSrc";
-import { formatTimeLabel, formatTripDateLabel } from "@/utils/formatTripDate";
+import {
+  formatTimeLabel,
+  formatTripDateLabel,
+  formatTripDateRangeLabel,
+} from "@/utils/formatTripDate";
 
 export type RecapHeroModel = {
   coverImageUrl: string;
@@ -87,12 +91,11 @@ export function mapTripRecapToPageModel(
 }
 
 function buildDateText(trip: TripRecapResponse["trip"]) {
-  const start = formatTripDateLabel(trip.startTimeString ?? "");
-  const end = formatTripDateLabel(trip.endTimeString ?? "");
-  const year = trip.startingYear ?? "";
-
-  const range = [start, end].filter(Boolean).join("–");
-  return [range, String(year)].filter(Boolean).join(", ");
+  return (
+    formatTripDateRangeLabel(trip.startTimeString, trip.endTimeString, {
+      includeYear: true,
+    }) || ""
+  );
 }
 
 function mapDayFromApi(d: TripRecapDay, idx: number): RecapDay {

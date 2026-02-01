@@ -41,6 +41,39 @@ function normalizeIso2(v: string | null | undefined): string | null {
   return s;
 }
 
+function parseTripYmdToEpoch(input: unknown): number | null {
+  const raw = String(input ?? "").trim();
+  if (!raw) return null;
+
+  const datePart = raw.split(" ")[0] ?? raw;
+  const m = /^(\d{4})[:-](\d{2})[:-](\d{2})$/.exec(datePart);
+  if (!m) return null;
+
+  const year = Number(m[1]);
+  const month = Number(m[2]);
+  const day = Number(m[3]);
+  if (
+    !Number.isFinite(year) ||
+    !Number.isFinite(month) ||
+    !Number.isFinite(day)
+  )
+    return null;
+
+  return Date.UTC(year, month - 1, day);
+}
+
+function tripSortKey(t: Trip): number {
+  // Prefer end date (most representative of “latest”), fallback to start date.
+  const end = parseTripYmdToEpoch((t as any)?.endTimeString);
+  const start = parseTripYmdToEpoch((t as any)?.startTimeString);
+  if (end != null) return end;
+  if (start != null) return start;
+
+  const y = Number((t as any)?.startingYear);
+  if (Number.isFinite(y)) return Date.UTC(y, 0, 1);
+  return 0;
+}
+
 function pickTripCoordinate(
   trip: Trip,
   placeVisitHistory: Array<any | undefined>,
@@ -90,7 +123,7 @@ function formatTripMarkerDateLabel(
   if (!raw) return undefined;
 
   const datePart = raw.split(" ")[0] ?? raw;
-  const m = /^(\d{4}):(\d{2}):(\d{2})$/.exec(datePart);
+  const m = /^(\d{4})[:-](\d{2})[:-](\d{2})$/.exec(datePart);
   if (!m) {
     // If we can't extract a month, don't show a misleading label.
     return includeYear
@@ -149,7 +182,10 @@ export default function ProfileRecapBlogsView() {
   // visible trips only
   const visibleTrips: Trip[] = useMemo(() => {
     const trips = (user?.trips ?? []) as Trip[];
-    return trips.filter((t) => t.privacyControl?.level !== "hidden");
+    return trips
+      .filter((t) => t.privacyControl?.level !== "hidden")
+      .slice()
+      .sort((a, b) => tripSortKey(b) - tripSortKey(a));
   }, [user]);
 
   // years tab

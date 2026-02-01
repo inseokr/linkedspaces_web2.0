@@ -154,7 +154,7 @@ function RecapPlaceBlock({
 }) {
   return (
     <div className="space-y-4">
-      {/* 장소/시간/태그는 카드 외부 */}
+      {/* 장소/태그는 카드 외부 (시간은 사진 위로 오버레이) */}
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <div className="flex items-center gap-3">
@@ -163,9 +163,13 @@ function RecapPlaceBlock({
               <div className="truncate text-[24px] font-extrabold text-black underline underline-offset-4">
                 {entry.placeName}
               </div>
-              <div className="mt-1 text-[16px] font-medium text-black/70">
-                {entry.timeRangeText}
-              </div>
+              {/* If no photos exist, keep time visible here as fallback */}
+              {(!entry.photos || entry.photos.length === 0) &&
+                !!entry.timeRangeText?.trim() && (
+                  <div className="mt-1 text-[16px] font-medium text-black/70">
+                    {entry.timeRangeText}
+                  </div>
+                )}
             </div>
           </div>
         </div>
@@ -354,6 +358,14 @@ function RecapPhotoCard({
             <div className="absolute left-4 top-4 rounded-full bg-white/40 px-3 py-1 text-[14px] font-bold text-white backdrop-blur">
               {photoIndex + 1}/{totalPhotos}
             </div>
+            {!!entry.timeRangeText?.trim() && (
+              <div
+                className="absolute right-4 top-4 max-w-[70%] truncate rounded-full bg-black/45 px-3 py-1 text-[14px] font-bold text-white backdrop-blur"
+                title={entry.timeRangeText}
+              >
+                {entry.timeRangeText}
+              </div>
+            )}
           </button>
         </div>
 
@@ -468,6 +480,7 @@ function RecapPhotoEditList({
             index={idx}
             total={entry.photos.length}
             caption={normalizedCaptions[idx]}
+            timeLabel={entry.timeRangeText}
             onCaptionChange={onCaptionChange}
             onReplacePhoto={onReplacePhoto}
             onRequestRemove={() => setRemoveTarget({ photoIndex: idx })}
@@ -497,6 +510,7 @@ function PhotoCaptionRow({
   index,
   total,
   caption,
+  timeLabel,
   onCaptionChange,
   onReplacePhoto,
   onRequestRemove,
@@ -506,6 +520,7 @@ function PhotoCaptionRow({
   index: number;
   total: number;
   caption: string;
+  timeLabel?: string;
   onCaptionChange?: (entryId: string, photoIndex: number, next: string) => void;
   onReplacePhoto?: (entryId: string, photoIndex: number, file: File) => void;
   onRequestRemove: () => void;
@@ -524,6 +539,14 @@ function PhotoCaptionRow({
         <div className="absolute left-2 top-2 rounded-full bg-white/40 px-2 py-0.5 text-[12px] font-bold text-white backdrop-blur">
           {index + 1}/{total}
         </div>
+        {!!timeLabel?.trim() && (
+          <div
+            className="absolute bottom-2 right-2 max-w-[90%] truncate rounded-full bg-black/45 px-2 py-0.5 text-[12px] font-bold text-white backdrop-blur"
+            title={timeLabel}
+          >
+            {timeLabel}
+          </div>
+        )}
       </button>
 
       <input

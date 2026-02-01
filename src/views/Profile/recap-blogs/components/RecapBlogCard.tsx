@@ -13,7 +13,7 @@ export type AllBlogCardItem = {
   coverImageUrl: string;
   title: string;
   locationLabel: string; // ex) "Swiss Alps"
-  dateLabel: string; //ex) "2024 Dec 27-Dec 29"
+  dateLabel: string; // ex) "Aug 3 ~ Aug 5, 2025"
   isPublic?: boolean; // 필요하면 상태 표시용
 };
 
@@ -37,6 +37,11 @@ export default function AllBlogCard({
   showVisibilityButton = true,
 }: Props) {
   const { src, unoptimized } = normalizeImageSrc(item.coverImageUrl);
+  const yearMatch = item.dateLabel?.match(/\b(19|20)\d{2}\b/);
+  const yearText = yearMatch?.[0] ?? "";
+  const dateWithoutYear = yearText
+    ? item.dateLabel.replace(/,?\s*\b(19|20)\d{2}\b\s*$/, "").trim()
+    : item.dateLabel;
 
   return (
     <article className={["w-full", className].join(" ")}>
@@ -51,7 +56,7 @@ export default function AllBlogCard({
           {/* 이미지 영역 */}
           <div className="relative aspect-[16/9] w-full">
             <Image
-              src={item.coverImageUrl}
+              src={src}
               alt={item.title}
               fill
               unoptimized={unoptimized}
@@ -101,12 +106,35 @@ export default function AllBlogCard({
               </div>
             </div>
 
-            {/* 우하단 날짜 */}
-            <div className="absolute bottom-3 right-3 z-10">
-              <span className="text-[11px] font-medium text-white/95 drop-shadow">
-                {item.dateLabel}
-              </span>
-            </div>
+            {/* 좌상단 날짜(시간) pill: trip cover image overlay (no truncation) */}
+            {!!item.dateLabel && (
+              <div
+                className={[
+                  "absolute left-3 top-3 z-10",
+                  // Allocate width relative to the image container (parent is `relative`).
+                  // This prevents the shrink-to-fit behavior that made it look too small.
+                  "w-[80%]",
+                ].join(" ")}
+              >
+                <div
+                  className={[
+                    // Single-line (should fit within the 80% container).
+                    "inline-flex w-fit items-center gap-1.5 rounded-full",
+                    "bg-black/55 px-2 py-0.5 text-[12px] text-white backdrop-blur",
+                    "whitespace-nowrap",
+                    "pointer-events-none",
+                  ].join(" ")}
+                  title={item.dateLabel}
+                >
+                  {!!yearText && (
+                    <span className="shrink-0 rounded-full bg-white/15 px-1.5 py-0.5 font-extrabold leading-none">
+                      {yearText}
+                    </span>
+                  )}
+                  <span className="min-w-0">{dateWithoutYear}</span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
