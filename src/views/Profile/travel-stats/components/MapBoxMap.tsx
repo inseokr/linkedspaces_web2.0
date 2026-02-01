@@ -52,6 +52,17 @@ function PlaceMarker({
   size?: number;
   isActive?: boolean;
 }) {
+  const baseShadow = "0 8px 20px rgba(0,0,0,0.18)";
+  const activeRings = [
+    // crisp main ring
+    "0 0 0 3px rgba(249, 115, 22, 0.98)",
+    // soft outer rings
+    "0 0 0 8px rgba(249, 115, 22, 0.32)",
+    "0 0 0 14px rgba(249, 115, 22, 0.16)",
+    // subtle inner highlight for pop
+    "inset 0 0 0 1px rgba(255,255,255,0.55)",
+  ].join(", ");
+
   return (
     <div
       style={{
@@ -62,8 +73,11 @@ function PlaceMarker({
         border: isActive
           ? "3px solid rgba(249, 115, 22, 0.98)" // orange-500
           : "3px solid rgba(255,255,255,0.9)",
-        boxShadow: "0 8px 20px rgba(0,0,0,0.18)",
+        boxShadow: isActive ? `${baseShadow}, ${activeRings}` : baseShadow,
         background: "rgba(0,0,0,0.05)",
+        transform: isActive ? "scale(1.03)" : "scale(1)",
+        transition:
+          "transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease",
       }}
     >
       <img
