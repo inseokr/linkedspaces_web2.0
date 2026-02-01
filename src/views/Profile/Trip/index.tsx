@@ -316,7 +316,7 @@ function OwnerTripRecapView({ userId, tripId }: TripRecapViewProps) {
   }, [effectiveModel]);
 
   /** 7) Markers */
-  const markers = useMemo<MarkerData[]>(() => {
+  const allMarkers = useMemo<MarkerData[]>(() => {
     if (!effectiveModel) return [];
 
     const travelYear =
@@ -335,6 +335,11 @@ function OwnerTripRecapView({ userId, tripId }: TripRecapViewProps) {
       })),
     );
   }, [effectiveModel, baseCenter]);
+
+  const activeDayMarkers = useMemo<MarkerData[]>(() => {
+    if (!activeDayId) return [];
+    return allMarkers.filter((m) => entryIdToDayId.get(m.id) === activeDayId);
+  }, [allMarkers, entryIdToDayId, activeDayId]);
 
   /** helpers: scroll & focus */
   const scrollToDay = (dayId: string) => {
@@ -382,7 +387,7 @@ function OwnerTripRecapView({ userId, tripId }: TripRecapViewProps) {
   };
 
   const focusToEntryId = (entryId: string) => {
-    const m = markers.find((x) => x.id === entryId);
+    const m = allMarkers.find((x) => x.id === entryId);
     if (!m) return;
     setFocusLatLng({ lat: m.lat, lng: m.lng });
   };
@@ -432,13 +437,13 @@ function OwnerTripRecapView({ userId, tripId }: TripRecapViewProps) {
   /** 8) initial focus to first marker */
   useEffect(() => {
     if (focusLatLng) return;
-    if (!markers.length) return;
+    if (!allMarkers.length) return;
 
-    const first = markers[0];
+    const first = allMarkers[0];
     activeEntryIdRef.current = first.id;
     setActiveEntryId(first.id);
     setFocusLatLng({ lat: first.lat, lng: first.lng });
-  }, [markers, focusLatLng]);
+  }, [allMarkers, focusLatLng]);
 
   /** 9) mark userInteracted once */
   useEffect(() => {
@@ -542,7 +547,7 @@ function OwnerTripRecapView({ userId, tripId }: TripRecapViewProps) {
       if (focusTimerRef.current) window.clearTimeout(focusTimerRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dayTabs, markers]);
+  }, [dayTabs, allMarkers]);
 
   /** 12) day change (tab click) */
   const handleDayChange = (dayId: string, fromUser = false) => {
@@ -630,7 +635,7 @@ function OwnerTripRecapView({ userId, tripId }: TripRecapViewProps) {
       window.removeEventListener("wheel", onWheel, opts);
       document.removeEventListener("wheel", onWheel, opts);
     };
-  }, [TOPBAR_OFFSET_PX, userInteracted, markers]);
+  }, [TOPBAR_OFFSET_PX, userInteracted, allMarkers]);
 
   /** render */
   if (loading) return <div className="p-6">Loading recap blog...</div>;
@@ -726,7 +731,7 @@ function OwnerTripRecapView({ userId, tripId }: TripRecapViewProps) {
             >
               <MapboxMap
                 mode="place"
-                placeMarkers={markers}
+                placeMarkers={activeDayMarkers}
                 activePlaceMarkerId={activeEntryId ?? undefined}
                 focusLatLng={focusLatLng}
                 onPlaceMarkerClick={focusByMarkerId}

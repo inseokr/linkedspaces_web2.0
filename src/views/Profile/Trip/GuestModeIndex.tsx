@@ -823,7 +823,7 @@ export default function GuestRecapPage({ userId, tripId }: Props) {
   }, [effectiveModel]);
 
   // ===== (변경) markers: fakeLatLng 제거, 실제 coordinate 사용 =====
-  const markers = useMemo<MarkerData[]>(() => {
+  const allMarkers = useMemo<MarkerData[]>(() => {
     if (!effectiveModel) return [];
 
     const travelYear =
@@ -885,6 +885,11 @@ export default function GuestRecapPage({ userId, tripId }: Props) {
     activeDayIdRef.current = activeDayId;
   }, [activeDayId]);
 
+  const activeDayMarkers = useMemo<MarkerData[]>(() => {
+    if (!activeDayId) return [];
+    return allMarkers.filter((m) => entryIdToDayId.get(m.id) === activeDayId);
+  }, [allMarkers, entryIdToDayId, activeDayId]);
+
   // dayTabs 준비되면 초기 activeDayId 보정
   useEffect(() => {
     if (!dayTabs.length) return;
@@ -904,15 +909,15 @@ export default function GuestRecapPage({ userId, tripId }: Props) {
   // 최초 1회 포커스(원하면 다시 켜도 됨): 실제 markers 기준으로
   useEffect(() => {
     if (focusLatLng) return;
-    if (!markers.length) return;
-    const first = markers[0];
+    if (!allMarkers.length) return;
+    const first = allMarkers[0];
     activeEntryIdRef.current = first.id;
     setActiveEntryId(first.id);
     setFocusLatLng({ lat: first.lat, lng: first.lng });
-  }, [markers, focusLatLng]);
+  }, [allMarkers, focusLatLng]);
 
   const focusToEntryId = (entryId: string) => {
-    const m = markers.find((x) => x.id === entryId);
+    const m = allMarkers.find((x) => x.id === entryId);
     if (!m) return;
     setFocusLatLng({ lat: m.lat, lng: m.lng });
   };
@@ -1234,7 +1239,7 @@ export default function GuestRecapPage({ userId, tripId }: Props) {
             <MapboxMap
               focusLatLng={focusLatLng ?? undefined}
               mode="place"
-              placeMarkers={markers}
+              placeMarkers={activeDayMarkers}
               activePlaceMarkerId={activeEntryId ?? undefined}
               onPlaceMarkerClick={onMarkerClick}
             />
