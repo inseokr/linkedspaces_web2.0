@@ -1154,10 +1154,7 @@ export default function GuestRecapPage({ userId, tripId }: Props) {
   // ===== render (기존 UI 그대로) =====
   return (
     <div className="min-h-screen bg-white">
-      <RecapLoginBar
-        onSignIn={() => setIsSignInOpen(true)}
-        onMenuClick={() => console.log("menu")}
-      />
+      <RecapLoginBar onSignIn={() => setIsSignInOpen(true)} />
       <div className="h-18" />
 
       <div className="p-3">

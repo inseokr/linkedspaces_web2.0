@@ -101,7 +101,13 @@ function ProfileLayoutInner({ children }: { children: React.ReactNode }) {
 
   // --- 최종 hideSidebar ---
   // layoutMode(bare) OR (trip recap에서 guest)
-  const hideSidebar = layoutMode === "bare" || isGuestOnTripRecap;
+  // Also: sidebar should exist only for authenticated users.
+  // While auth is loading, keep it hidden to avoid flicker/layout shift.
+  const hideSidebar =
+    layoutMode === "bare" ||
+    isGuestOnTripRecap ||
+    authLoading ||
+    !isAuthenticated;
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const SIDEBAR_WIDTH = "320px";

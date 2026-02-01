@@ -3,6 +3,7 @@
 import Sidebar from "@/views/Profile/sidebar/Sidebar";
 import { useEffect, useState } from "react";
 import Image from "next/image";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function ProfileLayout({
   children,
@@ -12,15 +13,26 @@ export default function ProfileLayout({
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const SIDEBAR_WIDTH = "320px";
 
+  const { isLoading: authLoading, isAuthenticated } = useAuth();
+  const hideSidebar = authLoading || !isAuthenticated;
+
   useEffect(() => {
     document.documentElement.style.setProperty(
       "--sidebar-offset",
-      isSidebarOpen ? SIDEBAR_WIDTH : "0px",
+      hideSidebar ? "0px" : isSidebarOpen ? SIDEBAR_WIDTH : "0px",
     );
     return () => {
       document.documentElement.style.removeProperty("--sidebar-offset");
     };
-  }, [isSidebarOpen]);
+  }, [isSidebarOpen, hideSidebar]);
+
+  if (hideSidebar) {
+    return (
+      <main className="min-h-screen w-full bg-white">
+        <div className="w-full min-h-full flex flex-col">{children}</div>
+      </main>
+    );
+  }
 
   return (
     <div className="relative flex min-h-screen">

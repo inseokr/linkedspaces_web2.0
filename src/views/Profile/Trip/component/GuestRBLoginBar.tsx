@@ -2,13 +2,11 @@
 "use client";
 
 import React from "react";
-import { Menu } from "lucide-react";
 
 type Props = {
   message?: string;
   signInLabel?: string;
   onSignIn?: () => void;
-  onMenuClick?: () => void;
   className?: string;
 };
 
@@ -16,7 +14,6 @@ export default function RecapLoginBar({
   message = "Sign in now to start keeping your moments",
   signInLabel = "Sign in",
   onSignIn,
-  onMenuClick,
   className = "",
 }: Props) {
   return (
@@ -44,15 +41,6 @@ export default function RecapLoginBar({
             ].join(" ")}
           >
             {signInLabel}
-          </button>
-
-          <button
-            type="button"
-            onClick={onMenuClick}
-            aria-label="Open menu"
-            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition hover:bg-black/5 active:bg-black/10"
-          >
-            <Menu className="h-6 w-6 text-black/70" />
           </button>
         </div>
       </div>

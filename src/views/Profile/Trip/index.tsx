@@ -43,7 +43,6 @@ interface TripRecapViewProps {
   tripId: string;
 }
 
-import RecapLoginBar from "./component/GuestRBLoginBar";
 import GuestRecapPage from "./GuestModeIndex";
 import { useLayoutMode } from "@/components/layout/LayoutModeContext";
 
