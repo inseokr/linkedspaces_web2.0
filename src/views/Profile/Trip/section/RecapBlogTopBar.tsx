@@ -10,6 +10,7 @@ import RecapDayTabs, {
 import Image from "next/image";
 import editIcon from "@/assets/icons/edit.svg";
 import shareIcon from "@/assets/icons/share.svg";
+import updateIcon from "@/assets/icons/update.svg";
 
 type Props = {
   title?: string;
@@ -46,6 +47,20 @@ export default function RecapBlogTopBar({
   onUpdate,
   className = "",
 }: Props) {
+  const secondaryButtonClass =
+    "h-9 rounded-full px-4 text-sm font-semibold leading-none tracking-[-0.01em] whitespace-nowrap " +
+    "border border-black/15 text-black/70 " +
+    "hover:bg-black/5 active:scale-[0.99] transition " +
+    "inline-flex items-center justify-center gap-2 " +
+    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/20";
+
+  const primaryButtonClass =
+    "h-9 rounded-full px-4 text-sm font-semibold leading-none tracking-[-0.01em] whitespace-nowrap " +
+    "bg-[#FF6A00] text-white " +
+    "hover:opacity-90 active:scale-[0.99] transition " +
+    "inline-flex items-center justify-center gap-2 " +
+    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/20";
+
   const handleShare = async () => {
     const url = window.location.href;
 
@@ -97,11 +112,7 @@ export default function RecapBlogTopBar({
             <button
               type="button"
               onClick={onGoBack}
-              className={[
-                "h-9 rounded-full px-4 text-[14px] font-semibold",
-                "border border-black/20 text-black/70",
-                "hover:bg-black/5 active:scale-[0.99] transition",
-              ].join(" ")}
+              className={secondaryButtonClass}
             >
               Go Back
             </button>
@@ -120,11 +131,7 @@ export default function RecapBlogTopBar({
                 <button
                   type="button"
                   onClick={onCloseEdit}
-                  className={[
-                    "h-9 rounded-full px-4 text-[14px] font-semibold",
-                    "border border-black/20 text-black/70",
-                    "hover:bg-black/5 active:scale-[0.99] transition",
-                  ].join(" ")}
+                  className={secondaryButtonClass}
                 >
                   Close
                 </button>
@@ -132,19 +139,14 @@ export default function RecapBlogTopBar({
                 <button
                   type="button"
                   onClick={onUpdate}
-                  className={[
-                    "h-9 rounded-full px-4 text-[14px] font-semibold",
-                    "bg-[#FF6A00] text-white",
-                    "hover:opacity-90 active:scale-[0.99] transition",
-                    "inline-flex items-center gap-2",
-                  ].join(" ")}
+                  className={primaryButtonClass}
                 >
                   <Image
-                    src="/icons/update.png"
+                    src={updateIcon}
                     alt="Update"
-                    width={22}
-                    height={22}
-                    className="opacity-80"
+                    width={18}
+                    height={18}
+                    className="block shrink-0 opacity-90"
                   />
                   Update
                 </button>
@@ -157,40 +159,16 @@ export default function RecapBlogTopBar({
                     console.log("Edit clicked");
                     onEditBlog?.();
                   }}
-                  className={[
-                    "h-9 rounded-full px-4 text-[14px] font-semibold",
-                    "border border-black/20 text-black/70",
-                    "hover:bg-black/5 active:scale-[0.99] transition",
-                    "inline-flex items-center gap-2",
-                  ].join(" ")}
+                  className={secondaryButtonClass}
                 >
-                  <Image
-                    src={editIcon}
-                    alt="Edit"
-                    width={24}
-                    height={24}
-                    className="opacity-80"
-                  />
                   Edit Blog
                 </button>
 
                 <button
                   type="button"
                   onClick={onShare ?? handleShare}
-                  className={[
-                    "h-9 rounded-full px-4 text-[14px] font-semibold",
-                    "border border-black/20 text-black/70",
-                    "hover:bg-black/5 active:scale-[0.99] transition",
-                    "inline-flex items-center gap-2",
-                  ].join(" ")}
+                  className={secondaryButtonClass}
                 >
-                  <Image
-                    src={shareIcon}
-                    alt="Share"
-                    width={24}
-                    height={24}
-                    className="opacity-80"
-                  />
                   Share
                 </button>
               </>
