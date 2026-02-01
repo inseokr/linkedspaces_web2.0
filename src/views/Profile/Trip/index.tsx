@@ -356,6 +356,31 @@ function OwnerTripRecapView({ userId, tripId }: TripRecapViewProps) {
     }, 650);
   };
 
+  const scrollToEntry = (entryId: string) => {
+    const root = leftScrollRef.current;
+    const el = entryRefs.current[entryId];
+    if (!root || !el) return;
+
+    isProgrammaticScrollRef.current = true;
+
+    const rootRect = root.getBoundingClientRect();
+    const elRect = el.getBoundingClientRect();
+
+    // Align clicked place to the top of the visible scroll area.
+    const TOP_PADDING = 12;
+    const targetTop = elRect.top - rootRect.top + root.scrollTop - TOP_PADDING;
+    const maxTop = root.scrollHeight - root.clientHeight;
+
+    root.scrollTo({
+      top: Math.min(Math.max(0, targetTop), Math.max(0, maxTop)),
+      behavior: "smooth",
+    });
+
+    window.setTimeout(() => {
+      isProgrammaticScrollRef.current = false;
+    }, 650);
+  };
+
   const focusToEntryId = (entryId: string) => {
     const m = markers.find((x) => x.id === entryId);
     if (!m) return;
@@ -543,7 +568,10 @@ function OwnerTripRecapView({ userId, tripId }: TripRecapViewProps) {
     focusToEntryId(markerId);
 
     const targetDayId = entryIdToDayId.get(markerId);
-    if (targetDayId) handleDayChange(targetDayId, true);
+    if (targetDayId) setActiveDayId(targetDayId);
+
+    // Ensure the clicked place card is positioned nicely in the left panel.
+    scrollToEntry(markerId);
   };
 
   /** 14) pinned map: wheel consumed by left panel first */

@@ -947,10 +947,16 @@ export default function GuestRecapPage({ userId, tripId }: Props) {
     const rootRect = root.getBoundingClientRect();
     const elRect = el.getBoundingClientRect();
 
-    const targetTop =
-      elRect.top - rootRect.top + root.scrollTop - rootRect.height * 0.35;
+    // Align the clicked place to the top of the visible scroll area.
+    // (Previously we positioned it around the middle which can leave tall cards half-cut.)
+    const TOP_PADDING = 12;
+    const targetTop = elRect.top - rootRect.top + root.scrollTop - TOP_PADDING;
+    const maxTop = root.scrollHeight - root.clientHeight;
 
-    root.scrollTo({ top: Math.max(0, targetTop), behavior: "smooth" });
+    root.scrollTo({
+      top: Math.min(Math.max(0, targetTop), Math.max(0, maxTop)),
+      behavior: "smooth",
+    });
 
     window.setTimeout(() => {
       isProgrammaticScrollRef.current = false;
