@@ -29,13 +29,17 @@ export default function HeaderMenu({
       style={{ maxWidth: maxWidthPx }}
     >
       <div
-        className={cn("flex items-center w-full")}
+        className={cn(
+          "flex items-center w-full border shadow-sm",
+          "border-[var(--header-menu-border)]",
+        )}
         style={{
           height: heightPx,
           borderRadius: radiusPx,
           paddingLeft: paddingX,
           paddingRight: paddingX,
-          backgroundColor: `rgba(255,255,255,${bgOpacity})`,
+          backgroundColor: `rgb(var(--header-menu-rgb) / ${bgOpacity})`,
+          backdropFilter: "blur(10px)",
         }}
       >
         {children}
