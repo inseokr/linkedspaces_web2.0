@@ -17,6 +17,8 @@ export type MarkerData = {
   year: number;
   label: string;
   imageUrl: string;
+  visitIndex?: number; // 1-based order within active day
+  visitTimeText?: string; // e.g. "9:30 AM" or "9:30–10:10 AM"
 };
 
 export interface CountryStat {
@@ -47,10 +49,14 @@ function PlaceMarker({
   imageUrl,
   size = 72,
   isActive = false,
+  visitIndex,
+  visitTimeText,
 }: {
   imageUrl: string;
   size?: number;
   isActive?: boolean;
+  visitIndex?: number;
+  visitTimeText?: string;
 }) {
   const baseShadow = "0 8px 20px rgba(0,0,0,0.18)";
   const activeRings = [
@@ -64,32 +70,93 @@ function PlaceMarker({
   ].join(", ");
 
   return (
-    <div
-      style={{
-        width: size,
-        height: size,
-        borderRadius: 9999,
-        overflow: "hidden",
-        border: isActive
-          ? "3px solid rgba(249, 115, 22, 0.98)" // orange-500
-          : "3px solid rgba(255,255,255,0.9)",
-        boxShadow: isActive ? `${baseShadow}, ${activeRings}` : baseShadow,
-        background: "rgba(0,0,0,0.05)",
-        transform: isActive ? "scale(1.03)" : "scale(1)",
-        transition:
-          "transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease",
-      }}
-    >
-      <img
-        src={imageUrl}
-        alt=""
+    <div style={{ width: size, height: size, position: "relative" }}>
+      <div
         style={{
-          width: "100%",
-          height: "100%",
-          objectFit: "cover",
-          display: "block",
+          width: size,
+          height: size,
+          borderRadius: 9999,
+          overflow: "hidden",
+          border: isActive
+            ? "3px solid rgba(249, 115, 22, 0.98)" // orange-500
+            : "3px solid rgba(255,255,255,0.9)",
+          boxShadow: isActive ? `${baseShadow}, ${activeRings}` : baseShadow,
+          background: "rgba(0,0,0,0.05)",
+          transform: isActive ? "scale(1.03)" : "scale(1)",
+          transition:
+            "transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease",
         }}
-      />
+      >
+        <img
+          src={imageUrl}
+          alt=""
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            display: "block",
+          }}
+        />
+      </div>
+
+      {typeof visitIndex === "number" && Number.isFinite(visitIndex) && (
+        <div
+          style={{
+            position: "absolute",
+            top: -8,
+            right: -8,
+            minWidth: 26,
+            height: 26,
+            padding: "0 8px",
+            borderRadius: 9999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            background: "rgba(0, 0, 0, 0.88)",
+            color: "white",
+            fontWeight: 900,
+            fontSize: 12,
+            lineHeight: "12px",
+            letterSpacing: 0.2,
+            border: "2px solid rgba(255,255,255,0.95)",
+            boxShadow: "0 6px 14px rgba(0,0,0,0.18)",
+            pointerEvents: "none",
+          }}
+        >
+          {visitIndex}
+        </div>
+      )}
+
+      {!!visitTimeText && (
+        <div
+          style={{
+            position: "absolute",
+            left: "50%",
+            top: "100%",
+            marginTop: 4,
+            // Optical centering: the pill can read slightly left under the circle,
+            // so we nudge it a couple pixels to the right.
+            transform: "translateX(calc(-50% + 3px))",
+            background: "rgba(255,255,255,0.96)",
+            border: "1px solid rgba(0,0,0,0.12)",
+            boxShadow: "0 10px 24px rgba(0,0,0,0.16)",
+            borderRadius: 9999,
+            padding: "6px 10px",
+            maxWidth: 160,
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            fontSize: 12,
+            fontWeight: 800,
+            color: "rgba(0,0,0,0.78)",
+            pointerEvents: "none",
+            backdropFilter: "blur(6px)",
+          }}
+          title={visitTimeText}
+        >
+          {visitTimeText}
+        </div>
+      )}
     </div>
   );
 }
@@ -331,7 +398,13 @@ export default function MapboxMap({
         const root = createRoot(el);
         const render = (isActive: boolean) => {
           root.render(
-            <PlaceMarker imageUrl={m.imageUrl} size={72} isActive={isActive} />,
+            <PlaceMarker
+              imageUrl={m.imageUrl}
+              size={72}
+              isActive={isActive}
+              visitIndex={m.visitIndex}
+              visitTimeText={m.visitTimeText}
+            />,
           );
         };
 

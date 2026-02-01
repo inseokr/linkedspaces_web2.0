@@ -325,13 +325,15 @@ function OwnerTripRecapView({ userId, tripId }: TripRecapViewProps) {
         : Number(recapData?.trip?.startingYear)) || new Date().getFullYear();
 
     return effectiveModel.days.flatMap((d) =>
-      d.entries.map((e: any) => ({
+      d.entries.map((e: any, idx: number) => ({
         id: e.id,
         lat: e.coordinate?.latitude ?? baseCenter.lat,
         lng: e.coordinate?.longitude ?? baseCenter.lng,
         year: travelYear,
         label: e.placeName,
         imageUrl: e.photos?.[0] ?? "/images/avatar.png",
+        visitIndex: idx + 1,
+        visitTimeText: e.timeRangeText ?? "",
       })),
     );
   }, [effectiveModel, baseCenter]);
