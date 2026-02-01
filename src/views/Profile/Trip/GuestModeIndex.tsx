@@ -898,6 +898,7 @@ export default function GuestRecapPage({ userId, tripId }: Props) {
     { lat: number; lng: number } | undefined
   >(undefined);
   const activeEntryIdRef = useRef<string | null>(null);
+  const [activeEntryId, setActiveEntryId] = useState<string | null>(null);
   const focusTimerRef = useRef<number | null>(null);
 
   // 최초 1회 포커스(원하면 다시 켜도 됨): 실제 markers 기준으로
@@ -906,6 +907,7 @@ export default function GuestRecapPage({ userId, tripId }: Props) {
     if (!markers.length) return;
     const first = markers[0];
     activeEntryIdRef.current = first.id;
+    setActiveEntryId(first.id);
     setFocusLatLng({ lat: first.lat, lng: first.lng });
   }, [markers, focusLatLng]);
 
@@ -990,6 +992,7 @@ export default function GuestRecapPage({ userId, tripId }: Props) {
       if (activeEntryIdRef.current === entryId) return;
 
       activeEntryIdRef.current = entryId;
+      setActiveEntryId(entryId);
       focusToEntryId(entryId);
 
       const dayId = entryIdToDayId.get(entryId);
@@ -1069,6 +1072,7 @@ export default function GuestRecapPage({ userId, tripId }: Props) {
 
     if (firstEntryId) {
       activeEntryIdRef.current = firstEntryId;
+      setActiveEntryId(firstEntryId);
       focusToEntryId(firstEntryId);
       scrollToEntry(firstEntryId);
     }
@@ -1076,6 +1080,7 @@ export default function GuestRecapPage({ userId, tripId }: Props) {
 
   const onMarkerClick = (markerId: string) => {
     activeEntryIdRef.current = markerId;
+    setActiveEntryId(markerId);
     focusToEntryId(markerId);
 
     const dayId = entryIdToDayId.get(markerId);
@@ -1227,6 +1232,7 @@ export default function GuestRecapPage({ userId, tripId }: Props) {
               focusLatLng={focusLatLng ?? undefined}
               mode="place"
               placeMarkers={markers}
+              activePlaceMarkerId={activeEntryId ?? undefined}
               onPlaceMarkerClick={onMarkerClick}
             />
           </div>

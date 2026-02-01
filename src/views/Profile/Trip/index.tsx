@@ -184,6 +184,7 @@ function OwnerTripRecapView({ userId, tripId }: TripRecapViewProps) {
 
   /** Entry focus helpers */
   const activeEntryIdRef = useRef<string | null>(null);
+  const [activeEntryId, setActiveEntryId] = useState<string | null>(null);
   const focusTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -396,6 +397,7 @@ function OwnerTripRecapView({ userId, tripId }: TripRecapViewProps) {
       if (activeEntryIdRef.current === entryId) return;
 
       activeEntryIdRef.current = entryId;
+      setActiveEntryId(entryId);
       focusToEntryId(entryId);
 
       const dayId = entryIdToDayId.get(entryId);
@@ -410,6 +412,7 @@ function OwnerTripRecapView({ userId, tripId }: TripRecapViewProps) {
 
     const first = markers[0];
     activeEntryIdRef.current = first.id;
+    setActiveEntryId(first.id);
     setFocusLatLng({ lat: first.lat, lng: first.lng });
   }, [markers, focusLatLng]);
 
@@ -529,6 +532,7 @@ function OwnerTripRecapView({ userId, tripId }: TripRecapViewProps) {
 
     if (firstEntryId) {
       activeEntryIdRef.current = firstEntryId;
+      setActiveEntryId(firstEntryId);
       focusToEntryId(firstEntryId);
     }
   };
@@ -536,6 +540,7 @@ function OwnerTripRecapView({ userId, tripId }: TripRecapViewProps) {
   /** 13) marker click: focus + jump to day */
   const focusByMarkerId = (markerId: string) => {
     activeEntryIdRef.current = markerId;
+    setActiveEntryId(markerId);
     focusToEntryId(markerId);
 
     const targetDayId = entryIdToDayId.get(markerId);
@@ -695,6 +700,7 @@ function OwnerTripRecapView({ userId, tripId }: TripRecapViewProps) {
               <MapboxMap
                 mode="place"
                 placeMarkers={markers}
+                activePlaceMarkerId={activeEntryId ?? undefined}
                 focusLatLng={focusLatLng}
                 onPlaceMarkerClick={focusByMarkerId}
               />

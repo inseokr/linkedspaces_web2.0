@@ -36,17 +36,21 @@ type Props = {
 
   markers?: MarkerData[];
   onMarkerClick?: (markerId: string) => void;
+  activeMarkerId?: string;
 
   placeMarkers?: MarkerData[];
   onPlaceMarkerClick?: (markerId: string) => void;
+  activePlaceMarkerId?: string;
 };
 
 function PlaceMarker({
   imageUrl,
   size = 72,
+  isActive = false,
 }: {
   imageUrl: string;
   size?: number;
+  isActive?: boolean;
 }) {
   return (
     <div
@@ -55,7 +59,9 @@ function PlaceMarker({
         height: size,
         borderRadius: 9999,
         overflow: "hidden",
-        border: "3px solid rgba(255,255,255,0.9)",
+        border: isActive
+          ? "3px solid rgba(249, 115, 22, 0.98)" // orange-500
+          : "3px solid rgba(255,255,255,0.9)",
         boxShadow: "0 8px 20px rgba(0,0,0,0.18)",
         background: "rgba(0,0,0,0.05)",
       }}
@@ -87,9 +93,11 @@ export default function MapboxMap({
 
   markers = [],
   onMarkerClick,
+  activeMarkerId,
 
   placeMarkers = [],
   onPlaceMarkerClick,
+  activePlaceMarkerId,
 }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
@@ -101,6 +109,9 @@ export default function MapboxMap({
   const markersRef = useRef(markers);
   const placeMarkersRef = useRef(placeMarkers);
   const modeRef = useRef(mode);
+  const activeMarkerIdRef = useRef<Props["activeMarkerId"]>(activeMarkerId);
+  const activePlaceMarkerIdRef =
+    useRef<Props["activePlaceMarkerId"]>(activePlaceMarkerId);
 
   const focusLatLngRef = useRef<Props["focusLatLng"]>(focusLatLng);
   const countryCodeRef = useRef<Props["countryCode"]>(countryCode);
@@ -108,6 +119,7 @@ export default function MapboxMap({
   const onPlaceMarkerClickRef = useRef(onPlaceMarkerClick);
 
   const syncMarkersRef = useRef<() => void>(() => {});
+  const syncActiveMarkerStylesRef = useRef<() => void>(() => {});
   const syncHighlightLayersRef = useRef<() => void>(() => {});
 
   // “한 번이라도 entry로 포커스를 준 적 있는지”
@@ -130,6 +142,14 @@ export default function MapboxMap({
   useEffect(() => {
     modeRef.current = mode;
   }, [mode]);
+
+  useEffect(() => {
+    activeMarkerIdRef.current = activeMarkerId;
+  }, [activeMarkerId]);
+
+  useEffect(() => {
+    activePlaceMarkerIdRef.current = activePlaceMarkerId;
+  }, [activePlaceMarkerId]);
 
   useEffect(() => {
     focusLatLngRef.current = focusLatLng;
@@ -295,7 +315,15 @@ export default function MapboxMap({
         el.addEventListener("click", handleClick);
 
         const root = createRoot(el);
-        root.render(<PlaceMarker imageUrl={m.imageUrl} size={72} />);
+        const render = (isActive: boolean) => {
+          root.render(
+            <PlaceMarker imageUrl={m.imageUrl} size={72} isActive={isActive} />,
+          );
+        };
+
+        const isActiveAtCreate = m.id === activePlaceMarkerIdRef.current;
+        render(isActiveAtCreate);
+        el.style.zIndex = isActiveAtCreate ? "10" : "0";
 
         const marker = new mapboxgl.Marker({ element: el, anchor: "center" })
           .setLngLat([m.lng, m.lat])
@@ -303,8 +331,10 @@ export default function MapboxMap({
 
         markerHandlesRef.current.push({
           id: m.id,
+          kind: "place",
           marker,
           el,
+          render,
           unmount: () => root.unmount(),
         });
       });
@@ -339,6 +369,7 @@ export default function MapboxMap({
 
       markerHandlesRef.current.push({
         id: m.id,
+        kind: "trip",
         marker,
         el,
         unmount: () => root.unmount(),
@@ -349,6 +380,39 @@ export default function MapboxMap({
   useEffect(() => {
     syncMarkersRef.current = syncMarkers;
   }, [syncMarkers]);
+
+  const syncActiveMarkerStyles = useCallback(() => {
+    const activePlaceId = activePlaceMarkerIdRef.current;
+    const activeTripId = activeMarkerIdRef.current;
+
+    markerHandlesRef.current.forEach((h) => {
+      if (h?.kind === "place" && typeof h?.render === "function") {
+        const isActive = h.id === activePlaceId;
+        h.render(isActive);
+
+        // Ensure highlighted marker is visually on top
+        if (h?.el) {
+          h.el.style.zIndex = isActive ? "10" : "0";
+          if (isActive && h.el.parentElement) {
+            h.el.parentElement.appendChild(h.el);
+          }
+        }
+      }
+
+      // (optional) trip markers could be styled too later
+      if (h?.kind === "trip" && activeTripId && h?.el) {
+        const isActive = h.id === activeTripId;
+        h.el.style.zIndex = isActive ? "10" : "0";
+        if (isActive && h.el.parentElement) {
+          h.el.parentElement.appendChild(h.el);
+        }
+      }
+    });
+  }, []);
+
+  useEffect(() => {
+    syncActiveMarkerStylesRef.current = syncActiveMarkerStyles;
+  }, [syncActiveMarkerStyles]);
 
   const syncHighlightLayers = useCallback(() => {
     const map = mapRef.current;
@@ -540,6 +604,16 @@ export default function MapboxMap({
   useEffect(() => {
     if (mapRef.current?.isStyleLoaded()) syncMarkersRef.current();
   }, [markers, placeMarkers, mode]); // modeRef는 업데이트되지만, 이 effect 트리거를 위해 deps에 둠
+
+  // active marker highlighting should NOT recreate markers; just re-render borders
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    const run = () => syncActiveMarkerStylesRef.current();
+    if (map.isStyleLoaded()) run();
+    else map.once("idle", run);
+  }, [activePlaceMarkerId, activeMarkerId]);
 
   useEffect(() => {
     if (mapRef.current?.isStyleLoaded()) syncHighlightLayersRef.current();
