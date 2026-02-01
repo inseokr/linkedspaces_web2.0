@@ -2,6 +2,7 @@ import type { Trip } from "@/views/Profile/recap-blogs/types";
 import type { PlaceVisitHistoryItem } from "@/api/user";
 import type { CountryRecapItem } from "@/views/Profile/recap-blogs/components/CountryRecapCard";
 import type { AllBlogCardItem } from "@/views/Profile/recap-blogs/components/RecapBlogCard";
+import { formatTripDateLabel } from "@/utils/formatTripDate";
 
 const DEFAULT_BLOG_COVER = "/images/recap/kr.png";
 const DEFAULT_RECAP_COVER = "/images/recap/kr.png";
@@ -121,7 +122,7 @@ export const transformToAllBlogItems = (
       title,
       locationLabel: trip.country || "Unknown",
       dateLabel:
-        `${trip.startingYear ?? ""} ${trip.startTimeString ?? ""}-${trip.endTimeString ?? ""}`.trim(),
+        `${trip.startingYear ?? ""} ${formatTripDateLabel(trip.startTimeString ?? "")}-${formatTripDateLabel(trip.endTimeString ?? "")}`.trim(),
       isPublic: trip.privacyControl?.level !== "hidden",
     };
   });

@@ -7,6 +7,7 @@ import type {
 
 import type { RecapDay, RecapEntry } from "../component/RecapBlogPlace";
 import { normalizeImageSrc } from "@/utils/normalizeImageSrc";
+import { formatTimeLabel, formatTripDateLabel } from "@/utils/formatTripDate";
 
 export type RecapHeroModel = {
   coverImageUrl: string;
@@ -86,8 +87,8 @@ export function mapTripRecapToPageModel(
 }
 
 function buildDateText(trip: TripRecapResponse["trip"]) {
-  const start = trip.startTimeString ?? "";
-  const end = trip.endTimeString ?? "";
+  const start = formatTripDateLabel(trip.startTimeString ?? "");
+  const end = formatTripDateLabel(trip.endTimeString ?? "");
   const year = trip.startingYear ?? "";
 
   const range = [start, end].filter(Boolean).join("–");
@@ -96,7 +97,7 @@ function buildDateText(trip: TripRecapResponse["trip"]) {
 
 function mapDayFromApi(d: TripRecapDay, idx: number): RecapDay {
   const dayIndex = idx + 1;
-  const title = d.date || `Day ${dayIndex}`;
+  const title = formatTripDateLabel(d.date) || `Day ${dayIndex}`;
 
   const entries: RecapEntry[] = (d.places ?? []).map((p, i) =>
     mapPlaceToEntry(p, `${dayIndex}-${i}`),
@@ -127,7 +128,8 @@ function mapPlaceToEntry(p: TripRecapPlace, fallbackId: string): RecapEntry {
     const dt = p.digitizedTime ?? "";
     if (!dt) return "";
     const parts = dt.split(" ");
-    return parts[1]?.slice(0, 5) ?? "";
+    const hhmm = parts[1]?.slice(0, 5) ?? "";
+    return formatTimeLabel(hhmm);
   })();
 
   const likeCount = selectedPhoto?.liked?.length ?? 0;
