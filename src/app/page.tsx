@@ -11,7 +11,7 @@ export default function Page() {
 
   useEffect(() => {
     if (!isLoading && isAuthenticated) {
-      router.replace("/profile");
+      router.replace("/profile/travel-stats");
     }
   }, [isAuthenticated, isLoading, router]);
 

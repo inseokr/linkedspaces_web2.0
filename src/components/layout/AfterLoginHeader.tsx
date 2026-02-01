@@ -1,9 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import Image from "next/image";
-import Button from "@/components/ui/Button";
 import HeaderMenu from "@/components/layout/HeaderMenu";
 import HamburgerIcon from "@/assets/icons/hamburger.svg";
 import DropdownMenu from "@/components/ui/DropdownMenu";
@@ -11,8 +9,6 @@ import DropdownMenu from "@/components/ui/DropdownMenu";
 import { useLayoutMode } from "@/components/layout/LayoutModeContext";
 
 export function AfterLoginHeader() {
-  const router = useRouter();
-
   const { layoutMode } = useLayoutMode();
 
   const hideTopbar = layoutMode === "bare";
@@ -40,14 +36,6 @@ export function AfterLoginHeader() {
 
         <HeaderMenu className="ml-auto">
           <div className="flex items-center justify-end gap-5 w-full">
-            <Button
-              radius="full"
-              onClick={() => router.push("/profile")}
-              className="w-[120px] h-[24px] font-normal [font-family:var(--font-bakbak-one)] shadow-[0_6px_10px_-6px_rgba(0,0,0,0.28)] hover:shadow-[0_6px_14px_rgba(0,0,0,0.22)] transition-shadow hover:bg-[#85aded]"
-            >
-              Profile
-            </Button>
-
             <DropdownMenu
               className="p-1 hover:opacity-70 transition z-10000"
               trigger={

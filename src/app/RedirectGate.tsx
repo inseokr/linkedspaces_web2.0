@@ -9,7 +9,7 @@ export default function RedirectGate() {
   const router = useRouter();
 
   useEffect(() => {
-    if (isAuthenticated) router.replace("/profile");
+    if (isAuthenticated) router.replace("/profile/travel-stats");
   }, [isAuthenticated, router]);
 
   return null;

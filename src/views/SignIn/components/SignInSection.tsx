@@ -26,7 +26,7 @@ export default function SignInSection() {
       localStorage.setItem("token", data.token);
       setCachedUser(data.user);
       notifyAuthChanged();
-      router.push("/profile");
+      router.push("/profile/travel-stats");
     } else {
       alert("Failed to log in with Google.");
     }
@@ -40,7 +40,7 @@ export default function SignInSection() {
       localStorage.setItem("token", data.token);
       setCachedUser(data.user);
       notifyAuthChanged();
-      router.push("/profile");
+      router.push("/profile/travel-stats");
     } else {
       alert("check username or password.");
     }
