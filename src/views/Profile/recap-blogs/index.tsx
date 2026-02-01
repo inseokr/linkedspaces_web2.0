@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import ResponsiveRecapGrid from "@/views/Profile/recap-blogs/section/ResponsiveRecapGrid";
 import { useSearchParams } from "next/navigation";
@@ -82,6 +82,35 @@ function pickTripCoordinate(
   return null;
 }
 
+function formatTripMarkerDateLabel(
+  trip: Trip,
+  includeYear: boolean,
+): string | undefined {
+  const raw = String(trip.startTimeString ?? "").trim();
+  if (!raw) return undefined;
+
+  const datePart = raw.split(" ")[0] ?? raw;
+  const m = /^(\d{4}):(\d{2}):(\d{2})$/.exec(datePart);
+  if (!m) {
+    // If we can't extract a month, don't show a misleading label.
+    return includeYear
+      ? String(trip.startingYear ?? "").trim() || undefined
+      : undefined;
+  }
+
+  const year = Number(m[1]);
+  const month = Number(m[2]);
+  if (!Number.isFinite(year) || !Number.isFinite(month)) return undefined;
+
+  const dt = new Date(Date.UTC(year, month - 1, 1));
+  const monthText = new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    timeZone: "UTC",
+  }).format(dt);
+
+  return includeYear ? `${monthText} ${year}` : monthText;
+}
+
 export default function ProfileRecapBlogsView() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -93,6 +122,10 @@ export default function ProfileRecapBlogsView() {
   const [selectedYear, setSelectedYear] = useState<RecapYearValue>("ALL");
   const [mode, setMode] = useState<Mode>("recap");
   const [isMapOverlayOpen, setIsMapOverlayOpen] = useState(false);
+  const mapListScrollRef = useRef<HTMLDivElement | null>(null);
+  const [topVisibleBlogId, setTopVisibleBlogId] = useState<string | undefined>(
+    undefined,
+  );
 
   // 3. change url when country is selected or cleared
   const openMapForCountry = (countryCode: string) => {
@@ -149,8 +182,9 @@ export default function ProfileRecapBlogsView() {
     return transformToAllBlogItems(tripsFilteredByYear, {
       username,
       placeVisitHistory,
+      includeYearInDateLabel: selectedYear === "ALL",
     });
-  }, [tripsFilteredByYear, username, placeVisitHistory]);
+  }, [tripsFilteredByYear, username, placeVisitHistory, selectedYear]);
 
   const normalizedSelectedCountry = useMemo(
     () => normalizeIso2(selectedCountryCode),
@@ -170,8 +204,9 @@ export default function ProfileRecapBlogsView() {
     return transformToAllBlogItems(tripsForSelectedCountry, {
       username,
       placeVisitHistory,
+      includeYearInDateLabel: selectedYear === "ALL",
     });
-  }, [tripsForSelectedCountry, username, placeVisitHistory]);
+  }, [tripsForSelectedCountry, username, placeVisitHistory, selectedYear]);
 
   // map markers: Trip -> MarkerData
   const mapMarkers: MarkerData[] = useMemo(() => {
@@ -181,6 +216,7 @@ export default function ProfileRecapBlogsView() {
     for (const item of transformToAllBlogItems(tripsForSelectedCountry, {
       username,
       placeVisitHistory,
+      includeYearInDateLabel: selectedYear === "ALL",
     })) {
       coverByBlogKey.set(String(item.id), item.coverImageUrl);
     }
@@ -205,6 +241,7 @@ export default function ProfileRecapBlogsView() {
           year: Number.isFinite(year) ? year : new Date().getFullYear(),
           label: title,
           imageUrl: coverByBlogKey.get(blogKey) || "/images/recap/kr.png",
+          dateLabel: formatTripMarkerDateLabel(trip, selectedYear === "ALL"),
         };
       })
       .filter(Boolean) as MarkerData[];
@@ -213,7 +250,51 @@ export default function ProfileRecapBlogsView() {
     tripsForSelectedCountry,
     placeVisitHistory,
     username,
+    selectedYear,
   ]);
+
+  // Track the trip that is currently at the top of the visible left list.
+  useEffect(() => {
+    if (view !== "map") return;
+    const root = mapListScrollRef.current;
+    if (!root) return;
+
+    let raf = 0;
+    const computeTopVisible = () => {
+      const nodes = Array.from(
+        root.querySelectorAll<HTMLElement>("[data-recap-blog-id]"),
+      );
+      if (nodes.length === 0) {
+        setTopVisibleBlogId(undefined);
+        return;
+      }
+
+      const st = root.scrollTop;
+      // Pick the first item that is visible (its bottom is below scrollTop).
+      for (const el of nodes) {
+        if (el.offsetTop + el.offsetHeight > st + 4) {
+          setTopVisibleBlogId(el.dataset.recapBlogId);
+          return;
+        }
+      }
+
+      // Fallback: last item
+      setTopVisibleBlogId(nodes[nodes.length - 1]?.dataset.recapBlogId);
+    };
+
+    const onScroll = () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(computeTopVisible);
+    };
+
+    root.addEventListener("scroll", onScroll, { passive: true });
+    computeTopVisible();
+
+    return () => {
+      root.removeEventListener("scroll", onScroll);
+      cancelAnimationFrame(raf);
+    };
+  }, [view, mapLeftBlogItems.length]);
 
   const goToBlogDetail = (blogKey: string) => {
     if (username) router.push(`/trip/${username}/${blogKey}`);
@@ -235,7 +316,10 @@ export default function ProfileRecapBlogsView() {
             ].join(" ")}
           >
             <div className="h-full rounded-2xl border border-black/10 bg-white">
-              <div className="h-full min-h-[220px] overflow-y-auto pr-2 px-4 pt-2 pb-4">
+              <div
+                ref={mapListScrollRef}
+                className="h-full min-h-[220px] overflow-y-auto pr-2 px-4 pt-2 pb-4"
+              >
                 <RecapBlogColumn
                   items={mapLeftBlogItems}
                   gapClassName="gap-6"
@@ -248,6 +332,11 @@ export default function ProfileRecapBlogsView() {
                   minCardWidth={isMapOverlayOpen ? 200 : undefined}
                   maxCardWidth={isMapOverlayOpen ? 300 : undefined}
                 />
+
+                {/* Bottom buffer so the last item can scroll up to the top */}
+                {!isMapOverlayOpen && (
+                  <div aria-hidden className="pointer-events-none h-[55vh]" />
+                )}
 
                 {mapLeftBlogItems.length === 0 && (
                   <div className="mt-4 rounded-2xl border border-black/10 p-4 text-sm text-black/60">
@@ -265,6 +354,7 @@ export default function ProfileRecapBlogsView() {
                 countryCode={normalizedSelectedCountry ?? undefined}
                 markers={mapMarkers}
                 onMarkerClick={(markerId) => goToBlogDetail(markerId)}
+                activeMarkerId={topVisibleBlogId}
               />
             </div>
           </section>
@@ -286,6 +376,8 @@ export default function ProfileRecapBlogsView() {
             <CountryRecapCard
               item={it}
               onSelect={(code) => openMapForCountry(code)}
+              // Hide the "years summary" when ALL is selected.
+              showTripSummary={selectedYear !== "ALL"}
             />
           )}
         />
@@ -315,45 +407,50 @@ export default function ProfileRecapBlogsView() {
   };
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-start justify-between gap-6">
-        <div className="space-y-2">
-          <div className="space-y-1">
-            <h1 className="ml-6 font-[Inter] text-[24px] font-bold leading-[32px] tracking-[-0.5px] text-black">
-              Recap Blog
-            </h1>
-            <p className="ml-8 font-[Inter] text-[14px] font-normal leading-[20px] tracking-[-0.5px] text-[#8B949E]">
-              Building memories around the world
-            </p>
-          </div>
+    <div className="space-y-6">
+      {/* Sticky header (title + year filter) */}
+      <div className="sticky top-0 z-50 border-b border-black/10 bg-white/95 shadow-[0_8px_24px_rgba(0,0,0,0.08)] backdrop-blur-md">
+        <div className="p-6">
+          <div className="flex items-start justify-between gap-6">
+            <div className="space-y-2">
+              <div className="space-y-1">
+                <h1 className="ml-6 font-[Inter] text-[24px] font-bold leading-[32px] tracking-[-0.5px] text-black">
+                  Recap Blog
+                </h1>
+                <p className="ml-8 font-[Inter] text-[14px] font-normal leading-[20px] tracking-[-0.5px] text-[#8B949E]">
+                  Building memories around the world
+                </p>
+              </div>
 
-          <div className="ml-6">
-            {mode === "recap" && view === "grid" ? (
-              <ViewAllBlogsButton onClick={() => setMode("allBlogs")}>
-                View All Blogs
-              </ViewAllBlogsButton>
-            ) : (
-              <ViewAllBlogsButton
-                onClick={() => {
-                  if (view === "map") backToGrid();
-                  else setMode("recap");
-                }}
-              >
-                Go Back
-              </ViewAllBlogsButton>
-            )}
+              <div className="ml-6">
+                {mode === "recap" && view === "grid" ? (
+                  <ViewAllBlogsButton onClick={() => setMode("allBlogs")}>
+                    View All Blogs
+                  </ViewAllBlogsButton>
+                ) : (
+                  <ViewAllBlogsButton
+                    onClick={() => {
+                      if (view === "map") backToGrid();
+                      else setMode("recap");
+                    }}
+                  >
+                    Go Back
+                  </ViewAllBlogsButton>
+                )}
+              </div>
+            </div>
+
+            <RecapYearTabs
+              value={selectedYear}
+              years={availableYears}
+              onChange={setSelectedYear}
+              className="mr-6"
+            />
           </div>
         </div>
-
-        <RecapYearTabs
-          value={selectedYear}
-          years={availableYears}
-          onChange={setSelectedYear}
-          className="mr-6"
-        />
       </div>
 
-      {renderGridOrMap()}
+      <div className="px-6 pb-6">{renderGridOrMap()}</div>
     </div>
   );
 }

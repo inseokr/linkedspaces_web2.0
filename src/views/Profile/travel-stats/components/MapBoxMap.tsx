@@ -17,6 +17,7 @@ export type MarkerData = {
   year: number;
   label: string;
   imageUrl: string;
+  dateLabel?: string; // e.g. "Nov 2024" (recap-blog list marker)
   visitIndex?: number; // 1-based order within active day
   visitTimeText?: string; // e.g. "9:30 AM" or "9:30–10:10 AM"
 };
@@ -205,6 +206,7 @@ export default function MapboxMap({
 
   // “한 번이라도 entry로 포커스를 준 적 있는지”
   const hasEverFocusedToEntryRef = useRef(false);
+  const lastUserInteractionAtRef = useRef<number>(0);
 
   const [isMounted, setIsMounted] = useState(false);
   useEffect(() => {
@@ -298,6 +300,62 @@ export default function MapboxMap({
     if (map.isStyleLoaded()) runFocus();
     else map.once("idle", runFocus);
   }, []);
+
+  const fitToCurrentMarkersBounds = useCallback(() => {
+    const map = mapRef.current;
+    if (!map) return false;
+
+    const arr =
+      modeRef.current === "place"
+        ? placeMarkersRef.current
+        : markersRef.current;
+
+    const pts = arr.filter(
+      (m) => Number.isFinite(m.lat) && Number.isFinite(m.lng),
+    ) as Array<{ lat: number; lng: number }>;
+
+    if (pts.length === 0) return false;
+
+    // One point → keep existing single-focus behavior.
+    if (pts.length === 1) {
+      focusOnLatLng(pts[0].lat, pts[0].lng);
+      return true;
+    }
+
+    let minLng = Infinity;
+    let minLat = Infinity;
+    let maxLng = -Infinity;
+    let maxLat = -Infinity;
+
+    for (const p of pts) {
+      minLng = Math.min(minLng, p.lng);
+      minLat = Math.min(minLat, p.lat);
+      maxLng = Math.max(maxLng, p.lng);
+      maxLat = Math.max(maxLat, p.lat);
+    }
+
+    const run = () => {
+      map.stop();
+      map.fitBounds(
+        [
+          [minLng, minLat],
+          [maxLng, maxLat],
+        ],
+        {
+          padding: 80,
+          duration: 650,
+          maxZoom: 10,
+        },
+      );
+
+      hasEverFocusedToEntryRef.current = true;
+    };
+
+    if (map.isStyleLoaded()) run();
+    else map.once("idle", run);
+
+    return true;
+  }, [focusOnLatLng]);
 
   const clearPlacePath = useCallback(() => {
     const map = mapRef.current;
@@ -442,13 +500,20 @@ export default function MapboxMap({
       });
 
       const root = createRoot(el);
-      root.render(
-        <CircleTripMarker
-          year={m.year}
-          label={m.label}
-          imageUrl={m.imageUrl}
-        />,
-      );
+      const render = (isActive: boolean) => {
+        root.render(
+          <CircleTripMarker
+            label={m.label}
+            imageUrl={m.imageUrl}
+            dateLabel={m.dateLabel}
+            isActive={isActive}
+          />,
+        );
+      };
+
+      const isActiveAtCreate = m.id === activeMarkerIdRef.current;
+      render(isActiveAtCreate);
+      el.style.zIndex = isActiveAtCreate ? "10" : "0";
 
       const marker = new mapboxgl.Marker({ element: el, anchor: "bottom" })
         .setLngLat([m.lng, m.lat])
@@ -459,6 +524,7 @@ export default function MapboxMap({
         kind: "trip",
         marker,
         el,
+        render,
         unmount: () => root.unmount(),
       });
     });
@@ -486,12 +552,15 @@ export default function MapboxMap({
         }
       }
 
-      // (optional) trip markers could be styled too later
-      if (h?.kind === "trip" && activeTripId && h?.el) {
-        const isActive = h.id === activeTripId;
-        h.el.style.zIndex = isActive ? "10" : "0";
-        if (isActive && h.el.parentElement) {
-          h.el.parentElement.appendChild(h.el);
+      if (h?.kind === "trip" && typeof h?.render === "function") {
+        const isActive = !!activeTripId && h.id === activeTripId;
+        h.render(isActive);
+
+        if (h?.el) {
+          h.el.style.zIndex = isActive ? "10" : "0";
+          if (isActive && h.el.parentElement) {
+            h.el.parentElement.appendChild(h.el);
+          }
         }
       }
     });
@@ -660,6 +729,11 @@ export default function MapboxMap({
         return;
       }
 
+      // Prefer fitting all markers so the map covers everything.
+      if (fitToCurrentMarkersBounds()) {
+        return;
+      }
+
       const first = getFirstValidEntryLatLng();
       if (first) {
         focusOnLatLng(first.lat, first.lng);
@@ -670,11 +744,23 @@ export default function MapboxMap({
       if (cc) focusOnCountry(cc);
     });
 
+    const markUserInteraction = () => {
+      lastUserInteractionAtRef.current = Date.now();
+    };
+    map.on("dragstart", markUserInteraction);
+    map.on("zoomstart", markUserInteraction);
+    map.on("rotatestart", markUserInteraction);
+    map.on("pitchstart", markUserInteraction);
+
     const ro = new ResizeObserver(() => map.resize());
     ro.observe(containerRef.current);
 
     return () => {
       ro.disconnect();
+      map.off("dragstart", markUserInteraction);
+      map.off("zoomstart", markUserInteraction);
+      map.off("rotatestart", markUserInteraction);
+      map.off("pitchstart", markUserInteraction);
       clearMarkers();
       map.remove();
       mapRef.current = null;
@@ -684,6 +770,7 @@ export default function MapboxMap({
     clearMarkers,
     focusOnLatLng,
     focusOnCountry,
+    fitToCurrentMarkersBounds,
     getFirstValidEntryLatLng,
   ]);
 
@@ -717,6 +804,9 @@ export default function MapboxMap({
 
     // focusLatLng가 없고, 아직 entry 포커스 한 번도 없으면: 첫 entry or country
     if (!hasEverFocusedToEntryRef.current) {
+      if (fitToCurrentMarkersBounds()) {
+        return;
+      }
       const first = getFirstValidEntryLatLng();
       if (first) {
         focusOnLatLng(first.lat, first.lng);
@@ -731,8 +821,52 @@ export default function MapboxMap({
     countryCode,
     focusOnLatLng,
     focusOnCountry,
+    fitToCurrentMarkersBounds,
     getFirstValidEntryLatLng,
   ]);
+
+  // When markers change (e.g. year filter), refit bounds unless the user just interacted.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    if (mode === "place") return;
+
+    const run = () => {
+      const msSinceUser = Date.now() - lastUserInteractionAtRef.current;
+      if (msSinceUser < 2000) return;
+      fitToCurrentMarkersBounds();
+    };
+
+    if (map.isStyleLoaded()) run();
+    else map.once("idle", run);
+  }, [markers, mode, fitToCurrentMarkersBounds]);
+
+  // Optional: gently bias toward the active trip marker (e.g. top visible list item).
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    if (!activeMarkerId) return;
+    if (mode === "place") return;
+
+    const m = markersRef.current.find((x) => x.id === activeMarkerId);
+    if (!m || !Number.isFinite(m.lat) || !Number.isFinite(m.lng)) return;
+
+    const run = () => {
+      const msSinceUser = Date.now() - lastUserInteractionAtRef.current;
+      if (msSinceUser < 700) return;
+
+      const currentZoom = map.getZoom();
+      const targetZoom = Math.min(Math.max(currentZoom, 4.75), 10);
+      map.easeTo({
+        center: [m.lng, m.lat],
+        zoom: targetZoom,
+        duration: 550,
+      });
+    };
+
+    if (map.isStyleLoaded()) run();
+    else map.once("idle", run);
+  }, [activeMarkerId, mode]);
 
   if (!isMounted) {
     return (

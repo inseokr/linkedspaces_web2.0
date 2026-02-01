@@ -83,12 +83,13 @@ export default function RecapBlogColumn({
 
       <div className={["grid", gapClassName].join(" ")} style={gridStyle}>
         {items.map((item) => (
-          <AllBlogCard
-            key={item.id}
-            item={item}
-            onVisibilityClick={onVisibilityClick}
-            showVisibilityButton={showVisibilityButton}
-          />
+          <div key={item.id} data-recap-blog-id={item.id}>
+            <AllBlogCard
+              item={item}
+              onVisibilityClick={onVisibilityClick}
+              showVisibilityButton={showVisibilityButton}
+            />
+          </div>
         ))}
       </div>
     </div>

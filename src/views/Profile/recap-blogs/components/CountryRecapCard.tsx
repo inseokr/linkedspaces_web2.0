@@ -74,16 +74,36 @@ export type CountryRecapItem = {
 type Props = {
   item: CountryRecapItem & { countryCode?: string };
   onSelect?: (countryCode: string) => void;
+  showTripSummary?: boolean;
 };
 
-function formatYears(years: number[]) {
-  const uniq = Array.from(new Set(years)).sort((a, b) => b - a);
-  return uniq.join(", ");
+function formatYearsSummary(years: number[]): {
+  display: string;
+  full: string;
+} {
+  const uniq = Array.from(new Set(years))
+    .map((y) => Number(y))
+    .filter((y) => Number.isFinite(y))
+    .sort((a, b) => b - a);
+
+  const full = uniq.join(", ");
+  if (uniq.length <= 3) return { display: full, full };
+
+  // Keep it short: "2026 · 2025 · +4"
+  const head = uniq.slice(0, 2).join(" · ");
+  const rest = uniq.length - 2;
+  return { display: `${head} · +${rest}`, full };
 }
 
-export default function CountryRecapCard({ item, onSelect }: Props) {
+export default function CountryRecapCard({
+  item,
+  onSelect,
+  // Default to hidden; caller opts-in (e.g. when a specific year is selected).
+  showTripSummary = false,
+}: Props) {
   const { src, unoptimized } = normalizeImageSrc(item.coverImageUrl);
   const code = (item.countryCode ?? item.id ?? "").toString().trim();
+  const yearsSummary = formatYearsSummary(item.years);
   return (
     <Link
       href={item.href}
@@ -121,9 +141,25 @@ export default function CountryRecapCard({ item, onSelect }: Props) {
           <div className="text-[24px] font-semibold tracking-[-0.4px] text-white drop-shadow">
             {item.countryName}
           </div>
-          <div className="mt-1 text-[13px] font-semibold text-white/90 drop-shadow">
-            {formatYears(item.years)}
-          </div>
+          {showTripSummary && (
+            <div className="mt-2 flex justify-center">
+              <div
+                className={[
+                  "max-w-[260px]",
+                  "truncate whitespace-nowrap",
+                  "rounded-full",
+                  "border border-white/20",
+                  "bg-black/35 px-3 py-1.5",
+                  "text-[12px] font-semibold leading-none text-white/90",
+                  "shadow-[0_10px_24px_rgba(0,0,0,0.25)]",
+                  "backdrop-blur-sm",
+                ].join(" ")}
+                title={yearsSummary.full}
+              >
+                {yearsSummary.display}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </Link>

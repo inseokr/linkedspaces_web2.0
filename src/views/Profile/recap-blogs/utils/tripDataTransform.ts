@@ -2,7 +2,6 @@ import type { Trip } from "@/views/Profile/recap-blogs/types";
 import type { PlaceVisitHistoryItem } from "@/api/user";
 import type { CountryRecapItem } from "@/views/Profile/recap-blogs/components/CountryRecapCard";
 import type { AllBlogCardItem } from "@/views/Profile/recap-blogs/components/RecapBlogCard";
-import { formatTripDateLabel } from "@/utils/formatTripDate";
 
 const DEFAULT_BLOG_COVER = "/images/recap/kr.png";
 const DEFAULT_RECAP_COVER = "/images/recap/kr.png";
@@ -98,18 +97,55 @@ function resolveTripCoverUrl(
   return fallback;
 }
 
+function formatMonthDayLabel(input: string): string {
+  const raw = String(input ?? "").trim();
+  if (!raw) return "";
+
+  const datePart = raw.split(" ")[0] ?? raw;
+  const m = /^(\d{4}):(\d{2}):(\d{2})$/.exec(datePart);
+  if (!m) return "";
+
+  const year = Number(m[1]);
+  const month = Number(m[2]);
+  const day = Number(m[3]);
+  if (
+    !Number.isFinite(year) ||
+    !Number.isFinite(month) ||
+    !Number.isFinite(day)
+  ) {
+    return "";
+  }
+
+  const dt = new Date(Date.UTC(year, month - 1, day));
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  }).format(dt);
+}
+
 export const transformToAllBlogItems = (
   trips: Trip[],
   args?: {
     username?: string;
     placeVisitHistory?: Array<PlaceVisitHistoryItem | undefined>;
+    /** "ALL" year tab: show year, otherwise omit year */
+    includeYearInDateLabel?: boolean;
   },
 ): AllBlogCardItem[] => {
   const username = args?.username;
+  const includeYearInDateLabel = args?.includeYearInDateLabel ?? true;
 
   return trips.map((trip) => {
     const title = trip.title || `${trip.country ?? "Unknown"} Trip`;
     const key = String(trip.blogKey);
+    const startMD = formatMonthDayLabel(trip.startTimeString ?? "");
+    const endMD = formatMonthDayLabel(trip.endTimeString ?? "");
+    const range = [startMD, endMD].filter(Boolean).join("-");
+    const yearText = String(trip.startingYear ?? "").trim();
+    const dateLabel = includeYearInDateLabel
+      ? [yearText, range].filter(Boolean).join(" ")
+      : range;
 
     return {
       id: key,
@@ -121,8 +157,7 @@ export const transformToAllBlogItems = (
       ),
       title,
       locationLabel: trip.country || "Unknown",
-      dateLabel:
-        `${trip.startingYear ?? ""} ${formatTripDateLabel(trip.startTimeString ?? "")}-${formatTripDateLabel(trip.endTimeString ?? "")}`.trim(),
+      dateLabel,
       isPublic: trip.privacyControl?.level !== "hidden",
     };
   });
