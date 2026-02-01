@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 
 import ConfirmModal from "@/components/ui/ConfirmModal";
+import PhotoLightbox from "@/components/ui/PhotoLightbox";
 import { idbGetBlob } from "@/views/Profile/Trip/edit/utils/imageIdb";
 import TextRow from "@/views/Profile/Trip/edit/components/TextRow";
 
@@ -330,81 +331,102 @@ function RecapPhotoCard({
     entry.captions?.[photoIndex] ??
     (photoIndex === 0 ? (entry.caption ?? "") : "");
   const canToggle = (captionText?.trim().length ?? 0) > 120;
+  const [lightboxOpen, setLightboxOpen] = useState(false);
   return (
-    <article
-      className={[
-        "w-full",
-        "overflow-hidden rounded-[28px] border border-black/15 bg-white shadow-sm",
-      ].join(" ")}
-    >
-      <div className="relative">
-        <div className="relative m-6 aspect-[16/9] overflow-hidden rounded-2xl bg-black/5">
-          <ResolvedImage
-            src={photoUrl}
-            alt={`${entry.placeName} photo ${photoIndex + 1}`}
-          />
-          <div className="absolute left-4 top-4 rounded-full bg-white/40 px-3 py-1 text-[14px] font-bold text-white backdrop-blur">
-            {photoIndex + 1}/{totalPhotos}
+    <>
+      <article
+        className={[
+          "w-full",
+          "overflow-hidden rounded-[28px] border border-black/15 bg-white shadow-sm",
+        ].join(" ")}
+      >
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setLightboxOpen(true)}
+            className="relative m-6 aspect-[16/9] w-[calc(100%-3rem)] overflow-hidden rounded-2xl bg-black/5 focus:outline-none focus:ring-2 focus:ring-black/30"
+            aria-label="Open photo"
+          >
+            <ResolvedImage
+              src={photoUrl}
+              alt={`${entry.placeName} photo ${photoIndex + 1}`}
+            />
+            <div className="absolute left-4 top-4 rounded-full bg-white/40 px-3 py-1 text-[14px] font-bold text-white backdrop-blur">
+              {photoIndex + 1}/{totalPhotos}
+            </div>
+          </button>
+        </div>
+
+        <div className="px-6 pb-4">
+          <div className="flex items-end justify-between gap-6">
+            <p
+              className={[
+                "text-[22px] leading-[1.35] text-black/85",
+                expanded ? "" : clampClass,
+              ].join(" ")}
+            >
+              {captionText}
+            </p>
+
+            {mode === "view" && canToggle && (
+              <button
+                type="button"
+                onClick={onToggleExpanded}
+                className="shrink-0 text-[18px] font-extrabold text-black hover:opacity-80"
+              >
+                {expanded ? "See Less" : "See More"}
+              </button>
+            )}
           </div>
         </div>
-      </div>
 
-      <div className="px-6 pb-4">
-        <div className="flex items-end justify-between gap-6">
-          <p
-            className={[
-              "text-[22px] leading-[1.35] text-black/85",
-              expanded ? "" : clampClass,
-            ].join(" ")}
-          >
-            {captionText}
-          </p>
-
-          {mode === "view" && canToggle && (
+        <div className="flex items-center justify-between border-t border-black/10 px-6 py-4">
+          <div className="flex items-center gap-5 text-black/70">
             <button
               type="button"
-              onClick={onToggleExpanded}
-              className="shrink-0 text-[18px] font-extrabold text-black hover:opacity-80"
+              className="inline-flex items-center gap-2 hover:text-black"
+              aria-label="Bookmark"
             >
-              {expanded ? "See Less" : "See More"}
+              <Bookmark className="h-6 w-6" />
             </button>
-          )}
-        </div>
-      </div>
-
-      <div className="flex items-center justify-between border-t border-black/10 px-6 py-4">
-        <div className="flex items-center gap-5 text-black/70">
-          <button
-            type="button"
-            className="inline-flex items-center gap-2 hover:text-black"
-            aria-label="Bookmark"
-          >
-            <Bookmark className="h-6 w-6" />
-          </button>
-          <button
-            type="button"
-            className="inline-flex items-center gap-2 hover:text-black"
-            aria-label="Copy link"
-          >
-            <Link2 className="h-6 w-6" />
-          </button>
-        </div>
-
-        <div className="flex items-center gap-6 text-[20px] font-semibold text-black/80">
-          <div className="inline-flex items-center gap-2">
-            <span>{entry.likeCount}</span>
-            <Heart className="h-6 w-6" />
+            <button
+              type="button"
+              className="inline-flex items-center gap-2 hover:text-black"
+              aria-label="Copy link"
+            >
+              <Link2 className="h-6 w-6" />
+            </button>
           </div>
-          <div className="inline-flex items-center gap-2">
-            <span>{entry.commentCount}</span>
-            <MessageSquare className="h-6 w-6" />
+
+          <div className="flex items-center gap-6 text-[20px] font-semibold text-black/80">
+            <div className="inline-flex items-center gap-2">
+              <span>{entry.likeCount}</span>
+              <Heart className="h-6 w-6" />
+            </div>
+            <div className="inline-flex items-center gap-2">
+              <span>{entry.commentCount}</span>
+              <MessageSquare className="h-6 w-6" />
+            </div>
+            <button
+              type="button"
+              aria-label="More"
+              className="hover:text-black"
+            >
+              <MoreVertical className="h-6 w-6" />
+            </button>
           </div>
-          <button type="button" aria-label="More" className="hover:text-black">
-            <MoreVertical className="h-6 w-6" />
-          </button>
         </div>
-      </div>
-    </article>
+      </article>
+
+      {lightboxOpen && (
+        <PhotoLightbox
+          photos={entry.photos}
+          initialIndex={photoIndex}
+          title={entry.placeName}
+          onClose={() => setLightboxOpen(false)}
+        />
+      )}
+    </>
   );
 }
 
