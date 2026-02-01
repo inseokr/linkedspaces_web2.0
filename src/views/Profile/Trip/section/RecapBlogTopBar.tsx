@@ -4,9 +4,6 @@ import React from "react";
 import RecapBlogBreadcrumb, {
   type Crumb,
 } from "@/views/Profile/Trip/component/RecapBlogCrumbBread";
-import RecapDayTabs, {
-  type DayTab,
-} from "@/views/Profile/Trip/component/RecapDayTabs";
 import Image from "next/image";
 import editIcon from "@/assets/icons/edit.svg";
 import shareIcon from "@/assets/icons/share.svg";
@@ -17,10 +14,6 @@ type Props = {
   onGoBack?: () => void;
 
   breadcrumbItems: Crumb[];
-
-  dayTabs: DayTab[];
-  activeDayId: string;
-  onDayChange: (id: string) => void;
 
   // 추가: 버튼 핸들러
   onEditBlog?: () => void;
@@ -37,9 +30,6 @@ export default function RecapBlogTopBar({
   title = "Recap Blog",
   onGoBack,
   breadcrumbItems,
-  dayTabs,
-  activeDayId,
-  onDayChange,
   onEditBlog,
   onShare,
   mode = "view",
@@ -98,33 +88,7 @@ export default function RecapBlogTopBar({
             />
           </div>
 
-          {/* Row 1, Col 2: Day tabs */}
-          <div className="justify-self-end">
-            <RecapDayTabs
-              tabs={dayTabs}
-              activeId={activeDayId}
-              onChange={onDayChange}
-            />
-          </div>
-
-          {/* Row 2, Col 1: Go Back + mobile breadcrumb */}
-          <div className="min-w-0">
-            <button
-              type="button"
-              onClick={onGoBack}
-              className={secondaryButtonClass}
-            >
-              Go Back
-            </button>
-
-            <RecapBlogBreadcrumb
-              items={breadcrumbItems}
-              className="mt-2 sm:hidden"
-            />
-          </div>
-
-          {/* Row 2, Col 2: Actions (Edit / Share) */}
-
+          {/* Row 1, Col 2: Actions (Edit / Share) */}
           <div className="justify-self-end flex items-center gap-2">
             {mode === "edit" ? (
               <>
@@ -155,10 +119,7 @@ export default function RecapBlogTopBar({
               <>
                 <button
                   type="button"
-                  onClick={() => {
-                    console.log("Edit clicked");
-                    onEditBlog?.();
-                  }}
+                  onClick={() => onEditBlog?.()}
                   className={secondaryButtonClass}
                 >
                   Edit Blog
@@ -173,6 +134,22 @@ export default function RecapBlogTopBar({
                 </button>
               </>
             )}
+          </div>
+
+          {/* Row 2, Col 1: Go Back + mobile breadcrumb */}
+          <div className="min-w-0">
+            <button
+              type="button"
+              onClick={onGoBack}
+              className={secondaryButtonClass}
+            >
+              Go Back
+            </button>
+
+            <RecapBlogBreadcrumb
+              items={breadcrumbItems}
+              className="mt-2 sm:hidden"
+            />
           </div>
         </div>
       </div>

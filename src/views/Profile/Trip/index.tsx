@@ -20,7 +20,9 @@ import { apiFetch } from "@/api/client";
 import type { TripRecapResponse } from "@/api/trips";
 
 import RecapBlogTopBar from "@/views/Profile/Trip/section/RecapBlogTopBar";
-import type { DayTab } from "@/views/Profile/Trip/component/RecapDayTabs";
+import RecapDayTabs, {
+  type DayTab,
+} from "@/views/Profile/Trip/component/RecapDayTabs";
 import type { Crumb } from "@/views/Profile/Trip/component/RecapBlogCrumbBread";
 import RecapBlogHero from "@/views/Profile/Trip/component/RecapBlogTopImage";
 
@@ -737,6 +739,16 @@ function OwnerTripRecapView({ userId, tripId }: TripRecapViewProps) {
                 activePlaceMarkerId={activeEntryId ?? undefined}
                 focusLatLng={focusLatLng}
                 onPlaceMarkerClick={focusByMarkerId}
+                overlayTopRight={
+                  <div className="rounded-full bg-white/70 backdrop-blur-md border border-white/50 px-2 py-2 shadow-sm">
+                    <RecapDayTabs
+                      tabs={dayTabs}
+                      activeId={activeDayId}
+                      onChange={(id) => handleDayChange(id, true)}
+                      className="max-w-[min(72vw,420px)] [&>button]:!h-7 [&>button]:!px-3 [&>button]:!text-[13px]"
+                    />
+                  </div>
+                }
               />
             </div>
           </section>

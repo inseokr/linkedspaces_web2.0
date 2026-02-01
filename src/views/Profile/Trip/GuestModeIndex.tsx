@@ -8,13 +8,12 @@ import React, {
   useState,
 } from "react";
 
-import GuestRecapTopBar from "./section/GuestModeTopBar";
 import RecapBlogHero from "./component/RecapBlogTopImage";
 import {
   RecapBlogDaySection,
   type RecapBlogPageData,
 } from "./component/RecapBlogPlace";
-import type { DayTab } from "./component/RecapDayTabs";
+import RecapDayTabs, { type DayTab } from "./component/RecapDayTabs";
 import RecapLoginBar from "./component/GuestRBLoginBar"; //추가
 
 import MapboxMap, {
@@ -1171,17 +1170,6 @@ export default function GuestRecapPage({ userId, tripId }: Props) {
       <div className="h-18" />
 
       <div className="p-3">
-        <div
-          className="fixed top-[110px] z-[90]"
-          style={{ right: "max(24px, calc((100vw - 1200px) / 2 + 24px))" }}
-        >
-          <GuestRecapTopBar
-            dayTabs={dayTabs}
-            activeDayId={activeDayId}
-            onDayChange={handleDayChange}
-          />
-        </div>
-
         <RecapBlogHero {...effectiveModel.hero} />
       </div>
 
@@ -1244,6 +1232,16 @@ export default function GuestRecapPage({ userId, tripId }: Props) {
               placeMarkers={activeDayMarkers}
               activePlaceMarkerId={activeEntryId ?? undefined}
               onPlaceMarkerClick={onMarkerClick}
+              overlayTopRight={
+                <div className="rounded-full bg-white/70 backdrop-blur-md border border-white/50 px-2 py-2 shadow-sm">
+                  <RecapDayTabs
+                    tabs={dayTabs}
+                    activeId={activeDayId}
+                    onChange={handleDayChange}
+                    className="max-w-[min(72vw,420px)] [&>button]:!h-7 [&>button]:!px-3 [&>button]:!text-[13px]"
+                  />
+                </div>
+              }
             />
           </div>
         </section>

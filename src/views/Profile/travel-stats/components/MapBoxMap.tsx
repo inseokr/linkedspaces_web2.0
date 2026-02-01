@@ -6,7 +6,14 @@
 "use client";
 
 import mapboxgl from "mapbox-gl";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { createRoot } from "react-dom/client";
 import CircleTripMarker from "@/views/Profile/recap-blogs/components/CircleTripMarker";
 
@@ -44,6 +51,11 @@ type Props = {
   placeMarkers?: MarkerData[];
   onPlaceMarkerClick?: (markerId: string) => void;
   activePlaceMarkerId?: string;
+
+  /** Optional UI rendered on top of the map. */
+  overlayTopLeft?: ReactNode;
+  /** Optional UI rendered on top of the map. */
+  overlayTopRight?: ReactNode;
 };
 
 function PlaceMarker({
@@ -180,6 +192,9 @@ export default function MapboxMap({
   placeMarkers = [],
   onPlaceMarkerClick,
   activePlaceMarkerId,
+
+  overlayTopLeft,
+  overlayTopRight,
 }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
@@ -870,11 +885,77 @@ export default function MapboxMap({
 
   if (!isMounted) {
     return (
-      <div
-        style={{ width: "100%", height: "100%", backgroundColor: "#f0f0f0" }}
-      />
+      <div style={{ position: "relative", width: "100%", height: "100%" }}>
+        <div
+          style={{ width: "100%", height: "100%", backgroundColor: "#f0f0f0" }}
+        />
+
+        {(overlayTopLeft || overlayTopRight) && (
+          <div
+            style={{ position: "absolute", inset: 0, pointerEvents: "none" }}
+          >
+            {overlayTopLeft && (
+              <div
+                style={{
+                  position: "absolute",
+                  top: 12,
+                  left: 12,
+                  pointerEvents: "auto",
+                }}
+              >
+                {overlayTopLeft}
+              </div>
+            )}
+            {overlayTopRight && (
+              <div
+                style={{
+                  position: "absolute",
+                  top: 12,
+                  right: 12,
+                  pointerEvents: "auto",
+                }}
+              >
+                {overlayTopRight}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     );
   }
 
-  return <div ref={containerRef} style={{ width: "100%", height: "100%" }} />;
+  return (
+    <div style={{ position: "relative", width: "100%", height: "100%" }}>
+      <div ref={containerRef} style={{ width: "100%", height: "100%" }} />
+
+      {(overlayTopLeft || overlayTopRight) && (
+        <div style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
+          {overlayTopLeft && (
+            <div
+              style={{
+                position: "absolute",
+                top: 12,
+                left: 12,
+                pointerEvents: "auto",
+              }}
+            >
+              {overlayTopLeft}
+            </div>
+          )}
+          {overlayTopRight && (
+            <div
+              style={{
+                position: "absolute",
+                top: 12,
+                right: 12,
+                pointerEvents: "auto",
+              }}
+            >
+              {overlayTopRight}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
 }

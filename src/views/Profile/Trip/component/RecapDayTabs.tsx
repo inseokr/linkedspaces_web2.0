@@ -12,6 +12,7 @@ type Props = {
   tabs: DayTab[];
   activeId: string;
   onChange: (id: string) => void;
+  size?: "md" | "sm";
   className?: string;
 };
 
@@ -19,10 +20,20 @@ export default function RecapDayTabs({
   tabs,
   activeId,
   onChange,
+  size = "md",
   className = "",
 }: Props) {
+  const baseButton =
+    size === "sm" ? "h-7 px-3 text-[13px]" : "h-8 px-4 text-[14px]";
+
   return (
-    <div className={["flex items-center gap-2", className].join(" ")}>
+    <div
+      className={[
+        "flex max-w-full items-center gap-2 overflow-x-auto",
+        "[-webkit-overflow-scrolling:touch]",
+        className,
+      ].join(" ")}
+    >
       {tabs.map((t) => {
         const active = t.id === activeId;
 
@@ -32,8 +43,9 @@ export default function RecapDayTabs({
             type="button"
             onClick={() => onChange(t.id)}
             className={[
-              "h-8 rounded-full px-4 text-[14px] font-semibold",
-              "transition",
+              "shrink-0 rounded-full font-semibold",
+              baseButton,
+              "transition-colors",
               active
                 ? "bg-[#0798FF] text-white shadow-sm"
                 : "bg-black/10 text-black/55 hover:bg-black/15",
