@@ -222,23 +222,36 @@ function RecapPhotoCarousel({
 }) {
   const total = entry.photos.length;
   const [activeIdx, setActiveIdx] = useState(0);
+  const scrollerRef = useRef<HTMLDivElement | null>(null);
+  const userNavRef = useRef(false);
   const itemRefs = useRef<Array<HTMLDivElement | null>>([]);
 
   useEffect(() => {
-    itemRefs.current[activeIdx]?.scrollIntoView({
-      behavior: "smooth",
-      block: "nearest",
-      inline: "start",
-    });
+    // Important: don't scroll the *page*/outer containers.
+    // We only want to nudge the horizontal carousel, and only after user nav.
+    if (!userNavRef.current) return;
+
+    const scroller = scrollerRef.current;
+    const item = itemRefs.current[activeIdx];
+    if (!scroller || !item) return;
+
+    scroller.scrollTo({ left: item.offsetLeft, behavior: "smooth" });
   }, [activeIdx]);
 
-  const prev = () => setActiveIdx((i) => (i - 1 + total) % total);
-  const next = () => setActiveIdx((i) => (i + 1) % total);
+  const prev = () => {
+    userNavRef.current = true;
+    setActiveIdx((i) => (i - 1 + total) % total);
+  };
+  const next = () => {
+    userNavRef.current = true;
+    setActiveIdx((i) => (i + 1) % total);
+  };
   const showNav = total > 1;
 
   return (
     <div className="relative w-full mx-auto max-w-full lg:max-w-[920px] 2xl:max-w-[1100px]">
       <div
+        ref={scrollerRef}
         className={[
           "flex w-full min-w-0 overflow-x-auto",
           "snap-x snap-mandatory",

@@ -601,7 +601,7 @@ function OwnerTripRecapView({ userId, tripId }: TripRecapViewProps) {
   }, [TOPBAR_OFFSET_PX, userInteracted, markers]);
 
   /** render */
-  if (loading) return <div className="p-6">Loading recap…</div>;
+  if (loading) return <div className="p-6">Loading recap blog...</div>;
 
   if (error) {
     return (
