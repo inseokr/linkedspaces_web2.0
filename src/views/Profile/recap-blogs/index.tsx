@@ -78,15 +78,48 @@ function pickTripCoordinate(
   trip: Trip,
   placeVisitHistory: Array<any | undefined>,
 ): { lat: number; lng: number; label?: string } | null {
+  // 0) If placeVisitHistory isn't available (Safari quota fallback),
+  // fall back to the trip's own coordinate (if present).
+  const tripCoord = (trip as any)?.coordinate;
+  const tripLat = Number(tripCoord?.latitude);
+  const tripLng = Number(tripCoord?.longitude);
+
   const placeList = trip.placeList;
-  if (!Array.isArray(placeList) || placeList.length === 0) return null;
+  if (!Array.isArray(placeList) || placeList.length === 0) {
+    if (Number.isFinite(tripLat) && Number.isFinite(tripLng)) {
+      return {
+        lat: tripLat,
+        lng: tripLng,
+        label: trip.title?.trim() || trip.country || undefined,
+      };
+    }
+    return null;
+  }
 
   const rawIdx = (placeList[0] as any)?.placeIndex;
   const idx = Number(rawIdx);
-  if (!Number.isFinite(idx)) return null;
+  if (!Number.isFinite(idx)) {
+    if (Number.isFinite(tripLat) && Number.isFinite(tripLng)) {
+      return {
+        lat: tripLat,
+        lng: tripLng,
+        label: trip.title?.trim() || trip.country || undefined,
+      };
+    }
+    return null;
+  }
 
   const place = placeVisitHistory[idx];
-  if (!place) return null;
+  if (!place) {
+    if (Number.isFinite(tripLat) && Number.isFinite(tripLng)) {
+      return {
+        lat: tripLat,
+        lng: tripLng,
+        label: trip.title?.trim() || trip.country || undefined,
+      };
+    }
+    return null;
+  }
 
   // label 후보(장소명)
   const placeName: string | undefined = place?.placeName || place?.visitedCity;

@@ -94,13 +94,91 @@ export type User = {
 
 const USER_KEY = "user";
 
+function safeSetStorageItem(key: string, value: string) {
+  if (typeof window === "undefined") return;
+  // Safari (especially Private Browsing) can throw on localStorage access.
+  try {
+    window.localStorage.setItem(key, value);
+    return;
+  } catch {
+    // ignore and try sessionStorage fallback
+  }
+  try {
+    window.sessionStorage.setItem(key, value);
+  } catch {
+    // ignore
+  }
+}
+
+function safeGetStorageItem(key: string): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const v = window.localStorage.getItem(key);
+    if (v != null) return v;
+  } catch {
+    // ignore and try sessionStorage
+  }
+  try {
+    return window.sessionStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function safeRemoveStorageItem(key: string) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem(key);
+  } catch {
+    // ignore
+  }
+  try {
+    window.sessionStorage.removeItem(key);
+  } catch {
+    // ignore
+  }
+}
+
+function toSlimCachedUser(user: User): User {
+  // Keep only what most UI needs (sidebar/menu/stats/badges/recap list).
+  // This is used as a fallback when the full user object exceeds storage quota.
+  return {
+    _id: user._id,
+    username: user.username,
+    profile_picture: user.profile_picture,
+    countriesVisited: user.countriesVisited ?? [],
+    citiesVisited: user.citiesVisited ?? [],
+    badgeProgress: user.badgeProgress,
+    // Recap Blogs relies on `user.trips` to render the list.
+    // This is typically much smaller than `placeVisitHistory`.
+    trips: user.trips ?? [],
+  };
+}
+
 export function setCachedUser(user: User) {
-  localStorage.setItem(USER_KEY, JSON.stringify(user));
+  // Cache is a best-effort optimization. Never block login on storage failures.
+  try {
+    safeSetStorageItem(USER_KEY, JSON.stringify(user));
+  } catch {
+    // JSON stringify could theoretically fail; ignore.
+  }
+
+  // If the full payload fails in Safari with QuotaExceededError, fallback to a slim cache.
+  // (Note: safeSetStorageItem already swallows storage errors, so we retry with a smaller object
+  // to improve the chance the cache exists for UI that reads it.)
+  try {
+    const existing = safeGetStorageItem(USER_KEY);
+    if (existing == null) {
+      safeSetStorageItem(USER_KEY, JSON.stringify(toSlimCachedUser(user)));
+    }
+  } catch {
+    // ignore
+  }
 }
 
 export function getCachedUser(): User | null {
   try {
-    const raw = localStorage.getItem(USER_KEY);
+    const raw = safeGetStorageItem(USER_KEY);
     return raw ? (JSON.parse(raw) as User) : null;
   } catch {
     return null;
@@ -108,7 +186,7 @@ export function getCachedUser(): User | null {
 }
 
 export function clearCachedUser() {
-  localStorage.removeItem(USER_KEY);
+  safeRemoveStorageItem(USER_KEY);
 }
 
 /**

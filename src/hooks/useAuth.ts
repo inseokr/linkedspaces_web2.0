@@ -11,9 +11,18 @@ const TOKEN_KEY = "token";
  * @returns string | null
  */
 function getSnapshot() {
-  return typeof window !== "undefined"
-    ? window.localStorage.getItem(TOKEN_KEY)
-    : null;
+  if (typeof window === "undefined") return null;
+  try {
+    const t = window.localStorage.getItem(TOKEN_KEY);
+    if (t) return t;
+  } catch {
+    // ignore and try sessionStorage
+  }
+  try {
+    return window.sessionStorage.getItem(TOKEN_KEY);
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -52,7 +61,16 @@ export function useAuth() {
   const logout = () => {
     // 1. Clear the token
     if (typeof window !== "undefined") {
-      window.localStorage.removeItem(TOKEN_KEY);
+      try {
+        window.localStorage.removeItem(TOKEN_KEY);
+      } catch {
+        // ignore
+      }
+      try {
+        window.sessionStorage.removeItem(TOKEN_KEY);
+      } catch {
+        // ignore
+      }
     }
 
     // 2. Clear the cached user data

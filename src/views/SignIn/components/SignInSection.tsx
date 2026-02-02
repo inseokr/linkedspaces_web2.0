@@ -15,34 +15,59 @@ export default function SignInSection() {
   const [password, setPassword] = useState("");
   const router = useRouter();
 
+  const persistTokenBestEffort = (token: string) => {
+    // Safari (especially Private Browsing) can throw QuotaExceededError on localStorage writes.
+    try {
+      window.localStorage.setItem("token", token);
+      return;
+    } catch {
+      // ignore and try sessionStorage fallback
+    }
+    try {
+      window.sessionStorage.setItem("token", token);
+    } catch {
+      // ignore
+    }
+  };
+
   // Google login
   const handleGoogleLogin = async (response: any) => {
-    const idToken = response.credential || response.tokenId;
-    if (!idToken) return;
+    try {
+      const idToken = response.credential || response.tokenId;
+      if (!idToken) return;
 
-    const data = await loginWithGoogle(idToken);
+      const data = await loginWithGoogle(idToken);
 
-    if (isLoginSuccess(data)) {
-      localStorage.setItem("token", data.token);
-      setCachedUser(data.user);
-      notifyAuthChanged();
-      router.push("/profile/travel-stats");
-    } else {
-      alert("Failed to log in with Google.");
+      if (isLoginSuccess(data)) {
+        persistTokenBestEffort(data.token);
+        setCachedUser(data.user);
+        notifyAuthChanged();
+        router.push("/profile/travel-stats");
+      } else {
+        alert("Failed to log in with Google.");
+      }
+    } catch (e) {
+      console.error("[login] google failed", e);
+      alert("Failed to log in. Please try again.");
     }
   };
 
   // JWT login button handler
   const handleLogin = async () => {
-    const data = await loginWithJwt(username, password);
+    try {
+      const data = await loginWithJwt(username, password);
 
-    if (isLoginSuccess(data)) {
-      localStorage.setItem("token", data.token);
-      setCachedUser(data.user);
-      notifyAuthChanged();
-      router.push("/profile/travel-stats");
-    } else {
-      alert("check username or password.");
+      if (isLoginSuccess(data)) {
+        persistTokenBestEffort(data.token);
+        setCachedUser(data.user);
+        notifyAuthChanged();
+        router.push("/profile/travel-stats");
+      } else {
+        alert("check username or password.");
+      }
+    } catch (e) {
+      console.error("[login] jwt failed", e);
+      alert("Failed to log in. Please try again.");
     }
   };
 

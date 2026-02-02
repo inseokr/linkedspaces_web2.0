@@ -131,7 +131,19 @@ export type UpdateTripCoverPhotoRequest = {
 export async function updateTripCoverPhoto(body: UpdateTripCoverPhotoRequest) {
   const token =
     typeof window !== "undefined"
-      ? (window.localStorage.getItem("token") ?? undefined)
+      ? (() => {
+          try {
+            const t = window.localStorage.getItem("token");
+            if (t) return t;
+          } catch {
+            // ignore and try sessionStorage
+          }
+          try {
+            return window.sessionStorage.getItem("token") ?? undefined;
+          } catch {
+            return undefined;
+          }
+        })()
       : undefined;
 
   const res = await apiFetch<SimpleResult>(`/trips/update-cover-photo`, {
