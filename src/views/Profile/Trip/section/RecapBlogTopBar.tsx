@@ -79,7 +79,7 @@ export default function RecapBlogTopBar({
         className,
       ].join(" ")}
     >
-      <div className="mx-auto max-w-[1200px] px-6 py-4">
+      <div className="w-full px-6 py-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           {/* Left: Title */}
           <div className="min-w-0 flex items-center gap-3">
