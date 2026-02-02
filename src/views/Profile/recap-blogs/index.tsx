@@ -370,6 +370,22 @@ export default function ProfileRecapBlogsView() {
     else router.push(`/trip/${blogKey}`);
   };
 
+  const headerAction =
+    mode === "recap" && view === "grid" ? (
+      <ViewAllBlogsButton onClick={() => setMode("allBlogs")}>
+        View All Blogs
+      </ViewAllBlogsButton>
+    ) : (
+      <ViewAllBlogsButton
+        onClick={() => {
+          if (view === "map") backToGrid();
+          else setMode("recap");
+        }}
+      >
+        Go Back
+      </ViewAllBlogsButton>
+    );
+
   const renderGridOrMap = () => {
     // map view
     if (view === "map") {
@@ -424,6 +440,14 @@ export default function ProfileRecapBlogsView() {
                 markers={mapMarkers}
                 onMarkerClick={(markerId) => goToBlogDetail(markerId)}
                 activeMarkerId={topVisibleBlogId}
+                overlayTopRight={
+                  <RecapYearTabs
+                    value={selectedYear}
+                    years={availableYears}
+                    onChange={setSelectedYear}
+                    className="border border-black/10 shadow-[0_12px_26px_rgba(0,0,0,0.16)]"
+                  />
+                }
               />
             </div>
           </section>
@@ -490,31 +514,18 @@ export default function ProfileRecapBlogsView() {
                   Building memories around the world
                 </p>
               </div>
-
-              <div className="ml-6">
-                {mode === "recap" && view === "grid" ? (
-                  <ViewAllBlogsButton onClick={() => setMode("allBlogs")}>
-                    View All Blogs
-                  </ViewAllBlogsButton>
-                ) : (
-                  <ViewAllBlogsButton
-                    onClick={() => {
-                      if (view === "map") backToGrid();
-                      else setMode("recap");
-                    }}
-                  >
-                    Go Back
-                  </ViewAllBlogsButton>
-                )}
-              </div>
             </div>
 
-            <RecapYearTabs
-              value={selectedYear}
-              years={availableYears}
-              onChange={setSelectedYear}
-              className="mr-6"
-            />
+            <div className="mr-6 flex flex-col items-end gap-3">
+              {headerAction}
+              {view !== "map" && (
+                <RecapYearTabs
+                  value={selectedYear}
+                  years={availableYears}
+                  onChange={setSelectedYear}
+                />
+              )}
+            </div>
           </div>
         </div>
       </div>
