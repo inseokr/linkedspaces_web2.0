@@ -8,6 +8,7 @@
  * Note: localStorage is client-only. Avoid using getCachedUser() during SSR renders.
  */
 import { Trip } from "./trips";
+import { apiFetch } from "./client";
 
 export type CountryVisited = {
   _id: string;
@@ -122,4 +123,30 @@ export function setCachedBadgeProgress(badgeProgress: BadgeProgress) {
     ...existing,
     badgeProgress,
   });
+}
+
+export type UpdatePlaceVisitHistoryStoryRequest = {
+  placeKey: string;
+  /** If omitted/null => updates place-level story. */
+  photoIndex?: number | null;
+  /** Allow empty string to clear. */
+  storyText: string;
+};
+
+type SimpleResult = { result: "OK" | "FAIL"; reason?: string };
+
+export async function updatePlaceVisitHistoryStory(
+  body: UpdatePlaceVisitHistoryStoryRequest,
+) {
+  console.log("[updatePlaceVisitHistoryStory] body", JSON.stringify(body));
+  const res = await apiFetch<SimpleResult>(`/placeVisitHistory/story`, {
+    method: "POST",
+    body,
+    // backend uses req.user (session cookie)
+    credentials: "include",
+  });
+
+  if (!res || res.result !== "OK") {
+    throw new Error(res?.reason || "Failed to update story");
+  }
 }

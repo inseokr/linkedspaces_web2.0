@@ -14,14 +14,12 @@ import type { DayTab } from "@/views/Profile/Trip/component/RecapDayTabs";
 import type { RecapEditDraft, PlaceDraft } from "./types/editTypes";
 import { draftFromPageModel } from "./utils/editMappers";
 import { loadDraft, saveDraft, clearDraft } from "./utils/draftStorage";
+import { updatePlaceVisitHistoryStory } from "@/api/user";
 
 import ImageFieldEditor from "./components/ImageFieldEditor";
 import TextRow from "./components/TextRow";
 import deleteIcon from "@/assets/icons/delete.svg";
-import {
-  RecapBlogDaySection,
-  type RecapEntry,
-} from "@/views/Profile/Trip/component/RecapBlogPlace";
+import { RecapBlogDaySection } from "@/views/Profile/Trip/component/RecapBlogPlace";
 import {
   idbPutBlob,
   makeImageKey,
@@ -44,6 +42,21 @@ export default function TripRecapEditView({
   const [openRemoveBlog, setOpenRemoveBlog] = useState(false);
   // draft
   const [draft, setDraft] = useState<RecapEditDraft | null>(null);
+  const draftRef = useRef<RecapEditDraft | null>(null);
+  useEffect(() => {
+    draftRef.current = draft;
+  }, [draft]);
+
+  // Debounced story saves (avoid firing on every keystroke)
+  const storySaveTimersRef = useRef<Record<string, number>>({});
+  useEffect(() => {
+    return () => {
+      for (const t of Object.values(storySaveTimersRef.current)) {
+        window.clearTimeout(t);
+      }
+      storySaveTimersRef.current = {};
+    };
+  }, []);
 
   // day scroll refs
   const daySectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -199,6 +212,30 @@ export default function TripRecapEditView({
     photoIndex: number,
     next: string,
   ) => {
+    // Persist to DB (photo-level story) via backend API
+    const placeKey =
+      draftRef.current?.days
+        ?.find((d) => d.id === dayId)
+        ?.places?.find((p) => p.id === placeId)?.placeKey ?? null;
+
+    if (placeKey) {
+      const timerKey = `${placeKey}:${photoIndex}`;
+      const existing = storySaveTimersRef.current[timerKey];
+      if (existing) window.clearTimeout(existing);
+
+      storySaveTimersRef.current[timerKey] = window.setTimeout(async () => {
+        try {
+          await updatePlaceVisitHistoryStory({
+            placeKey,
+            photoIndex,
+            storyText: next,
+          });
+        } catch (err) {
+          console.warn("Failed to save story:", err);
+        }
+      }, 650);
+    }
+
     updatePlaceInDay(dayId, placeId, (p) => {
       const photosLen = (p.photos ?? []).length;
       const captions = Array.from(
@@ -254,23 +291,6 @@ export default function TripRecapEditView({
     });
   };
 
-  /** 7) map place draft -> recap entry (UI 컴포넌트가 요구하는 shape) */
-  const placeToEntry = (p: PlaceDraft): RecapEntry => {
-    return {
-      id: p.id,
-      placeName: (p as any).placeName ?? (p as any).title ?? "Place",
-      timeRangeText: (p as any).timeRangeText ?? (p as any).time ?? "",
-      categoryLabel: (p as any).categoryLabel ?? (p as any).category,
-      liked: (p as any).liked ?? false,
-      likeCount: (p as any).likeCount ?? 0,
-      commentCount: (p as any).commentCount ?? 0,
-      photos: (p as any).photos ?? [],
-      captions: (p as any).captions ?? [],
-      caption: (p as any).caption ?? "",
-      coordinate: (p as any).coordinate,
-    };
-  };
-
   /** render states */
   if (loading) return <div className="p-6">Loading…</div>;
 
@@ -293,7 +313,7 @@ export default function TripRecapEditView({
         breadcrumbItems={breadcrumbItems}
         dayTabs={dayTabs}
         activeDayId={dayTabs[0]?.id ?? "day-1"} // edit에선 단순 표시용
-        onDayChange={(id) => scrollToDay(id)}
+        onDayChange={(id: string) => scrollToDay(id)}
         onGoBack={() => window.history.back()}
         onCloseEdit={handleClose}
         onUpdate={handleUpdate}
@@ -385,6 +405,7 @@ export default function TripRecapEditView({
                 mode="edit"
                 entries={d.places.map((p) => ({
                   id: p.id,
+                  placeKey: p.placeKey,
                   placeName: p.placeName,
                   timeRangeText: p.timeRangeText ?? "",
                   categoryLabel: p.categoryLabel ?? undefined,

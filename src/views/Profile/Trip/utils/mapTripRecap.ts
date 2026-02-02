@@ -111,6 +111,7 @@ function mapDayFromApi(d: TripRecapDay, idx: number): RecapDay {
 
 function mapPlaceToEntry(p: TripRecapPlace, fallbackId: string): RecapEntry {
   const id = fallbackId; // trip-recap place에는 id/_id가 보장되지 않아서 안전하게 fallback 사용
+  const placeKey = p.digitizedTime || fallbackId;
 
   const placeName = p.placeName || "Place";
 
@@ -118,7 +119,10 @@ function mapPlaceToEntry(p: TripRecapPlace, fallbackId: string): RecapEntry {
   const selectedPhoto =
     photoList.find((x: any) => x?.selected) ?? photoList[0] ?? null;
 
-  const caption = selectedPhoto?.story ?? p.story ?? "";
+  const captions = photoList.map((x: any) =>
+    typeof x?.story === "string" ? x.story : "",
+  );
+  const caption = selectedPhoto?.story ?? p.story ?? captions[0] ?? "";
 
   //  photos: normalizeImageSrc로 /public 제거 + host 붙인 "최종 src"만 넘김
   const photos = photoList
@@ -148,6 +152,7 @@ function mapPlaceToEntry(p: TripRecapPlace, fallbackId: string): RecapEntry {
 
   return {
     id,
+    placeKey,
     placeName,
     timeRangeText,
     categoryLabel,
@@ -155,6 +160,7 @@ function mapPlaceToEntry(p: TripRecapPlace, fallbackId: string): RecapEntry {
     likeCount,
     commentCount,
     caption,
+    captions,
     photos,
     coordinate,
   };

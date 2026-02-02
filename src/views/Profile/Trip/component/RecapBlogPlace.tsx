@@ -25,6 +25,11 @@ import TextRow from "@/views/Profile/Trip/edit/components/TextRow";
  *  ---------------------------- */
 export type RecapEntry = {
   id: string;
+  /**
+   * Backend identifier used by /placeVisitHistory/story.
+   * Typically equals PlaceVisitHistoryItem.visitedTimeDigitized (often same as recap place digitizedTime).
+   */
+  placeKey?: string;
   placeName: string;
   timeRangeText: string;
   categoryLabel?: string;

@@ -4,6 +4,9 @@ import React from "react";
 import RecapBlogBreadcrumb, {
   type Crumb,
 } from "@/views/Profile/Trip/component/RecapBlogCrumbBread";
+import RecapDayTabs, {
+  type DayTab,
+} from "@/views/Profile/Trip/component/RecapDayTabs";
 import Image from "next/image";
 import editIcon from "@/assets/icons/edit.svg";
 import shareIcon from "@/assets/icons/share.svg";
@@ -14,6 +17,11 @@ type Props = {
   onGoBack?: () => void;
 
   breadcrumbItems: Crumb[];
+
+  // optional day tabs (mainly for edit flows)
+  dayTabs?: DayTab[];
+  activeDayId?: string;
+  onDayChange?: (id: string) => void;
 
   // 추가: 버튼 핸들러
   onEditBlog?: () => void;
@@ -30,6 +38,9 @@ export default function RecapBlogTopBar({
   title = "Recap Blog",
   onGoBack,
   breadcrumbItems,
+  dayTabs,
+  activeDayId,
+  onDayChange,
   onEditBlog,
   onShare,
   mode = "view",
@@ -152,6 +163,16 @@ export default function RecapBlogTopBar({
             />
           </div>
         </div>
+
+        {mode === "edit" && dayTabs?.length && onDayChange && (
+          <div className="mt-4">
+            <RecapDayTabs
+              tabs={dayTabs}
+              activeId={activeDayId ?? dayTabs[0]?.id ?? "day-1"}
+              onChange={onDayChange}
+            />
+          </div>
+        )}
       </div>
     </header>
   );

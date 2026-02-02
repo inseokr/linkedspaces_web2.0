@@ -5,6 +5,8 @@ export type ImageValue =
 
 export type PlaceDraft = {
   id: string;
+  /** Backend identifier for /placeVisitHistory/story (usually digitizedTime). */
+  placeKey: string;
   placeName: string;
   timeRangeText?: string;
   categoryLabel?: string;
