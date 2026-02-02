@@ -149,8 +149,9 @@ export async function updateTripCoverPhoto(body: UpdateTripCoverPhotoRequest) {
   const res = await apiFetch<SimpleResult>(`/trips/update-cover-photo`, {
     method: "POST",
     body,
-    // Some endpoints use req.user(session); some use Bearer token — send both when available.
-    credentials: "include",
+    // NOTE: Do NOT send credentials cross-origin.
+    // If the backend returns `Access-Control-Allow-Origin: *`, browsers will reject any
+    // credentialed (cookie) request. This endpoint should rely on the Bearer token instead.
     token,
   });
 

@@ -217,11 +217,29 @@ export async function updatePlaceVisitHistoryStory(
   body: UpdatePlaceVisitHistoryStoryRequest,
 ) {
   console.log("[updatePlaceVisitHistoryStory] body", JSON.stringify(body));
+  const token =
+    typeof window !== "undefined"
+      ? (() => {
+          try {
+            const t = window.localStorage.getItem("token");
+            if (t) return t;
+          } catch {
+            // ignore and try sessionStorage
+          }
+          try {
+            return window.sessionStorage.getItem("token") ?? undefined;
+          } catch {
+            return undefined;
+          }
+        })()
+      : undefined;
   const res = await apiFetch<SimpleResult>(`/placeVisitHistory/story`, {
     method: "POST",
     body,
-    // backend uses req.user (session cookie)
-    credentials: "include",
+    // NOTE: Do NOT send credentials cross-origin.
+    // If the backend returns `Access-Control-Allow-Origin: *`, browsers will reject any
+    // credentialed (cookie) request. This endpoint should rely on the Bearer token instead.
+    token,
   });
 
   if (!res || res.result !== "OK") {

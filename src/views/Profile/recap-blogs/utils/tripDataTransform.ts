@@ -41,15 +41,23 @@ function pickCoverFromPlaceVisitHistory(
     const photos = place?.photoList;
     if (!Array.isArray(photos) || photos.length === 0) continue;
 
-    const picked = photos.find((p) => {
+    // Prefer an explicitly selected cloud photo, otherwise use the first cloud photo.
+    // ("cloud" here = non-local URI; never use file:// on the web)
+    const selected = photos.find((p) => {
       const uri = p?.uri;
       if (!uri) return false;
       if (uri.includes("file://")) return false;
-      if (p.selected === false) return false;
+      return p.selected === true;
+    });
+    if (selected?.uri) return selected.uri;
+
+    const firstCloud = photos.find((p) => {
+      const uri = p?.uri;
+      if (!uri) return false;
+      if (uri.includes("file://")) return false;
       return true;
     });
-
-    if (picked?.uri) return picked.uri;
+    if (firstCloud?.uri) return firstCloud.uri;
   }
 
   return null;
@@ -164,10 +172,12 @@ function resolveTripCoverUrl(
   placeVisitHistory?: Array<PlaceVisitHistoryItem | undefined>,
   fallback = DEFAULT_BLOG_COVER,
 ) {
-  const explicit = trip.coverPhotoUri;
-
-  if (typeof explicit === "string" && explicit.trim().length > 0) {
-    return toAbsoluteAssetUrl(explicit) || fallback;
+  const explicitRaw =
+    typeof trip.coverPhotoUri === "string" ? trip.coverPhotoUri.trim() : "";
+  if (explicitRaw) {
+    // If coverPhotoUri exists but isn't usable (e.g. file://), fall through to "first cloud photo".
+    const abs = toAbsoluteAssetUrl(explicitRaw);
+    if (abs) return abs;
   }
 
   const fromPlaces = pickCoverFromPlaceVisitHistory(trip, placeVisitHistory);
