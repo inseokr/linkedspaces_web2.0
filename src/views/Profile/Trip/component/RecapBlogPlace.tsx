@@ -465,6 +465,9 @@ function RecapPhotoEditList({
     });
   }, [entry.photos.length, entry.captions, entry.caption]);
 
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
+
   return (
     <>
       <div className="space-y-4">
@@ -479,9 +482,22 @@ function RecapPhotoEditList({
             timeLabel={entry.timeRangeText}
             onCaptionChange={onCaptionChange}
             onReplacePhoto={onReplacePhoto}
+            onOpenPhoto={() => {
+              setLightboxIndex(idx);
+              setLightboxOpen(true);
+            }}
           />
         ))}
       </div>
+
+      {lightboxOpen && (
+        <PhotoLightbox
+          photos={entry.photos}
+          initialIndex={lightboxIndex}
+          title={entry.placeName}
+          onClose={() => setLightboxOpen(false)}
+        />
+      )}
     </>
   );
 }
@@ -495,6 +511,7 @@ function PhotoCaptionRow({
   timeLabel,
   onCaptionChange,
   onReplacePhoto,
+  onOpenPhoto,
 }: {
   entryId: string;
   photoUrl: string;
@@ -504,30 +521,47 @@ function PhotoCaptionRow({
   timeLabel?: string;
   onCaptionChange?: (entryId: string, photoIndex: number, next: string) => void;
   onReplacePhoto?: (entryId: string, photoIndex: number, file: File) => void;
+  onOpenPhoto: () => void;
 }) {
   const fileRef = useRef<HTMLInputElement | null>(null);
 
   return (
     <div className="flex gap-4 items-center">
-      <button
-        type="button"
-        className="relative h-[150px] w-[150px] shrink-0 overflow-hidden rounded-2xl bg-black/10"
-        onClick={() => fileRef.current?.click()}
-        aria-label={`Replace photo ${index + 1}`}
-      >
-        <ResolvedImage src={photoUrl} alt="" />
-        <div className="absolute left-2 top-2 rounded-full bg-white/40 px-2 py-0.5 text-[12px] font-bold text-white backdrop-blur">
+      <div className="relative h-[150px] w-[150px] shrink-0 overflow-hidden rounded-2xl bg-black/10">
+        <button
+          type="button"
+          className="absolute inset-0"
+          onClick={onOpenPhoto}
+          aria-label={`Open photo ${index + 1} in viewer`}
+        >
+          <ResolvedImage src={photoUrl} alt="" />
+        </button>
+
+        <div className="pointer-events-none absolute left-2 top-2 rounded-full bg-white/40 px-2 py-0.5 text-[12px] font-bold text-white backdrop-blur">
           {index + 1}/{total}
         </div>
+
         {!!timeLabel?.trim() && (
           <div
-            className="absolute bottom-2 right-2 max-w-[90%] truncate rounded-full bg-black/45 px-2 py-0.5 text-[12px] font-bold text-white backdrop-blur"
+            className="pointer-events-none absolute bottom-2 right-2 max-w-[90%] truncate rounded-full bg-black/45 px-2 py-0.5 text-[12px] font-bold text-white backdrop-blur"
             title={timeLabel}
           >
             {timeLabel}
           </div>
         )}
-      </button>
+
+        <button
+          type="button"
+          className="absolute bottom-2 left-2 rounded-full bg-white/70 px-2 py-1 text-[12px] font-bold text-black/80 backdrop-blur hover:bg-white"
+          onClick={(e) => {
+            e.stopPropagation();
+            fileRef.current?.click();
+          }}
+          aria-label={`Replace photo ${index + 1}`}
+        >
+          Replace
+        </button>
+      </div>
 
       <input
         ref={fileRef}
