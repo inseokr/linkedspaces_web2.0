@@ -18,11 +18,14 @@ export default function ImageFieldEditor({
   onChange,
   userId,
   tripId,
+  onOpenGallery,
 }: {
   value: ImageValue;
   onChange: (v: ImageValue) => void;
   userId: string;
   tripId: string;
+  /** Optional: override "Change" to open a trip photo gallery instead of file picker. */
+  onOpenGallery?: () => void;
 }) {
   const inputRef = useRef<HTMLInputElement | null>(null);
 
@@ -151,6 +154,8 @@ export default function ImageFieldEditor({
     onChange({ kind: "remove", reason: "user" });
   };
 
+  const hasGallery = typeof onOpenGallery === "function";
+
   return (
     <div className="rounded-3xl border border-black/10 p-4">
       <div className="flex flex-wrap items-center gap-12">
@@ -177,10 +182,22 @@ export default function ImageFieldEditor({
             radius="full"
             variant="neutral"
             className="h-10 px-6 text-lg font-bold"
-            onClick={handlePick}
+            onClick={hasGallery ? onOpenGallery : handlePick}
           >
             Change
           </Button>
+
+          {hasGallery && (
+            <Button
+              type="button"
+              radius="full"
+              variant="neutral"
+              className="h-10 px-6 text-lg font-bold"
+              onClick={handlePick}
+            >
+              Upload
+            </Button>
+          )}
 
           <Button
             type="button"

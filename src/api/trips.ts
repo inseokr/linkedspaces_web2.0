@@ -1,4 +1,5 @@
 // trips.ts
+import { apiFetch } from "@/api/client";
 
 /** --------------------------------
  *  Shared / User Trips (summary)
@@ -115,3 +116,33 @@ export type TripRecapResponse = {
   };
   days: TripRecapDay[];
 };
+
+type SimpleResult = { result: "OK" | "FAIL"; reason?: string };
+
+export type UpdateTripCoverPhotoRequest = {
+  blogKey: number;
+  photoUri: string | null;
+};
+
+/**
+ * Update trip cover photo (server-side).
+ * Backend expects: { blogKey, photoUri }
+ */
+export async function updateTripCoverPhoto(body: UpdateTripCoverPhotoRequest) {
+  const token =
+    typeof window !== "undefined"
+      ? (window.localStorage.getItem("token") ?? undefined)
+      : undefined;
+
+  const res = await apiFetch<SimpleResult>(`/trips/update-cover-photo`, {
+    method: "POST",
+    body,
+    // Some endpoints use req.user(session); some use Bearer token — send both when available.
+    credentials: "include",
+    token,
+  });
+
+  if (!res || res.result !== "OK") {
+    throw new Error(res?.reason || "Failed to update cover photo");
+  }
+}

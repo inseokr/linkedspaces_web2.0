@@ -4,7 +4,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { apiFetch } from "@/api/client";
-import type { TripRecapResponse } from "@/api/trips";
+import { updateTripCoverPhoto, type TripRecapResponse } from "@/api/trips";
 import { mapTripRecapToPageModel } from "@/views/Profile/Trip/utils/mapTripRecap";
 
 import RecapBlogTopBar from "@/views/Profile/Trip/section/RecapBlogTopBar";
@@ -20,6 +20,7 @@ import ImageFieldEditor from "./components/ImageFieldEditor";
 import TextRow from "./components/TextRow";
 import deleteIcon from "@/assets/icons/delete.svg";
 import { RecapBlogDaySection } from "@/views/Profile/Trip/component/RecapBlogPlace";
+import PhotoLightbox from "@/components/ui/PhotoLightbox";
 import {
   idbPutBlob,
   makeImageKey,
@@ -40,6 +41,7 @@ export default function TripRecapEditView({
   const [error, setError] = useState<string | null>(null);
   const [recapData, setRecapData] = useState<TripRecapResponse | null>(null);
   const [openRemoveBlog, setOpenRemoveBlog] = useState(false);
+  const [coverGalleryOpen, setCoverGalleryOpen] = useState(false);
   // draft
   const [draft, setDraft] = useState<RecapEditDraft | null>(null);
   const draftRef = useRef<RecapEditDraft | null>(null);
@@ -291,6 +293,62 @@ export default function TripRecapEditView({
     });
   };
 
+  const tripPhotos = useMemo(() => {
+    if (!draft) return [];
+    const raw = draft.days.flatMap((d) =>
+      d.places.flatMap((p) => (p.photos ?? []).filter(Boolean)),
+    );
+
+    // Dedupe (preserve order)
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const url of raw) {
+      if (seen.has(url)) continue;
+      seen.add(url);
+      out.push(url);
+    }
+    return out;
+  }, [draft]);
+
+  const coverInitialIndex = useMemo(() => {
+    if (!draft) return 0;
+    const v = draft.coverPhoto;
+    if (v.kind === "keep") return Math.max(0, tripPhotos.indexOf(v.url));
+    if (v.kind === "local" && v.previewKey)
+      return Math.max(0, tripPhotos.indexOf(`idb:${v.previewKey}`));
+    return 0;
+  }, [draft, tripPhotos]);
+
+  const persistCoverPhoto = async (photoUri: string | null) => {
+    const blogKey = Number(tripId);
+    if (!Number.isFinite(blogKey)) return;
+    try {
+      await updateTripCoverPhoto({ blogKey, photoUri });
+    } catch (err) {
+      console.warn("Failed to update cover photo:", err);
+    }
+  };
+
+  const applyCoverFromTripPhoto = (photoUrl: string) => {
+    setDraft((prev) => {
+      if (!prev) return prev;
+      const nextCover = photoUrl.startsWith("idb:")
+        ? ({
+            kind: "local",
+            previewKey: photoUrl.replace(/^idb:/, ""),
+          } as const)
+        : ({ kind: "keep", url: photoUrl } as const);
+      return { ...prev, updatedAt: Date.now(), coverPhoto: nextCover };
+    });
+
+    // Only persist server-side when the selected photo is already a server URI.
+    if (!photoUrl.startsWith("idb:")) {
+      void persistCoverPhoto(photoUrl);
+    }
+
+    setCoverGalleryOpen(false);
+  };
+
   /** render states */
   if (loading) return <div className="p-6">Loading…</div>;
 
@@ -370,9 +428,16 @@ export default function TripRecapEditView({
             value={draft.coverPhoto}
             userId={userId}
             tripId={tripId}
-            onChange={(coverPhoto) =>
-              setDraft({ ...draft, updatedAt: Date.now(), coverPhoto })
-            }
+            onOpenGallery={() => setCoverGalleryOpen(true)}
+            onChange={(coverPhoto) => {
+              setDraft({ ...draft, updatedAt: Date.now(), coverPhoto });
+              if (coverPhoto.kind === "keep") {
+                void persistCoverPhoto(coverPhoto.url);
+              } else if (coverPhoto.kind === "remove") {
+                void persistCoverPhoto(null);
+              }
+              // Note: "local" cover uploads are currently local-only (idb) and not persisted server-side.
+            }}
           />
         </div>
 
@@ -442,6 +507,17 @@ export default function TripRecapEditView({
           </button>
         </div>
       </div>
+
+      {coverGalleryOpen && (
+        <PhotoLightbox
+          photos={tripPhotos}
+          initialIndex={coverInitialIndex}
+          title="Trip photos"
+          selectLabel="Use as cover"
+          onSelect={(photo) => applyCoverFromTripPhoto(photo)}
+          onClose={() => setCoverGalleryOpen(false)}
+        />
+      )}
     </div>
   );
 }

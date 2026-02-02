@@ -10,6 +10,9 @@ type Props = {
   photos: string[];
   initialIndex?: number;
   title?: string;
+  /** When provided, show a "select" action for the active photo. */
+  onSelect?: (photo: string, index: number) => void;
+  selectLabel?: string;
   onClose: () => void;
 };
 
@@ -27,6 +30,8 @@ export default function PhotoLightbox({
   photos,
   initialIndex = 0,
   title,
+  onSelect,
+  selectLabel = "Use this photo",
   onClose,
 }: Props) {
   const total = photos.length;
@@ -194,6 +199,15 @@ export default function PhotoLightbox({
           </div>
 
           <div className="flex items-center gap-2">
+            {onSelect && total > 0 && (
+              <button
+                type="button"
+                className="mr-1 inline-flex h-10 items-center justify-center rounded-full bg-white/20 px-4 text-sm font-semibold text-white hover:bg-white/30"
+                onClick={() => onSelect(photos[activeIdx]!, activeIdx)}
+              >
+                {selectLabel}
+              </button>
+            )}
             <div className="hidden sm:block w-12 text-center text-xs font-semibold text-white/80">
               {Math.round(zoom * 100)}%
             </div>
