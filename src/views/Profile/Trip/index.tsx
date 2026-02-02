@@ -23,7 +23,6 @@ import RecapBlogTopBar from "@/views/Profile/Trip/section/RecapBlogTopBar";
 import RecapDayTabs, {
   type DayTab,
 } from "@/views/Profile/Trip/component/RecapDayTabs";
-import type { Crumb } from "@/views/Profile/Trip/component/RecapBlogCrumbBread";
 import RecapBlogHero from "@/views/Profile/Trip/component/RecapBlogTopImage";
 
 import {
@@ -269,7 +268,7 @@ function OwnerTripRecapView({ userId, tripId }: TripRecapViewProps) {
     return { lat: 37.7749, lng: -122.4194 };
   }, [effectiveModel]);
 
-  /** 4) Tabs / breadcrumb */
+  /** 4) Tabs */
   const dayTabs: DayTab[] = useMemo(() => {
     return (
       effectiveModel?.days.map((d) => ({
@@ -278,15 +277,6 @@ function OwnerTripRecapView({ userId, tripId }: TripRecapViewProps) {
       })) ?? []
     );
   }, [effectiveModel]);
-
-  const breadcrumbItems: Crumb[] = useMemo(() => {
-    const title = effectiveModel?.hero?.title ?? "Trip";
-    return [
-      { label: "Recap Blogs", href: "/profile/recap-blogs" },
-      { label: "Map", onClick: () => window.history.back() },
-      { label: `(${title})` },
-    ];
-  }, [effectiveModel?.hero?.title]);
 
   const heroProps = useMemo(() => {
     if (!effectiveModel?.hero) return null;
@@ -659,7 +649,6 @@ function OwnerTripRecapView({ userId, tripId }: TripRecapViewProps) {
     <div className="min-h-screen bg-white">
       <RecapBlogTopBar
         title="Recap Blog"
-        breadcrumbItems={breadcrumbItems}
         dayTabs={dayTabs}
         activeDayId={activeDayId}
         onDayChange={(id) => handleDayChange(id, true)}

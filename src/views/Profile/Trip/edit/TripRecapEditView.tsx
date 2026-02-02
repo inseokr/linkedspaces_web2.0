@@ -8,7 +8,6 @@ import { updateTripCoverPhoto, type TripRecapResponse } from "@/api/trips";
 import { mapTripRecapToPageModel } from "@/views/Profile/Trip/utils/mapTripRecap";
 
 import RecapBlogTopBar from "@/views/Profile/Trip/section/RecapBlogTopBar";
-import type { Crumb } from "@/views/Profile/Trip/component/RecapBlogCrumbBread";
 import type { DayTab } from "@/views/Profile/Trip/component/RecapDayTabs";
 
 import type { RecapEditDraft, PlaceDraft } from "./types/editTypes";
@@ -119,15 +118,6 @@ export default function TripRecapEditView({
       draft?.days.map((d) => ({ id: d.id, label: `Day ${d.dayIndex}` })) ?? []
     );
   }, [draft?.days]);
-
-  const breadcrumbItems: Crumb[] = useMemo(() => {
-    const title = draft?.recapTitle || pageModel?.hero?.title || "Trip";
-    return [
-      { label: "Recap Blogs", href: "/profile/recap-blog" },
-      { label: "Map", onClick: () => window.history.go(-2) },
-      { label: `(${title})`, onClick: () => window.history.back() },
-    ];
-  }, [draft?.recapTitle, pageModel?.hero?.title]);
 
   /** 4) scroll to day */
   const scrollToDay = (dayId: string) => {
@@ -368,7 +358,6 @@ export default function TripRecapEditView({
       <RecapBlogTopBar
         mode="edit"
         title="Recap Blog"
-        breadcrumbItems={breadcrumbItems}
         dayTabs={dayTabs}
         activeDayId={dayTabs[0]?.id ?? "day-1"} // edit에선 단순 표시용
         onDayChange={(id: string) => scrollToDay(id)}

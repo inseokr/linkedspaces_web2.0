@@ -91,11 +91,21 @@ export function mapTripRecapToPageModel(
 }
 
 function buildDateText(trip: TripRecapResponse["trip"]) {
-  return (
+  const base =
     formatTripDateRangeLabel(trip.startTimeString, trip.endTimeString, {
       includeYear: true,
-    }) || ""
-  );
+    }) || "";
+
+  // Some API payloads omit the year in start/end strings (e.g. "Sep 21").
+  // If so, append the trip's startingYear so the hero caption always shows a year.
+  const hasYear = /\b\d{4}\b/.test(base);
+  if (hasYear) return base;
+
+  const y = Number((trip as any)?.startingYear);
+  if (!Number.isFinite(y)) return base;
+  if (!base.trim()) return String(y);
+
+  return `${base.replace(/[,\s]+$/, "")}, ${y}`;
 }
 
 function mapDayFromApi(d: TripRecapDay, idx: number): RecapDay {

@@ -1,22 +1,15 @@
 "use client";
 
 import React from "react";
-import RecapBlogBreadcrumb, {
-  type Crumb,
-} from "@/views/Profile/Trip/component/RecapBlogCrumbBread";
 import RecapDayTabs, {
   type DayTab,
 } from "@/views/Profile/Trip/component/RecapDayTabs";
 import Image from "next/image";
-import editIcon from "@/assets/icons/edit.svg";
-import shareIcon from "@/assets/icons/share.svg";
 import updateIcon from "@/assets/icons/update.svg";
 
 type Props = {
   title?: string;
   onGoBack?: () => void;
-
-  breadcrumbItems: Crumb[];
 
   // optional day tabs (mainly for edit flows)
   dayTabs?: DayTab[];
@@ -37,7 +30,6 @@ type Props = {
 export default function RecapBlogTopBar({
   title = "Recap Blog",
   onGoBack,
-  breadcrumbItems,
   dayTabs,
   activeDayId,
   onDayChange,
@@ -88,19 +80,16 @@ export default function RecapBlogTopBar({
       ].join(" ")}
     >
       <div className="mx-auto max-w-[1200px] px-6 py-4">
-        {/* 2행 2열 그리드 */}
-        <div className="grid grid-cols-[1fr_auto] grid-rows-2 gap-x-4 gap-y-2 items-start">
-          {/* Row 1, Col 1: Title + breadcrumb (desktop) */}
-          <div className="min-w-0 flex items-center gap-4">
-            <h1 className="text-[18px] font-semibold text-black/70">{title}</h1>
-            <RecapBlogBreadcrumb
-              items={breadcrumbItems}
-              className="hidden sm:flex"
-            />
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          {/* Left: Title */}
+          <div className="min-w-0 flex items-center gap-3">
+            <h1 className="min-w-0 truncate text-[18px] font-semibold text-black/70">
+              {title}
+            </h1>
           </div>
 
-          {/* Row 1, Col 2: Actions (Edit / Share) */}
-          <div className="justify-self-end flex items-center gap-2">
+          {/* Right: Go Back + Actions (Edit / Share) */}
+          <div className="flex items-center gap-2">
             {mode === "edit" ? (
               <>
                 <button
@@ -143,24 +132,18 @@ export default function RecapBlogTopBar({
                 >
                   Share
                 </button>
+
+                {onGoBack && (
+                  <button
+                    type="button"
+                    onClick={onGoBack}
+                    className={secondaryButtonClass}
+                  >
+                    Go Back
+                  </button>
+                )}
               </>
             )}
-          </div>
-
-          {/* Row 2, Col 1: Go Back + mobile breadcrumb */}
-          <div className="min-w-0">
-            <button
-              type="button"
-              onClick={onGoBack}
-              className={secondaryButtonClass}
-            >
-              Go Back
-            </button>
-
-            <RecapBlogBreadcrumb
-              items={breadcrumbItems}
-              className="mt-2 sm:hidden"
-            />
           </div>
         </div>
 

@@ -40,17 +40,21 @@ export function TripMeta({
   dateText: string; // e.g. "Dec 15–20, 2024"
   locationText: string; // e.g. "San Francisco"
 }) {
+  const hasLocation = Boolean(locationText?.trim());
+
   return (
-    <div className="mt-3 flex flex-wrap items-center justify-center gap-x-8 gap-y-2 text-white/90">
+    <div className="mt-3 flex flex-wrap items-center justify-center gap-x-8 gap-y-2 text-white/90 text-center">
       <div className="inline-flex items-center gap-2">
         <span className="inline-block h-2 w-2 rounded-full bg-white/80" />
         <span className="text-sm font-medium">{dateText}</span>
       </div>
 
-      <div className="inline-flex items-center gap-2">
-        <span className="inline-block h-2 w-2 rounded-full bg-white/80" />
-        <span className="text-sm font-medium">{locationText}</span>
-      </div>
+      {hasLocation && (
+        <div className="inline-flex items-center gap-2">
+          <span className="inline-block h-2 w-2 rounded-full bg-white/80" />
+          <span className="text-sm font-medium">{locationText}</span>
+        </div>
+      )}
     </div>
   );
 }
