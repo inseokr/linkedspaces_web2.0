@@ -224,6 +224,28 @@ export default function MapboxMap({
   const lastUserInteractionAtRef = useRef<number>(0);
 
   const [isMounted, setIsMounted] = useState(false);
+  const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+  const [initError, setInitError] = useState<string | null>(() => {
+    if (!token) {
+      return "Mapbox token is missing. Please set NEXT_PUBLIC_MAPBOX_TOKEN and refresh.";
+    }
+
+    // Most common reason for “Failed to initialize WebGL”
+    try {
+      const isSupported =
+        typeof mapboxgl.supported === "function"
+          ? mapboxgl.supported({ failIfMajorPerformanceCaveat: true } as any)
+          : true;
+
+      if (!isSupported) {
+        return "Map can't be displayed because WebGL isn't supported or is disabled in this browser/device. Try Safari, or enable hardware acceleration / update graphics drivers.";
+      }
+    } catch {
+      // If this check fails, we'll still attempt initialization in the effect.
+    }
+
+    return null;
+  });
   useEffect(() => {
     const raf = requestAnimationFrame(() => setIsMounted(true));
     return () => cancelAnimationFrame(raf);
@@ -709,23 +731,32 @@ export default function MapboxMap({
 
   // 핵심: 지도 생성/cleanup은 “최초 1회만”
   useEffect(() => {
-    if (!isMounted || !containerRef.current || mapRef.current) return;
-
-    const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
-    if (!token) {
-      console.error("Mapbox token missing!");
+    if (!isMounted || !containerRef.current || mapRef.current || initError)
       return;
-    }
+    if (!token) return;
 
     mapboxgl.accessToken = token;
 
-    const map = new mapboxgl.Map({
-      container: containerRef.current,
-      style: "mapbox://styles/mapbox/streets-v12",
-      center: [-98.5795, 39.8283], // 초기값(미국)이어도 OK: 이후 카메라 effect가 자연스럽게 이동시킴
-      zoom: 1,
-      renderWorldCopies: false,
-    });
+    let map: mapboxgl.Map;
+    try {
+      map = new mapboxgl.Map({
+        container: containerRef.current,
+        style: "mapbox://styles/mapbox/streets-v12",
+        center: [-98.5795, 39.8283], // 초기값(미국)이어도 OK: 이후 카메라 effect가 자연스럽게 이동시킴
+        zoom: 1,
+        renderWorldCopies: false,
+      });
+    } catch (e) {
+      console.error("Failed to initialize WebGL for the map:", e);
+
+      // Defer state update to avoid synchronous setState inside the effect body.
+      setTimeout(() => {
+        setInitError(
+          "Failed to initialize WebGL for the map. This usually means WebGL is unavailable (GPU/driver/browser policy) or hardware acceleration is disabled. Try Safari or another browser, and check browser GPU settings.",
+        );
+      }, 0);
+      return;
+    }
 
     mapRef.current = map;
 
@@ -782,6 +813,8 @@ export default function MapboxMap({
     };
   }, [
     isMounted,
+    initError,
+    token,
     clearMarkers,
     focusOnLatLng,
     focusOnCountry,
@@ -882,6 +915,95 @@ export default function MapboxMap({
     if (map.isStyleLoaded()) run();
     else map.once("idle", run);
   }, [activeMarkerId, mode]);
+
+  if (initError) {
+    return (
+      <div style={{ position: "relative", width: "100%", height: "100%" }}>
+        <div
+          style={{
+            width: "100%",
+            height: "100%",
+            background:
+              "radial-gradient(1200px 600px at 20% 0%, rgba(249,115,22,0.12), transparent 55%), linear-gradient(180deg, rgba(15,23,42,0.03), rgba(15,23,42,0.07))",
+            border: "1px solid rgba(0,0,0,0.08)",
+            borderRadius: 16,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 20,
+          }}
+        >
+          <div style={{ maxWidth: 520 }}>
+            <div
+              style={{
+                fontSize: 14,
+                fontWeight: 900,
+                letterSpacing: 0.2,
+                color: "rgba(0,0,0,0.85)",
+                marginBottom: 8,
+              }}
+            >
+              Map isn’t supported in this browser
+            </div>
+            <div
+              style={{
+                fontSize: 13,
+                lineHeight: "18px",
+                fontWeight: 700,
+                color: "rgba(0,0,0,0.65)",
+                marginBottom: 10,
+              }}
+            >
+              {initError}
+            </div>
+            <div
+              style={{
+                fontSize: 12,
+                lineHeight: "16px",
+                fontWeight: 700,
+                color: "rgba(0,0,0,0.55)",
+              }}
+            >
+              Quick checks: enable “Use hardware acceleration” in your browser
+              settings and restart. If you’re on a work laptop/VM/remote
+              desktop, GPU/WebGL may be restricted.
+            </div>
+          </div>
+        </div>
+
+        {(overlayTopLeft || overlayTopRight) && (
+          <div
+            style={{ position: "absolute", inset: 0, pointerEvents: "none" }}
+          >
+            {overlayTopLeft && (
+              <div
+                style={{
+                  position: "absolute",
+                  top: 12,
+                  left: 12,
+                  pointerEvents: "auto",
+                }}
+              >
+                {overlayTopLeft}
+              </div>
+            )}
+            {overlayTopRight && (
+              <div
+                style={{
+                  position: "absolute",
+                  top: 12,
+                  right: 12,
+                  pointerEvents: "auto",
+                }}
+              >
+                {overlayTopRight}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   if (!isMounted) {
     return (
