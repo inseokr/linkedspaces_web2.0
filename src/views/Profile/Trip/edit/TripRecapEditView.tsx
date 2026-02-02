@@ -2,9 +2,12 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import { apiFetch } from "@/api/client";
-import { updateTripCoverPhoto, type TripRecapResponse } from "@/api/trips";
+import {
+  updateTripCoverPhoto,
+  updateTripTitle,
+  type TripRecapResponse,
+} from "@/api/trips";
 import { mapTripRecapToPageModel } from "@/views/Profile/Trip/utils/mapTripRecap";
 
 import RecapBlogTopBar from "@/views/Profile/Trip/section/RecapBlogTopBar";
@@ -17,7 +20,6 @@ import { updatePlaceVisitHistoryStory } from "@/api/user";
 
 import ImageFieldEditor from "./components/ImageFieldEditor";
 import TextRow from "./components/TextRow";
-import deleteIcon from "@/assets/icons/delete.svg";
 import { RecapBlogDaySection } from "@/views/Profile/Trip/component/RecapBlogPlace";
 import PhotoLightbox from "@/components/ui/PhotoLightbox";
 import {
@@ -39,7 +41,6 @@ export default function TripRecapEditView({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [recapData, setRecapData] = useState<TripRecapResponse | null>(null);
-  const [openRemoveBlog, setOpenRemoveBlog] = useState(false);
   const [coverGalleryOpen, setCoverGalleryOpen] = useState(false);
   // draft
   const [draft, setDraft] = useState<RecapEditDraft | null>(null);
@@ -55,6 +56,7 @@ export default function TripRecapEditView({
   );
   const baselineInitializedRef = useRef(false);
   const baselineDraftFingerprintRef = useRef<string | null>(null);
+  const baselineTitleRef = useRef<string | null>(null);
 
   // day scroll refs
   const daySectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -174,6 +176,7 @@ export default function TripRecapEditView({
     if (baselineInitializedRef.current) return;
     baselineCaptionsRef.current = buildBaselineCaptions(draft);
     baselineDraftFingerprintRef.current = draftFingerprint(draft);
+    baselineTitleRef.current = draft.recapTitle;
     baselineInitializedRef.current = true;
   }, [draft]);
 
@@ -204,6 +207,11 @@ export default function TripRecapEditView({
   /** 5) save/close/discard */
   const handleUpdate = async () => {
     if (!draft) return;
+
+    const blogKey = Number(tripId);
+    const baselineTitle = baselineTitleRef.current;
+    const titleChanged =
+      baselineTitle != null && draft.recapTitle !== baselineTitle;
 
     // Diff captions by photo URI (not by index) so index shifts don't trigger "update all".
     const baseline = baselineCaptionsRef.current ?? new Map();
@@ -247,25 +255,57 @@ export default function TripRecapEditView({
     setLoading(true);
     setError(null);
     try {
-      // Execute updates; keep going even if some fail.
-      const results = await Promise.allSettled(
-        updates.map((u) =>
-          updatePlaceVisitHistoryStory({
+      const tasks: Array<{ kind: "title" | "caption"; promise: Promise<any> }> =
+        [];
+
+      if (titleChanged && Number.isFinite(blogKey)) {
+        tasks.push({
+          kind: "title",
+          promise: updateTripTitle({ blogKey, title: draft.recapTitle }),
+        });
+      }
+
+      for (const u of updates) {
+        tasks.push({
+          kind: "caption",
+          promise: updatePlaceVisitHistoryStory({
             placeKey: u.placeKey,
             photoIndex: u.photoIndex,
             storyText: u.storyText,
           }),
-        ),
-      );
+        });
+      }
 
-      const failed = results.filter((r) => r.status === "rejected");
-      if (failed.length > 0) {
-        throw new Error(`Failed to update ${failed.length} caption(s).`);
+      const results = await Promise.allSettled(tasks.map((t) => t.promise));
+
+      const failedKinds = tasks
+        .map((t, i) => ({
+          kind: t.kind,
+          ok: results[i].status === "fulfilled",
+        }))
+        .filter((x) => !x.ok)
+        .map((x) => x.kind);
+
+      if (failedKinds.length > 0) {
+        const titleFailed = failedKinds.includes("title");
+        const captionFailedCount = failedKinds.filter(
+          (k) => k === "caption",
+        ).length;
+        if (titleFailed && captionFailedCount > 0) {
+          throw new Error(
+            `Failed to update title and ${captionFailedCount} caption(s).`,
+          );
+        }
+        if (titleFailed) {
+          throw new Error("Failed to update title.");
+        }
+        throw new Error(`Failed to update ${captionFailedCount} caption(s).`);
       }
 
       // Refresh baseline with the saved captions so repeated "Update" doesn't resend.
       baselineCaptionsRef.current = buildBaselineCaptions(draft);
       baselineDraftFingerprintRef.current = draftFingerprint(draft);
+      baselineTitleRef.current = draft.recapTitle;
 
       saveDraft(userId, tripId, { ...draft, updatedAt: Date.now() });
       router.back();
@@ -282,15 +322,6 @@ export default function TripRecapEditView({
 
   const handleDiscardLocal = () => {
     clearDraft(userId, tripId);
-    router.back();
-  };
-
-  const handleRemoveBlog = async () => {
-    // 1) 로컬 드래프트 삭제
-    clearDraft(userId, tripId);
-
-    // 2) 서버 삭제 API가 있으면 여기서 호출
-    // await apiFetch(`/ls-beta-test/trip-recap/${userId}/${tripId}`, { method: "DELETE" });
     router.back();
   };
 
@@ -490,12 +521,6 @@ export default function TripRecapEditView({
         {/* Settings header */}
         <div className="flex justify-between">
           <div className="text-3xl font-bold">Recap Blog Settings</div>
-          <div className="flex items-center text-[var(--color-warning)]">
-            <div className="text-2xl font-bold ">Remove Blog</div>
-            <button className="ml-3">
-              <Image src={deleteIcon} alt="Delete" width={32} height={32} />
-            </button>
-          </div>
         </div>
         <div className="mt-6 flex gap-10 pl-0 p-4">
           <div className="font-bold text-2xl">Shared with friends</div>

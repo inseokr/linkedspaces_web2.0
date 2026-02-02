@@ -124,6 +124,11 @@ export type UpdateTripCoverPhotoRequest = {
   photoUri: string | null;
 };
 
+export type UpdateTripTitleRequest = {
+  blogKey: number;
+  title: string;
+};
+
 /**
  * Update trip cover photo (server-side).
  * Backend expects: { blogKey, photoUri }
@@ -157,5 +162,41 @@ export async function updateTripCoverPhoto(body: UpdateTripCoverPhotoRequest) {
 
   if (!res || res.result !== "OK") {
     throw new Error(res?.reason || "Failed to update cover photo");
+  }
+}
+
+/**
+ * Update trip/recap blog title (server-side).
+ * Backend expects: { blogKey, title }
+ */
+export async function updateTripTitle(body: UpdateTripTitleRequest) {
+  const token =
+    typeof window !== "undefined"
+      ? (() => {
+          try {
+            const t = window.localStorage.getItem("token");
+            if (t) return t;
+          } catch {
+            // ignore and try sessionStorage
+          }
+          try {
+            return window.sessionStorage.getItem("token") ?? undefined;
+          } catch {
+            return undefined;
+          }
+        })()
+      : undefined;
+
+  const res = await apiFetch<SimpleResult>(`/trips/update-title`, {
+    method: "POST",
+    body,
+    // NOTE: Do NOT send credentials cross-origin.
+    // If the backend returns `Access-Control-Allow-Origin: *`, browsers will reject any
+    // credentialed (cookie) request. This endpoint should rely on the Bearer token instead.
+    token,
+  });
+
+  if (!res || res.result !== "OK") {
+    throw new Error(res?.reason || "Failed to update title");
   }
 }

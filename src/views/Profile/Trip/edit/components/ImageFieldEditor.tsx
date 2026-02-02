@@ -147,36 +147,27 @@ export default function ImageFieldEditor({
     onChange({ kind: "local", previewUrl, previewKey: key });
   };
 
-  const handleRemove = () => {
-    revokePickUrl();
-    revokeIdbUrl();
-    setResolvedSrc(null);
-    onChange({ kind: "remove", reason: "user" });
-  };
-
   const hasGallery = typeof onOpenGallery === "function";
 
   return (
     <div className="rounded-3xl border border-black/10 p-4">
-      <div className="flex flex-wrap items-center gap-12">
-        <div className="w-full max-w-[clamp(320px,60vw,780px)]">
-          <div className="relative aspect-[780/230] w-full overflow-hidden rounded-2xl bg-black/[0.04]">
-            {resolvedSrc ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={resolvedSrc}
-                alt="cover"
-                className="h-full w-full object-cover"
-              />
-            ) : (
-              <div className="flex h-full w-full items-center justify-center text-sm opacity-60">
-                No image
-              </div>
-            )}
-          </div>
+      <div className="w-full">
+        <div className="relative aspect-[780/230] w-full overflow-hidden rounded-2xl bg-black/[0.04]">
+          {resolvedSrc ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={resolvedSrc}
+              alt="cover"
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center text-sm opacity-60">
+              No image
+            </div>
+          )}
         </div>
 
-        <div className="flex shrink-0 items-center gap-3">
+        <div className="mt-4 flex flex-wrap items-center gap-3">
           <Button
             type="button"
             radius="full"
@@ -198,17 +189,6 @@ export default function ImageFieldEditor({
               Upload
             </Button>
           )}
-
-          <Button
-            type="button"
-            radius="full"
-            variant="neutral"
-            className="h-10 px-6 text-lg font-bold"
-            onClick={handleRemove}
-            disabled={!resolvedSrc}
-          >
-            Remove
-          </Button>
         </div>
       </div>
 
