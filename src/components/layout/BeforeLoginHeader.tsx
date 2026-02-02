@@ -32,14 +32,7 @@ export function BerforeLoginHeader() {
               src="/images/LS_blue.png"
               alt="LinkedSpaces Logo"
               fill
-              className="object-contain logo-light"
-              priority
-            />
-            <Image
-              src="/images/ls-logo-orange.svg"
-              alt="LinkedSpaces Logo"
-              fill
-              className="object-contain logo-dark"
+              className="object-contain"
               priority
             />
           </div>

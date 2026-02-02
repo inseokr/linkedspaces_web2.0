@@ -48,7 +48,7 @@ export function Footer() {
         </a>
       </div>
 
-      <div className="mx-auto flex [font-family:var(--font-poppins)] text-base leading-[22.4px] font-semibold text-black items-center justify-center gap-2 px-4 pb-30">
+      <div className="mx-auto flex [font-family:var(--font-poppins)] text-base leading-[22.4px] font-semibold text-[var(--foreground)] items-center justify-center gap-2 px-4 pb-30">
         <span>© 2025 LinkedSpaces. All rights reserved.</span>
         <span>|</span>
         <Link href="/privacy" className="underline text-[var(--color-main)]">

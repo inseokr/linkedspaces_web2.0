@@ -96,18 +96,16 @@ export default function DownloadVideoModal({
       <div
         className={[
           "w-[500px] max-w-[92vw]",
-          "rounded-[22px] bg-white",
+          "rounded-[22px] bg-[var(--card-bg)] text-[var(--card-text)] border border-[var(--card-border)]",
           "shadow-[0_30px_90px_rgba(0,0,0,0.35)]",
           "px-10 py-10",
         ].join(" ")}
         onMouseDown={(e) => e.stopPropagation()}
       >
-        <h2 className="text-center text-[28px] font-extrabold text-black">
-          {title}
-        </h2>
+        <h2 className="text-center text-[28px] font-extrabold">{title}</h2>
 
         <div className="mt-6">
-          <div className="overflow-hidden rounded-[12px] border border-black/15">
+          <div className="overflow-hidden rounded-[12px] border border-[var(--card-border)] bg-[var(--input-bg)]">
             <video
               ref={videoRef}
               src={videoSrc}

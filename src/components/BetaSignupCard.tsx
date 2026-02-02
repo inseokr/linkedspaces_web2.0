@@ -35,7 +35,7 @@ export default function BetaSignupSection() {
       {/* Outer container: center + max width similar to design */}
       <div className="mx-auto w-full max-w-[980px] px-6">
         {/* Card */}
-        <div className="rounded-[20px] bg-white p-6 shadow-card">
+        <div className="rounded-[20px] bg-[var(--card-bg)] p-6 shadow-card border border-[var(--card-border)] text-[var(--card-text)]">
           <form
             ref={formRef}
             noValidate
@@ -43,12 +43,12 @@ export default function BetaSignupSection() {
             className="flex flex-col gap-6"
           >
             {/* Title */}
-            <h2 className="text-[35px] [font-family:var(--font-poppins)] font-bold text-black">
+            <h2 className="text-[35px] [font-family:var(--font-poppins)] font-bold">
               100 Spots, Join Beta Now!
             </h2>
 
             {/* Description */}
-            <p className="text-lg font-normal leading-[27px] text-black">
+            <p className="text-lg font-normal leading-[27px] text-[var(--card-text-muted)]">
               We&apos;re almost ready... are you? Say goodbye to “Where was that
               again?” and hello to never forgetting a memory with LinkedSpaces!
               Start saving moments before they fade away.
@@ -58,8 +58,8 @@ export default function BetaSignupSection() {
             <div className="flex flex-col gap-6">
               {/* Email */}
               <label className="flex flex-col gap-2">
-                <span className="text-sm font-normal text-black">
-                  Apple ID Email <span className="text-black">*</span>
+                <span className="text-sm font-normal">
+                  Apple ID Email <span>*</span>
                 </span>
                 <input
                   id="appleEmail"
@@ -74,8 +74,10 @@ export default function BetaSignupSection() {
                   inputMode="email"
                   required
                   aria-invalid={!!emailError}
-                  className={`h-[40px] w-full border px-[8px] py-[2px] text-black outline-none leading-[24px] focus:border-black ${
-                    emailError ? "border-red-500" : "border-black"
+                  className={`h-[40px] w-full border bg-[var(--input-bg)] px-[8px] py-[2px] text-[var(--card-text)] placeholder:text-[var(--card-text-muted)] outline-none leading-[24px] focus:border-[var(--color-main)] ${
+                    emailError
+                      ? "border-red-500"
+                      : "border-[var(--input-border)]"
                   }`}
                 />
 
@@ -92,21 +94,19 @@ export default function BetaSignupSection() {
 
               {/* First name */}
               <label className="flex flex-col gap-2">
-                <span className="text-sm font-normal text-black">
-                  First Name
-                </span>
+                <span className="text-sm font-normal">First Name</span>
                 <input
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
                   type="text"
                   placeholder="Optional"
-                  className="h-[40px] w-full border border-black px-[8px] py-[2px] text-base text-black outline-none leading-[24px] focus:border-black"
+                  className="h-[40px] w-full border border-[var(--input-border)] bg-[var(--input-bg)] px-[8px] py-[2px] text-base text-[var(--card-text)] placeholder:text-[var(--card-text-muted)] outline-none leading-[24px] focus:border-[var(--color-main)]"
                 />
               </label>
             </div>
 
             {/* Helper text */}
-            <div className="flex flex-col gap-7 text-[18px] leading-[21.6px] text-black">
+            <div className="flex flex-col gap-7 text-[18px] leading-[21.6px] text-[var(--card-text-muted)]">
               <p>
                 You will be able to invite one friend to access these premium
                 services!

@@ -10,6 +10,14 @@
   --color-neutral: #f0f0f0;
   --font-sans: var(--font-montserrat);
 
+  /* Generic surfaces (used outside header) */
+  --card-bg: #ffffff;
+  --card-border: rgba(0, 0, 0, 0.08);
+  --card-text: rgba(0, 0, 0, 0.92);
+  --card-text-muted: rgba(0, 0, 0, 0.68);
+  --input-bg: #ffffff;
+  --input-border: rgba(0, 0, 0, 0.32);
+
   /* Header surface tokens (light mode) */
   --header-bg: rgba(255, 255, 255, 0.86);
   --header-border: rgba(0, 0, 0, 0.08);
@@ -44,6 +52,14 @@
     --background: #0a0a0a;
     --foreground: #ededed;
 
+    /* Generic surfaces (used outside header) */
+    --card-bg: rgba(18, 18, 18, 0.92);
+    --card-border: rgba(255, 255, 255, 0.12);
+    --card-text: rgba(255, 255, 255, 0.92);
+    --card-text-muted: rgba(255, 255, 255, 0.72);
+    --input-bg: rgba(24, 24, 24, 0.9);
+    --input-border: rgba(255, 255, 255, 0.18);
+
     /* Header surface tokens (dark mode) */
     --header-bg: rgba(10, 10, 10, 0.72);
     --header-border: rgba(255, 255, 255, 0.12);
@@ -71,19 +87,6 @@
     --user-menu-muted: rgba(255, 255, 255, 0.6);
     --user-menu-item-hover: rgba(255, 255, 255, 0.06);
     --user-menu-danger: #ff453a;
-  }
-}
-
-/* Light/Dark logo swap helper (works with prefers-color-scheme) */
-.logo-dark {
-  display: none;
-}
-@media (prefers-color-scheme: dark) {
-  .logo-light {
-    display: none;
-  }
-  .logo-dark {
-    display: block;
   }
 }
 

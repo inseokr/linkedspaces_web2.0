@@ -19,7 +19,7 @@ export default function SignUpButton({ children, className, ...props }: Props) {
         "bg-[var(--color-sub)] text-white",
         "border border-transparent",
         "transition-colors duration-200",
-        "hover:bg-white hover:text-black hover:font-normal",
+        "hover:bg-[var(--color-main)]",
         "active:opacity-90",
         "disabled:opacity-50 disabled:pointer-events-none",
         className,

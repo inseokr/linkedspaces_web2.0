@@ -21,7 +21,7 @@ export function StoryBlock({
     <div className="grid grid-cols-1 items-center lg:grid-cols-2 lg:gap-16">
       {/* Text */}
       <div
-        className={`flex flex-col gap-4 text-black whitespace-pre-line ${reverse ? "lg:order-2" : "lg:order-1"}`}
+        className={`flex flex-col gap-4 text-[var(--foreground)] whitespace-pre-line ${reverse ? "lg:order-2" : "lg:order-1"}`}
       >
         {eyebrow ? (
           <p className="text-lg font-normal tracking-wide">{eyebrow}</p>

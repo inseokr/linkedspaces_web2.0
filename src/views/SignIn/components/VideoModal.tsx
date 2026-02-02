@@ -53,6 +53,8 @@ export default function VideoModal({
 
   if (!open) return null;
 
+  const resolvedPoster = posterSrc ?? "/images/ls-logo.png";
+
   return (
     <div className="fixed inset-0 z-[999]">
       {/* Dimmed background */}
@@ -70,25 +72,30 @@ export default function VideoModal({
           role="dialog"
           aria-modal="true"
           aria-labelledby={ariaId}
-          className="relative w-full max-w-[554px] rounded-[28px] bg-white shadow-2xl outline-none"
+          className="relative w-full max-w-[554px] rounded-[28px] bg-[var(--card-bg)] text-[var(--card-text)] border border-[var(--card-border)] shadow-2xl outline-none"
         >
           {/* Header */}
           <div className="px-10 pt-10 pb-4 text-center">
             <h2 id={ariaId} className="text-2xl font-semibold tracking-tight">
               {title}
             </h2>
+            <p className="mt-2 text-sm text-[var(--card-text-muted)]">
+              Watch this quick guide (video)
+            </p>
           </div>
 
           {/* Video frame */}
           <div className="px-10 ">
-            <div className="mx-auto w-full max-w-[456px] aspect-[456/461] rounded-xl bg-black/10">
+            <div className="relative mx-auto w-full max-w-[456px] aspect-[456/461] rounded-xl bg-[var(--input-bg)] border border-[var(--input-border)] overflow-hidden">
               <video
                 ref={videoRef}
-                className="object-contain"
+                className="relative block h-full w-full object-contain bg-black"
                 src={videoSrc}
-                poster={posterSrc}
+                poster={resolvedPoster}
                 controls
                 playsInline
+                preload="metadata"
+                aria-label="Video guide"
               />
             </div>
           </div>
@@ -97,7 +104,7 @@ export default function VideoModal({
           <div className="flex items-center justify-end">
             <button
               onClick={onClose}
-              className="text-sm pb-4 pt-4 pr-4 font-medium text-blue-600 hover:text-blue-700"
+              className="text-sm pb-4 pt-4 pr-4 font-medium text-[var(--color-main)] hover:opacity-90"
             >
               Skip
             </button>
