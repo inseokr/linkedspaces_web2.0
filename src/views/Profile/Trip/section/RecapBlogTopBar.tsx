@@ -22,6 +22,9 @@ type Props = {
 
   onCloseEdit?: () => void;
   onUpdate?: () => void;
+  updateDisabled?: boolean;
+  onDiscardLocal?: () => void;
+  discardDisabled?: boolean;
   mode?: "view" | "edit";
 
   className?: string;
@@ -38,6 +41,9 @@ export default function RecapBlogTopBar({
   mode = "view",
   onCloseEdit,
   onUpdate,
+  updateDisabled = false,
+  onDiscardLocal,
+  discardDisabled = false,
   className = "",
 }: Props) {
   const secondaryButtonClass =
@@ -53,6 +59,27 @@ export default function RecapBlogTopBar({
     "hover:opacity-90 active:scale-[0.99] transition " +
     "inline-flex items-center justify-center gap-2 " +
     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/20";
+
+  const disabledPrimaryButtonClass =
+    "h-9 rounded-full px-4 text-sm font-semibold leading-none tracking-[-0.01em] whitespace-nowrap " +
+    "bg-black/10 text-black/40 " +
+    "cursor-not-allowed " +
+    "inline-flex items-center justify-center gap-2 " +
+    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/10";
+
+  const destructiveButtonClass =
+    "h-9 rounded-full px-4 text-sm font-semibold leading-none tracking-[-0.01em] whitespace-nowrap " +
+    "bg-red-500/10 text-red-700 " +
+    "hover:bg-red-500/15 active:scale-[0.99] transition " +
+    "inline-flex items-center justify-center gap-2 " +
+    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/20";
+
+  const disabledDestructiveButtonClass =
+    "h-9 rounded-full px-4 text-sm font-semibold leading-none tracking-[-0.01em] whitespace-nowrap " +
+    "bg-black/10 text-black/40 " +
+    "cursor-not-allowed " +
+    "inline-flex items-center justify-center gap-2 " +
+    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/10";
 
   const handleShare = async () => {
     const url = window.location.href;
@@ -100,17 +127,40 @@ export default function RecapBlogTopBar({
                   Close
                 </button>
 
+                {onDiscardLocal && (
+                  <button
+                    type="button"
+                    onClick={discardDisabled ? undefined : onDiscardLocal}
+                    disabled={discardDisabled}
+                    className={
+                      discardDisabled
+                        ? disabledDestructiveButtonClass
+                        : destructiveButtonClass
+                    }
+                  >
+                    Discard local changes
+                  </button>
+                )}
+
                 <button
                   type="button"
-                  onClick={onUpdate}
-                  className={primaryButtonClass}
+                  onClick={updateDisabled ? undefined : onUpdate}
+                  disabled={updateDisabled}
+                  className={
+                    updateDisabled
+                      ? disabledPrimaryButtonClass
+                      : primaryButtonClass
+                  }
                 >
                   <Image
                     src={updateIcon}
                     alt="Update"
                     width={18}
                     height={18}
-                    className="block shrink-0 opacity-90"
+                    className={[
+                      "block shrink-0",
+                      updateDisabled ? "opacity-40" : "opacity-90",
+                    ].join(" ")}
                   />
                   Update
                 </button>

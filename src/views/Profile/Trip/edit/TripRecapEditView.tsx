@@ -54,9 +54,37 @@ export default function TripRecapEditView({
     null,
   );
   const baselineInitializedRef = useRef(false);
+  const baselineDraftFingerprintRef = useRef<string | null>(null);
 
   // day scroll refs
   const daySectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  const draftFingerprint = (d: RecapEditDraft) => {
+    // Exclude `updatedAt` (it changes on every keystroke), but include actual editable fields.
+    // Use JSON to keep it simple and stable.
+    return JSON.stringify({
+      sharedWithFriends: d.sharedWithFriends,
+      recapTitle: d.recapTitle,
+      coverPhoto: d.coverPhoto,
+      days: (d.days ?? []).map((day) => ({
+        id: day.id,
+        dayIndex: day.dayIndex,
+        title: day.title,
+        places: (day.places ?? []).map((p) => ({
+          id: p.id,
+          placeKey: p.placeKey,
+          // Include photos/captions so changing them toggles "dirty".
+          photos: p.photos ?? [],
+          captions: (p as any).captions ?? [],
+          caption: (p as any).caption ?? "",
+          // Include these too, in case they become editable later.
+          placeName: p.placeName,
+          timeRangeText: p.timeRangeText ?? "",
+          categoryLabel: p.categoryLabel ?? "",
+        })),
+      })),
+    });
+  };
 
   const buildBaselineCaptions = (d: RecapEditDraft) => {
     const placeMap = new Map<string, Map<string, string>>();
@@ -145,7 +173,15 @@ export default function TripRecapEditView({
     if (!draft) return;
     if (baselineInitializedRef.current) return;
     baselineCaptionsRef.current = buildBaselineCaptions(draft);
+    baselineDraftFingerprintRef.current = draftFingerprint(draft);
     baselineInitializedRef.current = true;
+  }, [draft]);
+
+  const hasLocalChanges = useMemo(() => {
+    if (!draft) return false;
+    const baseline = baselineDraftFingerprintRef.current;
+    if (!baseline) return false;
+    return draftFingerprint(draft) !== baseline;
   }, [draft]);
 
   /** 3) tabs / breadcrumb */
@@ -229,6 +265,7 @@ export default function TripRecapEditView({
 
       // Refresh baseline with the saved captions so repeated "Update" doesn't resend.
       baselineCaptionsRef.current = buildBaselineCaptions(draft);
+      baselineDraftFingerprintRef.current = draftFingerprint(draft);
 
       saveDraft(userId, tripId, { ...draft, updatedAt: Date.now() });
       router.back();
@@ -442,7 +479,10 @@ export default function TripRecapEditView({
         onDayChange={(id: string) => scrollToDay(id)}
         onGoBack={() => window.history.back()}
         onCloseEdit={handleClose}
+        onDiscardLocal={handleDiscardLocal}
+        discardDisabled={!hasLocalChanges || loading}
         onUpdate={handleUpdate}
+        updateDisabled={!hasLocalChanges || loading}
         className="sticky top-0 z-50 border-b border-black/10"
       />
 
@@ -562,17 +602,6 @@ export default function TripRecapEditView({
               />
             </div>
           ))}
-        </div>
-
-        {/* Local discard */}
-        <div className="mt-12 flex justify-end">
-          <button
-            type="button"
-            className="rounded-full bg-red-500/10 px-4 py-2 text-sm font-semibold text-red-600"
-            onClick={handleDiscardLocal}
-          >
-            Discard local changes
-          </button>
         </div>
       </div>
 

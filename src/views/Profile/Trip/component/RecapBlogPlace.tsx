@@ -2,7 +2,6 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
-import DeleteIcon from "@/assets/icons/delete.svg";
 import {
   MapPin,
   ThumbsUp,
@@ -15,7 +14,6 @@ import {
   ChevronRight,
 } from "lucide-react";
 
-import ConfirmModal from "@/components/ui/ConfirmModal";
 import PhotoLightbox from "@/components/ui/PhotoLightbox";
 import { idbGetBlob } from "@/views/Profile/Trip/edit/utils/imageIdb";
 import TextRow from "@/views/Profile/Trip/edit/components/TextRow";
@@ -205,7 +203,6 @@ function RecapPlaceBlock({
           entry={entry}
           onCaptionChange={onCaptionChange}
           onReplacePhoto={onReplacePhoto}
-          onRemovePhoto={onRemovePhoto}
         />
       ) : (
         <RecapPhotoCarousel
@@ -454,12 +451,10 @@ function RecapPhotoEditList({
   entry,
   onCaptionChange,
   onReplacePhoto,
-  onRemovePhoto,
 }: {
   entry: RecapEntry;
   onCaptionChange?: (entryId: string, photoIndex: number, next: string) => void;
   onReplacePhoto?: (entryId: string, photoIndex: number, file: File) => void;
-  onRemovePhoto?: (entryId: string, photoIndex: number) => void;
 }) {
   const normalizedCaptions = useMemo(() => {
     return Array.from({ length: entry.photos.length }, (_, i) => {
@@ -469,10 +464,6 @@ function RecapPhotoEditList({
       return "";
     });
   }, [entry.photos.length, entry.captions, entry.caption]);
-
-  const [removeTarget, setRemoveTarget] = useState<{
-    photoIndex: number;
-  } | null>(null);
 
   return (
     <>
@@ -488,23 +479,9 @@ function RecapPhotoEditList({
             timeLabel={entry.timeRangeText}
             onCaptionChange={onCaptionChange}
             onReplacePhoto={onReplacePhoto}
-            onRequestRemove={() => setRemoveTarget({ photoIndex: idx })}
           />
         ))}
       </div>
-
-      <ConfirmModal
-        open={!!removeTarget}
-        message={"Do you want to remove this place\n from this blog?"}
-        confirmText="Yes"
-        cancelText="No"
-        onClose={() => setRemoveTarget(null)}
-        onConfirm={() => {
-          if (!removeTarget) return;
-          onRemovePhoto?.(entry.id, removeTarget.photoIndex);
-          setRemoveTarget(null);
-        }}
-      />
     </>
   );
 }
@@ -518,7 +495,6 @@ function PhotoCaptionRow({
   timeLabel,
   onCaptionChange,
   onReplacePhoto,
-  onRequestRemove,
 }: {
   entryId: string;
   photoUrl: string;
@@ -528,7 +504,6 @@ function PhotoCaptionRow({
   timeLabel?: string;
   onCaptionChange?: (entryId: string, photoIndex: number, next: string) => void;
   onReplacePhoto?: (entryId: string, photoIndex: number, file: File) => void;
-  onRequestRemove: () => void;
 }) {
   const fileRef = useRef<HTMLInputElement | null>(null);
 
@@ -576,15 +551,6 @@ function PhotoCaptionRow({
           onChange={(v) => onCaptionChange?.(entryId, index, v)}
         />
       </div>
-
-      <button
-        type="button"
-        className="mt-2 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full hover:bg-black/5"
-        onClick={onRequestRemove}
-        aria-label="Remove photo"
-      >
-        <Image src={DeleteIcon} alt="delete" className="h-8 w-8 " />
-      </button>
     </div>
   );
 }
