@@ -5,7 +5,7 @@
 
 "use client";
 
-import mapboxgl from "mapbox-gl";
+import type { GeoJSONSource, Map as MapboxMapType } from "mapbox-gl";
 import {
   useCallback,
   useEffect,
@@ -197,7 +197,8 @@ export default function MapboxMap({
   overlayTopRight,
 }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const mapRef = useRef<mapboxgl.Map | null>(null);
+  const mapRef = useRef<MapboxMapType | null>(null);
+  const mapboxglRef = useRef<any | null>(null);
 
   // handles
   const markerHandlesRef = useRef<any[]>([]);
@@ -228,20 +229,6 @@ export default function MapboxMap({
   const [initError, setInitError] = useState<string | null>(() => {
     if (!token) {
       return "Mapbox token is missing. Please set NEXT_PUBLIC_MAPBOX_TOKEN and refresh.";
-    }
-
-    // Most common reason for “Failed to initialize WebGL”
-    try {
-      const isSupported =
-        typeof mapboxgl.supported === "function"
-          ? mapboxgl.supported({ failIfMajorPerformanceCaveat: true } as any)
-          : true;
-
-      if (!isSupported) {
-        return "Map can't be displayed because WebGL isn't supported or is disabled in this browser/device. Try Safari, or enable hardware acceleration / update graphics drivers.";
-      }
-    } catch {
-      // If this check fails, we'll still attempt initialization in the effect.
     }
 
     return null;
@@ -413,6 +400,14 @@ export default function MapboxMap({
     clearPlacePath();
   }, [clearPlacePath]);
 
+  const loadMapboxGL = useCallback(async () => {
+    if (mapboxglRef.current) return mapboxglRef.current;
+    const mod = await import("mapbox-gl");
+    const mb = (mod as any)?.default ?? mod;
+    mapboxglRef.current = mb;
+    return mb;
+  }, []);
+
   const syncPlacePath = useCallback(() => {
     const map = mapRef.current;
     if (!map || !map.isStyleLoaded()) return;
@@ -438,7 +433,7 @@ export default function MapboxMap({
     };
 
     const existing = map.getSource(PLACE_PATH_SOURCE_ID) as
-      | mapboxgl.GeoJSONSource
+      | GeoJSONSource
       | undefined;
 
     if (existing) {
@@ -467,6 +462,8 @@ export default function MapboxMap({
   const syncMarkers = useCallback(() => {
     const map = mapRef.current;
     if (!map) return;
+    const mapboxgl = mapboxglRef.current;
+    if (!mapboxgl) return;
 
     if (!map.isStyleLoaded()) {
       map.once("idle", () => syncMarkersRef.current());
@@ -735,80 +732,104 @@ export default function MapboxMap({
       return;
     if (!token) return;
 
-    mapboxgl.accessToken = token;
+    let cancelled = false;
+    let map: any;
+    let ro: ResizeObserver | null = null;
+    let markUserInteraction: (() => void) | null = null;
 
-    let map: mapboxgl.Map;
-    try {
-      map = new mapboxgl.Map({
-        container: containerRef.current,
-        style: "mapbox://styles/mapbox/streets-v12",
-        center: [-98.5795, 39.8283], // 초기값(미국)이어도 OK: 이후 카메라 effect가 자연스럽게 이동시킴
-        zoom: 1,
-        renderWorldCopies: false,
-      });
-    } catch (e) {
-      console.error("Failed to initialize WebGL for the map:", e);
+    (async () => {
+      const mapboxgl = await loadMapboxGL();
+      if (cancelled) return;
 
-      // Defer state update to avoid synchronous setState inside the effect body.
-      setTimeout(() => {
+      mapboxgl.accessToken = token;
+
+      // Best-effort WebGL support check (after Mapbox loads)
+      try {
+        const isSupported =
+          typeof mapboxgl.supported === "function"
+            ? mapboxgl.supported({ failIfMajorPerformanceCaveat: true } as any)
+            : true;
+        if (!isSupported) {
+          setInitError(
+            "Map can't be displayed because WebGL isn't supported or is disabled in this browser/device. Try Safari, or enable hardware acceleration / update graphics drivers.",
+          );
+          return;
+        }
+      } catch {
+        // ignore and attempt initialization
+      }
+
+      try {
+        map = new mapboxgl.Map({
+          container: containerRef.current!,
+          style: "mapbox://styles/mapbox/streets-v12",
+          center: [-98.5795, 39.8283], // 초기값(미국)이어도 OK: 이후 카메라 effect가 자연스럽게 이동시킴
+          zoom: 1,
+          renderWorldCopies: false,
+        });
+      } catch (e) {
+        console.error("Failed to initialize WebGL for the map:", e);
         setInitError(
           "Failed to initialize WebGL for the map. This usually means WebGL is unavailable (GPU/driver/browser policy) or hardware acceleration is disabled. Try Safari or another browser, and check browser GPU settings.",
         );
-      }, 0);
-      return;
-    }
-
-    mapRef.current = map;
-
-    map.on("load", () => {
-      map.setProjection("globe");
-      map.setFog({});
-
-      // 최신 함수로
-      syncHighlightLayersRef.current();
-      syncMarkersRef.current();
-
-      // 초기 포커스는 “최신 props(ref)” 기준
-      const fl = focusLatLngRef.current;
-      if (fl) {
-        focusOnLatLng(fl.lat, fl.lng);
         return;
       }
 
-      // Prefer fitting all markers so the map covers everything.
-      if (fitToCurrentMarkersBounds()) {
-        return;
-      }
+      mapRef.current = map;
 
-      const first = getFirstValidEntryLatLng();
-      if (first) {
-        focusOnLatLng(first.lat, first.lng);
-        return;
-      }
+      map.on("load", () => {
+        map.setProjection("globe");
+        map.setFog({});
 
-      const cc = countryCodeRef.current;
-      if (cc) focusOnCountry(cc);
-    });
+        // 최신 함수로
+        syncHighlightLayersRef.current();
+        syncMarkersRef.current();
 
-    const markUserInteraction = () => {
-      lastUserInteractionAtRef.current = Date.now();
-    };
-    map.on("dragstart", markUserInteraction);
-    map.on("zoomstart", markUserInteraction);
-    map.on("rotatestart", markUserInteraction);
-    map.on("pitchstart", markUserInteraction);
+        // 초기 포커스는 “최신 props(ref)” 기준
+        const fl = focusLatLngRef.current;
+        if (fl) {
+          focusOnLatLng(fl.lat, fl.lng);
+          return;
+        }
 
-    const ro = new ResizeObserver(() => map.resize());
-    ro.observe(containerRef.current);
+        // Prefer fitting all markers so the map covers everything.
+        if (fitToCurrentMarkersBounds()) {
+          return;
+        }
+
+        const first = getFirstValidEntryLatLng();
+        if (first) {
+          focusOnLatLng(first.lat, first.lng);
+          return;
+        }
+
+        const cc = countryCodeRef.current;
+        if (cc) focusOnCountry(cc);
+      });
+
+      markUserInteraction = () => {
+        lastUserInteractionAtRef.current = Date.now();
+      };
+      map.on("dragstart", markUserInteraction);
+      map.on("zoomstart", markUserInteraction);
+      map.on("rotatestart", markUserInteraction);
+      map.on("pitchstart", markUserInteraction);
+
+      ro = new ResizeObserver(() => map.resize());
+      ro.observe(containerRef.current!);
+    })();
 
     return () => {
-      ro.disconnect();
-      map.off("dragstart", markUserInteraction);
-      map.off("zoomstart", markUserInteraction);
-      map.off("rotatestart", markUserInteraction);
-      map.off("pitchstart", markUserInteraction);
+      cancelled = true;
+      if (ro) ro.disconnect();
+      if (map && markUserInteraction) {
+        map.off("dragstart", markUserInteraction);
+        map.off("zoomstart", markUserInteraction);
+        map.off("rotatestart", markUserInteraction);
+        map.off("pitchstart", markUserInteraction);
+      }
       clearMarkers();
-      map.remove();
+      if (map) map.remove();
       mapRef.current = null;
     };
   }, [
@@ -820,6 +841,7 @@ export default function MapboxMap({
     focusOnCountry,
     fitToCurrentMarkersBounds,
     getFirstValidEntryLatLng,
+    loadMapboxGL,
   ]);
 
   // 데이터/모드 변화 시 마커/하이라이트 동기화는 “map 유지”한 채로만

@@ -1,11 +1,19 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useMemo, useEffect, useState } from "react";
 import { useTravelStatsVM } from "@/views/Profile/travel-stats/hooks/useTravelStatsVM";
 import MostVisitedSection from "./section/MostVisitedSection";
 import AllCountriesSection from "./section/AllCountry";
-import MapboxMap, { CountryStat } from "./components/MapBoxMap";
+import type { CountryStat } from "./components/MapBoxMap";
 import { getCountryName } from "@/utils/countryName";
+
+const MapboxMap = dynamic(() => import("./components/MapBoxMap"), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-full rounded-3xl bg-black/5 border border-black/5" />
+  ),
+});
 
 type MostVisitedItem = {
   country: string;
