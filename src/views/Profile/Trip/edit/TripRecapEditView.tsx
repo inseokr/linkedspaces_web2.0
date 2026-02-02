@@ -48,19 +48,47 @@ export default function TripRecapEditView({
     draftRef.current = draft;
   }, [draft]);
 
-  // Debounced story saves (avoid firing on every keystroke)
-  const storySaveTimersRef = useRef<Record<string, number>>({});
-  useEffect(() => {
-    return () => {
-      for (const t of Object.values(storySaveTimersRef.current)) {
-        window.clearTimeout(t);
-      }
-      storySaveTimersRef.current = {};
-    };
-  }, []);
+  // Baseline captions keyed by placeKey -> photoUrl -> caption.
+  // We diff against this on "Update" so we only call the caption API for changed photos.
+  const baselineCaptionsRef = useRef<Map<string, Map<string, string>> | null>(
+    null,
+  );
+  const baselineInitializedRef = useRef(false);
 
   // day scroll refs
   const daySectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  const buildBaselineCaptions = (d: RecapEditDraft) => {
+    const placeMap = new Map<string, Map<string, string>>();
+    for (const day of d.days ?? []) {
+      for (const place of day.places ?? []) {
+        const placeKey = place.placeKey;
+        if (!placeKey) continue;
+
+        const photoToCaption = new Map<string, string>();
+        const photos = place.photos ?? [];
+        const captions = (place as any).captions ?? [];
+        for (let i = 0; i < photos.length; i++) {
+          const photoUrl = photos[i];
+          if (!photoUrl) continue;
+
+          const caption =
+            typeof captions?.[i] === "string"
+              ? captions[i]
+              : i === 0 && typeof (place as any).caption === "string"
+                ? (place as any).caption
+                : "";
+
+          // If duplicate URIs exist, keep the first baseline value (stable).
+          if (!photoToCaption.has(photoUrl)) {
+            photoToCaption.set(photoUrl, caption);
+          }
+        }
+        placeMap.set(placeKey, photoToCaption);
+      }
+    }
+    return placeMap;
+  };
 
   /** 1) Fetch */
   useEffect(() => {
@@ -112,6 +140,14 @@ export default function TripRecapEditView({
     setDraft(base);
   }, [pageModel, userId, tripId]);
 
+  // Initialize baseline captions once (first time draft becomes available).
+  useEffect(() => {
+    if (!draft) return;
+    if (baselineInitializedRef.current) return;
+    baselineCaptionsRef.current = buildBaselineCaptions(draft);
+    baselineInitializedRef.current = true;
+  }, [draft]);
+
   /** 3) tabs / breadcrumb */
   const dayTabs: DayTab[] = useMemo(() => {
     return (
@@ -130,10 +166,77 @@ export default function TripRecapEditView({
   };
 
   /** 5) save/close/discard */
-  const handleUpdate = () => {
+  const handleUpdate = async () => {
     if (!draft) return;
-    saveDraft(userId, tripId, { ...draft, updatedAt: Date.now() });
-    router.back();
+
+    // Diff captions by photo URI (not by index) so index shifts don't trigger "update all".
+    const baseline = baselineCaptionsRef.current ?? new Map();
+    const updates: Array<{
+      placeKey: string;
+      photoIndex: number;
+      storyText: string;
+    }> = [];
+
+    for (const day of draft.days ?? []) {
+      for (const place of day.places ?? []) {
+        const placeKey = place.placeKey;
+        if (!placeKey) continue;
+
+        const baselineByPhoto =
+          baseline.get(placeKey) ?? new Map<string, string>();
+        const photos = place.photos ?? [];
+        const captions = (place as any).captions ?? [];
+
+        for (let i = 0; i < photos.length; i++) {
+          const photoUrl = photos[i];
+          if (!photoUrl) continue;
+          // Local-only (idb) photos can't be updated server-side with this endpoint.
+          if (photoUrl.startsWith("idb:")) continue;
+
+          const nextCaption =
+            typeof captions?.[i] === "string"
+              ? captions[i]
+              : i === 0 && typeof (place as any).caption === "string"
+                ? (place as any).caption
+                : "";
+
+          const prevCaption = baselineByPhoto.get(photoUrl) ?? "";
+          if (nextCaption !== prevCaption) {
+            updates.push({ placeKey, photoIndex: i, storyText: nextCaption });
+          }
+        }
+      }
+    }
+
+    setLoading(true);
+    setError(null);
+    try {
+      // Execute updates; keep going even if some fail.
+      const results = await Promise.allSettled(
+        updates.map((u) =>
+          updatePlaceVisitHistoryStory({
+            placeKey: u.placeKey,
+            photoIndex: u.photoIndex,
+            storyText: u.storyText,
+          }),
+        ),
+      );
+
+      const failed = results.filter((r) => r.status === "rejected");
+      if (failed.length > 0) {
+        throw new Error(`Failed to update ${failed.length} caption(s).`);
+      }
+
+      // Refresh baseline with the saved captions so repeated "Update" doesn't resend.
+      baselineCaptionsRef.current = buildBaselineCaptions(draft);
+
+      saveDraft(userId, tripId, { ...draft, updatedAt: Date.now() });
+      router.back();
+    } catch (e: any) {
+      setError(e?.message ?? "Failed to update captions");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleClose = () => {
@@ -204,30 +307,6 @@ export default function TripRecapEditView({
     photoIndex: number,
     next: string,
   ) => {
-    // Persist to DB (photo-level story) via backend API
-    const placeKey =
-      draftRef.current?.days
-        ?.find((d) => d.id === dayId)
-        ?.places?.find((p) => p.id === placeId)?.placeKey ?? null;
-
-    if (placeKey) {
-      const timerKey = `${placeKey}:${photoIndex}`;
-      const existing = storySaveTimersRef.current[timerKey];
-      if (existing) window.clearTimeout(existing);
-
-      storySaveTimersRef.current[timerKey] = window.setTimeout(async () => {
-        try {
-          await updatePlaceVisitHistoryStory({
-            placeKey,
-            photoIndex,
-            storyText: next,
-          });
-        } catch (err) {
-          console.warn("Failed to save story:", err);
-        }
-      }, 650);
-    }
-
     updatePlaceInDay(dayId, placeId, (p) => {
       const photosLen = (p.photos ?? []).length;
       const captions = Array.from(
