@@ -105,7 +105,13 @@ export default function SignInSection() {
                 autoComplete="username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className="w-full rounded-2xl border border-black/25 px-5 py-3 text-[14px] placeholder:text-black/50 outline-none focus:border-black/50"
+                // className="w-full rounded-2xl border border-black/25 px-5 py-3 text-[14px] placeholder:text-black/50 outline-none focus:border-black/50"
+                className={[
+                  "w-full h-[46px]",
+                  "rounded-[10px] border border-black/25",
+                  "px-4 text-[14px] text-black",
+                  "outline-none focus:border-black/55",
+                ].join(" ")}
               />
 
               <input
