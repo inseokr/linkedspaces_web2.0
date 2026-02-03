@@ -33,7 +33,7 @@ export default function SignInHeroCard({
   return (
     <section
       className={[
-        "relative mx-auto w-[90%] rounded-[36px] rounded-[36px] overflow-hidden",
+        "relative mx-auto w-[96%] sm:w-[90%] rounded-[36px] rounded-[36px] overflow-hidden",
         "h-[80vh]",
         className,
       ].join(" ")}
@@ -47,21 +47,15 @@ export default function SignInHeroCard({
         className="object-cover -scale-x-100"
       />
 
-      {/* Contrast overlay (subtle, left-heavy) */}
-      {/* <div className="pointer-events-none absolute inset-0">
-        <div className="absolute inset-0 bg-white/10" />
-        <div
-          className="absolute inset-0"
-          style={{
-            background:
-              "linear-gradient(90deg, rgba(0,0,0,0.40) 0%, rgba(0,0,0,0.18) 42%, rgba(0,0,0,0.00) 72%)",
-          }}
-        />
-      </div> */}
+      {/* Mobile-only contrast overlay (keeps text readable on bright areas) */}
+      <div className="pointer-events-none absolute inset-0 sm:hidden">
+        <div className="absolute inset-0 bg-black/10" />
+        <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/25 to-transparent" />
+      </div>
 
       {/* Content */}
       <div className="relative z-10 flex h-full w-full items-center">
-        <div className="w-full max-w-[8000px] p-8 md:p-30">
+        <div className="w-full max-w-[8000px] p-6 sm:p-8 md:p-30">
           {/* Title */}
           <h1
             className={[
@@ -70,8 +64,8 @@ export default function SignInHeroCard({
               "leading-[1.16]",
               "tracking-[-0.75px]",
               "font-['Nunito_Sans']",
-              "!text-[60px]",
-              "whitespace-pre-line",
+              "!text-[44px] sm:!text-[60px]",
+              "whitespace-pre-line break-words",
             ].join(" ")}
             style={{
               textShadow: "0 4px 4px rgba(0, 0, 0, 0.75)",
@@ -81,21 +75,38 @@ export default function SignInHeroCard({
           </h1>
 
           {/* Subtitle */}
-          <p className='!mt-5 text-white leading-[1.16] tracking-[-0.75px] !font-["Nunito_Sans"] !text-[20px] font-bold leading-[1.32] tracking-[2.4px] whitespace-pre-line'>
+          <p
+            className={[
+              "mt-5",
+              'font-["Nunito_Sans"]',
+              "text-white/90 font-semibold",
+              "text-[18px] sm:text-[20px]",
+              "leading-[1.32] tracking-[1.2px]",
+              "whitespace-pre-line",
+            ].join(" ")}
+            style={{
+              paddingTop: "10px",
+              fontWeight: "700",
+              textShadow: "0 3px 12px rgba(0, 0, 0, 0.65)",
+            }}
+          >
             {subtitle}
           </p>
 
           {/* Buttons */}
-          <div className="mt-25 flex flex-col gap-4 sm:flex-row sm:items-center">
+          <div
+            style={{ paddingTop: "100px" }}
+            className="mt-25 flex flex-col gap-4 sm:flex-row sm:items-center"
+          >
             <button
               type="button"
               onClick={onPrimaryClick}
               className={[
-                "h-20 w-full sm:w-[280px]",
+                "h-14 w-full sm:h-20 sm:w-[280px]",
                 "rounded-2xl",
                 "bg-white/90 hover:bg-white",
                 "text-[#2F6BFF]",
-                "text-[30px] font-semibold",
+                "text-[20px] sm:text-[30px] font-semibold",
                 "shadow-[0_10px_30px_rgba(0,0,0,0.18)]",
                 "transition",
                 "backdrop-blur-md",
@@ -108,11 +119,11 @@ export default function SignInHeroCard({
               type="button"
               onClick={onSecondaryClick}
               className={[
-                "h-20 w-full sm:w-[280px]",
+                "h-14 w-full sm:h-20 sm:w-[280px]",
                 "rounded-2xl",
                 "bg-white/90 hover:bg-white",
                 "text-[#2F6BFF]",
-                "text-[30px] font-semibold",
+                "text-[20px] sm:text-[30px] font-semibold",
                 "shadow-[0_10px_30px_rgba(0,0,0,0.18)]",
                 "transition",
                 "backdrop-blur-md",
