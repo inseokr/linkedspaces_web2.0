@@ -272,6 +272,7 @@ export default function TripRecapEditView({
             placeKey: u.placeKey,
             photoIndex: u.photoIndex,
             storyText: u.storyText,
+            photoIndexType: "filtered",
           }),
         });
       }

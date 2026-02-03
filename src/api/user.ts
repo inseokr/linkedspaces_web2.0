@@ -209,6 +209,7 @@ export type UpdatePlaceVisitHistoryStoryRequest = {
   photoIndex?: number | null;
   /** Allow empty string to clear. */
   storyText: string;
+  photoIndexType: "filtered" | "all";
 };
 
 type SimpleResult = { result: "OK" | "FAIL"; reason?: string };
