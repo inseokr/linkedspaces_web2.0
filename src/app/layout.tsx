@@ -39,11 +39,15 @@ export default function RootLayout({
   const pathname = usePathname();
 
   const isAuthPage = pathname === "/sign-in";
+  const forceLightTheme =
+    pathname === "/privacy" || pathname === "/contact" || pathname === "/terms";
 
   return (
     <html
       lang="en"
-      className={`${inter.variable} ${poppins.variable} ${montserrat.variable}`}
+      className={`${inter.variable} ${poppins.variable} ${montserrat.variable} ${
+        forceLightTheme ? "theme-light" : ""
+      }`}
     >
       <body className="min-h-screen flex flex-col overflow-x-hidden">
         {/* 여기서 Provider로 감싸기 */}

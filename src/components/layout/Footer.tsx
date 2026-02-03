@@ -8,7 +8,7 @@ import linkedinIcon from "@/assets/icons/linkedin.svg";
 export function Footer() {
   return (
     <footer
-      className="w-full bg-transparent"
+      className="w-full border-t border-[var(--header-border)] bg-[var(--header-bg)] backdrop-blur supports-[backdrop-filter]:bg-[var(--header-bg)]"
       style={{
         marginLeft: "var(--sidebar-offset, 0px)",
         width: "calc(100% - var(--sidebar-offset, 0px))",
@@ -48,8 +48,10 @@ export function Footer() {
         </a>
       </div>
 
-      <div className="mx-auto flex flex-col sm:flex-row flex-wrap [font-family:var(--font-poppins)] text-base leading-[22.4px] font-semibold text-[var(--foreground)] items-center justify-center gap-2 px-4 pb-30 text-center">
-        <span>© 2025 LinkedSpaces. All rights reserved.</span>
+      <div className="mx-auto flex flex-col sm:flex-row flex-wrap [font-family:var(--font-poppins)] text-base leading-[22.4px] font-semibold text-[var(--header-text)] items-center justify-center gap-2 px-4 pb-30 text-center">
+        <span className="text-[var(--header-text-muted)]">
+          © 2025 LinkedSpaces. All rights reserved.
+        </span>
         <span className="hidden sm:inline">|</span>
         <Link href="/privacy" className="underline text-[var(--color-main)]">
           Privacy Policy

@@ -752,9 +752,23 @@ export default function GuestRecapPage({ userId, tripId }: Props) {
   // ===== layout constants =====
   const LOGIN_BAR_HEIGHT_PX = 74;
   const MOBILE_TABS_HEIGHT_PX = 56;
-  const TOPBAR_OFFSET_PX = 200; // desktop sticky offset (kept as-is)
+  const TOPBAR_OFFSET_PX = 200; // desktop sticky offset (initial; pre-snap)
+  const DESKTOP_SNAPPED_TOP_PX = LOGIN_BAR_HEIGHT_PX;
   const PANEL_HEIGHT_OFFSET = 100;
   const PANEL_HEIGHT = `calc(100vh - ${PANEL_HEIGHT_OFFSET}px)`;
+
+  // Desktop-only: once the left panel starts moving, we "snap" both sticky
+  // columns (left panel + map) to the top (under the fixed login bar).
+  const desktopSnappedRef = useRef(false);
+  const desktopStickyTopRef = useRef<number>(TOPBAR_OFFSET_PX);
+  const leftStickyRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    // When switching to mobile, reset so returning to desktop behaves normally.
+    if (isLg) return;
+    desktopSnappedRef.current = false;
+    desktopStickyTopRef.current = TOPBAR_OFFSET_PX;
+  }, [isLg, TOPBAR_OFFSET_PX]);
 
   // Mobile: hide the fixed login bar once the Day tabs become sticky.
   const dayTabsSentinelRef = useRef<HTMLDivElement | null>(null);
@@ -1372,6 +1386,45 @@ export default function GuestRecapPage({ userId, tripId }: Props) {
     const root = leftScrollRef.current;
     if (!root) return;
 
+    const getAnchorEl = () => leftStickyRef.current ?? mapStickyRef.current;
+
+    const alignToTop = () => {
+      const anchor = getAnchorEl();
+      if (!anchor) return;
+      const stickyTop = desktopStickyTopRef.current;
+      const rect = anchor.getBoundingClientRect();
+      const delta = rect.top - stickyTop;
+      // Only scroll down to "snap" into place; avoid scroll-up jitter.
+      if (delta > 1) window.scrollBy({ top: delta, left: 0, behavior: "auto" });
+    };
+
+    const snapNow = () => {
+      if (desktopSnappedRef.current) return;
+      desktopSnappedRef.current = true;
+      desktopStickyTopRef.current = DESKTOP_SNAPPED_TOP_PX;
+
+      // Apply immediately (no render timing dependency).
+      const top = `${DESKTOP_SNAPPED_TOP_PX}px`;
+      if (leftStickyRef.current) leftStickyRef.current.style.top = top;
+      if (mapStickyRef.current) mapStickyRef.current.style.top = top;
+
+      // Align on the next frame after layout settles.
+      window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(() => alignToTop());
+      });
+    };
+
+    // Guest-mode blog UX: as soon as the left panel starts moving, snap the
+    // split view to the top. This is triggered by actual left-panel scroll.
+    const onLeftPanelScroll = () => {
+      if (!userInteracted) return;
+      if (isProgrammaticScrollRef.current) return;
+      snapNow();
+      alignToTop();
+    };
+
+    root.addEventListener("scroll", onLeftPanelScroll, { passive: true });
+
     const canScrollLeftPanel = (deltaY: number) => {
       const maxTop = root.scrollHeight - root.clientHeight;
       const cur = root.scrollTop;
@@ -1393,11 +1446,17 @@ export default function GuestRecapPage({ userId, tripId }: Props) {
       if (!mapEl) return;
 
       const rect = mapEl.getBoundingClientRect();
-      const pinnedNow = rect.top <= TOPBAR_OFFSET_PX + 1;
+      const pinnedNow = rect.top <= desktopStickyTopRef.current + 1;
       if (!pinnedNow) return;
 
       if (e.ctrlKey) return;
       if (!canScrollLeftPanel(delta)) return;
+
+      // We are about to move the left panel -> ensure the split view is snapped.
+      if (userInteracted && !isProgrammaticScrollRef.current) {
+        snapNow();
+        alignToTop();
+      }
 
       e.preventDefault();
       e.stopPropagation();
@@ -1411,10 +1470,11 @@ export default function GuestRecapPage({ userId, tripId }: Props) {
     document.addEventListener("wheel", onWheel, opts);
 
     return () => {
+      root.removeEventListener("scroll", onLeftPanelScroll);
       window.removeEventListener("wheel", onWheel, opts);
       document.removeEventListener("wheel", onWheel, opts);
     };
-  }, [TOPBAR_OFFSET_PX, userInteracted, isLg]);
+  }, [DESKTOP_SNAPPED_TOP_PX, userInteracted, isLg]);
 
   // ===== 로딩/에러 처리 =====
   if (loading) return <div className="p-6">Loading recap…</div>;
@@ -1476,8 +1536,9 @@ export default function GuestRecapPage({ userId, tripId }: Props) {
       {isLg ? (
         <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
           <section
+            ref={leftStickyRef}
             className="min-w-0 flex-1 sticky self-start"
-            style={{ top: TOPBAR_OFFSET_PX }}
+            style={{ top: desktopStickyTopRef.current }}
           >
             <div
               ref={leftScrollRef}
@@ -1520,7 +1581,7 @@ export default function GuestRecapPage({ userId, tripId }: Props) {
               mapStickyRef.current = el;
             }}
             className="min-w-0 flex-1 sticky self-start"
-            style={{ top: TOPBAR_OFFSET_PX }}
+            style={{ top: desktopStickyTopRef.current }}
           >
             <div
               ref={mapContainerRef}

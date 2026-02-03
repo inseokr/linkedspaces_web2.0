@@ -90,6 +90,90 @@
   }
 }
 
+/* Explicit theme overrides (win over prefers-color-scheme) */
+html.theme-light {
+  color-scheme: light;
+  --background: #ffffff;
+  --foreground: #171717;
+
+  /* Generic surfaces (used outside header) */
+  --card-bg: #ffffff;
+  --card-border: rgba(0, 0, 0, 0.08);
+  --card-text: rgba(0, 0, 0, 0.92);
+  --card-text-muted: rgba(0, 0, 0, 0.68);
+  --input-bg: #ffffff;
+  --input-border: rgba(0, 0, 0, 0.32);
+
+  /* Header surface tokens (light mode) */
+  --header-bg: rgba(255, 255, 255, 0.86);
+  --header-border: rgba(0, 0, 0, 0.08);
+  --header-shadow: 0 1px 0 rgba(0, 0, 0, 0.02), 0 12px 30px rgba(0, 0, 0, 0.08);
+  --header-text: rgba(0, 0, 0, 0.92);
+  --header-text-muted: rgba(0, 0, 0, 0.68);
+  --header-menu-rgb: 255 255 255;
+  --header-menu-bg: rgba(255, 255, 255, 0.68);
+  --header-menu-border: rgba(0, 0, 0, 0.08);
+  --header-icon-filter: none;
+
+  /* User menu (authenticated) */
+  --user-pill-bg: rgba(255, 255, 255, 0.72);
+  --user-pill-bg-hover: rgba(255, 255, 255, 0.86);
+  --user-pill-border: rgba(0, 0, 0, 0.12);
+  --user-pill-text: var(--header-text);
+  --user-pill-text-muted: var(--header-text-muted);
+  --user-pill-focus: rgba(7, 152, 255, 0.55);
+
+  --user-menu-overlay: rgba(0, 0, 0, 0.12);
+  --user-menu-bg: rgba(255, 255, 255, 0.95);
+  --user-menu-border: rgba(0, 0, 0, 0.08);
+  --user-menu-shadow: 0 18px 45px rgba(0, 0, 0, 0.25);
+  --user-menu-muted: rgba(0, 0, 0, 0.55);
+  --user-menu-item-hover: rgba(0, 0, 0, 0.04);
+  --user-menu-danger: #ff3b30;
+}
+
+html.theme-dark {
+  color-scheme: dark;
+  --background: #0a0a0a;
+  --foreground: #ededed;
+
+  /* Generic surfaces (used outside header) */
+  --card-bg: rgba(18, 18, 18, 0.92);
+  --card-border: rgba(255, 255, 255, 0.12);
+  --card-text: rgba(255, 255, 255, 0.92);
+  --card-text-muted: rgba(255, 255, 255, 0.72);
+  --input-bg: rgba(24, 24, 24, 0.9);
+  --input-border: rgba(255, 255, 255, 0.18);
+
+  /* Header surface tokens (dark mode) */
+  --header-bg: rgba(10, 10, 10, 0.72);
+  --header-border: rgba(255, 255, 255, 0.12);
+  --header-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.03), 0 14px 40px rgba(0, 0, 0, 0.55);
+  --header-text: rgba(255, 255, 255, 0.92);
+  --header-text-muted: rgba(255, 255, 255, 0.72);
+  --header-menu-rgb: 24 24 24;
+  --header-menu-bg: rgba(24, 24, 24, 0.72);
+  --header-menu-border: rgba(255, 255, 255, 0.12);
+  --header-icon-filter: invert(1) brightness(1.1);
+
+  /* User menu (authenticated) */
+  --user-pill-bg: rgba(24, 24, 24, 0.72);
+  --user-pill-bg-hover: rgba(24, 24, 24, 0.88);
+  --user-pill-border: rgba(255, 255, 255, 0.14);
+  --user-pill-text: var(--header-text);
+  --user-pill-text-muted: var(--header-text-muted);
+  --user-pill-focus: rgba(7, 152, 255, 0.65);
+
+  --user-menu-overlay: rgba(0, 0, 0, 0.35);
+  --user-menu-bg: rgba(18, 18, 18, 0.92);
+  --user-menu-border: rgba(255, 255, 255, 0.12);
+  --user-menu-shadow: 0 20px 55px rgba(0, 0, 0, 0.65);
+  --user-menu-muted: rgba(255, 255, 255, 0.6);
+  --user-menu-item-hover: rgba(255, 255, 255, 0.06);
+  --user-menu-danger: #ff453a;
+}
+
 /* Authenticated user pill (header right) */
 .user-pill {
   background: var(--user-pill-bg);
