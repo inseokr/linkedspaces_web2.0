@@ -7,10 +7,12 @@ import React, {
   useRef,
   useState,
 } from "react";
+import { createPortal } from "react-dom";
 
 import RecapBlogHero from "./component/RecapBlogTopImage";
 import {
   RecapBlogDaySection,
+  RecapBlogEntryCard,
   type RecapBlogPageData,
 } from "./component/RecapBlogPlace";
 import RecapDayTabs, { type DayTab } from "./component/RecapDayTabs";
@@ -729,8 +731,15 @@ function useIsDesktopLg() {
 }
 
 export default function GuestRecapPage({ userId, tripId }: Props) {
+  const isLg = useIsDesktopLg();
+
   const [isSignInOpen, setIsSignInOpen] = useState(false);
   const [isDownloadOpen, setIsDownloadOpen] = useState(false);
+  const [mobileMapPortalTarget, setMobileMapPortalTarget] =
+    useState<HTMLDivElement | null>(null);
+  const [mobilePlaceSheetEntryId, setMobilePlaceSheetEntryId] = useState<
+    string | null
+  >(null);
 
   const openSignIn = () => setIsSignInOpen(true);
   const closeSignIn = () => setIsSignInOpen(false);
@@ -739,7 +748,9 @@ export default function GuestRecapPage({ userId, tripId }: Props) {
   const closeDownload = () => setIsDownloadOpen(false);
 
   // ===== layout constants =====
-  const TOPBAR_OFFSET_PX = 200;
+  const LOGIN_BAR_HEIGHT_PX = 74;
+  const MOBILE_TABS_HEIGHT_PX = 56;
+  const TOPBAR_OFFSET_PX = 200; // desktop sticky offset (kept as-is)
   const PANEL_HEIGHT_OFFSET = 100;
   const PANEL_HEIGHT = `calc(100vh - ${PANEL_HEIGHT_OFFSET}px)`;
 
@@ -862,6 +873,7 @@ export default function GuestRecapPage({ userId, tripId }: Props) {
   const entryRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const mapStickyRef = useRef<HTMLElement | null>(null);
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
+  const dayMapHostRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   // ===== guard flags =====
   const isProgrammaticScrollRef = useRef(false);
@@ -899,6 +911,30 @@ export default function GuestRecapPage({ userId, tripId }: Props) {
     }
   }, [dayTabs]);
 
+  const effectiveDaysCount = effectiveModel?.days.length ?? 0;
+  useLayoutEffect(() => {
+    // Mobile only: pick the current day section's map host as portal target.
+    if (isLg) {
+      setMobileMapPortalTarget((prev) => (prev === null ? prev : null));
+      return;
+    }
+
+    const next = dayMapHostRefs.current[activeDayId] ?? null;
+    setMobileMapPortalTarget((prev) => (prev === next ? prev : next));
+  }, [activeDayId, isLg, effectiveDaysCount]);
+
+  // Close place sheet on Escape (mobile only)
+  useEffect(() => {
+    if (isLg) return;
+    if (!mobilePlaceSheetEntryId) return;
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMobilePlaceSheetEntryId(null);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [isLg, mobilePlaceSheetEntryId]);
+
   // ===== map focus =====
   const [focusLatLng, setFocusLatLng] = useState<
     { lat: number; lng: number } | undefined
@@ -925,57 +961,118 @@ export default function GuestRecapPage({ userId, tripId }: Props) {
 
   // ===== scroll helpers (기존 로직 유지) =====
   const scrollToDay = (dayId: string) => {
-    const root = leftScrollRef.current;
     const el = daySectionRefs.current[dayId];
-    if (!root || !el) return;
+    if (!el) return;
 
+    // Desktop: scroll the left panel
+    if (isLg) {
+      const root = leftScrollRef.current;
+      if (!root) return;
+
+      isProgrammaticScrollRef.current = true;
+
+      const rootRect = root.getBoundingClientRect();
+      const elRect = el.getBoundingClientRect();
+      const PADDING = 10;
+
+      const nextTop = elRect.top - rootRect.top + root.scrollTop - PADDING;
+      root.scrollTo({ top: nextTop, behavior: "smooth" });
+
+      window.setTimeout(() => {
+        isProgrammaticScrollRef.current = false;
+      }, 650);
+      return;
+    }
+
+    // Mobile: scroll the document
     isProgrammaticScrollRef.current = true;
+    const rect = el.getBoundingClientRect();
+    const top =
+      window.scrollY +
+      rect.top -
+      (LOGIN_BAR_HEIGHT_PX + MOBILE_TABS_HEIGHT_PX + 12);
 
-    const rootRect = root.getBoundingClientRect();
-    const elRect = el.getBoundingClientRect();
-    const PADDING = 10;
-
-    const nextTop = elRect.top - rootRect.top + root.scrollTop - PADDING;
-    root.scrollTo({ top: nextTop, behavior: "smooth" });
-
+    window.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
     window.setTimeout(() => {
       isProgrammaticScrollRef.current = false;
     }, 650);
   };
 
   const scrollToEntry = (entryId: string) => {
-    const root = leftScrollRef.current;
     const el = entryRefs.current[entryId];
-    if (!root || !el) return;
+    if (!el) return;
 
+    // Desktop: scroll the left panel
+    if (isLg) {
+      const root = leftScrollRef.current;
+      if (!root) return;
+
+      isProgrammaticScrollRef.current = true;
+
+      const rootRect = root.getBoundingClientRect();
+      const elRect = el.getBoundingClientRect();
+
+      const TOP_PADDING = 12;
+      const targetTop =
+        elRect.top - rootRect.top + root.scrollTop - TOP_PADDING;
+      const maxTop = root.scrollHeight - root.clientHeight;
+
+      root.scrollTo({
+        top: Math.min(Math.max(0, targetTop), Math.max(0, maxTop)),
+        behavior: "smooth",
+      });
+
+      window.setTimeout(() => {
+        isProgrammaticScrollRef.current = false;
+      }, 650);
+      return;
+    }
+
+    // Mobile: scroll the document
     isProgrammaticScrollRef.current = true;
-
-    const rootRect = root.getBoundingClientRect();
-    const elRect = el.getBoundingClientRect();
-
-    // Align the clicked place to the top of the visible scroll area.
-    // (Previously we positioned it around the middle which can leave tall cards half-cut.)
-    const TOP_PADDING = 12;
-    const targetTop = elRect.top - rootRect.top + root.scrollTop - TOP_PADDING;
-    const maxTop = root.scrollHeight - root.clientHeight;
-
-    root.scrollTo({
-      top: Math.min(Math.max(0, targetTop), Math.max(0, maxTop)),
-      behavior: "smooth",
-    });
-
+    const rect = el.getBoundingClientRect();
+    const top =
+      window.scrollY +
+      rect.top -
+      (LOGIN_BAR_HEIGHT_PX + MOBILE_TABS_HEIGHT_PX + 12);
+    window.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
     window.setTimeout(() => {
       isProgrammaticScrollRef.current = false;
     }, 650);
   };
 
   const getClosestEntryToCenter = () => {
-    const root = leftScrollRef.current;
-    if (!root) return null;
+    // Desktop: compute within the left scroll panel
+    if (isLg) {
+      const root = leftScrollRef.current;
+      if (!root) return null;
 
-    const rootRect = root.getBoundingClientRect();
-    const centerY = rootRect.top + rootRect.height / 2;
+      const rootRect = root.getBoundingClientRect();
+      const centerY = rootRect.top + rootRect.height / 2;
 
+      let bestId: string | null = null;
+      let bestDist = Infinity;
+
+      for (const [id, el] of Object.entries(entryRefs.current)) {
+        if (!el) continue;
+
+        const r = el.getBoundingClientRect();
+        const entryCenterY = r.top + r.height / 2;
+
+        if (r.bottom < rootRect.top || r.top > rootRect.bottom) continue;
+
+        const dist = Math.abs(entryCenterY - centerY);
+        if (dist < bestDist) {
+          bestDist = dist;
+          bestId = id;
+        }
+      }
+
+      return bestId;
+    }
+
+    // Mobile: compute against viewport center
+    const centerY = window.innerHeight / 2;
     let bestId: string | null = null;
     let bestDist = Infinity;
 
@@ -983,10 +1080,10 @@ export default function GuestRecapPage({ userId, tripId }: Props) {
       if (!el) continue;
 
       const r = el.getBoundingClientRect();
+      // Skip entries far outside the viewport to reduce noise
+      if (r.bottom < 0 || r.top > window.innerHeight) continue;
+
       const entryCenterY = r.top + r.height / 2;
-
-      if (r.bottom < rootRect.top || r.top > rootRect.bottom) continue;
-
       const dist = Math.abs(entryCenterY - centerY);
       if (dist < bestDist) {
         bestDist = dist;
@@ -1015,8 +1112,6 @@ export default function GuestRecapPage({ userId, tripId }: Props) {
   };
 
   useEffect(() => {
-    const root = leftScrollRef.current;
-    if (!root) return;
     if (!dayTabs.length) return;
 
     const TRIGGER_PX = 16;
@@ -1024,8 +1119,14 @@ export default function GuestRecapPage({ userId, tripId }: Props) {
     const compute = () => {
       if (isProgrammaticScrollRef.current) return;
 
-      const rootRect = root.getBoundingClientRect();
-      const triggerY = rootRect.top + TRIGGER_PX;
+      const triggerY = isLg
+        ? (() => {
+            const root = leftScrollRef.current;
+            if (!root) return 0;
+            const rootRect = root.getBoundingClientRect();
+            return rootRect.top + TRIGGER_PX;
+          })()
+        : LOGIN_BAR_HEIGHT_PX + MOBILE_TABS_HEIGHT_PX + 8;
 
       let chosen: string | null = null;
 
@@ -1055,23 +1156,29 @@ export default function GuestRecapPage({ userId, tripId }: Props) {
       });
     };
 
-    const ro = new ResizeObserver(() => compute());
-    ro.observe(root);
-
     requestAnimationFrame(() => compute());
     setTimeout(() => compute(), 150);
     setTimeout(() => compute(), 600);
 
-    root.addEventListener("scroll", onScroll, { passive: true });
+    // Desktop: listen to left panel scroll; Mobile: listen to window scroll.
+    const root = leftScrollRef.current;
+    const ro = new ResizeObserver(() => compute());
+    if (isLg && root) {
+      ro.observe(root);
+      root.addEventListener("scroll", onScroll, { passive: true });
+    } else {
+      window.addEventListener("scroll", onScroll, { passive: true });
+    }
     window.addEventListener("resize", compute);
 
     return () => {
       ro.disconnect();
-      root.removeEventListener("scroll", onScroll);
+      if (isLg && root) root.removeEventListener("scroll", onScroll);
+      else window.removeEventListener("scroll", onScroll);
       window.removeEventListener("resize", compute);
       if (focusTimerRef.current) window.clearTimeout(focusTimerRef.current);
     };
-  }, [dayTabs, entryIdToDayId]);
+  }, [dayTabs, entryIdToDayId, isLg]);
 
   const handleDayChange = (dayId: string) => {
     setActiveDayId(dayId);
@@ -1098,10 +1205,19 @@ export default function GuestRecapPage({ userId, tripId }: Props) {
     const dayId = entryIdToDayId.get(markerId);
     if (dayId) setActiveDayId(dayId);
 
+    // Mobile: open bottom sheet instead of scrolling
+    if (!isLg) {
+      setMobilePlaceSheetEntryId(markerId);
+      return;
+    }
+
     scrollToEntry(markerId);
   };
 
   useLayoutEffect(() => {
+    // Only relevant for the desktop split layout.
+    if (!isLg) return;
+
     const root = leftScrollRef.current;
     if (!root) return;
 
@@ -1147,7 +1263,7 @@ export default function GuestRecapPage({ userId, tripId }: Props) {
       window.removeEventListener("wheel", onWheel, opts);
       document.removeEventListener("wheel", onWheel, opts);
     };
-  }, [TOPBAR_OFFSET_PX, userInteracted]);
+  }, [TOPBAR_OFFSET_PX, userInteracted, isLg]);
 
   // ===== 로딩/에러 처리 =====
   if (loading) return <div className="p-6">Loading recap…</div>;
@@ -1167,85 +1283,210 @@ export default function GuestRecapPage({ userId, tripId }: Props) {
   return (
     <div className="min-h-screen bg-white">
       <RecapLoginBar onSignIn={() => setIsSignInOpen(true)} />
-      <div className="h-18" />
+      {/* push content below the fixed login bar */}
+      <div style={{ height: LOGIN_BAR_HEIGHT_PX }} />
 
       <div className="p-3">
         <RecapBlogHero {...effectiveModel.hero} />
       </div>
 
-      <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
-        <section
-          className="min-w-0 flex-1 sticky self-start"
-          style={{ top: TOPBAR_OFFSET_PX }}
+      {/* Mobile: sticky day tabs (now below the header, not on the cover image) */}
+      {!isLg && (
+        <div
+          className="sticky z-[180] border-b border-black/10 bg-white/85 backdrop-blur-md"
+          style={{ top: LOGIN_BAR_HEIGHT_PX }}
         >
-          <div
-            ref={leftScrollRef}
-            className="w-full overflow-y-auto overscroll-contain touch-pan-y rounded-2xl"
-            style={{
-              height: PANEL_HEIGHT,
-              scrollBehavior: "auto",
-              overflowAnchor: "none",
-            }}
-          >
-            <div className="space-y-12 p-4">
-              {effectiveModel.days.map((d) => {
-                const id = `day-${d.dayIndex}`;
-                return (
-                  <div
-                    key={id}
-                    data-day-id={id}
-                    ref={(el) => {
-                      daySectionRefs.current[id] = el;
-                    }}
-                    style={{ scrollMarginTop: 12 }}
-                  >
-                    <RecapBlogDaySection
-                      dayIndex={d.dayIndex}
-                      title={d.title}
-                      entries={d.entries as any}
-                      onEntryMount={(entryId, el) => {
-                        entryRefs.current[entryId] = el;
-                      }}
-                    />
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </section>
-
-        <section
-          ref={(el) => {
-            mapStickyRef.current = el;
-          }}
-          className="min-w-0 flex-1 sticky self-start"
-          style={{ top: TOPBAR_OFFSET_PX }}
-        >
-          <div
-            ref={mapContainerRef}
-            className="w-[98%] overflow-hidden rounded-2xl border border-black/10"
-            style={{ height: PANEL_HEIGHT }}
-          >
-            <MapboxMap
-              focusLatLng={focusLatLng ?? undefined}
-              mode="place"
-              placeMarkers={activeDayMarkers}
-              activePlaceMarkerId={activeEntryId ?? undefined}
-              onPlaceMarkerClick={onMarkerClick}
-              overlayTopRight={
-                <div className="rounded-full bg-white/70 backdrop-blur-md border border-white/50 px-2 py-2 shadow-sm">
-                  <RecapDayTabs
-                    tabs={dayTabs}
-                    activeId={activeDayId}
-                    onChange={handleDayChange}
-                    className="max-w-[min(72vw,420px)] [&>button]:!h-7 [&>button]:!px-3 [&>button]:!text-[13px]"
-                  />
-                </div>
-              }
+          <div className="mx-auto w-full px-3 py-2">
+            <RecapDayTabs
+              tabs={dayTabs}
+              activeId={activeDayId}
+              onChange={handleDayChange}
+              size="sm"
+              className="max-w-full"
             />
           </div>
-        </section>
-      </div>
+        </div>
+      )}
+
+      {/* Desktop: current split layout (list + sticky map) */}
+      {isLg ? (
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
+          <section
+            className="min-w-0 flex-1 sticky self-start"
+            style={{ top: TOPBAR_OFFSET_PX }}
+          >
+            <div
+              ref={leftScrollRef}
+              className="w-full overflow-y-auto overscroll-contain touch-pan-y rounded-2xl"
+              style={{
+                height: PANEL_HEIGHT,
+                scrollBehavior: "auto",
+                overflowAnchor: "none",
+              }}
+            >
+              <div className="space-y-12 p-4">
+                {effectiveModel.days.map((d) => {
+                  const id = `day-${d.dayIndex}`;
+                  return (
+                    <div
+                      key={id}
+                      data-day-id={id}
+                      ref={(el) => {
+                        daySectionRefs.current[id] = el;
+                      }}
+                      style={{ scrollMarginTop: 12 }}
+                    >
+                      <RecapBlogDaySection
+                        dayIndex={d.dayIndex}
+                        title={d.title}
+                        entries={d.entries as any}
+                        onEntryMount={(entryId, el) => {
+                          entryRefs.current[entryId] = el;
+                        }}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </section>
+
+          <section
+            ref={(el) => {
+              mapStickyRef.current = el;
+            }}
+            className="min-w-0 flex-1 sticky self-start"
+            style={{ top: TOPBAR_OFFSET_PX }}
+          >
+            <div
+              ref={mapContainerRef}
+              className="w-[98%] overflow-hidden rounded-2xl border border-black/10"
+              style={{ height: PANEL_HEIGHT }}
+            >
+              <MapboxMap
+                focusLatLng={focusLatLng ?? undefined}
+                mode="place"
+                placeMarkers={activeDayMarkers}
+                activePlaceMarkerId={activeEntryId ?? undefined}
+                onPlaceMarkerClick={onMarkerClick}
+                overlayTopRight={
+                  <div className="rounded-full bg-white/70 backdrop-blur-md border border-white/50 px-2 py-2 shadow-sm">
+                    <RecapDayTabs
+                      tabs={dayTabs}
+                      activeId={activeDayId}
+                      onChange={handleDayChange}
+                      className="max-w-[min(72vw,420px)] [&>button]:!h-7 [&>button]:!px-3 [&>button]:!text-[13px]"
+                    />
+                  </div>
+                }
+              />
+            </div>
+          </section>
+        </div>
+      ) : (
+        <>
+          {/* Mobile: map appears at the top of the active day section */}
+          {(() => {
+            const target = mobileMapPortalTarget;
+            if (!target) return null;
+
+            return createPortal(
+              <div className="h-full w-full overflow-hidden rounded-2xl border border-black/10">
+                <MapboxMap
+                  focusLatLng={focusLatLng ?? undefined}
+                  mode="place"
+                  placeMarkers={activeDayMarkers}
+                  activePlaceMarkerId={activeEntryId ?? undefined}
+                  onPlaceMarkerClick={onMarkerClick}
+                />
+              </div>,
+              target,
+            );
+          })()}
+
+          <div className="space-y-12 px-3 pb-6">
+            {effectiveModel.days.map((d) => {
+              const id = `day-${d.dayIndex}`;
+              return (
+                <div
+                  key={id}
+                  data-day-id={id}
+                  ref={(el) => {
+                    daySectionRefs.current[id] = el;
+                  }}
+                  style={{
+                    scrollMarginTop:
+                      LOGIN_BAR_HEIGHT_PX + MOBILE_TABS_HEIGHT_PX + 16,
+                  }}
+                >
+                  {/* map host for this day (portal target) */}
+                  <div
+                    ref={(el) => {
+                      dayMapHostRefs.current[id] = el;
+                    }}
+                    className="mb-5 h-[260px] w-full"
+                  />
+
+                  <RecapBlogDaySection
+                    dayIndex={d.dayIndex}
+                    title={d.title}
+                    entries={d.entries as any}
+                    onEntryMount={(entryId, el) => {
+                      entryRefs.current[entryId] = el;
+                    }}
+                  />
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Mobile: bottom-sheet place modal */}
+          {(() => {
+            const entryId = mobilePlaceSheetEntryId;
+            if (!entryId) return null;
+
+            const entry = effectiveModel.days
+              .flatMap((d) => d.entries)
+              .find((e) => e.id === entryId);
+            if (!entry) return null;
+
+            return (
+              <div className="fixed inset-0 z-[250]">
+                {/* Backdrop */}
+                <button
+                  type="button"
+                  aria-label="Close"
+                  className="absolute inset-0 bg-black/35"
+                  onClick={() => setMobilePlaceSheetEntryId(null)}
+                />
+
+                {/* Sheet */}
+                <div className="absolute inset-x-0 bottom-0">
+                  <div className="mx-auto w-full max-w-[720px]">
+                    <div className="rounded-t-3xl bg-white shadow-[0_-18px_40px_rgba(0,0,0,0.24)]">
+                      <div className="flex items-center justify-between px-4 pt-3">
+                        <div className="mx-auto h-1.5 w-12 rounded-full bg-black/15" />
+                        <button
+                          type="button"
+                          onClick={() => setMobilePlaceSheetEntryId(null)}
+                          className="ml-3 shrink-0 rounded-full bg-black/5 px-3 py-1.5 text-[14px] font-bold text-black/70"
+                          aria-label="Dismiss"
+                        >
+                          Close
+                        </button>
+                      </div>
+
+                      <div className="max-h-[70vh] overflow-y-auto px-3 pb-6 pt-3">
+                        <RecapBlogEntryCard entry={entry as any} />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+        </>
+      )}
 
       <div className="px-3 pb-10 pt-10">
         <div className="mx-auto w-[95%]">

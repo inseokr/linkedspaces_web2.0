@@ -136,6 +136,30 @@ export function RecapBlogDaySection({
 }
 
 /** ----------------------------
+ *  Single entry card (re-usable, e.g. in mobile bottom sheet)
+ *  ---------------------------- */
+export function RecapBlogEntryCard({
+  entry,
+  className = "",
+}: {
+  entry: RecapEntry;
+  className?: string;
+}) {
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <div className={className}>
+      <RecapPlaceBlock
+        entry={entry}
+        expanded={expanded}
+        onToggleExpanded={() => setExpanded((v) => !v)}
+        mode="view"
+      />
+    </div>
+  );
+}
+
+/** ----------------------------
  *  Place block
  *  ---------------------------- */
 function RecapPlaceBlock({
@@ -350,7 +374,13 @@ function RecapPhotoCard({
           <button
             type="button"
             onClick={() => setLightboxOpen(true)}
-            className="relative m-6 aspect-[16/9] w-[calc(100%-3rem)] overflow-hidden rounded-2xl bg-black/5 focus:outline-none focus:ring-2 focus:ring-black/30"
+            className={[
+              // Mobile: use more space (bigger photo, smaller margins)
+              "relative mx-4 my-4 aspect-[4/5] w-[calc(100%-2rem)]",
+              // Desktop: keep the wider cinematic ratio
+              "sm:m-6 sm:aspect-[16/9] sm:w-[calc(100%-3rem)]",
+              "overflow-hidden rounded-2xl bg-black/5 focus:outline-none focus:ring-2 focus:ring-black/30",
+            ].join(" ")}
             aria-label="Open photo"
           >
             <ResolvedImage
