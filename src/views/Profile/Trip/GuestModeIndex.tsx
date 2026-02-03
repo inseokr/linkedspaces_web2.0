@@ -1505,7 +1505,7 @@ export default function GuestRecapPage({ userId, tripId }: Props) {
                     ref={(el) => {
                       dayMapHostRefs.current[id] = el;
                     }}
-                    className="mb-5 h-[260px] w-full"
+                    className="mb-5 h-[50dvh] w-full"
                   />
 
                   <RecapBlogDaySection
@@ -1536,7 +1536,7 @@ export default function GuestRecapPage({ userId, tripId }: Props) {
                 open={!!entry}
                 onClose={() => setMobilePlaceSheetEntryId(null)}
               >
-                <RecapBlogEntryCard entry={entry as any} />
+                <RecapBlogEntryCard entry={entry as any} variant="sheet" />
               </BottomSheet>
             );
           })()}

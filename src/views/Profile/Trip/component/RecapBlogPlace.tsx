@@ -141,9 +141,11 @@ export function RecapBlogDaySection({
 export function RecapBlogEntryCard({
   entry,
   className = "",
+  variant = "default",
 }: {
   entry: RecapEntry;
   className?: string;
+  variant?: "default" | "sheet";
 }) {
   const [expanded, setExpanded] = useState(false);
 
@@ -154,6 +156,7 @@ export function RecapBlogEntryCard({
         expanded={expanded}
         onToggleExpanded={() => setExpanded((v) => !v)}
         mode="view"
+        photoLayout={variant === "sheet" ? "sheet" : "default"}
       />
     </div>
   );
@@ -170,6 +173,7 @@ function RecapPlaceBlock({
   onCaptionChange,
   onReplacePhoto,
   onRemovePhoto,
+  photoLayout = "default",
 }: {
   entry: RecapEntry;
   expanded: boolean;
@@ -178,6 +182,7 @@ function RecapPlaceBlock({
   onCaptionChange?: (entryId: string, photoIndex: number, next: string) => void;
   onReplacePhoto?: (entryId: string, photoIndex: number, file: File) => void;
   onRemovePhoto?: (entryId: string, photoIndex: number) => void;
+  photoLayout?: "default" | "sheet";
 }) {
   return (
     <div className="space-y-4">
@@ -233,6 +238,7 @@ function RecapPlaceBlock({
           entry={entry}
           expanded={expanded}
           onToggleExpanded={onToggleExpanded}
+          layout={photoLayout}
         />
       )}
     </div>
@@ -246,10 +252,12 @@ function RecapPhotoCarousel({
   entry,
   expanded,
   onToggleExpanded,
+  layout = "default",
 }: {
   entry: RecapEntry;
   expanded: boolean;
   onToggleExpanded: () => void;
+  layout?: "default" | "sheet";
 }) {
   const total = entry.photos.length;
   const [activeIdx, setActiveIdx] = useState(0);
@@ -306,6 +314,7 @@ function RecapPhotoCarousel({
               totalPhotos={total}
               expanded={expanded}
               onToggleExpanded={onToggleExpanded}
+              layout={layout}
             />
           </div>
         ))}
@@ -348,6 +357,7 @@ function RecapPhotoCard({
   expanded,
   onToggleExpanded,
   mode = "view",
+  layout = "default",
 }: {
   entry: RecapEntry;
   photoUrl: string;
@@ -356,6 +366,7 @@ function RecapPhotoCard({
   expanded: boolean;
   onToggleExpanded?: () => void;
   mode?: Mode;
+  layout?: "default" | "sheet";
 }) {
   const captionText =
     entry.captions?.[photoIndex] ??
@@ -375,8 +386,11 @@ function RecapPhotoCard({
             type="button"
             onClick={() => setLightboxOpen(true)}
             className={[
-              // Mobile: use more space (bigger photo, smaller margins)
-              "relative mx-4 my-4 aspect-[4/5] w-[calc(100%-2rem)]",
+              layout === "sheet"
+                ? // Bottom sheet: keep photo shorter so other UI stays visible
+                  "relative mx-4 my-3 h-[220px] w-[calc(100%-2rem)]"
+                : // Default: use more space (bigger photo, smaller margins)
+                  "relative mx-4 my-4 aspect-[4/5] w-[calc(100%-2rem)]",
               // Desktop: keep the wider cinematic ratio
               "sm:m-6 sm:aspect-[16/9] sm:w-[calc(100%-3rem)]",
               "overflow-hidden rounded-2xl bg-black/5 focus:outline-none focus:ring-2 focus:ring-black/30",

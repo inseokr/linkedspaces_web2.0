@@ -20,7 +20,7 @@ type Props = {
   contentMaxHeightClassName?: string;
   /** Defaults to `z-[250]` */
   zIndexClassName?: string;
-  /** Defaults to showing a Close button */
+  /** Defaults to false (handle-only UI) */
   showCloseButton?: boolean;
 };
 
@@ -36,7 +36,7 @@ export default function BottomSheet({
   maxWidthClassName = "max-w-[720px]",
   contentMaxHeightClassName = "max-h-[70vh]",
   zIndexClassName = "z-[250]",
-  showCloseButton = true,
+  showCloseButton = false,
 }: Props) {
   const canUseDOM = typeof document !== "undefined";
   const [isDragging, setIsDragging] = useState(false);
@@ -141,7 +141,7 @@ export default function BottomSheet({
           >
             {/* Drag handle area (swipe down to dismiss) */}
             <div
-              className="flex items-center justify-between px-4 pt-3"
+              className="relative flex items-center justify-center px-4 pt-3"
               style={{ touchAction: "none" }}
               onPointerDown={(e) => {
                 // Only start dragging on primary pointer/touch
@@ -199,17 +199,17 @@ export default function BottomSheet({
                 setDragY(0);
               }}
             >
-              <div className="mx-auto h-1.5 w-12 rounded-full bg-black/15" />
-              {showCloseButton && (
+              <div className="h-1.5 w-12 rounded-full bg-black/15" />
+              {showCloseButton ? (
                 <button
                   type="button"
                   onClick={onClose}
-                  className="ml-3 shrink-0 rounded-full bg-black/5 px-3 py-1.5 text-[14px] font-bold text-black/70"
+                  className="absolute right-4 top-3 shrink-0 rounded-full bg-black/5 px-3 py-1.5 text-[14px] font-bold text-black/70"
                   aria-label="Dismiss"
                 >
                   Close
                 </button>
-              )}
+              ) : null}
             </div>
 
             <div

@@ -752,7 +752,7 @@ function OwnerTripRecapView({ userId, tripId }: TripRecapViewProps) {
             <div
               ref={mapContainerRef}
               className="w-full overflow-hidden rounded-2xl border border-black/10"
-              style={{ height: PANEL_HEIGHT }}
+              style={{ height: isLg ? PANEL_HEIGHT : "50dvh" }}
             >
               <MapboxMap
                 mode="place"
@@ -783,7 +783,10 @@ function OwnerTripRecapView({ userId, tripId }: TripRecapViewProps) {
           onClose={() => setMobilePlaceSheetEntryId(null)}
         >
           {mobileSheetEntry ? (
-            <RecapBlogEntryCard entry={mobileSheetEntry as any} />
+            <RecapBlogEntryCard
+              entry={mobileSheetEntry as any}
+              variant="sheet"
+            />
           ) : null}
         </BottomSheet>
       )}
