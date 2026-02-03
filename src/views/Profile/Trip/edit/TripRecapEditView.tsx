@@ -15,17 +15,12 @@ import type { DayTab } from "@/views/Profile/Trip/component/RecapDayTabs";
 
 import type { RecapEditDraft, PlaceDraft } from "./types/editTypes";
 import { draftFromPageModel } from "./utils/editMappers";
-import { loadDraft, saveDraft, clearDraft } from "./utils/draftStorage";
 import { updatePlaceVisitHistoryStory } from "@/api/user";
 
 import ImageFieldEditor from "./components/ImageFieldEditor";
 import TextRow from "./components/TextRow";
 import { RecapBlogDaySection } from "@/views/Profile/Trip/component/RecapBlogPlace";
 import PhotoLightbox from "@/components/ui/PhotoLightbox";
-import {
-  idbPutBlob,
-  makeImageKey,
-} from "@/views/Profile/Trip/edit/utils/imageIdb";
 
 export default function TripRecapEditView({
   userId,
@@ -54,6 +49,8 @@ export default function TripRecapEditView({
   const baselineCaptionsRef = useRef<Map<string, Map<string, string>> | null>(
     null,
   );
+  // Baseline place stories keyed by placeKey -> story.
+  const baselinePlaceStoriesRef = useRef<Map<string, string> | null>(null);
   const baselineInitializedRef = useRef(false);
   const baselineDraftFingerprintRef = useRef<string | null>(null);
   const baselineTitleRef = useRef<string | null>(null);
@@ -79,6 +76,7 @@ export default function TripRecapEditView({
           photos: p.photos ?? [],
           captions: (p as any).captions ?? [],
           caption: (p as any).caption ?? "",
+          placeStory: p.placeStory ?? "",
           // Include these too, in case they become editable later.
           placeName: p.placeName,
           timeRangeText: p.timeRangeText ?? "",
@@ -120,6 +118,18 @@ export default function TripRecapEditView({
     return placeMap;
   };
 
+  const buildBaselinePlaceStories = (d: RecapEditDraft) => {
+    const placeToStory = new Map<string, string>();
+    for (const day of d.days ?? []) {
+      for (const place of day.places ?? []) {
+        const placeKey = place.placeKey;
+        if (!placeKey) continue;
+        placeToStory.set(placeKey, place.placeStory ?? "");
+      }
+    }
+    return placeToStory;
+  };
+
   /** 1) Fetch */
   useEffect(() => {
     let cancelled = false;
@@ -133,6 +143,7 @@ export default function TripRecapEditView({
       try {
         const data = await apiFetch<TripRecapResponse>(
           `/ls-beta-test/trip-recap/${userId}/${tripId}`,
+          { cache: "no-store" },
         );
         if (cancelled) return;
         setRecapData(data);
@@ -160,12 +171,6 @@ export default function TripRecapEditView({
   useEffect(() => {
     if (!pageModel) return;
 
-    const saved = loadDraft(userId, tripId);
-    if (saved) {
-      setDraft(saved);
-      return;
-    }
-
     const base = draftFromPageModel(pageModel);
     setDraft(base);
   }, [pageModel, userId, tripId]);
@@ -175,6 +180,7 @@ export default function TripRecapEditView({
     if (!draft) return;
     if (baselineInitializedRef.current) return;
     baselineCaptionsRef.current = buildBaselineCaptions(draft);
+    baselinePlaceStoriesRef.current = buildBaselinePlaceStories(draft);
     baselineDraftFingerprintRef.current = draftFingerprint(draft);
     baselineTitleRef.current = draft.recapTitle;
     baselineInitializedRef.current = true;
@@ -215,16 +221,25 @@ export default function TripRecapEditView({
 
     // Diff captions by photo URI (not by index) so index shifts don't trigger "update all".
     const baseline = baselineCaptionsRef.current ?? new Map();
+    const baselinePlaceStories = baselinePlaceStoriesRef.current ?? new Map();
     const updates: Array<{
       placeKey: string;
       photoIndex: number;
       storyText: string;
     }> = [];
+    const placeStoryUpdates: Array<{ placeKey: string; storyText: string }> =
+      [];
 
     for (const day of draft.days ?? []) {
       for (const place of day.places ?? []) {
         const placeKey = place.placeKey;
         if (!placeKey) continue;
+
+        const nextPlaceStory = place.placeStory ?? "";
+        const prevPlaceStory = baselinePlaceStories.get(placeKey) ?? "";
+        if (nextPlaceStory !== prevPlaceStory) {
+          placeStoryUpdates.push({ placeKey, storyText: nextPlaceStory });
+        }
 
         const baselineByPhoto =
           baseline.get(placeKey) ?? new Map<string, string>();
@@ -255,8 +270,10 @@ export default function TripRecapEditView({
     setLoading(true);
     setError(null);
     try {
-      const tasks: Array<{ kind: "title" | "caption"; promise: Promise<any> }> =
-        [];
+      const tasks: Array<{
+        kind: "title" | "caption" | "placeStory";
+        promise: Promise<any>;
+      }> = [];
 
       if (titleChanged && Number.isFinite(blogKey)) {
         tasks.push({
@@ -271,6 +288,18 @@ export default function TripRecapEditView({
           promise: updatePlaceVisitHistoryStory({
             placeKey: u.placeKey,
             photoIndex: u.photoIndex,
+            storyText: u.storyText,
+            photoIndexType: "filtered",
+          }),
+        });
+      }
+
+      for (const u of placeStoryUpdates) {
+        tasks.push({
+          kind: "placeStory",
+          // Place-level story: omit photoIndex (or null/-1) to target the place, not a photo.
+          promise: updatePlaceVisitHistoryStory({
+            placeKey: u.placeKey,
             storyText: u.storyText,
             photoIndexType: "filtered",
           }),
@@ -292,26 +321,43 @@ export default function TripRecapEditView({
         const captionFailedCount = failedKinds.filter(
           (k) => k === "caption",
         ).length;
-        if (titleFailed && captionFailedCount > 0) {
+        const placeStoryFailedCount = failedKinds.filter(
+          (k) => k === "placeStory",
+        ).length;
+
+        if (
+          titleFailed &&
+          (captionFailedCount > 0 || placeStoryFailedCount > 0)
+        ) {
           throw new Error(
-            `Failed to update title and ${captionFailedCount} caption(s).`,
+            `Failed to update title and ${captionFailedCount} caption(s) and ${placeStoryFailedCount} place story(ies).`,
           );
         }
         if (titleFailed) {
           throw new Error("Failed to update title.");
         }
-        throw new Error(`Failed to update ${captionFailedCount} caption(s).`);
+        if (captionFailedCount > 0 && placeStoryFailedCount > 0) {
+          throw new Error(
+            `Failed to update ${captionFailedCount} caption(s) and ${placeStoryFailedCount} place story(ies).`,
+          );
+        }
+        if (captionFailedCount > 0) {
+          throw new Error(`Failed to update ${captionFailedCount} caption(s).`);
+        }
+        throw new Error(
+          `Failed to update ${placeStoryFailedCount} place story(ies).`,
+        );
       }
 
       // Refresh baseline with the saved captions so repeated "Update" doesn't resend.
       baselineCaptionsRef.current = buildBaselineCaptions(draft);
+      baselinePlaceStoriesRef.current = buildBaselinePlaceStories(draft);
       baselineDraftFingerprintRef.current = draftFingerprint(draft);
       baselineTitleRef.current = draft.recapTitle;
 
-      saveDraft(userId, tripId, { ...draft, updatedAt: Date.now() });
       router.back();
     } catch (e: any) {
-      setError(e?.message ?? "Failed to update captions");
+      setError(e?.message ?? "Failed to update recap");
     } finally {
       setLoading(false);
     }
@@ -322,7 +368,6 @@ export default function TripRecapEditView({
   };
 
   const handleDiscardLocal = () => {
-    clearDraft(userId, tripId);
     router.back();
   };
 
@@ -393,6 +438,12 @@ export default function TripRecapEditView({
     });
   };
 
+  const onPlaceStoryChange = (dayId: string, placeId: string, next: string) => {
+    updatePlaceInDay(dayId, placeId, (p) => {
+      return { ...p, placeStory: next };
+    });
+  };
+
   const onRemovePhoto = (
     dayId: string,
     placeId: string,
@@ -410,24 +461,6 @@ export default function TripRecapEditView({
         captions,
         caption: captions?.[0] ?? "",
       } as any;
-    });
-  };
-
-  const onReplacePhoto = async (
-    dayId: string,
-    placeId: string,
-    photoIndex: number,
-    file: File,
-  ) => {
-    // ✅ idb 저장 -> photos[photoIndex] = "idb:<key>"
-    const key = makeImageKey(`place:${placeId}:${photoIndex}`);
-    await idbPutBlob(key, file);
-
-    updatePlaceInDay(dayId, placeId, (p) => {
-      const photos = [...(p.photos ?? [])];
-      photos[photoIndex] = `idb:${key}`;
-
-      return { ...(p as any), photos } as any;
     });
   };
 
@@ -611,16 +644,17 @@ export default function TripRecapEditView({
                   liked: false,
                   likeCount: 0,
                   commentCount: 0,
+                  placeStory: p.placeStory ?? "",
                   photos: p.photos ?? [],
                   captions: p.captions ?? [],
                   caption: p.caption ?? "",
                   coordinate: p.coordinate,
                 }))}
+                onPlaceStoryChange={(entryId, next) =>
+                  onPlaceStoryChange(d.id, entryId, next)
+                }
                 onCaptionChange={(entryId, photoIndex, next) =>
                   onCaptionChange(d.id, entryId, photoIndex, next)
-                }
-                onReplacePhoto={(entryId, photoIndex, file) =>
-                  onReplacePhoto(d.id, entryId, photoIndex, file)
                 }
                 onRemovePhoto={(entryId, photoIndex) =>
                   onRemovePhoto(d.id, entryId, photoIndex)

@@ -1,6 +1,13 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import Image from "next/image";
 import {
   MapPin,
@@ -35,6 +42,9 @@ export type RecapEntry = {
   likeCount: number;
   commentCount: number;
 
+  /** Place-level story (not tied to any specific photo). */
+  placeStory?: string;
+
   // 기존 단일 캡션 호환
   caption?: string;
 
@@ -61,7 +71,7 @@ export type RecapBlogPageData = {
     locationText: string;
     authorName: string;
     postedLabel: string;
-    avatarUrl: string;
+    avatarUrl?: string;
   };
   days: RecapDay[];
 };
@@ -74,14 +84,17 @@ type Props = {
   entries: RecapEntry[];
   mode?: Mode;
 
+  onPlaceStoryChange?: (entryId: string, next: string) => void;
   onCaptionChange?: (entryId: string, photoIndex: number, next: string) => void;
-  onReplacePhoto?: (entryId: string, photoIndex: number, file: File) => void;
   onRemovePhoto?: (entryId: string, photoIndex: number) => void;
 
   onEntryMount?: (entryId: string, el: HTMLDivElement | null) => void;
 };
 
-const clampClass = "line-clamp-2";
+// Collapsed caption preview:
+// - mobile: 3 lines
+// - sm+: 4 lines
+const collapsedClampClass = "line-clamp-3 sm:line-clamp-4";
 
 /** ----------------------------
  *  Day section
@@ -91,8 +104,8 @@ export function RecapBlogDaySection({
   title,
   entries,
   mode = "view",
+  onPlaceStoryChange,
   onCaptionChange,
-  onReplacePhoto,
   onRemovePhoto,
   onEntryMount,
 }: Props) {
@@ -124,8 +137,8 @@ export function RecapBlogDaySection({
               expanded={expandedIds.has(entry.id)}
               onToggleExpanded={() => toggleExpanded(entry.id)}
               mode={mode}
+              onPlaceStoryChange={onPlaceStoryChange}
               onCaptionChange={onCaptionChange}
-              onReplacePhoto={onReplacePhoto}
               onRemovePhoto={onRemovePhoto}
             />
           </div>
@@ -170,8 +183,8 @@ function RecapPlaceBlock({
   expanded,
   onToggleExpanded,
   mode,
+  onPlaceStoryChange,
   onCaptionChange,
-  onReplacePhoto,
   onRemovePhoto,
   photoLayout = "default",
 }: {
@@ -179,11 +192,15 @@ function RecapPlaceBlock({
   expanded: boolean;
   onToggleExpanded: () => void;
   mode: Mode;
+  onPlaceStoryChange?: (entryId: string, next: string) => void;
   onCaptionChange?: (entryId: string, photoIndex: number, next: string) => void;
-  onReplacePhoto?: (entryId: string, photoIndex: number, file: File) => void;
   onRemovePhoto?: (entryId: string, photoIndex: number) => void;
   photoLayout?: "default" | "sheet";
 }) {
+  const placeStoryTrimmed = (entry.placeStory ?? "").trim();
+  const [placeStoryExpanded, setPlaceStoryExpanded] = useState(false);
+  const canTogglePlaceStory = placeStoryTrimmed.length > 160;
+
   return (
     <div className="space-y-4">
       {/* 장소/태그는 카드 외부 (시간은 사진 위로 오버레이) */}
@@ -228,11 +245,43 @@ function RecapPlaceBlock({
       </div>
 
       {mode === "edit" ? (
-        <RecapPhotoEditList
-          entry={entry}
-          onCaptionChange={onCaptionChange}
-          onReplacePhoto={onReplacePhoto}
-        />
+        <div className="w-full max-w-[920px] 2xl:max-w-[1100px]">
+          <TextRow
+            label="Place story"
+            value={entry.placeStory ?? ""}
+            multiline
+            placeholder="Write a story for this place"
+            onChange={(v) => onPlaceStoryChange?.(entry.id, v)}
+          />
+        </div>
+      ) : (
+        placeStoryTrimmed && (
+          <div className="w-full max-w-[920px] 2xl:max-w-[1100px]">
+            <div className="rounded-2xl bg-black/5 px-6 py-5">
+              <p
+                className={[
+                  "text-[20px] leading-[1.55] text-black/80",
+                  placeStoryExpanded ? "" : "line-clamp-3",
+                ].join(" ")}
+              >
+                {placeStoryTrimmed}
+              </p>
+              {canTogglePlaceStory && (
+                <button
+                  type="button"
+                  onClick={() => setPlaceStoryExpanded((v) => !v)}
+                  className="mt-3 text-[16px] font-extrabold text-black hover:opacity-80"
+                >
+                  {placeStoryExpanded ? "See Less" : "See More"}
+                </button>
+              )}
+            </div>
+          </div>
+        )
+      )}
+
+      {mode === "edit" ? (
+        <RecapPhotoEditList entry={entry} onCaptionChange={onCaptionChange} />
       ) : (
         <RecapPhotoCarousel
           entry={entry}
@@ -371,7 +420,40 @@ function RecapPhotoCard({
   const captionText =
     entry.captions?.[photoIndex] ??
     (photoIndex === 0 ? (entry.caption ?? "") : "");
-  const canToggle = (captionText?.trim().length ?? 0) > 120;
+  const captionTrimmed = captionText?.trim() ?? "";
+
+  const [captionEl, setCaptionEl] = useState<HTMLParagraphElement | null>(null);
+  const [isTruncated, setIsTruncated] = useState(false);
+
+  const measureTruncation = useCallback(() => {
+    if (!captionEl) return;
+    if (expanded) {
+      // Expanded view is never "truncated" (we still show "See Less" if it was truncated).
+      setIsTruncated(false);
+      return;
+    }
+
+    // With line-clamp + overflow hidden, scrollHeight/scrollWidth still represent full content.
+    const next =
+      captionEl.scrollHeight > captionEl.clientHeight + 1 ||
+      captionEl.scrollWidth > captionEl.clientWidth + 1;
+    setIsTruncated(next);
+  }, [captionEl, expanded]);
+
+  useLayoutEffect(() => {
+    // Avoid synchronous setState in effect body (lint rule).
+    const raf = requestAnimationFrame(() => measureTruncation());
+    return () => cancelAnimationFrame(raf);
+  }, [measureTruncation, captionTrimmed, layout]);
+
+  useEffect(() => {
+    if (!captionEl) return;
+    const ro = new ResizeObserver(() => measureTruncation());
+    ro.observe(captionEl);
+    return () => ro.disconnect();
+  }, [captionEl, measureTruncation]);
+
+  const canToggle = captionTrimmed.length > 0 && (expanded || isTruncated);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   return (
     <>
@@ -416,21 +498,31 @@ function RecapPhotoCard({
         </div>
 
         <div className="px-6 pb-4">
-          <div className="flex items-end justify-between gap-6">
-            <p
-              className={[
-                "text-[22px] leading-[1.35] text-black/85",
-                expanded ? "" : clampClass,
-              ].join(" ")}
-            >
-              {captionText}
-            </p>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between sm:gap-6">
+            <div className="relative min-w-0 flex-1">
+              <p
+                ref={setCaptionEl}
+                className={[
+                  "text-[22px] leading-[1.35] text-black/85",
+                  expanded ? "" : collapsedClampClass,
+                ].join(" ")}
+              >
+                {captionTrimmed}
+              </p>
+
+              {!expanded && isTruncated && (
+                <div
+                  aria-hidden
+                  className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-white via-white/80 to-transparent"
+                />
+              )}
+            </div>
 
             {mode === "view" && canToggle && (
               <button
                 type="button"
                 onClick={onToggleExpanded}
-                className="shrink-0 text-[18px] font-extrabold text-black hover:opacity-80"
+                className="self-end shrink-0 text-[18px] font-extrabold text-black hover:opacity-80"
               >
                 {expanded ? "See Less" : "See More"}
               </button>
@@ -494,11 +586,9 @@ function RecapPhotoCard({
 function RecapPhotoEditList({
   entry,
   onCaptionChange,
-  onReplacePhoto,
 }: {
   entry: RecapEntry;
   onCaptionChange?: (entryId: string, photoIndex: number, next: string) => void;
-  onReplacePhoto?: (entryId: string, photoIndex: number, file: File) => void;
 }) {
   const normalizedCaptions = useMemo(() => {
     return Array.from({ length: entry.photos.length }, (_, i) => {
@@ -525,7 +615,6 @@ function RecapPhotoEditList({
             caption={normalizedCaptions[idx]}
             timeLabel={entry.timeRangeText}
             onCaptionChange={onCaptionChange}
-            onReplacePhoto={onReplacePhoto}
             onOpenPhoto={() => {
               setLightboxIndex(idx);
               setLightboxOpen(true);
@@ -554,7 +643,6 @@ function PhotoCaptionRow({
   caption,
   timeLabel,
   onCaptionChange,
-  onReplacePhoto,
   onOpenPhoto,
 }: {
   entryId: string;
@@ -564,11 +652,8 @@ function PhotoCaptionRow({
   caption: string;
   timeLabel?: string;
   onCaptionChange?: (entryId: string, photoIndex: number, next: string) => void;
-  onReplacePhoto?: (entryId: string, photoIndex: number, file: File) => void;
   onOpenPhoto: () => void;
 }) {
-  const fileRef = useRef<HTMLInputElement | null>(null);
-
   return (
     <div className="flex gap-4 items-center">
       <div className="relative h-[150px] w-[150px] shrink-0 overflow-hidden rounded-2xl bg-black/10">
@@ -593,32 +678,7 @@ function PhotoCaptionRow({
             {timeLabel}
           </div>
         )}
-
-        <button
-          type="button"
-          className="absolute bottom-2 left-2 rounded-full bg-white/70 px-2 py-1 text-[12px] font-bold text-black/80 backdrop-blur hover:bg-white"
-          onClick={(e) => {
-            e.stopPropagation();
-            fileRef.current?.click();
-          }}
-          aria-label={`Replace photo ${index + 1}`}
-        >
-          Replace
-        </button>
       </div>
-
-      <input
-        ref={fileRef}
-        type="file"
-        accept="image/*"
-        className="hidden"
-        onChange={(e) => {
-          const file = e.target.files?.[0];
-          if (!file) return;
-          onReplacePhoto?.(entryId, index, file);
-          e.currentTarget.value = "";
-        }}
-      />
 
       <div className="w-full">
         <TextRow

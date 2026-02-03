@@ -1,6 +1,7 @@
 "use client";
 
 import React, {
+  useCallback,
   useEffect,
   useLayoutEffect,
   useMemo,
@@ -25,19 +26,13 @@ import RecapDayTabs, {
 } from "@/views/Profile/Trip/component/RecapDayTabs";
 import RecapBlogHero from "@/views/Profile/Trip/component/RecapBlogTopImage";
 
-import {
-  RecapBlogDaySection,
-  type RecapBlogPageData,
-} from "@/views/Profile/Trip/component/RecapBlogPlace";
+import { RecapBlogDaySection } from "@/views/Profile/Trip/component/RecapBlogPlace";
 
 import MapboxMap, {
   type MarkerData,
 } from "@/views/Profile/travel-stats/components/MapBoxMap";
 
 import { mapTripRecapToPageModel } from "@/views/Profile/Trip/utils/mapTripRecap";
-import { loadDraft } from "@/views/Profile/Trip/edit/utils/draftStorage";
-import { applyDraftToPageModel } from "@/views/Profile/Trip/edit/utils/editMappers";
-import { idbGetBlob } from "./edit/utils/imageIdb";
 import BottomSheet from "@/components/ui/BottomSheet";
 import { RecapBlogEntryCard } from "@/views/Profile/Trip/component/RecapBlogPlace";
 
@@ -84,6 +79,24 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
 
   const [viewerId, setViewerId] = useState<string | null>(null);
   const [viewerResolved, setViewerResolved] = useState(false);
+
+  // Clear legacy local recap drafts on login so DB always wins.
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    if (typeof window === "undefined") return;
+    try {
+      const keys: string[] = [];
+      for (let i = 0; i < window.localStorage.length; i++) {
+        const k = window.localStorage.key(i);
+        if (k) keys.push(k);
+      }
+      for (const k of keys) {
+        if (k.startsWith("recapDraft:")) window.localStorage.removeItem(k);
+      }
+    } catch {
+      // best-effort cleanup
+    }
+  }, [isAuthenticated]);
 
   // ✅ isOwner 계산을 훅들보다 아래로 미루지 말고, return들보다 위에서 계산
   const isOwner =
@@ -168,10 +181,6 @@ function OwnerTripRecapView({ userId, tripId }: TripRecapViewProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // 오너에서만 draft 쓰는 구조가 자연스럽고 안전
-  const draft = useMemo(() => loadDraft(userId, tripId), [userId, tripId]);
-  const [resolvedCoverUrl, setResolvedCoverUrl] = useState<string | null>(null);
-
   /** Layout */
   const TOPBAR_OFFSET_PX = 250;
   const PANEL_HEIGHT_OFFSET = 220;
@@ -208,77 +217,56 @@ function OwnerTripRecapView({ userId, tripId }: TripRecapViewProps) {
     string | null
   >(null);
 
-  useEffect(() => {
-    let urlToRevoke: string | null = null;
-
-    async function run() {
-      setResolvedCoverUrl(null);
-
-      if (!draft) return;
-      if (draft.coverPhoto.kind !== "local") return;
-
-      // 같은 세션에서 previewUrl이 있으면 그걸 우선 사용
-      if (draft.coverPhoto.previewUrl) {
-        setResolvedCoverUrl(draft.coverPhoto.previewUrl);
-        return;
-      }
-
-      const key = draft.coverPhoto.previewKey;
-      if (!key) return;
-
-      const blob = await idbGetBlob(key);
-      if (!blob) return;
-
-      urlToRevoke = URL.createObjectURL(blob);
-      setResolvedCoverUrl(urlToRevoke);
-    }
-
-    run();
-
-    return () => {
-      if (urlToRevoke) URL.revokeObjectURL(urlToRevoke);
-    };
-  }, [draft]);
-
   /** 1) Fetch */
-  useEffect(() => {
-    let cancelled = false;
-
-    async function run() {
-      if (!userId || !tripId) return;
-
-      setLoading(true);
-      setError(null);
-
-      try {
-        const data = await apiFetch<TripRecapResponse>(
-          `/ls-beta-test/trip-recap/${userId}/${tripId}`,
-        );
-        if (cancelled) return;
-        setRecapData(data);
-      } catch (e: any) {
-        if (cancelled) return;
-        setError(e?.message ?? "Failed to load recap");
-      } finally {
-        if (cancelled) return;
-        setLoading(false);
-      }
+  const fetchRecap = useCallback(async () => {
+    if (!userId || !tripId) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await apiFetch<TripRecapResponse>(
+        `/ls-beta-test/trip-recap/${userId}/${tripId}`,
+        { cache: "no-store" },
+      );
+      setRecapData(data);
+    } catch (e: any) {
+      setError(e?.message ?? "Failed to load recap");
+    } finally {
+      setLoading(false);
     }
-
-    run();
-    return () => {
-      cancelled = true;
-    };
   }, [userId, tripId]);
 
-  /** 2) Effective model = API mapped + draft applied */
-  const effectiveModel: RecapBlogPageData | null = useMemo(() => {
-    if (!recapData) return null;
+  useEffect(() => {
+    void fetchRecap();
+  }, [fetchRecap]);
 
-    const pm = mapTripRecapToPageModel(recapData);
+  // When returning via browser back / bfcache, refresh from DB.
+  useEffect(() => {
+    const onFocus = () => void fetchRecap();
+    const onVis = () => {
+      if (!document.hidden) void fetchRecap();
+    };
+    const onPageShow = (e: PageTransitionEvent) => {
+      if (e.persisted) void fetchRecap();
+    };
 
-    return draft ? applyDraftToPageModel(pm, draft) : pm;
-  }, [recapData, draft]);
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVis);
+    window.addEventListener("pageshow", onPageShow);
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVis);
+      window.removeEventListener("pageshow", onPageShow);
+    };
+  }, [fetchRecap]);
+
+  /** 2) Effective model = API mapped (always from DB) */
+  const effectiveModel: ReturnType<typeof mapTripRecapToPageModel> | null =
+    useMemo(() => {
+      if (!recapData) return null;
+
+      const pm = mapTripRecapToPageModel(recapData);
+      return pm;
+    }, [recapData]);
 
   /** 3) Base center */
   const baseCenter = useMemo(() => {
@@ -304,9 +292,8 @@ function OwnerTripRecapView({ userId, tripId }: TripRecapViewProps) {
 
     return {
       ...effectiveModel.hero,
-      coverImageUrl: resolvedCoverUrl ?? effectiveModel.hero.coverImageUrl,
     };
-  }, [effectiveModel?.hero, resolvedCoverUrl]);
+  }, [effectiveModel?.hero]);
 
   /** 5) Ensure active day valid */
   useEffect(() => {

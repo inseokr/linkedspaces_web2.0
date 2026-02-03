@@ -124,6 +124,8 @@ function mapPlaceToEntry(p: TripRecapPlace, fallbackId: string): RecapEntry {
   const placeKey = p.digitizedTime || fallbackId;
 
   const placeName = p.placeName || "Place";
+  const placeStory =
+    typeof (p as any)?.story === "string" ? (p as any).story : "";
 
   const photoList = p.photoList ?? [];
   const selectedPhoto =
@@ -132,7 +134,8 @@ function mapPlaceToEntry(p: TripRecapPlace, fallbackId: string): RecapEntry {
   const captions = photoList.map((x: any) =>
     typeof x?.story === "string" ? x.story : "",
   );
-  const caption = selectedPhoto?.story ?? p.story ?? captions[0] ?? "";
+  // NOTE: caption is per-photo (photoIndex 0 fallback). Place story is stored separately.
+  const caption = selectedPhoto?.story ?? captions[0] ?? "";
 
   //  photos: normalizeImageSrc로 /public 제거 + host 붙인 "최종 src"만 넘김
   const photos = photoList
@@ -166,6 +169,7 @@ function mapPlaceToEntry(p: TripRecapPlace, fallbackId: string): RecapEntry {
     placeName,
     timeRangeText,
     categoryLabel,
+    placeStory,
     liked: undefined,
     likeCount,
     commentCount,

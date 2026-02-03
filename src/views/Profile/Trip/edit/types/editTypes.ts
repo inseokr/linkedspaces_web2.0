@@ -10,6 +10,8 @@ export type PlaceDraft = {
   placeName: string;
   timeRangeText?: string;
   categoryLabel?: string;
+  /** Place-level story (not photo caption). */
+  placeStory?: string;
   caption?: string;
   photos: string[];
   captions: string[];

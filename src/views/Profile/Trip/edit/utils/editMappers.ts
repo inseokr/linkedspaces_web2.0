@@ -52,6 +52,12 @@ export function draftFromPageModel(pageModel: any): RecapEditDraft {
           placeName: e.placeName ?? e.label ?? "",
           timeRangeText: e.timeRangeText ?? e.time ?? "",
           categoryLabel: e.categoryLabel ?? e.category ?? undefined,
+          placeStory:
+            typeof e?.placeStory === "string"
+              ? e.placeStory
+              : typeof e?.story === "string"
+                ? e.story
+                : "",
 
           photos,
           captions,
@@ -108,6 +114,9 @@ export function applyDraftToPageModel(pageModel: any, draft: RecapEditDraft) {
     (d.entries ?? []).forEach((e: any) => {
       const p = placeById.get(e.id);
       if (!p) return;
+
+      // ✅ place story (place-level)
+      if (typeof p.placeStory === "string") e.placeStory = p.placeStory;
 
       // ✅ 캡션 (단일 + 배열 둘 다 반영)
       if (Array.isArray(p.captions)) e.captions = p.captions;
