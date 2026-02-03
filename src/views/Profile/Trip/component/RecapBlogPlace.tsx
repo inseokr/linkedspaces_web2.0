@@ -388,7 +388,7 @@ function RecapPhotoCard({
             className={[
               layout === "sheet"
                 ? // Bottom sheet: keep photo shorter so other UI stays visible
-                  "relative mx-4 my-3 h-[220px] w-[calc(100%-2rem)]"
+                  "relative mx-4 my-3 h-[32dvh] min-h-[240px] max-h-[420px] w-[calc(100%-2rem)]"
                 : // Default: use more space (bigger photo, smaller margins)
                   "relative mx-4 my-4 aspect-[4/5] w-[calc(100%-2rem)]",
               // Desktop: keep the wider cinematic ratio

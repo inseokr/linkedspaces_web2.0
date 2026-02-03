@@ -16,7 +16,7 @@ type Props = {
 
   /** Defaults to `max-w-[720px]` */
   maxWidthClassName?: string;
-  /** Defaults to `max-h-[70vh]` */
+  /** Defaults to `max-h-[94dvh]` */
   contentMaxHeightClassName?: string;
   /** Defaults to `z-[250]` */
   zIndexClassName?: string;
@@ -28,13 +28,14 @@ const ENTER_MS = 220;
 const EXIT_MS = 180;
 const DISMISS_DISTANCE_PX = 120;
 const DISMISS_VELOCITY_PX_S = 900;
+const START_DRAG_SLOP_PX = 6;
 
 export default function BottomSheet({
   open,
   onClose,
   children,
   maxWidthClassName = "max-w-[720px]",
-  contentMaxHeightClassName = "max-h-[70vh]",
+  contentMaxHeightClassName = "max-h-[94dvh]",
   zIndexClassName = "z-[250]",
   showCloseButton = false,
 }: Props) {
@@ -42,11 +43,13 @@ export default function BottomSheet({
   const [isDragging, setIsDragging] = useState(false);
   const [dragY, setDragY] = useState(0);
   const closeRef = useRef(onClose);
+  const scrollRef = useRef<HTMLDivElement | null>(null);
   const dragRef = useRef<{
     active: boolean;
     pointerId: number;
     startY: number;
     startAt: number;
+    isDragging: boolean;
   } | null>(null);
 
   useEffect(() => {
@@ -137,68 +140,82 @@ export default function BottomSheet({
               transitionDuration: isDragging
                 ? "0ms"
                 : `${open ? ENTER_MS : EXIT_MS}ms`,
+              touchAction: isDragging ? "none" : "pan-y",
+            }}
+            onPointerDown={(e) => {
+              if (!open) return;
+              if (dragRef.current?.active) return;
+              if ((e as any).button != null && (e as any).button !== 0) return;
+
+              dragRef.current = {
+                active: true,
+                pointerId: e.pointerId,
+                startY: e.clientY,
+                startAt: performance.now(),
+                isDragging: false,
+              };
+
+              // Don’t force dragging immediately; allow normal scrolling.
+              (e.currentTarget as HTMLDivElement).setPointerCapture?.(
+                e.pointerId,
+              );
+            }}
+            onPointerMove={(e) => {
+              const s = dragRef.current;
+              if (!s?.active) return;
+              if (e.pointerId !== s.pointerId) return;
+
+              const dy = e.clientY - s.startY;
+              if (dy <= 0) return;
+
+              const scroller = scrollRef.current;
+              const atTop = !scroller || scroller.scrollTop <= 0;
+
+              // Start dragging only when content is at the top and user pulls down.
+              if (!s.isDragging) {
+                if (!atTop) return;
+                if (dy < START_DRAG_SLOP_PX) return;
+                s.isDragging = true;
+                setIsDragging(true);
+              }
+
+              setDragY(Math.max(0, dy));
+            }}
+            onPointerUp={(e) => {
+              const s = dragRef.current;
+              if (!s?.active) return;
+              if (e.pointerId !== s.pointerId) return;
+
+              const wasDragging = s.isDragging;
+              dragRef.current = null;
+              if (!wasDragging) return;
+
+              const dy = Math.max(0, e.clientY - s.startY);
+              const dt = Math.max(1, performance.now() - s.startAt);
+              const v = (dy / dt) * 1000; // px/s
+
+              setIsDragging(false);
+
+              if (dy >= DISMISS_DISTANCE_PX || v >= DISMISS_VELOCITY_PX_S) {
+                setDragY(0);
+                closeRef.current();
+                return;
+              }
+
+              setDragY(0);
+            }}
+            onPointerCancel={(e) => {
+              const s = dragRef.current;
+              if (!s?.active) return;
+              if (e.pointerId !== s.pointerId) return;
+
+              dragRef.current = null;
+              setIsDragging(false);
+              setDragY(0);
             }}
           >
-            {/* Drag handle area (swipe down to dismiss) */}
-            <div
-              className="relative flex items-center justify-center px-4 pt-3"
-              style={{ touchAction: "none" }}
-              onPointerDown={(e) => {
-                // Only start dragging on primary pointer/touch
-                if (!open) return;
-                if (dragRef.current?.active) return;
-                if ((e as any).button != null && (e as any).button !== 0)
-                  return;
-
-                dragRef.current = {
-                  active: true,
-                  pointerId: e.pointerId,
-                  startY: e.clientY,
-                  startAt: performance.now(),
-                };
-                setIsDragging(true);
-                setDragY(0);
-                (e.currentTarget as HTMLDivElement).setPointerCapture?.(
-                  e.pointerId,
-                );
-              }}
-              onPointerMove={(e) => {
-                const s = dragRef.current;
-                if (!s?.active) return;
-                if (e.pointerId !== s.pointerId) return;
-                const dy = e.clientY - s.startY;
-                setDragY(Math.max(0, dy));
-              }}
-              onPointerUp={(e) => {
-                const s = dragRef.current;
-                if (!s?.active) return;
-                if (e.pointerId !== s.pointerId) return;
-
-                const dy = Math.max(0, e.clientY - s.startY);
-                const dt = Math.max(1, performance.now() - s.startAt);
-                const v = (dy / dt) * 1000; // px/s
-
-                dragRef.current = null;
-                setIsDragging(false);
-
-                if (dy >= DISMISS_DISTANCE_PX || v >= DISMISS_VELOCITY_PX_S) {
-                  setDragY(0);
-                  closeRef.current();
-                  return;
-                }
-
-                // Snap back
-                setDragY(0);
-              }}
-              onPointerCancel={(e) => {
-                const s = dragRef.current;
-                if (!s?.active) return;
-                if (e.pointerId !== s.pointerId) return;
-                dragRef.current = null;
-                setIsDragging(false);
-                setDragY(0);
-              }}
-            >
+            {/* Handle */}
+            <div className="relative flex items-center justify-center px-4 pt-3">
               <div className="h-1.5 w-12 rounded-full bg-black/15" />
               {showCloseButton ? (
                 <button
@@ -213,6 +230,7 @@ export default function BottomSheet({
             </div>
 
             <div
+              ref={scrollRef}
               className={[
                 contentMaxHeightClassName,
                 "overflow-y-auto px-3 pb-6 pt-3",
