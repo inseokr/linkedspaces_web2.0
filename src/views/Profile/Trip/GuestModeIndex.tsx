@@ -939,6 +939,8 @@ export default function GuestRecapPage({ userId, tripId }: Props) {
   const mapStickyRef = useRef<HTMLElement | null>(null);
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const dayMapHostRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const lastScrollYRef = useRef(0);
+  const scrollDirRef = useRef<"up" | "down">("down");
 
   // ===== guard flags =====
   const isProgrammaticScrollRef = useRef(false);
@@ -1114,6 +1116,9 @@ export default function GuestRecapPage({ userId, tripId }: Props) {
     if (!dayTabs.length) return;
 
     const TRIGGER_PX = 16;
+    const SCROLL_DIR_EPS_PX = 2;
+    const MAP_HOST_MIN_VISIBLE_PX_DOWN = 16;
+    const MAP_HOST_MIN_VISIBLE_PX_UP = 1;
 
     const getClosestEntryToCenter = () => {
       // Desktop: compute within the left scroll panel
@@ -1214,13 +1219,63 @@ export default function GuestRecapPage({ userId, tripId }: Props) {
 
       let chosen: string | null = null;
 
-      for (const t of dayTabs) {
-        const el = daySectionRefs.current[t.id];
-        if (!el) continue;
+      if (!isLg) {
+        // Mobile: choose day by map-host visibility.
+        // - Scroll down: keep "most visible" host => avoids jumping too early.
+        // - Scroll up: switch earlier to the host that is entering near the top => renders sooner.
+        const viewportTop = triggerY;
+        const viewportBottom = window.innerHeight;
 
-        const top = el.getBoundingClientRect().top;
-        if (top <= triggerY) chosen = t.id;
-        else break;
+        const candidates: Array<{ id: string; top: number; visible: number }> =
+          [];
+
+        for (const t of dayTabs) {
+          const host = dayMapHostRefs.current[t.id];
+          if (!host) continue;
+
+          const r = host.getBoundingClientRect();
+          const visible = Math.max(
+            0,
+            Math.min(r.bottom, viewportBottom) - Math.max(r.top, viewportTop),
+          );
+
+          if (visible > 0) candidates.push({ id: t.id, top: r.top, visible });
+        }
+
+        if (candidates.length) {
+          const dir = scrollDirRef.current;
+
+          if (dir === "up") {
+            // Earlier render while scrolling up:
+            // pick the visible map host closest to the top trigger line,
+            // and allow switching as soon as it becomes visible.
+            candidates.sort(
+              (a, b) =>
+                Math.abs(a.top - viewportTop) - Math.abs(b.top - viewportTop),
+            );
+            const pick =
+              candidates.find((c) => c.visible >= MAP_HOST_MIN_VISIBLE_PX_UP) ??
+              candidates[0];
+            chosen = pick?.id ?? null;
+          } else {
+            // Scrolling down: keep the most visible map host (stable).
+            candidates.sort((a, b) => b.visible - a.visible);
+            const pick = candidates[0];
+            if (pick?.visible >= MAP_HOST_MIN_VISIBLE_PX_DOWN) chosen = pick.id;
+          }
+        }
+      }
+
+      // Fallback: original "section top" based heuristic (desktop and edge cases)
+      if (!chosen) {
+        for (const t of dayTabs) {
+          const el = daySectionRefs.current[t.id];
+          if (!el) continue;
+
+          const top = el.getBoundingClientRect().top;
+          if (top <= triggerY) chosen = t.id;
+          else break;
+        }
       }
 
       if (!chosen) chosen = dayTabs[0]?.id ?? null;
@@ -1232,6 +1287,13 @@ export default function GuestRecapPage({ userId, tripId }: Props) {
 
     let ticking = false;
     const onScroll = () => {
+      if (!isLg) {
+        const y = window.scrollY;
+        const prev = lastScrollYRef.current;
+        if (y < prev - SCROLL_DIR_EPS_PX) scrollDirRef.current = "up";
+        else if (y > prev + SCROLL_DIR_EPS_PX) scrollDirRef.current = "down";
+        lastScrollYRef.current = y;
+      }
       if (ticking) return;
       ticking = true;
       requestAnimationFrame(() => {
@@ -1240,6 +1302,7 @@ export default function GuestRecapPage({ userId, tripId }: Props) {
       });
     };
 
+    lastScrollYRef.current = window.scrollY;
     requestAnimationFrame(() => compute());
     setTimeout(() => compute(), 150);
     setTimeout(() => compute(), 600);
@@ -1527,7 +1590,7 @@ export default function GuestRecapPage({ userId, tripId }: Props) {
                     ref={(el) => {
                       dayMapHostRefs.current[id] = el;
                     }}
-                    className="mb-5 h-[50dvh] w-full"
+                    className="mb-5 h-[45dvh] w-full"
                   />
 
                   <RecapBlogDaySection

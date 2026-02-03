@@ -752,7 +752,7 @@ function OwnerTripRecapView({ userId, tripId }: TripRecapViewProps) {
             <div
               ref={mapContainerRef}
               className="w-full overflow-hidden rounded-2xl border border-black/10"
-              style={{ height: isLg ? PANEL_HEIGHT : "50dvh" }}
+              style={{ height: isLg ? PANEL_HEIGHT : "45dvh" }}
             >
               <MapboxMap
                 mode="place"
