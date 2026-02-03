@@ -4,6 +4,7 @@
 import React from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 type Props = {
   message?: string;
@@ -18,6 +19,7 @@ export default function RecapLoginBar({
   onSignIn,
   className = "",
 }: Props) {
+  const router = useRouter();
   return (
     <header
       className={[
@@ -52,7 +54,10 @@ export default function RecapLoginBar({
 
           <button
             type="button"
-            onClick={onSignIn}
+            onClick={() => {
+              if (onSignIn) return onSignIn();
+              router.push("/sign-in");
+            }}
             className={[
               "shrink-0 rounded-xl px-4 py-2 text-[16px] sm:text-[18px] font-semibold",
               "bg-[#0798FF] text-white hover:brightness-95 active:brightness-90",

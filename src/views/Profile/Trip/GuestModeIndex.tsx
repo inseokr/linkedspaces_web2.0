@@ -9,6 +9,7 @@ import React, {
   useState,
 } from "react";
 import { createPortal } from "react-dom";
+import { useRouter } from "next/navigation";
 
 import RecapBlogHero from "./component/RecapBlogTopImage";
 import {
@@ -27,6 +28,9 @@ import SignInHeroCard from "./component/GuestSignInHeroCard";
 
 import SignInModal from "./component/GuestSignInModal";
 import DownloadVideoModal from "./component/GuestDownloadVideoModal";
+import { isLoginSuccess, loginWithJwt } from "@/api/auth";
+import { setCachedUser } from "@/api/user";
+import { notifyAuthChanged } from "@/hooks/useAuth";
 
 // const demoData: RecapBlogPageData = {
 //   hero: {
@@ -733,6 +737,7 @@ function useIsDesktopLg() {
 }
 
 export default function GuestRecapPage({ userId, tripId }: Props) {
+  const router = useRouter();
   const isLg = useIsDesktopLg();
 
   const [isSignInOpen, setIsSignInOpen] = useState(false);
@@ -748,6 +753,32 @@ export default function GuestRecapPage({ userId, tripId }: Props) {
 
   const openDownload = () => setIsDownloadOpen(true);
   const closeDownload = () => setIsDownloadOpen(false);
+
+  const persistTokenBestEffort = useCallback(
+    (token: string, remember: boolean) => {
+      // Safari (especially Private Browsing) can throw on localStorage writes.
+      const primary = remember ? "local" : "session";
+      const secondary = remember ? "session" : "local";
+
+      const trySet = (which: "local" | "session") => {
+        if (which === "local") window.localStorage.setItem("token", token);
+        else window.sessionStorage.setItem("token", token);
+      };
+
+      try {
+        trySet(primary);
+        return;
+      } catch {
+        // ignore and fallback
+      }
+      try {
+        trySet(secondary);
+      } catch {
+        // ignore
+      }
+    },
+    [],
+  );
 
   // ===== layout constants =====
   const LOGIN_BAR_HEIGHT_PX = 74;
@@ -1706,13 +1737,27 @@ export default function GuestRecapPage({ userId, tripId }: Props) {
       <SignInModal
         open={isSignInOpen}
         onClose={closeSignIn}
-        onGoogleSignIn={() => console.log("google sign in")}
-        onLogin={({ username, password, remember }) => {
-          console.log("login", { username, password, remember });
-          closeSignIn();
+        onGoogleSignIn={() => router.push("/sign-in")}
+        onLogin={async ({ username, password, remember }) => {
+          try {
+            const data = await loginWithJwt(username, password);
+            if (isLoginSuccess(data)) {
+              persistTokenBestEffort(data.token, remember);
+              setCachedUser(data.user);
+              notifyAuthChanged();
+              closeSignIn();
+              // Ensure TripRecapView recomputes owner/guest shell.
+              router.refresh();
+              return;
+            }
+            alert("check username or password.");
+          } catch (e) {
+            console.error("[login] jwt failed", e);
+            alert("Failed to log in. Please try again.");
+          }
         }}
-        onForgotPassword={() => console.log("forgot pw")}
-        onCreateAccount={() => console.log("create account")}
+        onForgotPassword={() => router.push("/sign-in")}
+        onCreateAccount={() => router.push("/sign-in")}
       />
 
       <DownloadVideoModal
