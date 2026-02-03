@@ -108,7 +108,7 @@ export function RecapBlogDaySection({
 
   return (
     <section className="space-y-6">
-      <div className='text-black text-left font-["Nunito_Sans"] text-[40px] font-bold leading-normal'>
+      <div className='text-black text-left font-["Nunito_Sans"] text-[28px] sm:text-[40px] font-bold leading-normal'>
         Day {dayIndex}: {title}
       </div>
 

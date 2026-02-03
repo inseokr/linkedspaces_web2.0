@@ -174,7 +174,8 @@ export function RecapBlogHeader({
       <div className="pt-4 text-center">
         <h1
           className={[
-            "text-3xl font-semibold tracking-tight sm:text-4xl md:text-5xl",
+            // NOTE: use `!` to avoid any global h1 typography overrides
+            "!text-[22px] !leading-[1.15] font-semibold tracking-tight sm:!text-4xl md:!text-5xl",
             isOnDark ? "text-white" : "text-black",
           ].join(" ")}
         >
@@ -305,7 +306,7 @@ export default function RecapBlogHero({
           <div className="flex-1" />
 
           <div className="pb-4 text-center sm:pb-6">
-            <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl md:text-5xl">
+            <h1 className="!text-[22px] !leading-[1.15] font-semibold tracking-tight text-white sm:!text-4xl md:!text-5xl">
               {title}
             </h1>
             <TripMeta

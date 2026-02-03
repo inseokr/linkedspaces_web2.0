@@ -110,7 +110,7 @@ export default function RecapBlogTopBar({
         <div className="flex flex-wrap items-center justify-between gap-3">
           {/* Left: Title */}
           <div className="min-w-0 flex items-center gap-3">
-            <h1 className="min-w-0 truncate text-[18px] font-semibold text-black/70">
+            <h1 className="min-w-0 truncate text-[16px] sm:text-[18px] font-semibold text-black/70">
               {title}
             </h1>
           </div>

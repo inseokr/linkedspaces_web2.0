@@ -978,7 +978,7 @@ export default function GuestRecapPage({ userId, tripId }: Props) {
 
   const effectiveDaysCount = effectiveModel?.days.length ?? 0;
   useLayoutEffect(() => {
-    // Mobile only: pick the current day section's map host as portal target.
+    // Mobile only: pick the pinned day section's map host as portal target.
     if (isLg) {
       setMobileMapPortalTarget((prev) => (prev === null ? prev : null));
       return;
@@ -1007,6 +1007,7 @@ export default function GuestRecapPage({ userId, tripId }: Props) {
   const activeEntryIdRef = useRef<string | null>(null);
   const [activeEntryId, setActiveEntryId] = useState<string | null>(null);
   const focusTimerRef = useRef<number | null>(null);
+  const mobileCameraFocusTimerRef = useRef<number | null>(null);
 
   // 최초 1회 포커스(원하면 다시 켜도 됨): 실제 markers 기준으로
   useEffect(() => {
@@ -1175,12 +1176,27 @@ export default function GuestRecapPage({ userId, tripId }: Props) {
 
         activeEntryIdRef.current = entryId;
         setActiveEntryId(entryId);
-        focusToEntryId(entryId);
 
         const dayId = entryIdToDayId.get(entryId);
         if (dayId && dayId !== activeDayIdRef.current) {
           setActiveDayId(dayId);
         }
+
+        // Desktop: keep the map following scroll immediately.
+        if (isLg) {
+          focusToEntryId(entryId);
+          return;
+        }
+
+        // Mobile: avoid constant camera animations while the user scrolls.
+        // Debounce camera movement until scrolling "settles" a bit.
+        if (mobileCameraFocusTimerRef.current) {
+          window.clearTimeout(mobileCameraFocusTimerRef.current);
+        }
+        mobileCameraFocusTimerRef.current = window.setTimeout(() => {
+          if (activeEntryIdRef.current !== entryId) return;
+          focusToEntryId(entryId);
+        }, 220);
       }, 120);
     };
 
@@ -1245,6 +1261,8 @@ export default function GuestRecapPage({ userId, tripId }: Props) {
       else window.removeEventListener("scroll", onScroll);
       window.removeEventListener("resize", compute);
       if (focusTimerRef.current) window.clearTimeout(focusTimerRef.current);
+      if (mobileCameraFocusTimerRef.current)
+        window.clearTimeout(mobileCameraFocusTimerRef.current);
     };
   }, [dayTabs, entryIdToDayId, isLg, mobileHeaderOffsetPx, focusToEntryId]);
 
@@ -1468,7 +1486,8 @@ export default function GuestRecapPage({ userId, tripId }: Props) {
         </div>
       ) : (
         <>
-          {/* Mobile: map appears at the top of the active day section */}
+          {/* Mobile: keep a single Mapbox instance via portal (no remount).
+              It will move to the active day while scrolling. */}
           {(() => {
             const target = mobileMapPortalTarget;
             if (!target) return null;
@@ -1481,6 +1500,7 @@ export default function GuestRecapPage({ userId, tripId }: Props) {
                   placeMarkers={activeDayMarkers}
                   activePlaceMarkerId={activeEntryId ?? undefined}
                   onPlaceMarkerClick={onMarkerClick}
+                  containerResizeKey={activeDayId}
                 />
               </div>,
               target,

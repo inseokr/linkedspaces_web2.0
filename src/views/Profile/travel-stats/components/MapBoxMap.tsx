@@ -56,6 +56,13 @@ type Props = {
   overlayTopLeft?: ReactNode;
   /** Optional UI rendered on top of the map. */
   overlayTopRight?: ReactNode;
+
+  /**
+   * When the map container is moved in the DOM (e.g. via portal), Mapbox can
+   * visually glitch unless we call resize(). Pass a value that changes when the
+   * container target changes.
+   */
+  containerResizeKey?: string | number;
 };
 
 function PlaceMarker({
@@ -195,6 +202,7 @@ export default function MapboxMap({
 
   overlayTopLeft,
   overlayTopRight,
+  containerResizeKey,
 }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<MapboxMapType | null>(null);
@@ -858,6 +866,26 @@ export default function MapboxMap({
     if (map.isStyleLoaded()) run();
     else map.once("idle", run);
   }, [activePlaceMarkerId, activeMarkerId]);
+
+  // When the host element changes (portal moves) or layout shifts, force a resize.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    const raf = window.requestAnimationFrame(() => {
+      try {
+        map.resize();
+      } catch {}
+      // iOS/Safari sometimes needs a second tick after layout settles.
+      window.setTimeout(() => {
+        try {
+          map.resize();
+        } catch {}
+      }, 60);
+    });
+
+    return () => window.cancelAnimationFrame(raf);
+  }, [containerResizeKey]);
 
   useEffect(() => {
     if (mapRef.current?.isStyleLoaded()) syncHighlightLayersRef.current();
