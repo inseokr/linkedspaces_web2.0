@@ -1,6 +1,7 @@
 "use client";
 
 import React, {
+  useCallback,
   useEffect,
   useLayoutEffect,
   useMemo,
@@ -709,6 +710,7 @@ import type { TripRecapResponse } from "@/api/trips";
 import { apiFetch } from "@/api/client";
 
 import { mapTripRecapToPageModel } from "@/views/Profile/Trip/utils/mapTripRecap";
+import BottomSheet from "@/components/ui/BottomSheet";
 
 type Props = {
   userId: string;
@@ -1016,11 +1018,14 @@ export default function GuestRecapPage({ userId, tripId }: Props) {
     setFocusLatLng({ lat: first.lat, lng: first.lng });
   }, [allMarkers, focusLatLng]);
 
-  const focusToEntryId = (entryId: string) => {
-    const m = allMarkers.find((x) => x.id === entryId);
-    if (!m) return;
-    setFocusLatLng({ lat: m.lat, lng: m.lng });
-  };
+  const focusToEntryId = useCallback(
+    (entryId: string) => {
+      const m = allMarkers.find((x) => x.id === entryId);
+      if (!m) return;
+      setFocusLatLng({ lat: m.lat, lng: m.lng });
+    },
+    [allMarkers],
+  );
 
   // ===== scroll helpers (기존 로직 유지) =====
   const scrollToDay = (dayId: string) => {
@@ -1104,15 +1109,43 @@ export default function GuestRecapPage({ userId, tripId }: Props) {
     }, 650);
   };
 
-  const getClosestEntryToCenter = () => {
-    // Desktop: compute within the left scroll panel
-    if (isLg) {
-      const root = leftScrollRef.current;
-      if (!root) return null;
+  useEffect(() => {
+    if (!dayTabs.length) return;
 
-      const rootRect = root.getBoundingClientRect();
-      const centerY = rootRect.top + rootRect.height / 2;
+    const TRIGGER_PX = 16;
 
+    const getClosestEntryToCenter = () => {
+      // Desktop: compute within the left scroll panel
+      if (isLg) {
+        const root = leftScrollRef.current;
+        if (!root) return null;
+
+        const rootRect = root.getBoundingClientRect();
+        const centerY = rootRect.top + rootRect.height / 2;
+
+        let bestId: string | null = null;
+        let bestDist = Infinity;
+
+        for (const [id, el] of Object.entries(entryRefs.current)) {
+          if (!el) continue;
+
+          const r = el.getBoundingClientRect();
+          const entryCenterY = r.top + r.height / 2;
+
+          if (r.bottom < rootRect.top || r.top > rootRect.bottom) continue;
+
+          const dist = Math.abs(entryCenterY - centerY);
+          if (dist < bestDist) {
+            bestDist = dist;
+            bestId = id;
+          }
+        }
+
+        return bestId;
+      }
+
+      // Mobile: compute against viewport center
+      const centerY = window.innerHeight / 2;
       let bestId: string | null = null;
       let bestDist = Infinity;
 
@@ -1120,10 +1153,10 @@ export default function GuestRecapPage({ userId, tripId }: Props) {
         if (!el) continue;
 
         const r = el.getBoundingClientRect();
+        // Skip entries far outside the viewport to reduce noise
+        if (r.bottom < 0 || r.top > window.innerHeight) continue;
+
         const entryCenterY = r.top + r.height / 2;
-
-        if (r.bottom < rootRect.top || r.top > rootRect.bottom) continue;
-
         const dist = Math.abs(entryCenterY - centerY);
         if (dist < bestDist) {
           bestDist = dist;
@@ -1132,52 +1165,24 @@ export default function GuestRecapPage({ userId, tripId }: Props) {
       }
 
       return bestId;
-    }
+    };
 
-    // Mobile: compute against viewport center
-    const centerY = window.innerHeight / 2;
-    let bestId: string | null = null;
-    let bestDist = Infinity;
+    const scheduleFocusToEntry = (entryId: string) => {
+      if (focusTimerRef.current) window.clearTimeout(focusTimerRef.current);
 
-    for (const [id, el] of Object.entries(entryRefs.current)) {
-      if (!el) continue;
+      focusTimerRef.current = window.setTimeout(() => {
+        if (activeEntryIdRef.current === entryId) return;
 
-      const r = el.getBoundingClientRect();
-      // Skip entries far outside the viewport to reduce noise
-      if (r.bottom < 0 || r.top > window.innerHeight) continue;
+        activeEntryIdRef.current = entryId;
+        setActiveEntryId(entryId);
+        focusToEntryId(entryId);
 
-      const entryCenterY = r.top + r.height / 2;
-      const dist = Math.abs(entryCenterY - centerY);
-      if (dist < bestDist) {
-        bestDist = dist;
-        bestId = id;
-      }
-    }
-
-    return bestId;
-  };
-
-  const scheduleFocusToEntry = (entryId: string) => {
-    if (focusTimerRef.current) window.clearTimeout(focusTimerRef.current);
-
-    focusTimerRef.current = window.setTimeout(() => {
-      if (activeEntryIdRef.current === entryId) return;
-
-      activeEntryIdRef.current = entryId;
-      setActiveEntryId(entryId);
-      focusToEntryId(entryId);
-
-      const dayId = entryIdToDayId.get(entryId);
-      if (dayId && dayId !== activeDayIdRef.current) {
-        setActiveDayId(dayId);
-      }
-    }, 120);
-  };
-
-  useEffect(() => {
-    if (!dayTabs.length) return;
-
-    const TRIGGER_PX = 16;
+        const dayId = entryIdToDayId.get(entryId);
+        if (dayId && dayId !== activeDayIdRef.current) {
+          setActiveDayId(dayId);
+        }
+      }, 120);
+    };
 
     const compute = () => {
       if (isProgrammaticScrollRef.current) return;
@@ -1241,7 +1246,7 @@ export default function GuestRecapPage({ userId, tripId }: Props) {
       window.removeEventListener("resize", compute);
       if (focusTimerRef.current) window.clearTimeout(focusTimerRef.current);
     };
-  }, [dayTabs, entryIdToDayId, isLg]);
+  }, [dayTabs, entryIdToDayId, isLg, mobileHeaderOffsetPx, focusToEntryId]);
 
   const handleDayChange = (dayId: string) => {
     setActiveDayId(dayId);
@@ -1527,38 +1532,12 @@ export default function GuestRecapPage({ userId, tripId }: Props) {
             if (!entry) return null;
 
             return (
-              <div className="fixed inset-0 z-[250]">
-                {/* Backdrop */}
-                <button
-                  type="button"
-                  aria-label="Close"
-                  className="absolute inset-0 bg-black/35"
-                  onClick={() => setMobilePlaceSheetEntryId(null)}
-                />
-
-                {/* Sheet */}
-                <div className="absolute inset-x-0 bottom-0">
-                  <div className="mx-auto w-full max-w-[720px]">
-                    <div className="rounded-t-3xl bg-white shadow-[0_-18px_40px_rgba(0,0,0,0.24)]">
-                      <div className="flex items-center justify-between px-4 pt-3">
-                        <div className="mx-auto h-1.5 w-12 rounded-full bg-black/15" />
-                        <button
-                          type="button"
-                          onClick={() => setMobilePlaceSheetEntryId(null)}
-                          className="ml-3 shrink-0 rounded-full bg-black/5 px-3 py-1.5 text-[14px] font-bold text-black/70"
-                          aria-label="Dismiss"
-                        >
-                          Close
-                        </button>
-                      </div>
-
-                      <div className="max-h-[70vh] overflow-y-auto px-3 pb-6 pt-3">
-                        <RecapBlogEntryCard entry={entry as any} />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <BottomSheet
+                open={!!entry}
+                onClose={() => setMobilePlaceSheetEntryId(null)}
+              >
+                <RecapBlogEntryCard entry={entry as any} />
+              </BottomSheet>
             );
           })()}
         </>

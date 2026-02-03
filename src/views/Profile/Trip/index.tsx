@@ -38,6 +38,8 @@ import { mapTripRecapToPageModel } from "@/views/Profile/Trip/utils/mapTripRecap
 import { loadDraft } from "@/views/Profile/Trip/edit/utils/draftStorage";
 import { applyDraftToPageModel } from "@/views/Profile/Trip/edit/utils/editMappers";
 import { idbGetBlob } from "./edit/utils/imageIdb";
+import BottomSheet from "@/components/ui/BottomSheet";
+import { RecapBlogEntryCard } from "@/views/Profile/Trip/component/RecapBlogPlace";
 
 interface TripRecapViewProps {
   userId: string;
@@ -48,6 +50,21 @@ import GuestRecapPage from "./GuestModeIndex";
 import { useLayoutMode } from "@/components/layout/LayoutModeContext";
 
 import { useAuth } from "@/hooks/useAuth";
+
+// Mobile/desktop breakpoint hook (tailwind `lg`)
+function useIsDesktopLg() {
+  const [isLg, setIsLg] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 1024px)");
+    const onChange = () => setIsLg(mq.matches);
+    onChange();
+    mq.addEventListener?.("change", onChange);
+    return () => mq.removeEventListener?.("change", onChange);
+  }, []);
+
+  return isLg;
+}
 
 function GuestTripRecapShell({ userId, tripId }: TripRecapViewProps) {
   const { setLayoutMode } = useLayoutMode();
@@ -145,6 +162,7 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
 
 function OwnerTripRecapView({ userId, tripId }: TripRecapViewProps) {
   const router = useRouter();
+  const isLg = useIsDesktopLg();
 
   const [recapData, setRecapData] = useState<TripRecapResponse | null>(null);
   const [loading, setLoading] = useState(false);
@@ -186,6 +204,9 @@ function OwnerTripRecapView({ userId, tripId }: TripRecapViewProps) {
   const activeEntryIdRef = useRef<string | null>(null);
   const [activeEntryId, setActiveEntryId] = useState<string | null>(null);
   const focusTimerRef = useRef<number | null>(null);
+  const [mobilePlaceSheetEntryId, setMobilePlaceSheetEntryId] = useState<
+    string | null
+  >(null);
 
   useEffect(() => {
     let urlToRevoke: string | null = null;
@@ -217,7 +238,7 @@ function OwnerTripRecapView({ userId, tripId }: TripRecapViewProps) {
     return () => {
       if (urlToRevoke) URL.revokeObjectURL(urlToRevoke);
     };
-  }, [draft?.coverPhoto.kind, (draft?.coverPhoto as any)?.previewKey]);
+  }, [draft]);
 
   /** 1) Fetch */
   useEffect(() => {
@@ -257,7 +278,7 @@ function OwnerTripRecapView({ userId, tripId }: TripRecapViewProps) {
     const pm = mapTripRecapToPageModel(recapData);
 
     return draft ? applyDraftToPageModel(pm, draft) : pm;
-  }, [recapData, userId, tripId]);
+  }, [recapData, draft]);
 
   /** 3) Base center */
   const baseCenter = useMemo(() => {
@@ -311,10 +332,11 @@ function OwnerTripRecapView({ userId, tripId }: TripRecapViewProps) {
   const allMarkers = useMemo<MarkerData[]>(() => {
     if (!effectiveModel) return [];
 
+    const startingYear = recapData?.trip?.startingYear;
     const travelYear =
-      (typeof recapData?.trip?.startingYear === "number"
-        ? recapData.trip.startingYear
-        : Number(recapData?.trip?.startingYear)) || new Date().getFullYear();
+      (typeof startingYear === "number"
+        ? startingYear
+        : Number(startingYear)) || new Date().getFullYear();
 
     return effectiveModel.days.flatMap((d) =>
       d.entries.map((e: any, idx: number) => ({
@@ -328,7 +350,7 @@ function OwnerTripRecapView({ userId, tripId }: TripRecapViewProps) {
         visitTimeText: e.timeRangeText ?? "",
       })),
     );
-  }, [effectiveModel, baseCenter]);
+  }, [effectiveModel, baseCenter, recapData?.trip?.startingYear]);
 
   const activeDayMarkers = useMemo<MarkerData[]>(() => {
     if (!activeDayId) return [];
@@ -571,6 +593,9 @@ function OwnerTripRecapView({ userId, tripId }: TripRecapViewProps) {
 
     // Ensure the clicked place card is positioned nicely in the left panel.
     scrollToEntry(markerId);
+
+    // Mobile: show bottom sheet for the clicked place.
+    if (!isLg) setMobilePlaceSheetEntryId(markerId);
   };
 
   /** 14) pinned map: wheel consumed by left panel first */
@@ -644,6 +669,13 @@ function OwnerTripRecapView({ userId, tripId }: TripRecapViewProps) {
   }
 
   if (!effectiveModel) return <div className="p-6">No recap data</div>;
+
+  const mobileSheetEntry =
+    mobilePlaceSheetEntryId == null
+      ? null
+      : (effectiveModel.days
+          .flatMap((d) => d.entries)
+          .find((e) => e.id === mobilePlaceSheetEntryId) ?? null);
 
   return (
     <div className="min-h-screen bg-white">
@@ -743,6 +775,18 @@ function OwnerTripRecapView({ userId, tripId }: TripRecapViewProps) {
           </section>
         </div>
       </div>
+
+      {/* Mobile: bottom-sheet place modal (opens on marker click) */}
+      {!isLg && (
+        <BottomSheet
+          open={!!mobileSheetEntry}
+          onClose={() => setMobilePlaceSheetEntryId(null)}
+        >
+          {mobileSheetEntry ? (
+            <RecapBlogEntryCard entry={mobileSheetEntry as any} />
+          ) : null}
+        </BottomSheet>
+      )}
     </div>
   );
 }
