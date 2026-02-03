@@ -1261,7 +1261,9 @@ export default function GuestRecapPage({ userId, tripId }: Props) {
       activeEntryIdRef.current = firstEntryId;
       setActiveEntryId(firstEntryId);
       focusToEntryId(firstEntryId);
-      scrollToEntry(firstEntryId);
+      // Mobile guest recap/blog: keep the map at the top of the visible screen
+      // when changing days (do not scroll down to the first entry).
+      if (isLg) scrollToEntry(firstEntryId);
     }
   };
 
