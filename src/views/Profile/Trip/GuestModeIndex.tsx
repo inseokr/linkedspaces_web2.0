@@ -754,6 +754,69 @@ export default function GuestRecapPage({ userId, tripId }: Props) {
   const PANEL_HEIGHT_OFFSET = 100;
   const PANEL_HEIGHT = `calc(100vh - ${PANEL_HEIGHT_OFFSET}px)`;
 
+  // Mobile: hide the fixed login bar once the Day tabs become sticky.
+  const dayTabsSentinelRef = useRef<HTMLDivElement | null>(null);
+  const [hideLoginBar, setHideLoginBar] = useState(false);
+  const hideLoginBarRef = useRef(false);
+  useEffect(() => {
+    hideLoginBarRef.current = hideLoginBar;
+  }, [hideLoginBar]);
+
+  // NOTE: keep page layout stable (no spacer height changes) to avoid flicker near
+  // the threshold where the day tabs become sticky.
+  const mobileHeaderOffsetPx = !isLg && hideLoginBar ? 0 : LOGIN_BAR_HEIGHT_PX;
+
+  useEffect(() => {
+    // Desktop layout doesn't use the mobile sticky day tabs.
+    if (isLg) {
+      setHideLoginBar(false);
+      return;
+    }
+
+    let raf = 0;
+    const recompute = () => {
+      const sentinel = dayTabsSentinelRef.current;
+      if (!sentinel) return;
+
+      const top = sentinel.getBoundingClientRect().top;
+      const currentlyHidden = hideLoginBarRef.current;
+
+      // Use a fixed threshold (bottom of the header when visible) + hysteresis.
+      // This avoids oscillation caused by changing the threshold while toggling.
+      const threshold = LOGIN_BAR_HEIGHT_PX;
+      const HYSTERESIS_PX = 64;
+
+      if (top <= threshold) {
+        if (!currentlyHidden) setHideLoginBar(true);
+        return;
+      }
+
+      if (top > threshold + HYSTERESIS_PX) {
+        if (currentlyHidden) setHideLoginBar(false);
+      }
+    };
+
+    const onScroll = () => {
+      if (raf) return;
+      raf = window.requestAnimationFrame(() => {
+        raf = 0;
+        recompute();
+      });
+    };
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", recompute);
+
+    window.requestAnimationFrame(recompute);
+    setTimeout(recompute, 100);
+
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", recompute);
+      if (raf) window.cancelAnimationFrame(raf);
+    };
+  }, [isLg, LOGIN_BAR_HEIGHT_PX]);
+
   // ===== (추가) 실제 데이터 fetch =====
   const [recapData, setRecapData] = useState<TripRecapResponse | null>(null);
   const [loading, setLoading] = useState(false);
@@ -990,7 +1053,7 @@ export default function GuestRecapPage({ userId, tripId }: Props) {
     const top =
       window.scrollY +
       rect.top -
-      (LOGIN_BAR_HEIGHT_PX + MOBILE_TABS_HEIGHT_PX + 12);
+      (mobileHeaderOffsetPx + MOBILE_TABS_HEIGHT_PX + 12);
 
     window.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
     window.setTimeout(() => {
@@ -1034,7 +1097,7 @@ export default function GuestRecapPage({ userId, tripId }: Props) {
     const top =
       window.scrollY +
       rect.top -
-      (LOGIN_BAR_HEIGHT_PX + MOBILE_TABS_HEIGHT_PX + 12);
+      (mobileHeaderOffsetPx + MOBILE_TABS_HEIGHT_PX + 12);
     window.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
     window.setTimeout(() => {
       isProgrammaticScrollRef.current = false;
@@ -1126,7 +1189,7 @@ export default function GuestRecapPage({ userId, tripId }: Props) {
             const rootRect = root.getBoundingClientRect();
             return rootRect.top + TRIGGER_PX;
           })()
-        : LOGIN_BAR_HEIGHT_PX + MOBILE_TABS_HEIGHT_PX + 8;
+        : mobileHeaderOffsetPx + MOBILE_TABS_HEIGHT_PX + 8;
 
       let chosen: string | null = null;
 
@@ -1282,7 +1345,15 @@ export default function GuestRecapPage({ userId, tripId }: Props) {
   // ===== render (기존 UI 그대로) =====
   return (
     <div className="min-h-screen bg-white">
-      <RecapLoginBar onSignIn={() => setIsSignInOpen(true)} />
+      <RecapLoginBar
+        onSignIn={() => setIsSignInOpen(true)}
+        className={[
+          "transition-[opacity,transform] duration-200 will-change-transform",
+          hideLoginBar
+            ? "opacity-0 -translate-y-full pointer-events-none"
+            : "opacity-100 translate-y-0",
+        ].join(" ")}
+      />
       {/* push content below the fixed login bar */}
       <div style={{ height: LOGIN_BAR_HEIGHT_PX }} />
 
@@ -1292,20 +1363,25 @@ export default function GuestRecapPage({ userId, tripId }: Props) {
 
       {/* Mobile: sticky day tabs (now below the header, not on the cover image) */}
       {!isLg && (
-        <div
-          className="sticky z-[180] border-b border-black/10 bg-white/85 backdrop-blur-md"
-          style={{ top: LOGIN_BAR_HEIGHT_PX }}
-        >
-          <div className="mx-auto w-full px-3 py-2">
-            <RecapDayTabs
-              tabs={dayTabs}
-              activeId={activeDayId}
-              onChange={handleDayChange}
-              size="sm"
-              className="max-w-full"
-            />
+        <>
+          {/* Sentinel: once this scrolls past the top, day tabs are "stuck" */}
+          <div ref={dayTabsSentinelRef} className="h-0" aria-hidden="true" />
+
+          <div
+            className="sticky z-[180] border-b border-black/10 bg-white/85 backdrop-blur-md"
+            style={{ top: mobileHeaderOffsetPx }}
+          >
+            <div className="mx-auto w-full px-3 py-2">
+              <RecapDayTabs
+                tabs={dayTabs}
+                activeId={activeDayId}
+                onChange={handleDayChange}
+                size="sm"
+                className="max-w-full"
+              />
+            </div>
           </div>
-        </div>
+        </>
       )}
 
       {/* Desktop: current split layout (list + sticky map) */}
@@ -1416,7 +1492,7 @@ export default function GuestRecapPage({ userId, tripId }: Props) {
                   }}
                   style={{
                     scrollMarginTop:
-                      LOGIN_BAR_HEIGHT_PX + MOBILE_TABS_HEIGHT_PX + 16,
+                      mobileHeaderOffsetPx + MOBILE_TABS_HEIGHT_PX + 16,
                   }}
                 >
                   {/* map host for this day (portal target) */}

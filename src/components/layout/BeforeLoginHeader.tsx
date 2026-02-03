@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import Image from "next/image";
 import DropdownMenu from "@/components/ui/DropdownMenu";
+import { useLayoutMode } from "@/components/layout/LayoutModeContext";
 
 import hamburgerIcon from "@/assets/icons/hamburger.svg";
 
@@ -17,8 +18,12 @@ const NAV_ITEMS = [
 ];
 
 export function BerforeLoginHeader() {
+  const { layoutMode } = useLayoutMode();
   const pathname = usePathname();
   const router = useRouter();
+
+  // Hide global header on pages that manage their own top bar (e.g. guest recap blog).
+  if (layoutMode === "bare") return null;
 
   const scrollToId = (id: string) => {
     const el = document.getElementById(id);
