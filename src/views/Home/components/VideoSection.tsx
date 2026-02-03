@@ -1,8 +1,8 @@
 export function VideoSection() {
   return (
-    <section className="w-full flex justify-center pb-[66px] pt-4">
+    <section className="w-full flex justify-center px-6 pb-16 pt-10">
       <video
-        className="w-[480px] h-[610px]"
+        className="w-full max-w-[480px] aspect-[480/610] h-auto rounded-2xl shadow-card border border-[var(--card-border)] bg-black"
         controls
         preload="metadata"
         playsInline

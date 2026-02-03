@@ -48,13 +48,13 @@ export function Footer() {
         </a>
       </div>
 
-      <div className="mx-auto flex [font-family:var(--font-poppins)] text-base leading-[22.4px] font-semibold text-[var(--foreground)] items-center justify-center gap-2 px-4 pb-30">
+      <div className="mx-auto flex flex-col sm:flex-row flex-wrap [font-family:var(--font-poppins)] text-base leading-[22.4px] font-semibold text-[var(--foreground)] items-center justify-center gap-2 px-4 pb-30 text-center">
         <span>© 2025 LinkedSpaces. All rights reserved.</span>
-        <span>|</span>
+        <span className="hidden sm:inline">|</span>
         <Link href="/privacy" className="underline text-[var(--color-main)]">
           Privacy Policy
         </Link>
-        <span className="text-[var(--color-main)]">|</span>
+        <span className="hidden sm:inline text-[var(--color-main)]">|</span>
         <Link href="/terms" className="underline text-[var(--color-main)]">
           Terms of Service
         </Link>
