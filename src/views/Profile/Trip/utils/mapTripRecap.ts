@@ -124,6 +124,8 @@ function mapPlaceToEntry(p: TripRecapPlace, fallbackId: string): RecapEntry {
   const placeKey = p.digitizedTime || fallbackId;
 
   const placeName = p.placeName || "Place";
+  const externalUrl =
+    typeof p.externalUrl === "string" ? p.externalUrl.trim() : "";
   const placeStory =
     typeof (p as any)?.story === "string" ? (p as any).story : "";
 
@@ -167,6 +169,7 @@ function mapPlaceToEntry(p: TripRecapPlace, fallbackId: string): RecapEntry {
     id,
     placeKey,
     placeName,
+    externalUrl: externalUrl || undefined,
     timeRangeText,
     categoryLabel,
     placeStory,

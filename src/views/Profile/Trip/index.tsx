@@ -208,6 +208,36 @@ function OwnerTripRecapView({ userId, tripId }: TripRecapViewProps) {
     { lat: number; lng: number } | undefined
   >(undefined);
   const [userInteracted, setUserInteracted] = useState(false);
+  const restoredScrollRef = useRef(false);
+  const scrollStateKey = useMemo(
+    () => `tripRecapScroll:${String(userId)}:${String(tripId)}`,
+    [userId, tripId],
+  );
+  const externalNavKey = useMemo(() => `ls:externalNav:tripRecap`, []);
+
+  const shouldSkipReturnRefetch = useCallback(() => {
+    // Returning from an external tab should not reset the UI state.
+    // We use a short TTL window.
+    const TTL_MS = 30_000;
+    try {
+      const raw = window.sessionStorage.getItem(externalNavKey);
+      if (!raw) return false;
+      const ts = Number(raw);
+      const now = Date.now();
+      if (!Number.isFinite(ts)) {
+        window.sessionStorage.removeItem(externalNavKey);
+        return false;
+      }
+      // IMPORTANT: multiple events can fire when returning (pageshow + visibility + focus).
+      // Don't clear the flag on first hit; skip the whole burst within TTL.
+      if (now - ts < TTL_MS) return true;
+
+      window.sessionStorage.removeItem(externalNavKey);
+      return false;
+    } catch {
+      return false;
+    }
+  }, [externalNavKey]);
 
   /** Entry focus helpers */
   const activeEntryIdRef = useRef<string | null>(null);
@@ -241,12 +271,19 @@ function OwnerTripRecapView({ userId, tripId }: TripRecapViewProps) {
 
   // When returning via browser back / bfcache, refresh from DB.
   useEffect(() => {
-    const onFocus = () => void fetchRecap();
+    const onFocus = () => {
+      if (shouldSkipReturnRefetch()) return;
+      void fetchRecap();
+    };
     const onVis = () => {
-      if (!document.hidden) void fetchRecap();
+      if (document.hidden) return;
+      if (shouldSkipReturnRefetch()) return;
+      void fetchRecap();
     };
     const onPageShow = (e: PageTransitionEvent) => {
-      if (e.persisted) void fetchRecap();
+      if (!e.persisted) return;
+      if (shouldSkipReturnRefetch()) return;
+      void fetchRecap();
     };
 
     window.addEventListener("focus", onFocus);
@@ -257,7 +294,7 @@ function OwnerTripRecapView({ userId, tripId }: TripRecapViewProps) {
       document.removeEventListener("visibilitychange", onVis);
       window.removeEventListener("pageshow", onPageShow);
     };
-  }, [fetchRecap]);
+  }, [fetchRecap, shouldSkipReturnRefetch]);
 
   /** 2) Effective model = API mapped (always from DB) */
   const effectiveModel: ReturnType<typeof mapTripRecapToPageModel> | null =
@@ -461,10 +498,107 @@ function OwnerTripRecapView({ userId, tripId }: TripRecapViewProps) {
     };
   }, []);
 
+  /** 9.5) preserve scroll position across tab switch / bfcache */
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const save = () => {
+      const root = leftScrollRef.current;
+      if (!root) return;
+      try {
+        window.sessionStorage.setItem(
+          scrollStateKey,
+          JSON.stringify({
+            scrollTop: root.scrollTop,
+            activeDayId: activeDayIdRef.current,
+            activeEntryId: activeEntryIdRef.current,
+            focusLatLng,
+            ts: Date.now(),
+          }),
+        );
+      } catch {
+        // ignore
+      }
+    };
+
+    const onVis = () => {
+      if (document.hidden) save();
+    };
+
+    // pagehide fires reliably on iOS when switching apps/tabs.
+    window.addEventListener("pagehide", save);
+    document.addEventListener("visibilitychange", onVis);
+    return () => {
+      window.removeEventListener("pagehide", save);
+      document.removeEventListener("visibilitychange", onVis);
+    };
+  }, [scrollStateKey, focusLatLng]);
+
+  useLayoutEffect(() => {
+    if (restoredScrollRef.current) return;
+    if (!effectiveModel) return;
+    const root = leftScrollRef.current;
+    if (!root) return;
+    if (typeof window === "undefined") return;
+
+    let parsed: any = null;
+    try {
+      const raw = window.sessionStorage.getItem(scrollStateKey);
+      if (!raw) return;
+      parsed = JSON.parse(raw);
+    } catch {
+      return;
+    }
+
+    const target = Number(parsed?.scrollTop ?? 0);
+    if (!Number.isFinite(target) || target <= 0) return;
+
+    restoredScrollRef.current = true;
+    // Prevent initial auto-scroll stabilization from forcing scrollTop=0.
+    setUserInteracted(true);
+
+    root.style.scrollBehavior = "auto";
+
+    // Content height can change after images/layout; re-apply a few times.
+    let tries = 0;
+    const apply = () => {
+      const clamped = Math.max(0, Math.min(target, root.scrollHeight));
+      root.scrollTop = clamped;
+      tries += 1;
+      if (tries < 6) requestAnimationFrame(apply);
+    };
+    requestAnimationFrame(apply);
+
+    // Restore active day/entry if still valid (best-effort).
+    const savedDay = String(parsed?.activeDayId ?? "");
+    if (savedDay && dayTabs.some((t) => t.id === savedDay)) {
+      setActiveDayId(savedDay);
+    }
+    const savedEntry = String(parsed?.activeEntryId ?? "");
+    if (savedEntry) {
+      activeEntryIdRef.current = savedEntry;
+      setActiveEntryId(savedEntry);
+    }
+
+    const savedFocus = parsed?.focusLatLng;
+    if (
+      savedFocus &&
+      typeof savedFocus.lat === "number" &&
+      typeof savedFocus.lng === "number" &&
+      Number.isFinite(savedFocus.lat) &&
+      Number.isFinite(savedFocus.lng)
+    ) {
+      setFocusLatLng({ lat: savedFocus.lat, lng: savedFocus.lng });
+    }
+  }, [effectiveModel, scrollStateKey, dayTabs]);
+
   /** 10) initial scroll stabilization (친구 로직 유지) */
   useLayoutEffect(() => {
     const root = leftScrollRef.current;
     if (!root) return;
+
+    // If we restored scroll (coming back from a new tab / bfcache),
+    // do not force-reset the scroll position.
+    if (restoredScrollRef.current || userInteracted) return;
 
     root.style.scrollBehavior = "auto";
     root.scrollTop = 0;
@@ -644,7 +778,10 @@ function OwnerTripRecapView({ userId, tripId }: TripRecapViewProps) {
   }, [TOPBAR_OFFSET_PX, userInteracted, allMarkers]);
 
   /** render */
-  if (loading) return <div className="p-6">Loading recap blog...</div>;
+  // Only block-render on the very first load.
+  // For background refetches, keep UI mounted to preserve scroll/state.
+  if (loading && !effectiveModel)
+    return <div className="p-6">Loading recap blog...</div>;
 
   if (error) {
     return (

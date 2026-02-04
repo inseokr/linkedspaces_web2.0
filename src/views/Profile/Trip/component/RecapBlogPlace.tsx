@@ -36,6 +36,8 @@ export type RecapEntry = {
    */
   placeKey?: string;
   placeName: string;
+  /** Optional place deep link (e.g., Google Maps / website). */
+  externalUrl?: string;
   timeRangeText: string;
   categoryLabel?: string;
   liked?: boolean;
@@ -424,6 +426,10 @@ function RecapPhotoCard({
 
   const [captionEl, setCaptionEl] = useState<HTMLParagraphElement | null>(null);
   const [isTruncated, setIsTruncated] = useState(false);
+  const placeExternalUrl = useMemo(
+    () => String(entry.externalUrl ?? "").trim(),
+    [entry.externalUrl],
+  );
 
   const measureTruncation = useCallback(() => {
     if (!captionEl) return;
@@ -542,7 +548,23 @@ function RecapPhotoCard({
             <button
               type="button"
               className="inline-flex items-center gap-2 hover:text-black"
-              aria-label="Copy link"
+              aria-label="Open place link"
+              onClick={() => {
+                if (!placeExternalUrl) return;
+                // Mark that we intentionally opened an external page, so the recap view can
+                // preserve UI state (avoid refetch/reset) when the user returns.
+                try {
+                  window.sessionStorage.setItem(
+                    `ls:externalNav:tripRecap`,
+                    String(Date.now()),
+                  );
+                } catch {
+                  // ignore
+                }
+                window.open(placeExternalUrl, "_blank", "noopener,noreferrer");
+              }}
+              disabled={!placeExternalUrl}
+              title={placeExternalUrl ? "Open link" : "No link available"}
             >
               <Link2 className="h-6 w-6" />
             </button>
