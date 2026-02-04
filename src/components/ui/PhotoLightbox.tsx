@@ -443,6 +443,23 @@ export default function PhotoLightbox({
               const stage = stageRef.current;
               if (!stage) return;
 
+              // Prevent stage gesture handling from breaking clicks on controls
+              // that live inside the stage (prev/next buttons, etc.).
+              const targetEl = e.target as HTMLElement | null;
+              if (
+                targetEl &&
+                targetEl !== e.currentTarget &&
+                targetEl.closest("button")
+              ) {
+                return;
+              }
+
+              const isTouchLike =
+                e.pointerType === "touch" || e.pointerType === "pen";
+              // Pointer capture is great for touch gestures, but on desktop it can
+              // interfere with click synthesis for child elements (buttons).
+              if (isTouchLike) stage.setPointerCapture?.(e.pointerId);
+
               pointersRef.current.set(e.pointerId, {
                 x: e.clientX,
                 y: e.clientY,
@@ -455,8 +472,6 @@ export default function PhotoLightbox({
                 startOffX: offset.x,
                 startOffY: offset.y,
               };
-
-              stage.setPointerCapture?.(e.pointerId);
 
               const pts = Array.from(pointersRef.current.values());
               if (pts.length === 2) {
@@ -478,8 +493,6 @@ export default function PhotoLightbox({
               // - if zoomed in: enable drag-pan
               // - if not zoomed: allow touch swipe to navigate between photos
               if (zoom <= 1) {
-                const isTouchLike =
-                  e.pointerType === "touch" || e.pointerType === "pen";
                 if (isTouchLike && total > 1) {
                   swipeRef.current = {
                     active: true,
@@ -496,6 +509,7 @@ export default function PhotoLightbox({
               }
               if (pinchRef.current) return;
               dragRef.current.active = true;
+              stage.setPointerCapture?.(e.pointerId);
             }}
             onPointerMove={(e) => {
               pointersRef.current.set(e.pointerId, {
