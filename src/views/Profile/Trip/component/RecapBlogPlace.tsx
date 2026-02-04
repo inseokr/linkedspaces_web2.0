@@ -24,6 +24,7 @@ import {
 import PhotoLightbox from "@/components/ui/PhotoLightbox";
 import { idbGetBlob } from "@/views/Profile/Trip/edit/utils/imageIdb";
 import TextRow from "@/views/Profile/Trip/edit/components/TextRow";
+import { normalizeExternalUrl, openExternalUrl } from "@/utils/externalLinks";
 
 /** ----------------------------
  *  Types
@@ -551,6 +552,8 @@ function RecapPhotoCard({
               aria-label="Open place link"
               onClick={() => {
                 if (!placeExternalUrl) return;
+                const normalized = normalizeExternalUrl(placeExternalUrl);
+                if (!normalized) return;
                 // Mark that we intentionally opened an external page, so the recap view can
                 // preserve UI state (avoid refetch/reset) when the user returns.
                 try {
@@ -561,7 +564,7 @@ function RecapPhotoCard({
                 } catch {
                   // ignore
                 }
-                window.open(placeExternalUrl, "_blank", "noopener,noreferrer");
+                openExternalUrl(normalized);
               }}
               disabled={!placeExternalUrl}
               title={placeExternalUrl ? "Open link" : "No link available"}

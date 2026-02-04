@@ -3,44 +3,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ExternalLink, X } from "lucide-react";
-
-function normalizeExternalUrl(input: string): string | null {
-  const raw = String(input ?? "")
-    .trim()
-    // remove surrounding quotes that sometimes sneak in from APIs
-    .replace(/^['"]|['"]$/g, "");
-  if (!raw) return null;
-
-  // Disallow dangerous schemes.
-  const lowered = raw.toLowerCase();
-  if (
-    lowered.startsWith("javascript:") ||
-    lowered.startsWith("data:") ||
-    lowered.startsWith("vbscript:")
-  ) {
-    return null;
-  }
-
-  // If no scheme, assume https.
-  const withScheme = /^[a-z]+:\/\//i.test(raw) ? raw : `https://${raw}`;
-
-  try {
-    const u = new URL(withScheme);
-    if (u.protocol !== "http:" && u.protocol !== "https:") return null;
-    return u.toString();
-  } catch {
-    // Some valid URLs come in with spaces (e.g. Google "place id:" query).
-    // Try a best-effort encoding pass.
-    try {
-      const encoded = encodeURI(withScheme);
-      const u = new URL(encoded);
-      if (u.protocol !== "http:" && u.protocol !== "https:") return null;
-      return u.toString();
-    } catch {
-      return null;
-    }
-  }
-}
+import { normalizeExternalUrl, openExternalUrl } from "@/utils/externalLinks";
 
 function toEmbeddableUrl(normalizedUrl: string): string {
   // Many sites block iframing; we can only "work around" this when the provider
@@ -163,7 +126,9 @@ export default function EmbeddedBrowserModal({
 
   const handleOpenNewTab = () => {
     if (!normalizedUrl) return;
-    window.open(normalizedUrl, "_blank", "noopener,noreferrer");
+    // Mobile Chrome can sometimes "lose" the origin tab when returning from a new tab.
+    // Default to same-tab navigation on mobile so the Back button works reliably.
+    openExternalUrl(normalizedUrl);
   };
 
   // Important: don't render anything unless open.
@@ -232,7 +197,7 @@ export default function EmbeddedBrowserModal({
               className="inline-flex h-9 items-center justify-center gap-2 rounded-full bg-black/5 px-3 text-[13px] font-semibold text-black/70 hover:bg-black/10 disabled:opacity-40"
               onClick={handleOpenNewTab}
               disabled={!normalizedUrl}
-              aria-label="Open in new tab"
+              aria-label="Open in browser"
             >
               <ExternalLink className="h-4 w-4" />
               Open
@@ -262,7 +227,7 @@ export default function EmbeddedBrowserModal({
                 <div className="absolute left-4 top-14 z-10 max-w-[min(520px,calc(100vw-2rem))] rounded-2xl bg-white/90 px-4 py-3 text-[13px] font-semibold text-black/70 shadow-sm backdrop-blur">
                   This site may block embedded viewing. Use{" "}
                   <span className="font-extrabold">Open</span> to view it in a
-                  new tab.
+                  browser.
                 </div>
               ) : null}
 
