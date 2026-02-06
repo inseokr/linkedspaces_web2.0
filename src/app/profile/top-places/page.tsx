@@ -19,6 +19,8 @@ import CountryChipsRow from "./components/CountryChipsRow";
 import CategoryChipsRow from "./components/CategoryChipsRow";
 import type { CategoryWithCount } from "./components/FiltersPopover";
 import TopPlacesGrid from "./components/TopPlacesGrid";
+import TopPlacesMapModal from "./components/TopPlacesMapModal";
+import { MapIcon } from "lucide-react";
 
 function filterAndSortPlaces(
   places: TopPlaceCardModel[],
@@ -27,7 +29,9 @@ function filterAndSortPlaces(
   let result = places;
 
   if (filters.countryIds.size > 0) {
-    result = result.filter((p) => filters.countryIds.has(getCountryFilterId(p)));
+    result = result.filter((p) =>
+      filters.countryIds.has(getCountryFilterId(p)),
+    );
   }
 
   const categoryAll =
@@ -62,6 +66,7 @@ function getActiveCategory(filters: FiltersState): string | "All" {
 export default function ProfileTopPlacesPage() {
   const user = React.useMemo(() => getCachedUser(), []);
   const [filtersOpen, setFiltersOpen] = React.useState(false);
+  const [mapOpen, setMapOpen] = React.useState(false);
   const [filters, setFilters] = React.useState<FiltersState>(() =>
     getDefaultFilters(),
   );
@@ -76,10 +81,30 @@ export default function ProfileTopPlacesPage() {
     [allRankedPlaces],
   );
 
+  /** Places in the currently selected country (for category pills: only show categories that exist here) */
+  const placesInSelectedCountry = React.useMemo(() => {
+    if (filters.countryIds.size === 0) return allRankedPlaces;
+    return allRankedPlaces.filter((p) =>
+      filters.countryIds.has(getCountryFilterId(p)),
+    );
+  }, [allRankedPlaces, filters.countryIds]);
+
   const categoryPills: CategoryWithCount[] = React.useMemo(
-    () => deriveCategoryFilterCounts(allRankedPlaces),
-    [allRankedPlaces],
+    () => deriveCategoryFilterCounts(placesInSelectedCountry),
+    [placesInSelectedCountry],
   );
+
+  React.useEffect(() => {
+    setFilters((prev) => {
+      const currentCategory = getActiveCategory(prev);
+      if (currentCategory === "All") return prev;
+      const stillAvailable = categoryPills.some(
+        (c) => c.id === currentCategory || c.name === currentCategory,
+      );
+      if (stillAvailable) return prev;
+      return { ...prev, categoryIds: new Set<string>(["All"]) };
+    });
+  }, [categoryPills]);
 
   const filteredPlaces = React.useMemo(
     () => filterAndSortPlaces(allRankedPlaces, filters),
@@ -134,7 +159,8 @@ export default function ProfileTopPlacesPage() {
           Your Top Spaces
         </h1>
         <p className="mt-4 text-gray-600">
-          No places yet. Your top places from your visit history will appear here.
+          No places yet. Your top places from your visit history will appear
+          here.
         </p>
       </div>
     );
@@ -152,15 +178,26 @@ export default function ProfileTopPlacesPage() {
               The places that matter most, curated by your journey
             </p>
           </div>
-          <FiltersPopover
-            open={filtersOpen}
-            onOpenChange={setFiltersOpen}
-            filters={filters}
-            onApply={setFilters}
-            onReset={handleFiltersReset}
-            countries={countryPills}
-            categories={categoryPills}
-          />
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setMapOpen(true)}
+              className="flex h-9 items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[var(--color-main)] focus:ring-offset-2"
+              aria-label="Open full screen map"
+            >
+              <MapIcon className="h-4 w-4" />
+              Map
+            </button>
+            <FiltersPopover
+              open={filtersOpen}
+              onOpenChange={setFiltersOpen}
+              filters={filters}
+              onApply={setFilters}
+              onReset={handleFiltersReset}
+              countries={countryPills}
+              categories={categoryPills}
+            />
+          </div>
         </div>
 
         <div className="mt-4">
@@ -193,6 +230,17 @@ export default function ProfileTopPlacesPage() {
           <TopPlacesGrid places={filteredPlaces} />
         </section>
       </div>
+      <TopPlacesMapModal
+        open={mapOpen}
+        onClose={() => setMapOpen(false)}
+        places={filteredPlaces}
+        countryPills={countryPills}
+        categoryPills={categoryPills}
+        activeCountryId={activeCountryId}
+        activeCategory={activeCategory}
+        onCountrySelect={handleCountryChipSelect}
+        onCategorySelect={handleCategoryChipSelect}
+      />
     </div>
   );
 }

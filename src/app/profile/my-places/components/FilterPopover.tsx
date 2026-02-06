@@ -8,6 +8,8 @@ import { PLACE_CATEGORIES } from "../mockData";
 interface FilterPopoverProps {
   selectedCategories: Set<PlaceCategory>;
   onSelectionChange: (selected: Set<PlaceCategory>) => void;
+  /** Categories to show in the filter (default: PLACE_CATEGORIES). Pass from getMyPlacesFromUser to show all categories that exist in the data. */
+  categories?: PlaceCategory[];
   /** Optional label next to the button */
   label?: string;
 }
@@ -15,10 +17,12 @@ interface FilterPopoverProps {
 export default function FilterPopover({
   selectedCategories,
   onSelectionChange,
+  categories: categoriesProp,
   label = "Filter",
 }: FilterPopoverProps) {
   const [open, setOpen] = useState(false);
   const popoverRef = useRef<HTMLDivElement>(null);
+  const categories = categoriesProp ?? PLACE_CATEGORIES;
 
   useEffect(() => {
     if (!open) return;
@@ -42,10 +46,10 @@ export default function FilterPopover({
   };
 
   const toggleAll = () => {
-    if (selectedCategories.size === PLACE_CATEGORIES.length) {
+    if (selectedCategories.size === categories.length) {
       onSelectionChange(new Set());
     } else {
-      onSelectionChange(new Set(PLACE_CATEGORIES));
+      onSelectionChange(new Set(categories));
     }
   };
 
@@ -77,13 +81,13 @@ export default function FilterPopover({
               onClick={toggleAll}
               className="text-left text-sm font-medium text-[var(--color-main)] hover:underline"
             >
-              {selectedCategories.size === PLACE_CATEGORIES.length
+              {selectedCategories.size === categories.length
                 ? "Clear all"
                 : "Select all"}
             </button>
           </div>
-          <ul className="py-1">
-            {PLACE_CATEGORIES.map((cat) => (
+          <ul className="max-h-[70vh] overflow-y-auto py-1">
+            {categories.map((cat) => (
               <li key={cat}>
                 <label className="flex cursor-pointer items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">
                   <input

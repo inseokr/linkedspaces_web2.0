@@ -15,13 +15,19 @@ export interface PlaceVisitHistoryEntry {
   visitedTime?: string;
   visitedTimeDigitized?: string;
   categories?: string[];
-  photoList?: Array<{ uri?: string; story?: string; selected?: boolean }>;
+  photoList?: Array<{
+    uri?: string;
+    story?: string;
+    caption?: string;
+    selected?: boolean;
+  }>;
   status?: string;
   primaryPlace?: boolean;
   privacyControl?: { level?: string; allowedUserList?: string[] };
   placeScore?: number;
   ranking?: number;
   coordinate?: GeoCoordinate;
-  /** Place-level story/caption */
+  /** Place-level story/caption (backend may use either) */
   story?: string;
+  caption?: string;
 }

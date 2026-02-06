@@ -1,14 +1,18 @@
 "use client";
 
-import { useState, useCallback } from "react";
-import { Copy } from "lucide-react";
+import { useCallback, useRef } from "react";
+import { ExternalLink } from "lucide-react";
 import type { SavedPlace } from "../mockData";
 
 interface PlacesListProps {
   places: SavedPlace[];
+  /** Single source of truth from parent: which place is selected (drives map highlight). */
+  activePlaceId?: string | null;
+  /** Called when user clicks a list item; parent sets activePlaceId. */
+  onSelectPlace?: (placeId: string) => void;
+  /** When set, clicking a place row also opens the place detail lightbox */
+  onPlaceClick?: (place: SavedPlace) => void;
 }
-
-const COPIED_DURATION_MS = 1500;
 
 function ThumbnailPlaceholder() {
   return (
@@ -22,23 +26,53 @@ function ThumbnailPlaceholder() {
   );
 }
 
-function PlaceRow({ place }: { place: SavedPlace }) {
-  const [copiedId, setCopiedId] = useState<string | null>(null);
+function PlaceRow({
+  place,
+  isActive,
+  onSelect,
+  onPlaceClick,
+}: {
+  place: SavedPlace;
+  isActive: boolean;
+  onSelect: () => void;
+  onPlaceClick?: (place: SavedPlace) => void;
+}) {
+  const handleSearchGoogle = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      const query = encodeURIComponent(place.name);
+      window.open(
+        `https://www.google.com/search?q=${query}`,
+        "_blank",
+        "noopener,noreferrer",
+      );
+    },
+    [place.name],
+  );
 
-  const handleCopy = useCallback(() => {
-    navigator.clipboard.writeText(place.address).then(() => {
-      setCopiedId(place.id);
-      setTimeout(() => setCopiedId(null), COPIED_DURATION_MS);
-    });
-  }, [place.id, place.address]);
-
-  const showCopied = copiedId === place.id;
+  const handleRowClick = useCallback(() => {
+    onSelect();
+    onPlaceClick?.(place);
+  }, [onSelect, onPlaceClick, place]);
 
   return (
     <div
-      className="flex gap-4 rounded-lg border border-gray-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md"
+      data-place-id={place.id}
       role="article"
       aria-label={`Saved place: ${place.name}`}
+      tabIndex={0}
+      onClick={handleRowClick}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          handleRowClick();
+        }
+      }}
+      className={`flex gap-4 rounded-lg border p-4 shadow-sm transition-shadow cursor-pointer ${
+        isActive
+          ? "border-[var(--color-main)] ring-2 ring-[var(--color-main)] ring-offset-2 bg-[var(--color-main)]/5"
+          : "border-gray-200 bg-white hover:shadow-md"
+      }`}
     >
       <div className="h-20 w-20 shrink-0 overflow-hidden rounded-lg bg-gray-100">
         {place.thumbnailUrl ? (
@@ -54,7 +88,9 @@ function PlaceRow({ place }: { place: SavedPlace }) {
           />
         ) : null}
         <div
-          className={place.thumbnailUrl ? "hidden h-full w-full" : "block h-full w-full"}
+          className={
+            place.thumbnailUrl ? "hidden h-full w-full" : "block h-full w-full"
+          }
           aria-hidden
         >
           <ThumbnailPlaceholder />
@@ -71,22 +107,43 @@ function PlaceRow({ place }: { place: SavedPlace }) {
           </span>
         </div>
         <p className="mt-0.5 text-xs text-gray-500">{place.visitedDate}</p>
-        <p className="mt-2 line-clamp-2 text-sm text-gray-600">{place.snippet}</p>
+        <p className="mt-2 line-clamp-2 text-sm text-gray-600">
+          {place.snippet}
+        </p>
         <button
           type="button"
-          onClick={handleCopy}
+          onClick={handleSearchGoogle}
           className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg bg-[var(--color-main)] px-3 py-2 text-sm font-medium text-white transition-colors hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-[var(--color-main)] focus:ring-offset-2"
-          aria-label={showCopied ? "Address copied" : "Copy address"}
+          aria-label={`Search for ${place.name} on Google`}
+          tabIndex={-1}
         >
-          <Copy className="h-4 w-4 shrink-0" aria-hidden />
-          {showCopied ? "Copied" : "Copy address"}
+          <ExternalLink className="h-4 w-4 shrink-0" aria-hidden />
+          Search on Google
         </button>
       </div>
     </div>
   );
 }
 
-export default function PlacesList({ places }: PlacesListProps) {
+export default function PlacesList({
+  places,
+  activePlaceId = null,
+  onSelectPlace,
+  onPlaceClick,
+}: PlacesListProps) {
+  const listRef = useRef<HTMLUListElement>(null);
+
+  const handleSelectPlace = useCallback(
+    (placeId: string) => {
+      onSelectPlace?.(placeId);
+      const el = listRef.current?.querySelector<HTMLElement>(
+        `[data-place-id="${placeId}"]`,
+      );
+      el?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    },
+    [onSelectPlace],
+  );
+
   if (places.length === 0) {
     return (
       <p className="rounded-lg border border-gray-200 bg-gray-50 p-6 text-center text-sm text-gray-600">
@@ -96,10 +153,19 @@ export default function PlacesList({ places }: PlacesListProps) {
   }
 
   return (
-    <ul className="flex flex-col gap-3" aria-label="Saved places list">
+    <ul
+      ref={listRef}
+      className="flex flex-col gap-3"
+      aria-label="Saved places list"
+    >
       {places.map((place) => (
         <li key={place.id}>
-          <PlaceRow place={place} />
+          <PlaceRow
+            place={place}
+            isActive={activePlaceId === place.id}
+            onSelect={() => handleSelectPlace(place.id)}
+            onPlaceClick={onPlaceClick}
+          />
         </li>
       ))}
     </ul>

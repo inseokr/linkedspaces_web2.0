@@ -6,21 +6,51 @@ import type { TopPlaceCardModel } from "../types";
 import TopPlaceCard from "./TopPlaceCard";
 import PlaceLightboxModal, { type LightboxImage } from "./PlaceLightboxModal";
 
-const INITIAL_VISIBLE = 6;
+const INITIAL_VISIBLE = 12;
 
+/** Parse date/time: ISO, YYYY-MM-DD, or "YYYY:MM:DD HH:mm:ss" (digitizedTime). */
+function parseDateTime(s: string): Date | null {
+  const raw = String(s).trim();
+  if (!raw) return null;
+  let d = new Date(raw);
+  if (!Number.isNaN(d.getTime())) return d;
+  const withTime =
+    /^(\d{4})[-:](\d{2})[-:](\d{2})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?/.exec(raw);
+  if (withTime) {
+    const y = Number(withTime[1]),
+      m = Number(withTime[2]) - 1,
+      day = Number(withTime[3]);
+    const h = Number(withTime[4]),
+      min = Number(withTime[5]),
+      sec = Number(withTime[6] ?? 0);
+    if (Number.isFinite(y) && Number.isFinite(m) && Number.isFinite(day))
+      return new Date(y, m, day, h, min, sec);
+  }
+  const dateOnly = /^(\d{4})[-:](\d{2})[-:](\d{2})/.exec(raw);
+  if (dateOnly) {
+    const y = Number(dateOnly[1]),
+      m = Number(dateOnly[2]) - 1,
+      day = Number(dateOnly[3]);
+    if (Number.isFinite(y) && Number.isFinite(m) && Number.isFinite(day))
+      return new Date(y, m, day);
+  }
+  return null;
+}
+
+/** Format visit date/time for lightbox with actual hours and minutes. */
 function formatVisitDate(isoOrYmd: string): string {
   const s = String(isoOrYmd).trim();
   if (!s) return "";
-  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s);
-  if (m) {
-    const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
-    if (!Number.isNaN(d.getTime())) {
-      const day = d.getDate();
-      const month = d.toLocaleString("en-US", { month: "long" });
-      return `${day} ${month} ${d.getFullYear()} at 00:00`;
-    }
-  }
-  return s;
+  const d = parseDateTime(s);
+  if (!d || Number.isNaN(d.getTime())) return s;
+  const day = d.getDate();
+  const month = d.toLocaleString("en-US", { month: "long" });
+  const hours = d.getHours();
+  const minutes = d.getMinutes();
+  const h12 = hours % 12 || 12;
+  const ampm = hours < 12 ? "AM" : "PM";
+  const timeStr = `${h12}:${String(minutes).padStart(2, "0")} ${ampm}`;
+  return `${day} ${month} ${d.getFullYear()} at ${timeStr}`;
 }
 const LOAD_MORE_COUNT = 6;
 
@@ -36,7 +66,8 @@ interface TopPlacesGridProps {
 }
 
 export default function TopPlacesGrid({ places }: TopPlacesGridProps) {
-  const [selectedPlace, setSelectedPlace] = React.useState<TopPlaceCardModel | null>(null);
+  const [selectedPlace, setSelectedPlace] =
+    React.useState<TopPlaceCardModel | null>(null);
   const [visibleCount, setVisibleCount] = React.useState(INITIAL_VISIBLE);
   const [interaction, setInteraction] = React.useState<CardInteractionState>({
     bookmarked: new Set(),
@@ -84,28 +115,26 @@ export default function TopPlacesGrid({ places }: TopPlacesGridProps) {
     ? (() => {
         const uris = selectedPlace.photoListUris ?? [selectedPlace.imageUrl];
         const dateTime =
-          selectedPlace.visitedTime != null
+          selectedPlace.visitedTime != null &&
+          String(selectedPlace.visitedTime).trim()
             ? formatVisitDate(selectedPlace.visitedTime)
-            : "";
+            : "Date unknown";
+        const caption = selectedPlace.caption;
+        const base = {
+          placeName: selectedPlace.title,
+          dateTime,
+          ...(caption ? { caption } : {}),
+          ...(selectedPlace.city ? { placeCity: selectedPlace.city } : {}),
+        };
         return uris.length > 0
-          ? uris.map((src) => ({
-              src,
-              placeName: selectedPlace.title,
-              dateTime,
-            }))
-          : [
-              {
-                src: selectedPlace.imageUrl,
-                placeName: selectedPlace.title,
-                dateTime,
-              },
-            ];
+          ? uris.map((src) => ({ src, ...base }))
+          : [{ src: selectedPlace.imageUrl, ...base }];
       })()
     : [];
 
   return (
     <div>
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {visiblePlaces.map((place) => (
           <TopPlaceCard
             key={place.id}
@@ -134,11 +163,7 @@ export default function TopPlacesGrid({ places }: TopPlacesGridProps) {
           type="button"
           onClick={handleShowMore}
           className="inline-flex items-center gap-2 rounded-full border border-gray-300 bg-white px-6 py-3 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[var(--color-main)] focus:ring-offset-2"
-          aria-label={
-            hasMore
-              ? "Show more spaces"
-              : "Show less spaces"
-          }
+          aria-label={hasMore ? "Show more spaces" : "Show less spaces"}
         >
           {hasMore ? "Show more spaces" : "Show less"}
           <ChevronDown

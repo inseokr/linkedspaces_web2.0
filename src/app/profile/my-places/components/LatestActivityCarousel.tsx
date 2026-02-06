@@ -7,6 +7,8 @@ import PlaceCard from "./PlaceCard";
 
 interface LatestActivityCarouselProps {
   places: LatestActivityPlace[];
+  /** When set, clicking a card opens the place detail lightbox (pass place id to look up full place) */
+  onPlaceClick?: (placeId: string) => void;
 }
 
 /** PlaceCard width and gap must match PlaceCard.tsx (w-[320px]) and gap-4 */
@@ -17,7 +19,10 @@ const PAGE_SCROLL = 4 * CARD_WIDTH + 3 * GAP;
 /** Viewport shows 4 full cards + slight peek of 5th (4.2 cards) */
 const VIEWPORT_MAX_WIDTH = 4.2 * CARD_WIDTH + 3.2 * GAP;
 
-export default function LatestActivityCarousel({ places }: LatestActivityCarouselProps) {
+export default function LatestActivityCarousel({
+  places,
+  onPlaceClick,
+}: LatestActivityCarouselProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const scroll = (direction: "left" | "right") => {
@@ -57,7 +62,7 @@ export default function LatestActivityCarousel({ places }: LatestActivityCarouse
         aria-label="Latest activity carousel"
       >
         {places.map((place) => (
-          <PlaceCard key={place.id} place={place} />
+          <PlaceCard key={place.id} place={place} onPlaceClick={onPlaceClick} />
         ))}
       </div>
 

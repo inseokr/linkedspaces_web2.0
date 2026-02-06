@@ -5,6 +5,8 @@ import { ThumbsUp } from "lucide-react";
 
 interface PlaceCardProps {
   place: LatestActivityPlace;
+  /** When set, clicking the card opens the place detail lightbox */
+  onPlaceClick?: (placeId: string) => void;
 }
 
 /** Gradient placeholder when imageUrl is missing or fails */
@@ -20,12 +22,27 @@ function ImagePlaceholder() {
   );
 }
 
-export default function PlaceCard({ place }: PlaceCardProps) {
-  const { name, date, category, imageUrl, caption, saved } = place;
+export default function PlaceCard({ place, onPlaceClick }: PlaceCardProps) {
+  const { id, name, date, category, imageUrl, caption, saved } = place;
+
+  const handleClick = () => onPlaceClick?.(id);
 
   return (
     <article
-      className="flex shrink-0 w-[320px] flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition-shadow hover:shadow-md focus-within:ring-2 focus-within:ring-[var(--color-main)] focus-within:ring-offset-2"
+      onClick={onPlaceClick ? handleClick : undefined}
+      role={onPlaceClick ? "button" : undefined}
+      tabIndex={onPlaceClick ? 0 : undefined}
+      onKeyDown={
+        onPlaceClick
+          ? (e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                handleClick();
+              }
+            }
+          : undefined
+      }
+      className={`flex shrink-0 w-[320px] flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition-shadow hover:shadow-md focus-within:ring-2 focus-within:ring-[var(--color-main)] focus-within:ring-offset-2 ${onPlaceClick ? "cursor-pointer" : ""}`}
       aria-label={`Place: ${name}`}
     >
       <div className="relative h-52 w-full overflow-hidden bg-gray-100">
@@ -37,7 +54,8 @@ export default function PlaceCard({ place }: PlaceCardProps) {
             onError={(e) => {
               e.currentTarget.style.display = "none";
               const placeholder = e.currentTarget.nextElementSibling;
-              if (placeholder instanceof HTMLElement) placeholder.style.display = "block";
+              if (placeholder instanceof HTMLElement)
+                placeholder.style.display = "block";
             }}
           />
         ) : null}
@@ -49,10 +67,7 @@ export default function PlaceCard({ place }: PlaceCardProps) {
         </div>
         <div className="absolute right-2 top-2 flex items-center gap-1 rounded-full bg-white/90 px-2 py-1 text-xs text-gray-700 shadow-sm">
           {saved && (
-            <ThumbsUp
-              className="h-3.5 w-3.5 text-green-600"
-              aria-hidden
-            />
+            <ThumbsUp className="h-3.5 w-3.5 text-green-600" aria-hidden />
           )}
           <span className="font-medium">{date}</span>
         </div>
@@ -67,7 +82,10 @@ export default function PlaceCard({ place }: PlaceCardProps) {
             {category}
           </span>
         </div>
-        <p className="mt-2 line-clamp-3 text-sm text-gray-600 leading-snug" title={caption}>
+        <p
+          className="mt-2 line-clamp-3 text-sm text-gray-600 leading-snug"
+          title={caption}
+        >
           {caption}
         </p>
       </div>

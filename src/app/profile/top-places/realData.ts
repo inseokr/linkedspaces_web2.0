@@ -9,8 +9,7 @@ import { assetUrl } from "@/api/assets";
 import type { PlaceVisitHistoryEntry, TopPlaceCardModel } from "./types";
 import type { CountryWithCount } from "./mockData";
 
-const PLACEHOLDER_IMAGE =
-  "https://picsum.photos/400/600?random=placeholder";
+const PLACEHOLDER_IMAGE = "https://picsum.photos/400/600?random=placeholder";
 
 /** Safe number for ranking (placeScore, visitedCount, or photo count) */
 function getNumber(value: unknown): number {
@@ -57,17 +56,44 @@ export function mapPlaceVisitHistoryToTopPlacesModel(
 ): TopPlaceCardModel {
   const placeName = entry.placeName?.trim() || "Unnamed place";
   const country = entry.country?.trim() || "";
-  const countryCode = (entry.countryCode?.trim() || "").toUpperCase() || country.slice(0, 2).toUpperCase();
+  const countryCode =
+    (entry.countryCode?.trim() || "").toUpperCase() ||
+    country.slice(0, 2).toUpperCase();
   const city = entry.city?.trim() || "";
   const photoList = entry.photoList ?? [];
-  const firstPhoto = photoList.find((p) => p?.uri && !String(p.uri).startsWith("file://"));
-  const imageUrl = firstPhoto?.uri ? assetUrl(firstPhoto.uri) : PLACEHOLDER_IMAGE;
+  const firstPhoto = photoList.find(
+    (p) => p?.uri && !String(p.uri).startsWith("file://"),
+  );
+  const imageUrl = firstPhoto?.uri
+    ? assetUrl(firstPhoto.uri)
+    : PLACEHOLDER_IMAGE;
   const photoListUris = photoList
     .filter((p) => p?.uri && !String(p.uri).startsWith("file://"))
     .map((p) => assetUrl(p!.uri));
 
   const categories = entry.categories ?? [];
   const category = categories[0]?.trim() || "Others";
+
+  const entryAny = entry as { story?: string; caption?: string };
+  const placeStory =
+    typeof entryAny.story === "string" ? entryAny.story.trim() : "";
+  const placeCaption =
+    typeof entryAny.caption === "string" ? entryAny.caption.trim() : "";
+  const first = photoList[0] as
+    | { story?: string; caption?: string }
+    | undefined;
+  const firstStory =
+    first && typeof first.story === "string" ? first.story.trim() : "";
+  const firstCaption =
+    first && typeof first.caption === "string" ? first.caption.trim() : "";
+  const caption =
+    placeStory || placeCaption || firstStory || firstCaption || undefined;
+
+  const coord = entry.coordinate;
+  const latitude =
+    coord && Number.isFinite(coord.latitude) ? coord.latitude : undefined;
+  const longitude =
+    coord && Number.isFinite(coord.longitude) ? coord.longitude : undefined;
 
   return {
     id: entry._id ?? `place-${index}-${rank}`,
@@ -83,21 +109,27 @@ export function mapPlaceVisitHistoryToTopPlacesModel(
     rank,
     photoListUris: photoListUris.length > 0 ? photoListUris : undefined,
     visitedTime: entry.visitedTime ?? entry.visitedTimeDigitized,
+    caption,
+    latitude,
+    longitude,
   };
 }
 
 /**
  * Derive country filter pills from visible places: unique countries with counts.
  * id = countryCode or fallback slug from country name.
+ * "All" count = total places (so the number is correct).
  */
 export function deriveCountryFilterCounts(
   places: TopPlaceCardModel[],
 ): CountryWithCount[] {
-  const all: CountryWithCount[] = [{ id: "all", name: "All", count: 0 }];
+  const all: CountryWithCount[] = [
+    { id: "all", name: "All", count: places.length },
+  ];
   const byId = new Map<string, { name: string; count: number }>();
 
   for (const p of places) {
-    const id = p.countryCode || p.country.replace(/\s+/g, "-") || "unknown";
+    const id = getCountryFilterId(p);
     const name = p.country || "Unknown";
     const prev = byId.get(id);
     if (prev) prev.count += 1;
@@ -111,7 +143,7 @@ export function deriveCountryFilterCounts(
 
 /**
  * Derive category filter pills from visible places: unique categories with counts.
- * "Others" is moved to the end of the list.
+ * "Others" is ordered between "Cafe" and "shopping" (inserted after "cafe").
  */
 export function deriveCategoryFilterCounts(
   places: TopPlaceCardModel[],
@@ -126,7 +158,16 @@ export function deriveCategoryFilterCounts(
     .map(([name, count]) => ({ id: name, name, count }));
   const others = list.find((c) => c.id === "Others" || c.name === "Others");
   const rest = list.filter((c) => c.id !== "Others" && c.name !== "Others");
-  return others ? [...rest, others] : list;
+  if (!others) return list;
+  const cafeIndex = rest.findIndex((c) => c.name.toLowerCase() === "cafe");
+  if (cafeIndex >= 0) {
+    return [
+      ...rest.slice(0, cafeIndex + 1),
+      others,
+      ...rest.slice(cafeIndex + 1),
+    ];
+  }
+  return [...rest, others];
 }
 
 /** Country filter id for a place (used when filtering by country). */

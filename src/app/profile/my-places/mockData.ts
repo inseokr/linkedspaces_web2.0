@@ -6,7 +6,13 @@
 import { getMockPlaces } from "../places/mockData";
 import type { PlaceWithSavedAt } from "../places/mockData";
 
-export type PlaceCategory = "Cafe" | "Restaurant" | "Bar" | "Park";
+export type PlaceCategory =
+  | "Cafe"
+  | "Restaurant"
+  | "Bar"
+  | "Park"
+  | "Others"
+  | (string & {});
 
 export interface LatestActivityPlace {
   id: string;
@@ -26,19 +32,35 @@ export interface SavedPlace {
   snippet: string;
   thumbnailUrl: string | null;
   address: string;
+  /** City for lightbox "Go to link" (Place Name, City Name) */
+  city?: string;
   lat: number;
   lng: number;
+  /** For place lightbox: caption/story */
+  caption?: string;
+  /** For place lightbox: all photo URIs */
+  photoListUris?: string[];
+  /** For place lightbox: raw visited time (ISO/date string) */
+  visitedTimeRaw?: string;
 }
 
 const MONTH_SHORT: Record<number, string> = {
-  0: "Jan", 1: "Feb", 2: "Mar", 3: "Apr", 4: "May", 5: "Jun",
-  6: "Jul", 7: "Aug", 8: "Sep", 9: "Oct", 10: "Nov", 11: "Dec",
+  0: "Jan",
+  1: "Feb",
+  2: "Mar",
+  3: "Apr",
+  4: "May",
+  5: "Jun",
+  6: "Jul",
+  7: "Aug",
+  8: "Sep",
+  9: "Oct",
+  10: "Nov",
+  11: "Dec",
 };
 
 /** Map View All Places category to My Places filter category */
-function toMyPlacesCategory(
-  cat: PlaceWithSavedAt["category"],
-): PlaceCategory {
+function toMyPlacesCategory(cat: PlaceWithSavedAt["category"]): PlaceCategory {
   if (cat === "Cafe") return "Cafe";
   if (cat === "Restaurants") return "Restaurant";
   if (cat === "Hotels/Resorts") return "Bar";
@@ -63,9 +85,20 @@ function formatVisitedDate(d: Date): string {
 }
 
 /** Dummy coords/address by country for list display */
-function mockAddress(p: PlaceWithSavedAt): { address: string; lat: number; lng: number } {
-  const byCountry: Record<string, { address: string; lat: number; lng: number }> = {
-    "United States": { address: "123 Main St, Los Angeles, CA 90001", lat: 34.05, lng: -118.24 },
+function mockAddress(p: PlaceWithSavedAt): {
+  address: string;
+  lat: number;
+  lng: number;
+} {
+  const byCountry: Record<
+    string,
+    { address: string; lat: number; lng: number }
+  > = {
+    "United States": {
+      address: "123 Main St, Los Angeles, CA 90001",
+      lat: 34.05,
+      lng: -118.24,
+    },
     Japan: { address: "1-2-3 Shibuya, Tokyo, Japan", lat: 35.66, lng: 139.7 },
     Italy: { address: "Via Roma 1, Rome, Italy", lat: 41.9, lng: 12.5 },
     France: { address: "1 Rue de Paris, Paris, France", lat: 48.86, lng: 2.35 },
@@ -79,9 +112,7 @@ const CAPTION_SNIPPET =
   "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.";
 
 /** Latest Activity: first N places from View All Places (newest first), same names & dates */
-export function getLatestActivityForMyPlaces(
-  count = 7,
-): LatestActivityPlace[] {
+export function getLatestActivityForMyPlaces(count = 7): LatestActivityPlace[] {
   const all = getMockPlaces();
   return all.slice(0, count).map((p) => {
     const { address } = mockAddress(p);
@@ -116,10 +147,11 @@ export function getSavedPlacesForMyPlaces(): SavedPlace[] {
   });
 }
 
-/** All filter categories for the FilterPopover */
+/** Default filter categories when no places (FilterPopover fallback) */
 export const PLACE_CATEGORIES: PlaceCategory[] = [
   "Cafe",
   "Restaurant",
   "Bar",
   "Park",
+  "Others",
 ];

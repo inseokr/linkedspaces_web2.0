@@ -62,8 +62,8 @@ export default function TopPlaceCard({
       className={`group flex flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md focus-within:ring-2 focus-within:ring-[var(--color-main)] focus-within:ring-offset-2 ${onPlaceClick ? "cursor-pointer" : ""}`}
       aria-label={`Top place: ${place.title}, ${place.city}, ${place.country}`}
     >
-      {/* Image */}
-      <div className="relative aspect-[3/4] w-full overflow-hidden bg-gray-100">
+      {/* Image: 4/3 aspect so cards are shorter and ~6 fit on screen */}
+      <div className="relative aspect-[4/3] w-full overflow-hidden bg-gray-100">
         {!showPlaceholder ? (
           <img
             src={place.imageUrl}
@@ -75,7 +75,7 @@ export default function TopPlaceCard({
         {showPlaceholder && <ImagePlaceholder />}
 
         {/* Overlay: bookmark and heart (top right) */}
-        <div className="absolute right-2 top-2 flex gap-2">
+        <div className="absolute right-1.5 top-1.5 flex gap-1.5">
           <button
             type="button"
             onClick={(e) => {
@@ -83,12 +83,14 @@ export default function TopPlaceCard({
               e.stopPropagation();
               onBookmarkToggle();
             }}
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-gray-700 shadow-sm backdrop-blur-sm transition-colors hover:bg-white focus:outline-none focus:ring-2 focus:ring-[var(--color-main)]"
-            aria-label={isBookmarked ? "Remove bookmark" : "Bookmark this place"}
+            className="flex h-7 w-7 items-center justify-center rounded-full bg-white/90 text-gray-700 shadow-sm backdrop-blur-sm transition-colors hover:bg-white focus:outline-none focus:ring-2 focus:ring-[var(--color-main)]"
+            aria-label={
+              isBookmarked ? "Remove bookmark" : "Bookmark this place"
+            }
             aria-pressed={isBookmarked}
           >
             <Bookmark
-              className={`h-4 w-4 ${isBookmarked ? "fill-current text-[var(--color-main)]" : ""}`}
+              className={`h-3.5 w-3.5 ${isBookmarked ? "fill-current text-[var(--color-main)]" : ""}`}
             />
           </button>
           <button
@@ -98,47 +100,46 @@ export default function TopPlaceCard({
               e.stopPropagation();
               onLikeToggle();
             }}
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-gray-700 shadow-sm backdrop-blur-sm transition-colors hover:bg-white focus:outline-none focus:ring-2 focus:ring-[var(--color-main)]"
+            className="flex h-7 w-7 items-center justify-center rounded-full bg-white/90 text-gray-700 shadow-sm backdrop-blur-sm transition-colors hover:bg-white focus:outline-none focus:ring-2 focus:ring-[var(--color-main)]"
             aria-label={isLiked ? "Unlike" : "Like this place"}
             aria-pressed={isLiked}
           >
             <Heart
-              className={`h-4 w-4 ${isLiked ? "fill-red-500 text-red-500" : ""}`}
+              className={`h-3.5 w-3.5 ${isLiked ? "fill-red-500 text-red-500" : ""}`}
             />
           </button>
         </div>
-
       </div>
 
       {/* Content */}
-      <div className="flex flex-1 flex-col p-4">
+      <div className="flex flex-1 flex-col p-3">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0 flex-1">
-            <h3 className="truncate text-lg font-semibold text-gray-900">
+            <h3 className="truncate text-base font-semibold text-gray-900">
               {place.title}
             </h3>
-            <p className="mt-0.5 flex items-center gap-1 text-sm text-gray-600">
-              <MapPin className="h-3.5 w-3.5 shrink-0" aria-hidden />
+            <p className="mt-0.5 flex items-center gap-1 text-xs text-gray-600">
+              <MapPin className="h-3 w-3 shrink-0" aria-hidden />
               <span className="truncate">
                 {place.city}, {place.country}
               </span>
             </p>
           </div>
-          <div className="flex shrink-0 items-center gap-1 rounded-full bg-amber-50 px-2 py-1 text-amber-800">
-            <Star className="h-4 w-4 fill-current" aria-hidden />
-            <span className="text-sm font-semibold">#{place.rank}</span>
+          <div className="flex shrink-0 items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-amber-800">
+            <Star className="h-3.5 w-3.5 fill-current" aria-hidden />
+            <span className="text-xs font-semibold">#{place.rank}</span>
           </div>
         </div>
 
         {/* Metadata row: photo count, visit count (left); like count (right) */}
-        <div className="mt-3 flex items-center justify-between gap-4 text-sm text-gray-700">
-          <div className="flex items-center gap-4">
+        <div className="mt-2 flex items-center justify-between gap-3 text-xs text-gray-700">
+          <div className="flex items-center gap-3">
             <span className="flex items-center gap-1">
-              <Camera className="h-4 w-4 shrink-0" aria-hidden />
+              <Camera className="h-3.5 w-3.5 shrink-0" aria-hidden />
               <span>{place.photosCount} photos</span>
             </span>
             <span className="flex items-center gap-1">
-              <Clock className="h-4 w-4 shrink-0" aria-hidden />
+              <Clock className="h-3.5 w-3.5 shrink-0" aria-hidden />
               <span>{place.visitsCount} visits</span>
             </span>
           </div>
@@ -147,7 +148,7 @@ export default function TopPlaceCard({
             aria-label={`${displayLikes} likes`}
           >
             <Heart
-              className={`h-4 w-4 shrink-0 ${isLiked ? "fill-red-500 text-red-500" : "text-gray-400"}`}
+              className={`h-3.5 w-3.5 shrink-0 ${isLiked ? "fill-red-500 text-red-500" : "text-gray-400"}`}
               aria-hidden
             />
             <span>{displayLikes}</span>

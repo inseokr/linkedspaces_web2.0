@@ -20,6 +20,12 @@ export interface PlaceWithSavedAt {
   category: PlaceCategory;
   savedAt: Date;
   imageUrl: string | null;
+  /** For lightbox: all photo URIs when available */
+  photoListUris?: string[];
+  /** For lightbox: caption/story when available */
+  caption?: string;
+  /** For lightbox: raw visited date string (e.g. YYYY-MM-DD) */
+  visitedTimeRaw?: string;
 }
 
 export interface CountryWithCount {
@@ -53,8 +59,7 @@ export const VIEW_ALL_CATEGORIES: PlaceCategory[] = [
   "Bakery",
 ];
 
-const IMG = (seed: number) =>
-  `https://picsum.photos/400/400?random=${seed}`;
+const IMG = (seed: number) => `https://picsum.photos/400/400?random=${seed}`;
 
 /** Generate mock places grouped across months, newest first by savedAt */
 export function getMockPlaces(): PlaceWithSavedAt[] {
@@ -105,7 +110,11 @@ export function getMockPlaces(): PlaceWithSavedAt[] {
   let id = 1;
   for (let m = 0; m < 4; m++) {
     const month = new Date(now.getFullYear(), now.getMonth() - m, 1);
-    const daysInMonth = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate();
+    const daysInMonth = new Date(
+      month.getFullYear(),
+      month.getMonth() + 1,
+      0,
+    ).getDate();
     const count = m === 0 ? 9 : 6;
     for (let i = 0; i < count; i++) {
       const day = (i % daysInMonth) + 1;
@@ -120,7 +129,5 @@ export function getMockPlaces(): PlaceWithSavedAt[] {
     }
   }
 
-  return places.sort(
-    (a, b) => b.savedAt.getTime() - a.savedAt.getTime(),
-  );
+  return places.sort((a, b) => b.savedAt.getTime() - a.savedAt.getTime());
 }

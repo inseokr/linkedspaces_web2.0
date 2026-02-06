@@ -1,8 +1,9 @@
 "use client";
 
 import Sidebar from "@/views/Profile/sidebar/Sidebar";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import Image from "next/image";
+import ScrollToTopButton from "@/components/ui/ScrollToTopButton";
 import { useParams, usePathname } from "next/navigation";
 
 import {
@@ -111,6 +112,7 @@ function ProfileLayoutInner({ children }: { children: React.ReactNode }) {
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const SIDEBAR_WIDTH = "320px";
+  const mainScrollRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     document.documentElement.style.setProperty(
@@ -123,11 +125,12 @@ function ProfileLayoutInner({ children }: { children: React.ReactNode }) {
     };
   }, [isSidebarOpen, hideSidebar]);
 
-  // 사이드바를 안 띄우고 싶을 때
+  // 사이드바를 안 띄우고 싶을 때 (document/window scroll)
   if (hideSidebar) {
     return (
       <main className="min-h-screen w-full bg-white">
         <div className="w-full min-h-full flex flex-col">{children}</div>
+        <ScrollToTopButton />
       </main>
     );
   }
@@ -155,11 +158,13 @@ function ProfileLayoutInner({ children }: { children: React.ReactNode }) {
       )}
 
       <main
+        ref={mainScrollRef}
         className="flex-1 h-full overflow-y-auto transition-all duration-300 ease-in-out bg-white"
         style={{ paddingLeft: isSidebarOpen ? SIDEBAR_WIDTH : "0px" }}
       >
         <div className="w-full min-h-full flex flex-col">{children}</div>
       </main>
+      <ScrollToTopButton scrollContainerRef={mainScrollRef} showAfterPx={400} />
     </div>
   );
 }
