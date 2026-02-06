@@ -42,6 +42,19 @@ export interface SavedPlace {
   photoListUris?: string[];
   /** For place lightbox: raw visited time (ISO/date string) */
   visitedTimeRaw?: string;
+  /** User sentiment for list view (e.g. positive / neutral / negative) */
+  sentiment?: "positive" | "neutral" | "negative";
+  /** Comments for this place (from backend when available). Used to seed lightbox comments. */
+  comments?: Array<{
+    id: string;
+    username: string;
+    text: string;
+    parentId?: string;
+    replyToUsername?: string;
+    avatarUrl?: string;
+  }>;
+  /** Visibility to user's network: private (only me) or public. */
+  visibility?: "private" | "public";
 }
 
 const MONTH_SHORT: Record<number, string> = {

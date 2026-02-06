@@ -32,8 +32,10 @@ export interface TopPlaceCardModel {
   /** For lightbox: first photo uri and optional extra uris */
   photoListUris?: string[];
   visitedTime?: string;
-  /** Place or photo caption/story for lightbox */
+  /** Place or photo caption/story for lightbox and card preview */
   caption?: string;
+  /** When true, caption is from another photo at this place (show "From another photo" or similar) */
+  captionFromOtherPhoto?: boolean;
   /** For map: from placeVisitHistory coordinate; omit if not available */
   latitude?: number;
   longitude?: number;

@@ -208,6 +208,7 @@ function ViewAllPlacesPage() {
     const dateTime = formatVisitDateForLightbox(selectedPlace);
     const caption = selectedPlace.caption ?? undefined;
     const base = {
+      placeId: selectedPlace.id,
       placeName: selectedPlace.title,
       dateTime,
       ...(caption ? { caption } : {}),

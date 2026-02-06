@@ -27,11 +27,17 @@ import {
 } from "../../mapbox-3d-config";
 import MapView3DToggle from "../../components/MapView3DToggle";
 import { isWebGLSupported } from "../../components/MapView3DToggle";
+import MapZoomControls from "../../components/MapZoomControls";
 import { applyLinkedSpacesMapStyle } from "../../mapbox-linkedspaces-style";
 import {
   drawCircularThumb,
   canvasToImageBitmap,
 } from "../../mapbox-photo-marker-utils";
+import {
+  getCategoryPinImageId,
+  getCategoryPinSvgDataUrl,
+  CATEGORY_PIN_IDS,
+} from "../../mapbox-category-pins";
 import type { SavedPlace } from "../mockData";
 
 const DEBUG_MAP =
@@ -76,6 +82,13 @@ export interface PhotoMapProps {
   places: SavedPlace[];
   /** Single source of truth: which place is selected (list click). Drives marker highlight and camera flyTo. */
   activePlaceId?: string | null;
+  /** Called when user clicks a place marker; use to open full-screen place modal. */
+  onPlaceClick?: (placeId: string) => void;
+  /** Called when map view changes (moveend/zoomend) so parent can restore it when modal closes. */
+  onMapViewChange?: (center: [number, number], zoom: number) => void;
+  /** When set, map flies to this view (e.g. after closing place modal). Call onRestoreComplete when done. */
+  restoreView?: { center: [number, number]; zoom: number } | null;
+  onRestoreComplete?: () => void;
 }
 
 function buildGeoJSON(
@@ -105,6 +118,7 @@ function buildGeoJSON(
       p.thumbnailUrl && String(p.thumbnailUrl).trim()
         ? p.thumbnailUrl.trim()
         : null;
+    const category = (p.category ?? "Others").toString();
     features.push({
       type: "Feature",
       id,
@@ -115,6 +129,7 @@ function buildGeoJSON(
         placeName: p.name ?? "",
         thumbnailUrl,
         thumbKey: thumbnailUrl ? `thumb:${p.id}` : DEFAULT_PIN_ID,
+        categoryPinId: getCategoryPinImageId(category),
         createdAt: p.visitedDate ?? "",
         address: p.address ?? "",
       },
@@ -162,10 +177,21 @@ function ensureAbsoluteUrl(url: string): string {
 const FOCUS_ZOOM = 14;
 const FLY_DURATION_MS = 800;
 
-export default function PhotoMap({ places, activePlaceId }: PhotoMapProps) {
+export default function PhotoMap({
+  places,
+  activePlaceId,
+  onPlaceClick,
+  onMapViewChange,
+  restoreView,
+  onRestoreComplete,
+}: PhotoMapProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<any>(null);
   const geoJsonRef = useRef<GeoJSON.FeatureCollection | null>(null);
+  const onPlaceClickRef = useRef(onPlaceClick);
+  onPlaceClickRef.current = onPlaceClick;
+  const onMapViewChangeRef = useRef(onMapViewChange);
+  onMapViewChangeRef.current = onMapViewChange;
   const thumbCacheRef = useRef<ReturnType<typeof createThumbCache> | null>(
     null,
   );
@@ -367,104 +393,154 @@ export default function PhotoMap({ places, activePlaceId }: PhotoMapProps) {
             ) => {
               if (!err && img && !map.hasImage(DEFAULT_PIN_ID))
                 map.addImage(DEFAULT_PIN_ID, img, { sdf: false });
-              geoJsonRef.current = geoJson.current;
-              map.addSource(SOURCE_ID, {
-                type: "geojson",
-                data: geoJsonRef.current!,
-                cluster: true,
-                clusterRadius: CLUSTER_RADIUS,
-                clusterMaxZoom: CLUSTER_MAX_ZOOM,
-              });
 
-              map.addLayer({
-                id: CLUSTER_LAYER_ID,
-                type: "circle",
-                source: SOURCE_ID,
-                filter: ["has", "point_count"],
-                paint: {
-                  "circle-color": "rgba(249, 115, 22, 0.75)",
-                  "circle-radius": [
-                    "step",
-                    ["get", "point_count"],
-                    20,
-                    10,
-                    28,
-                    25,
-                    36,
-                    50,
-                    50,
-                  ],
-                  "circle-stroke-width": 2,
-                  "circle-stroke-color": "#fff",
-                },
-              });
-              map.addLayer({
-                id: CLUSTER_COUNT_LAYER_ID,
-                type: "symbol",
-                source: SOURCE_ID,
-                filter: ["has", "point_count"],
-                layout: {
-                  "text-field": ["get", "point_count_abbreviated"],
-                  "text-font": ["DIN Offc Pro Medium", "Arial Unicode MS Bold"],
-                  "text-size": 13,
-                },
-                paint: { "text-color": "#fff" },
-              });
-              map.addLayer({
-                id: UNCLUSTERED_CIRCLE_LAYER_ID,
-                type: "circle",
-                source: SOURCE_ID,
-                filter: ["!", ["has", "point_count"]],
-                paint: {
-                  "circle-color": [
-                    "case",
-                    ["boolean", ["feature-state", "active"], false],
-                    "rgba(234, 88, 12, 1)",
-                    "rgba(249, 115, 22, 0.9)",
-                  ],
-                  "circle-radius": [
-                    "case",
-                    ["boolean", ["feature-state", "active"], false],
-                    16,
-                    12,
-                  ],
-                  "circle-stroke-width": [
-                    "case",
-                    ["boolean", ["feature-state", "active"], false],
-                    3,
-                    2,
-                  ],
-                  "circle-stroke-color": "#fff",
-                },
-              });
-              map.addLayer({
-                id: UNCLUSTERED_SYMBOL_LAYER_ID,
-                type: "symbol",
-                source: SOURCE_ID,
-                filter: ["!", ["has", "point_count"]],
-                layout: {
-                  "icon-image": [
-                    "coalesce",
-                    ["get", "thumbKey"],
-                    DEFAULT_PIN_ID,
-                  ],
-                  "icon-size": 0.65,
-                  "icon-allow-overlap": true,
-                  "icon-ignore-placement": true,
-                },
-              });
+              const addCategoryPinsThenLayers = () => {
+                const pinIds = [...CATEGORY_PIN_IDS];
+                let loaded = 0;
+                const total = pinIds.length;
+                const addSourceAndLayers = () => {
+                  geoJsonRef.current = geoJson.current;
+                  map.addSource(SOURCE_ID, {
+                    type: "geojson",
+                    data: geoJsonRef.current!,
+                    cluster: true,
+                    clusterRadius: CLUSTER_RADIUS,
+                    clusterMaxZoom: CLUSTER_MAX_ZOOM,
+                  });
+
+                  map.addLayer({
+                    id: CLUSTER_LAYER_ID,
+                    type: "circle",
+                    source: SOURCE_ID,
+                    filter: ["has", "point_count"],
+                    paint: {
+                      "circle-color": "rgba(249, 115, 22, 0.75)",
+                      "circle-radius": [
+                        "step",
+                        ["get", "point_count"],
+                        20,
+                        10,
+                        28,
+                        25,
+                        36,
+                        50,
+                        50,
+                      ],
+                      "circle-stroke-width": 2,
+                      "circle-stroke-color": "#fff",
+                    },
+                  });
+                  map.addLayer({
+                    id: CLUSTER_COUNT_LAYER_ID,
+                    type: "symbol",
+                    source: SOURCE_ID,
+                    filter: ["has", "point_count"],
+                    layout: {
+                      "text-field": ["get", "point_count_abbreviated"],
+                      "text-font": [
+                        "DIN Offc Pro Medium",
+                        "Arial Unicode MS Bold",
+                      ],
+                      "text-size": 13,
+                    },
+                    paint: { "text-color": "#fff" },
+                  });
+                  map.addLayer({
+                    id: UNCLUSTERED_CIRCLE_LAYER_ID,
+                    type: "circle",
+                    source: SOURCE_ID,
+                    filter: ["!", ["has", "point_count"]],
+                    paint: {
+                      "circle-color": [
+                        "case",
+                        ["boolean", ["feature-state", "active"], false],
+                        "rgba(234, 88, 12, 1)",
+                        "rgba(249, 115, 22, 0.9)",
+                      ],
+                      "circle-radius": [
+                        "case",
+                        ["boolean", ["feature-state", "active"], false],
+                        22,
+                        18,
+                      ],
+                      "circle-stroke-width": [
+                        "case",
+                        ["boolean", ["feature-state", "active"], false],
+                        3,
+                        2,
+                      ],
+                      "circle-stroke-color": "#fff",
+                    },
+                  });
+                  map.addLayer({
+                    id: UNCLUSTERED_SYMBOL_LAYER_ID,
+                    type: "symbol",
+                    source: SOURCE_ID,
+                    filter: ["!", ["has", "point_count"]],
+                    layout: {
+                      "icon-image": [
+                        "case",
+                        ["==", ["get", "thumbKey"], DEFAULT_PIN_ID],
+                        ["coalesce", ["get", "categoryPinId"], "pin-place"],
+                        ["get", "thumbKey"],
+                      ],
+                      "icon-size": 0.9,
+                      "icon-allow-overlap": true,
+                      "icon-ignore-placement": true,
+                    },
+                  });
+                };
+
+                pinIds.forEach((pinId) => {
+                  if (map.hasImage(pinId)) {
+                    loaded++;
+                    if (loaded === total) addSourceAndLayers();
+                    return;
+                  }
+                  const key = pinId.replace(/^pin-/, "");
+                  const dataUrl = getCategoryPinSvgDataUrl(key);
+                  const im = new Image();
+                  im.onload = () => {
+                    if (!map.hasImage(pinId))
+                      map.addImage(pinId, im, { sdf: false });
+                    loaded++;
+                    if (loaded === total) addSourceAndLayers();
+                  };
+                  im.onerror = () => {
+                    loaded++;
+                    if (loaded === total) addSourceAndLayers();
+                  };
+                  im.src = dataUrl;
+                });
+                if (total === 0) addSourceAndLayers();
+              };
+
+              addCategoryPinsThenLayers();
 
               let initialFitDone = false;
               const fitBoundsOnce = () => {
                 if (initialFitDone) return;
-                const d = geoJsonRef.current?.features?.length;
-                if (!d || d === 0) return;
+                const features = geoJsonRef.current?.features;
+                if (!features?.length) return;
                 initialFitDone = true;
+                // Anchor map on first place in the list (left-hand side)
+                const first = features[0] as GeoJSON.Feature<GeoJSON.Point>;
+                const c = first?.geometry?.coordinates;
+                if (c && c.length >= 2) {
+                  map.flyTo({
+                    center: [c[0], c[1]],
+                    zoom: FOCUS_ZOOM,
+                    duration: 0,
+                  });
+                  return;
+                }
+                // Fallback: fit all places if first has no coords
                 const bounds = new mapboxgl.LngLatBounds();
                 geoJsonRef.current!.features.forEach(
                   (f: GeoJSON.Feature<GeoJSON.Point>) => {
-                    const c = f.geometry?.coordinates;
-                    if (c && c.length >= 2) bounds.extend([c[0], c[1]]);
+                    const coords = f.geometry?.coordinates;
+                    if (coords && coords.length >= 2)
+                      bounds.extend([coords[0], coords[1]]);
                   },
                 );
                 map.fitBounds(bounds, {
@@ -484,7 +560,12 @@ export default function PhotoMap({ places, activePlaceId }: PhotoMapProps) {
                 },
               );
 
+              const reportView = () => {
+                const c = map.getCenter();
+                onMapViewChangeRef.current?.([c.lng, c.lat], map.getZoom());
+              };
               const onMoveEnd = () => {
+                reportView();
                 if (moveEndTimeoutRef.current)
                   clearTimeout(moveEndTimeoutRef.current);
                 moveEndTimeoutRef.current = setTimeout(() => {
@@ -494,6 +575,7 @@ export default function PhotoMap({ places, activePlaceId }: PhotoMapProps) {
               };
               map.on("moveend", onMoveEnd);
               map.on("zoomend", onMoveEnd);
+              map.once("idle", reportView);
 
               const onClusterClick = (e: any) => {
                 e.originalEvent?.stopPropagation();
@@ -529,6 +611,22 @@ export default function PhotoMap({ places, activePlaceId }: PhotoMapProps) {
               map.on("click", CLUSTER_LAYER_ID, onClusterClick);
               map.on("click", CLUSTER_COUNT_LAYER_ID, onClusterClick);
 
+              const onMarkerClick = (e: any) => {
+                e.originalEvent?.stopPropagation();
+                const features = map.queryRenderedFeatures(e.point, {
+                  layers: [
+                    UNCLUSTERED_CIRCLE_LAYER_ID,
+                    UNCLUSTERED_SYMBOL_LAYER_ID,
+                  ],
+                });
+                if (!features.length) return;
+                const placeId = (features[0].properties?.placeId ??
+                  features[0].properties?.id) as string | undefined;
+                if (placeId) onPlaceClickRef.current?.(String(placeId));
+              };
+              map.on("click", UNCLUSTERED_CIRCLE_LAYER_ID, onMarkerClick);
+              map.on("click", UNCLUSTERED_SYMBOL_LAYER_ID, onMarkerClick);
+
               map.getCanvas().style.cursor = "default";
               map.on("mouseenter", CLUSTER_LAYER_ID, () => {
                 map.getCanvas().style.cursor = "pointer";
@@ -546,6 +644,12 @@ export default function PhotoMap({ places, activePlaceId }: PhotoMapProps) {
                 map.getCanvas().style.cursor = "pointer";
               });
               map.on("mouseleave", UNCLUSTERED_CIRCLE_LAYER_ID, () => {
+                map.getCanvas().style.cursor = "default";
+              });
+              map.on("mouseenter", UNCLUSTERED_SYMBOL_LAYER_ID, () => {
+                map.getCanvas().style.cursor = "pointer";
+              });
+              map.on("mouseleave", UNCLUSTERED_SYMBOL_LAYER_ID, () => {
                 map.getCanvas().style.cursor = "default";
               });
             },
@@ -577,6 +681,11 @@ export default function PhotoMap({ places, activePlaceId }: PhotoMapProps) {
           });
           if (map.getSource(SOURCE_ID)) map.removeSource(SOURCE_ID);
           if (map.hasImage(DEFAULT_PIN_ID)) map.removeImage(DEFAULT_PIN_ID);
+          CATEGORY_PIN_IDS.forEach((id) => {
+            try {
+              if (map.hasImage(id)) map.removeImage(id);
+            } catch {}
+          });
         } catch {}
         map.remove();
       }
@@ -633,6 +742,7 @@ export default function PhotoMap({ places, activePlaceId }: PhotoMapProps) {
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
+    if (!map.getSource(SOURCE_ID)) return;
 
     const setFeatureActive = (placeId: string | null, active: boolean) => {
       if (!placeId) return;
@@ -649,24 +759,30 @@ export default function PhotoMap({ places, activePlaceId }: PhotoMapProps) {
     if (activePlaceId) setFeatureActive(activePlaceId, true);
     previousActivePlaceIdRef.current = activePlaceId;
 
-    if (!activePlaceId) return;
-    const place = validPlaces.find((p) => p.id === activePlaceId);
-    if (!place || !Number.isFinite(place.lat) || !Number.isFinite(place.lng))
-      return;
-    debugLog(
-      "flyTo",
-      activePlaceId,
-      [place.lng, place.lat],
-      "zoom",
-      FOCUS_ZOOM,
-    );
+    // Do not fly the map to the place when opening the modal — keep the map
+    // where the user left it. Restore on modal close still returns to saved view.
+  }, [activePlaceId, validPlaces]);
+
+  const onRestoreCompleteRef = useRef(onRestoreComplete);
+  onRestoreCompleteRef.current = onRestoreComplete;
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !restoreView) return;
     map.flyTo({
-      center: [place.lng, place.lat],
-      zoom: FOCUS_ZOOM,
-      duration: FLY_DURATION_MS / 1000,
+      center: restoreView.center,
+      zoom: restoreView.zoom,
+      duration: 0.4,
       essential: true,
     });
-  }, [activePlaceId, validPlaces]);
+    const onRestored = () => {
+      map.off("moveend", onRestored);
+      onRestoreCompleteRef.current?.();
+    };
+    map.once("moveend", onRestored);
+    return () => {
+      map.off("moveend", onRestored);
+    };
+  }, [restoreView]);
 
   const handle3DToggle = useCallback(() => {
     const next = !is3D;
@@ -695,13 +811,14 @@ export default function PhotoMap({ places, activePlaceId }: PhotoMapProps) {
   return (
     <div className="absolute inset-0 overflow-hidden rounded-xl border border-gray-200">
       <div ref={containerRef} className="h-full w-full" />
-      <div className="absolute right-3 top-3 z-10">
+      <div className="absolute right-3 top-3 z-10 flex flex-col items-end gap-2">
         <MapView3DToggle
           is3D={is3D}
           onToggle={handle3DToggle}
           map={mapReady ? mapRef.current : undefined}
           disabled={!webGLSupported}
         />
+        <MapZoomControls map={mapReady ? mapRef.current : undefined} />
       </div>
       <div className="absolute bottom-3 left-3 rounded-lg border border-gray-200 bg-white/95 px-3 py-1.5 text-sm text-gray-700 shadow-sm">
         {validPlaces.length} {validPlaces.length === 1 ? "place" : "places"} on

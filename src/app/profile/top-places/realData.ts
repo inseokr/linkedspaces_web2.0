@@ -79,15 +79,27 @@ export function mapPlaceVisitHistoryToTopPlacesModel(
     typeof entryAny.story === "string" ? entryAny.story.trim() : "";
   const placeCaption =
     typeof entryAny.caption === "string" ? entryAny.caption.trim() : "";
-  const first = photoList[0] as
-    | { story?: string; caption?: string }
-    | undefined;
-  const firstStory =
-    first && typeof first.story === "string" ? first.story.trim() : "";
-  const firstCaption =
-    first && typeof first.caption === "string" ? first.caption.trim() : "";
-  const caption =
-    placeStory || placeCaption || firstStory || firstCaption || undefined;
+  const getPhotoCaption = (p: unknown): string => {
+    const q = p as { story?: string; caption?: string } | undefined;
+    if (!q) return "";
+    const s = typeof q.story === "string" ? q.story.trim() : "";
+    const c = typeof q.caption === "string" ? q.caption.trim() : "";
+    return s || c || "";
+  };
+  const primaryCaption =
+    placeStory || placeCaption || getPhotoCaption(photoList[0]) || "";
+  let caption: string | undefined = primaryCaption || undefined;
+  let captionFromOtherPhoto = false;
+  if (!caption && photoList.length > 1) {
+    for (let i = 1; i < photoList.length; i++) {
+      const next = getPhotoCaption(photoList[i]);
+      if (next) {
+        caption = next;
+        captionFromOtherPhoto = true;
+        break;
+      }
+    }
+  }
 
   const coord = entry.coordinate;
   const latitude =
@@ -110,6 +122,7 @@ export function mapPlaceVisitHistoryToTopPlacesModel(
     photoListUris: photoListUris.length > 0 ? photoListUris : undefined,
     visitedTime: entry.visitedTime ?? entry.visitedTimeDigitized,
     caption,
+    ...(captionFromOtherPhoto ? { captionFromOtherPhoto: true } : {}),
     latitude,
     longitude,
   };

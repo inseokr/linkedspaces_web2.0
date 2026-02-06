@@ -30,4 +30,6 @@ export interface PlaceVisitHistoryEntry {
   /** Place-level story/caption (backend may use either) */
   story?: string;
   caption?: string;
+  /** Place comments from backend (when available). Shape: { _id?, userId?, username?, text?, parentId?, replyToUsername?, createdAt? }[] */
+  comments?: Array<Record<string, unknown>>;
 }

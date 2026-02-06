@@ -9,6 +9,8 @@ interface LatestActivityCarouselProps {
   places: LatestActivityPlace[];
   /** When set, clicking a card opens the place detail lightbox (pass place id to look up full place) */
   onPlaceClick?: (placeId: string) => void;
+  /** When set, clicking the comment button opens the lightbox with comments panel open */
+  onCommentClick?: (placeId: string) => void;
 }
 
 /** PlaceCard width and gap must match PlaceCard.tsx (w-[320px]) and gap-4 */
@@ -22,6 +24,7 @@ const VIEWPORT_MAX_WIDTH = 4.2 * CARD_WIDTH + 3.2 * GAP;
 export default function LatestActivityCarousel({
   places,
   onPlaceClick,
+  onCommentClick,
 }: LatestActivityCarouselProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -62,7 +65,12 @@ export default function LatestActivityCarousel({
         aria-label="Latest activity carousel"
       >
         {places.map((place) => (
-          <PlaceCard key={place.id} place={place} onPlaceClick={onPlaceClick} />
+          <PlaceCard
+            key={place.id}
+            place={place}
+            onPlaceClick={onPlaceClick}
+            onCommentClick={onCommentClick}
+          />
         ))}
       </div>
 

@@ -12,7 +12,9 @@ import PlacesList from "./components/PlacesList";
 import FilterPopover from "./components/FilterPopover";
 import PlaceLightboxModal, {
   type LightboxImage,
+  type PlaceComment,
 } from "../top-places/components/PlaceLightboxModal";
+import EditPlaceModal from "./components/EditPlaceModal";
 import MyPlacesSearchOverlay from "./components/MyPlacesSearchOverlay";
 import type { SearchPlace } from "./searchMockData";
 import ScrollToTopButton from "@/components/ui/ScrollToTopButton";
@@ -99,11 +101,33 @@ export default function ProfileMyPlacesPage() {
    */
   const [activePlaceId, setActivePlaceId] = useState<string | null>(null);
   const [selectedPlace, setSelectedPlace] = useState<SavedPlace | null>(null);
+  const [openWithComments, setOpenWithComments] = useState(false);
   const [searchLightboxImages, setSearchLightboxImages] = useState<
     LightboxImage[] | null
   >(null);
   const [searchOverlayOpen, setSearchOverlayOpen] = useState(false);
+  const [editPlace, setEditPlace] = useState<SavedPlace | null>(null);
+  /** Local overrides for visibility (private/public) when user saves in Edit modal before backend persist. */
+  const [visibilityOverrides, setVisibilityOverrides] = useState<
+    Record<string, "private" | "public">
+  >({});
+  /** Local overrides for category when user saves in Edit modal before backend persist. */
+  const [categoryOverrides, setCategoryOverrides] = useState<
+    Record<string, PlaceCategory>
+  >({});
   const listScrollRef = useRef<HTMLDivElement | null>(null);
+  const lastMapViewRef = useRef<{
+    center: [number, number];
+    zoom: number;
+  } | null>(null);
+  const viewToRestoreRef = useRef<{
+    center: [number, number];
+    zoom: number;
+  } | null>(null);
+  const [viewToRestore, setViewToRestore] = useState<{
+    center: [number, number];
+    zoom: number;
+  } | null>(null);
   const [listScrollReady, setListScrollReady] = useState(false);
   const setListScrollRef = useCallback((el: HTMLDivElement | null) => {
     listScrollRef.current = el;
@@ -111,12 +135,32 @@ export default function ProfileMyPlacesPage() {
   }, []);
   const prevFilteredPlacesRef = useRef<SavedPlace[]>([]);
 
+  const saveMapViewBeforeOpen = useCallback(() => {
+    viewToRestoreRef.current = lastMapViewRef.current
+      ? {
+          center: [...lastMapViewRef.current.center],
+          zoom: lastMapViewRef.current.zoom,
+        }
+      : null;
+  }, []);
+
   const filteredPlaces = useMemo(() => {
     if (selectedCategories.size === 0) return [];
     return savedPlaces.filter((p: SavedPlace) =>
       selectedCategories.has(p.category),
     );
   }, [savedPlaces, selectedCategories]);
+
+  const initialCommentsByPlaceId = useMemo((): Record<
+    string,
+    PlaceComment[]
+  > => {
+    const m: Record<string, PlaceComment[]> = {};
+    for (const p of savedPlaces) {
+      if (p.comments?.length) m[p.id] = p.comments as PlaceComment[];
+    }
+    return m;
+  }, [savedPlaces]);
 
   const lightboxImages: LightboxImage[] = useMemo(() => {
     if (!selectedPlace) return [];
@@ -129,16 +173,25 @@ export default function ProfileMyPlacesPage() {
       formatVisitDateForLightbox(selectedPlace.visitedTimeRaw) ||
       "Date unknown";
     const caption = selectedPlace.caption ?? selectedPlace.snippet ?? undefined;
+    const visibility =
+      visibilityOverrides[selectedPlace.id] ??
+      selectedPlace.visibility ??
+      "public";
+    const category =
+      categoryOverrides[selectedPlace.id] ?? selectedPlace.category;
     const base = {
+      placeId: selectedPlace.id,
       placeName: selectedPlace.name,
       dateTime,
+      visibility,
+      ...(category ? { category } : {}),
       ...(caption ? { caption } : {}),
       ...(selectedPlace.city ? { placeCity: selectedPlace.city } : {}),
     };
     return uris.length > 0
       ? uris.map((src) => ({ src, ...base }))
       : [{ src: "https://picsum.photos/400/600?random=placeholder", ...base }];
-  }, [selectedPlace]);
+  }, [selectedPlace, visibilityOverrides, categoryOverrides]);
 
   const hasPlaces = savedPlaces.length > 0;
 
@@ -257,6 +310,13 @@ export default function ProfileMyPlacesPage() {
           places={latestActivity}
           onPlaceClick={(placeId) => {
             setSearchLightboxImages(null);
+            setOpenWithComments(false);
+            const full = savedPlaces.find((p) => p.id === placeId);
+            if (full) setSelectedPlace(full);
+          }}
+          onCommentClick={(placeId) => {
+            setSearchLightboxImages(null);
+            setOpenWithComments(true);
             const full = savedPlaces.find((p) => p.id === placeId);
             if (full) setSelectedPlace(full);
           }}
@@ -294,7 +354,15 @@ export default function ProfileMyPlacesPage() {
               activePlaceId={activePlaceId}
               onSelectPlace={(placeId) => setActivePlaceId(placeId)}
               onPlaceClick={(place) => {
+                saveMapViewBeforeOpen();
                 setSearchLightboxImages(null);
+                setOpenWithComments(false);
+                setSelectedPlace(place);
+              }}
+              onCommentClick={(place) => {
+                saveMapViewBeforeOpen();
+                setSearchLightboxImages(null);
+                setOpenWithComments(true);
                 setSelectedPlace(place);
               }}
             />
@@ -305,7 +373,22 @@ export default function ProfileMyPlacesPage() {
             />
           </div>
           <div className="relative h-full min-h-[400px] min-w-0 w-full">
-            <PhotoMap places={filteredPlaces} activePlaceId={activePlaceId} />
+            <PhotoMap
+              places={filteredPlaces}
+              activePlaceId={activePlaceId}
+              onPlaceClick={(placeId) => {
+                saveMapViewBeforeOpen();
+                setSearchLightboxImages(null);
+                setActivePlaceId(placeId);
+                const full = savedPlaces.find((p) => p.id === placeId);
+                if (full) setSelectedPlace(full);
+              }}
+              onMapViewChange={(center, zoom) => {
+                lastMapViewRef.current = { center, zoom };
+              }}
+              restoreView={viewToRestore}
+              onRestoreComplete={() => setViewToRestore(null)}
+            />
           </div>
         </div>
       </section>
@@ -316,6 +399,16 @@ export default function ProfileMyPlacesPage() {
           (searchLightboxImages != null && searchLightboxImages.length > 0)
         }
         onClose={() => {
+          setViewToRestore(
+            viewToRestoreRef.current
+              ? {
+                  center: [...viewToRestoreRef.current.center],
+                  zoom: viewToRestoreRef.current.zoom,
+                }
+              : null,
+          );
+          setActivePlaceId(null);
+          setOpenWithComments(false);
           if (searchLightboxImages != null) setSearchLightboxImages(null);
           else setSelectedPlace(null);
         }}
@@ -323,6 +416,74 @@ export default function ProfileMyPlacesPage() {
           searchLightboxImages?.length ? searchLightboxImages : lightboxImages
         }
         startIndex={0}
+        initialCommentsByPlaceId={initialCommentsByPlaceId}
+        initialCommentsOpen={openWithComments}
+        onEdit={
+          selectedPlace
+            ? () => {
+                setEditPlace(selectedPlace);
+                setViewToRestore(
+                  viewToRestoreRef.current
+                    ? {
+                        center: [...viewToRestoreRef.current.center],
+                        zoom: viewToRestoreRef.current.zoom,
+                      }
+                    : null,
+                );
+                setActivePlaceId(null);
+                setSelectedPlace(null);
+                if (searchLightboxImages != null) setSearchLightboxImages(null);
+              }
+            : undefined
+        }
+      />
+      <EditPlaceModal
+        isOpen={editPlace !== null}
+        categories={categories}
+        place={
+          editPlace
+            ? {
+                ...editPlace,
+                visibility:
+                  visibilityOverrides[editPlace.id] ??
+                  editPlace.visibility ??
+                  "public",
+                category:
+                  categoryOverrides[editPlace.id] ??
+                  editPlace.category ??
+                  "Others",
+              }
+            : null
+        }
+        onClose={() => {
+          if (editPlace) setSelectedPlace(editPlace);
+          setEditPlace(null);
+        }}
+        onSave={(updates) => {
+          if (editPlace) {
+            if (updates.visibility !== undefined) {
+              setVisibilityOverrides((prev) => ({
+                ...prev,
+                [editPlace.id]: updates.visibility!,
+              }));
+            }
+            if (updates.category !== undefined) {
+              setCategoryOverrides((prev) => ({
+                ...prev,
+                [editPlace.id]: updates.category!,
+              }));
+            }
+          }
+          // TODO: persist name/caption/visibility/category to backend
+        }}
+        onDelete={
+          editPlace
+            ? (placeId) => {
+                // TODO: remove place from backend; for now just close
+                setEditPlace(null);
+              }
+            : undefined
+        }
       />
       <MyPlacesSearchOverlay
         isOpen={searchOverlayOpen}
@@ -339,6 +500,7 @@ export default function ProfileMyPlacesPage() {
             setSearchLightboxImages([
               {
                 src: PLACEHOLDER_IMAGE,
+                placeId: place.id,
                 placeName: place.name,
                 dateTime: "Searched",
                 placeCity: place.city,

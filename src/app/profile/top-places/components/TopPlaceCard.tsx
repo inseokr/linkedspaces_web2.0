@@ -112,27 +112,45 @@ export default function TopPlaceCard({
       </div>
 
       {/* Content */}
-      <div className="flex flex-1 flex-col p-3">
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0 flex-1">
-            <h3 className="truncate text-base font-semibold text-gray-900">
-              {place.title}
-            </h3>
-            <p className="mt-0.5 flex items-center gap-1 text-xs text-gray-600">
-              <MapPin className="h-3 w-3 shrink-0" aria-hidden />
-              <span className="truncate">
-                {place.city}, {place.country}
-              </span>
-            </p>
+      <div className="flex min-h-0 flex-1 flex-col p-3">
+        <div className="min-h-0 flex-1">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0 flex-1">
+              <h3 className="truncate text-base font-semibold text-gray-900">
+                {place.title}
+              </h3>
+              <p className="mt-0.5 flex items-center gap-1 text-xs text-gray-600">
+                <MapPin className="h-3 w-3 shrink-0" aria-hidden />
+                <span className="truncate">
+                  {place.city}, {place.country}
+                </span>
+              </p>
+            </div>
+            <div className="flex shrink-0 items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-amber-800">
+              <Star className="h-3.5 w-3.5 fill-current" aria-hidden />
+              <span className="text-xs font-semibold">#{place.rank}</span>
+            </div>
           </div>
-          <div className="flex shrink-0 items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-amber-800">
-            <Star className="h-3.5 w-3.5 fill-current" aria-hidden />
-            <span className="text-xs font-semibold">#{place.rank}</span>
-          </div>
+
+          {place.caption?.trim() ? (
+            <div className="mt-2">
+              <p
+                className="line-clamp-2 text-sm text-gray-600"
+                title={place.caption.trim()}
+              >
+                {place.caption.trim()}
+              </p>
+              {place.captionFromOtherPhoto ? (
+                <p className="mt-1 text-xs text-gray-500" aria-hidden>
+                  From another photo
+                </p>
+              ) : null}
+            </div>
+          ) : null}
         </div>
 
-        {/* Metadata row: photo count, visit count (left); like count (right) */}
-        <div className="mt-2 flex items-center justify-between gap-3 text-xs text-gray-700">
+        {/* Metadata row: fixed at bottom left (photos, visits) and bottom right (likes) */}
+        <div className="mt-auto flex shrink-0 items-center justify-between gap-3 pt-2 text-xs text-gray-700">
           <div className="flex items-center gap-3">
             <span className="flex items-center gap-1">
               <Camera className="h-3.5 w-3.5 shrink-0" aria-hidden />

@@ -173,6 +173,36 @@ export interface FlattenedPlace {
   visitedTimeRaw?: string;
   /** For place lightbox: all photo URIs */
   photoListUris?: string[];
+  /** User sentiment for list view (inferred from caption when possible) */
+  sentiment?: "positive" | "neutral" | "negative";
+  /** Comments from backend (when available); normalized for lightbox */
+  comments?: Array<{
+    id: string;
+    username: string;
+    text: string;
+    parentId?: string;
+    replyToUsername?: string;
+    avatarUrl?: string;
+  }>;
+  /** Visibility to user's network from privacyControl.level: "private" | "public". Default public. */
+  visibility?: "private" | "public";
+}
+
+/** Infer simple sentiment from caption/snippet text for list view */
+function inferSentiment(text: string): "positive" | "neutral" | "negative" {
+  const lower = text.trim().toLowerCase();
+  if (!lower) return "neutral";
+  const positive =
+    /\b(love|lovely|loved|great|amazing|awesome|best|recommend|wonderful|excellent|fantastic|perfect|would (get|go|visit|come) again)\b/.test(
+      lower,
+    );
+  const negative =
+    /\b(disappoint|bad|worst|avoid|overrated|mediocre|never again|not worth)\b/.test(
+      lower,
+    );
+  if (positive && !negative) return "positive";
+  if (negative && !positive) return "negative";
+  return "neutral";
 }
 
 /** Build from placeVisitHistory when entries have placeName/visitedTime (new backend shape) */
@@ -210,6 +240,15 @@ function fromPlaceVisitHistoryEntries(
       `place-${String(entry.placeName ?? name)
         .replace(/\s+/g, "-")
         .slice(0, 24)}-${Number(lat).toFixed(4)}-${Number(lng).toFixed(4)}`;
+    const rawComments = (entry as { comments?: Array<Record<string, unknown>> })
+      .comments;
+    const comments =
+      Array.isArray(rawComments) && rawComments.length > 0
+        ? rawComments.map(normalizePlaceComment)
+        : undefined;
+    const level = entry.privacyControl?.level?.toLowerCase?.();
+    const visibility =
+      level === "private" ? ("private" as const) : ("public" as const);
     return {
       id: stableId,
       name,
@@ -226,8 +265,31 @@ function fromPlaceVisitHistoryEntries(
       sortTime,
       visitedTimeRaw: visitedTime,
       photoListUris: photoListUris.length > 0 ? photoListUris : undefined,
+      sentiment: inferSentiment(caption),
+      visibility,
+      ...(comments?.length ? { comments } : {}),
     };
   });
+}
+
+function normalizePlaceComment(raw: Record<string, unknown>): {
+  id: string;
+  username: string;
+  text: string;
+  parentId?: string;
+  replyToUsername?: string;
+  avatarUrl?: string;
+} {
+  const id = typeof raw._id === "string" ? raw._id : String(raw.id ?? "");
+  const username = typeof raw.username === "string" ? raw.username : "Unknown";
+  const text =
+    typeof raw.text === "string" ? raw.text : String(raw.content ?? "");
+  const parentId = typeof raw.parentId === "string" ? raw.parentId : undefined;
+  const replyToUsername =
+    typeof raw.replyToUsername === "string" ? raw.replyToUsername : undefined;
+  const avatarUrl =
+    typeof raw.avatarUrl === "string" ? raw.avatarUrl : undefined;
+  return { id, username, text, parentId, replyToUsername, avatarUrl };
 }
 
 /** Fallback: build from user.trips + placeVisitHistory by index (old shape) */
@@ -267,6 +329,16 @@ function fromTripsAndHistory(user: User): FlattenedPlace[] {
       const id = `${trip.blogKey}-${placeIndex}`;
       const category = inferCategory(name, hist?.categories);
       const photoListUris = hist ? allPhotoUris(hist.photoList) : undefined;
+      const rawComments = hist
+        ? (hist as { comments?: Array<Record<string, unknown>> }).comments
+        : undefined;
+      const comments =
+        Array.isArray(rawComments) && rawComments.length > 0
+          ? rawComments.map(normalizePlaceComment)
+          : undefined;
+      const level = hist?.privacyControl?.level?.toLowerCase?.();
+      const visibility =
+        level === "private" ? ("private" as const) : ("public" as const);
 
       out.push({
         id,
@@ -285,6 +357,9 @@ function fromTripsAndHistory(user: User): FlattenedPlace[] {
         visitedTimeRaw:
           hist?.visitedTime ?? hist?.visitedTimeDigitized ?? tripStart,
         photoListUris: photoListUris?.length ? photoListUris : undefined,
+        sentiment: inferSentiment(caption),
+        visibility,
+        ...(comments?.length ? { comments } : {}),
       });
     });
   }
@@ -334,8 +409,11 @@ function toSavedPlace(p: FlattenedPlace): SavedPlace {
     lng: p.lng,
     ...(p.caption ? { caption: p.caption } : {}),
     ...(p.city ? { city: p.city } : {}),
+    ...(p.sentiment ? { sentiment: p.sentiment } : {}),
     ...(p.photoListUris?.length ? { photoListUris: p.photoListUris } : {}),
     ...(p.visitedTimeRaw ? { visitedTimeRaw: p.visitedTimeRaw } : {}),
+    ...(p.comments?.length ? { comments: p.comments } : {}),
+    ...(p.visibility ? { visibility: p.visibility } : {}),
   };
 }
 
@@ -356,10 +434,18 @@ export function getMyPlacesFromUser(user: User | null): {
   const latestActivity = flat.slice(0, 7).map(toLatestActivityPlace);
   const savedPlaces = flat.map(toSavedPlace);
 
-  const uniqueCategories = [...new Set(savedPlaces.map((p) => p.category))];
+  const invalidCategory = (c: string | undefined) =>
+    !c || c === "All" || c === "Null" || String(c).trim() === "";
+  const uniqueCategories = [
+    ...new Set(
+      savedPlaces
+        .map((p) => p.category)
+        .filter((c): c is string => !invalidCategory(c)),
+    ),
+  ];
   const categories =
     uniqueCategories.length > 0
-      ? uniqueCategories.sort((a, b) => String(a).localeCompare(String(b)))
+      ? uniqueCategories.sort((a, b) => a.localeCompare(b))
       : [...PLACE_CATEGORIES];
 
   return {

@@ -5,6 +5,9 @@ import { ChevronDown } from "lucide-react";
 import type { TopPlaceCardModel } from "../types";
 import TopPlaceCard from "./TopPlaceCard";
 import PlaceLightboxModal, { type LightboxImage } from "./PlaceLightboxModal";
+import EditPlaceModal from "../../my-places/components/EditPlaceModal";
+import type { SavedPlace } from "../../my-places/mockData";
+import { PLACE_CATEGORIES } from "../../my-places/mockData";
 
 const INITIAL_VISIBLE = 12;
 
@@ -54,6 +57,32 @@ function formatVisitDate(isoOrYmd: string): string {
 }
 const LOAD_MORE_COUNT = 6;
 
+/** Map Top Place to SavedPlace-like for EditPlaceModal (Top Places page). */
+function topPlaceToSavedPlace(p: TopPlaceCardModel): SavedPlace {
+  const address =
+    [p.city, p.country].filter(Boolean).join(", ") || "Address unknown";
+  return {
+    id: p.id,
+    name: p.title,
+    category: (p.category || "Others") as SavedPlace["category"],
+    visitedDate: p.visitedTime ? formatVisitDate(p.visitedTime) : "Visited",
+    snippet: p.caption ?? "",
+    thumbnailUrl: p.imageUrl ?? null,
+    address,
+    city: p.city || undefined,
+    lat: p.latitude ?? 0,
+    lng: p.longitude ?? 0,
+    caption: p.caption,
+    photoListUris: p.photoListUris?.length
+      ? p.photoListUris
+      : p.imageUrl
+        ? [p.imageUrl]
+        : undefined,
+    visitedTimeRaw: p.visitedTime,
+    visibility: "public",
+  };
+}
+
 interface CardInteractionState {
   bookmarked: Set<string>;
   liked: Set<string>;
@@ -68,6 +97,8 @@ interface TopPlacesGridProps {
 export default function TopPlacesGrid({ places }: TopPlacesGridProps) {
   const [selectedPlace, setSelectedPlace] =
     React.useState<TopPlaceCardModel | null>(null);
+  const [editPlace, setEditPlace] = React.useState<SavedPlace | null>(null);
+  const placeBeforeEditRef = React.useRef<TopPlaceCardModel | null>(null);
   const [visibleCount, setVisibleCount] = React.useState(INITIAL_VISIBLE);
   const [interaction, setInteraction] = React.useState<CardInteractionState>({
     bookmarked: new Set(),
@@ -121,8 +152,11 @@ export default function TopPlacesGrid({ places }: TopPlacesGridProps) {
             : "Date unknown";
         const caption = selectedPlace.caption;
         const base = {
+          placeId: selectedPlace.id,
           placeName: selectedPlace.title,
           dateTime,
+          category: selectedPlace.category,
+          visibility: "public" as const,
           ...(caption ? { caption } : {}),
           ...(selectedPlace.city ? { placeCity: selectedPlace.city } : {}),
         };
@@ -131,6 +165,20 @@ export default function TopPlacesGrid({ places }: TopPlacesGridProps) {
           : [{ src: selectedPlace.imageUrl, ...base }];
       })()
     : [];
+
+  const handleEdit = React.useCallback(() => {
+    if (!selectedPlace) return;
+    placeBeforeEditRef.current = selectedPlace;
+    setEditPlace(topPlaceToSavedPlace(selectedPlace));
+    setSelectedPlace(null);
+  }, [selectedPlace]);
+
+  const handleEditClose = React.useCallback(() => {
+    const restore = placeBeforeEditRef.current;
+    placeBeforeEditRef.current = null;
+    if (restore) setSelectedPlace(restore);
+    setEditPlace(null);
+  }, []);
 
   return (
     <div>
@@ -156,6 +204,16 @@ export default function TopPlacesGrid({ places }: TopPlacesGridProps) {
         onClose={() => setSelectedPlace(null)}
         images={lightboxImages}
         startIndex={0}
+        onEdit={handleEdit}
+      />
+      <EditPlaceModal
+        isOpen={editPlace !== null}
+        place={editPlace}
+        categories={PLACE_CATEGORIES}
+        onClose={handleEditClose}
+        onSave={() => {
+          // TODO: persist from Top Places if backend supports
+        }}
       />
 
       <div className="mt-10 flex justify-center">

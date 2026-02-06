@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useRef } from "react";
-import { ExternalLink } from "lucide-react";
+import { useCallback, useRef, useState, useEffect } from "react";
+import { ExternalLink, MessageCircle, MoreVertical } from "lucide-react";
 import type { SavedPlace } from "../mockData";
 
 interface PlacesListProps {
@@ -12,6 +12,8 @@ interface PlacesListProps {
   onSelectPlace?: (placeId: string) => void;
   /** When set, clicking a place row also opens the place detail lightbox */
   onPlaceClick?: (place: SavedPlace) => void;
+  /** When set, clicking the comment button opens the lightbox with the comments panel open */
+  onCommentClick?: (place: SavedPlace) => void;
 }
 
 function ThumbnailPlaceholder() {
@@ -31,12 +33,17 @@ function PlaceRow({
   isActive,
   onSelect,
   onPlaceClick,
+  onCommentClick,
 }: {
   place: SavedPlace;
   isActive: boolean;
   onSelect: () => void;
   onPlaceClick?: (place: SavedPlace) => void;
+  onCommentClick?: (place: SavedPlace) => void;
 }) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
   const handleSearchGoogle = useCallback(
     (e: React.MouseEvent) => {
       e.stopPropagation();
@@ -55,6 +62,33 @@ function PlaceRow({
     onPlaceClick?.(place);
   }, [onSelect, onPlaceClick, place]);
 
+  const handleCommentClick = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (onCommentClick) onCommentClick(place);
+      else {
+        onSelect();
+        onPlaceClick?.(place);
+      }
+    },
+    [onSelect, onPlaceClick, onCommentClick, place],
+  );
+
+  const handleKebabClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    setMenuOpen((prev) => !prev);
+  }, []);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const handleClickOutside = (ev: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(ev.target as Node))
+        setMenuOpen(false);
+    };
+    document.addEventListener("click", handleClickOutside);
+    return () => document.removeEventListener("click", handleClickOutside);
+  }, [menuOpen]);
+
   return (
     <div
       data-place-id={place.id}
@@ -68,7 +102,7 @@ function PlaceRow({
           handleRowClick();
         }
       }}
-      className={`flex gap-4 rounded-lg border p-4 shadow-sm transition-shadow cursor-pointer ${
+      className={`relative flex gap-4 rounded-lg border p-4 pb-14 shadow-sm transition-shadow cursor-pointer ${
         isActive
           ? "border-[var(--color-main)] ring-2 ring-[var(--color-main)] ring-offset-2 bg-[var(--color-main)]/5"
           : "border-gray-200 bg-white hover:shadow-md"
@@ -121,6 +155,63 @@ function PlaceRow({
           Search on Google
         </button>
       </div>
+
+      {/* Fixed bottom-right: comment icon + kebab menu */}
+      <div className="absolute right-4 bottom-4 z-10 flex items-center gap-1">
+        <button
+          type="button"
+          onClick={handleCommentClick}
+          className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-gray-600 shadow-sm ring-1 ring-gray-200 transition-colors hover:bg-gray-50 hover:text-gray-800 focus:outline-none focus:ring-2 focus:ring-[var(--color-main)] focus:ring-offset-2"
+          aria-label="Comments"
+          tabIndex={-1}
+        >
+          <MessageCircle className="h-4 w-4" />
+        </button>
+        <div className="relative" ref={menuRef}>
+          <button
+            type="button"
+            onClick={handleKebabClick}
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-gray-600 shadow-sm ring-1 ring-gray-200 transition-colors hover:bg-gray-50 hover:text-gray-800 focus:outline-none focus:ring-2 focus:ring-[var(--color-main)] focus:ring-offset-2"
+            aria-label="More options"
+            aria-expanded={menuOpen}
+            tabIndex={-1}
+          >
+            <MoreVertical className="h-4 w-4" />
+          </button>
+          {menuOpen && (
+            <div
+              className="absolute right-0 bottom-full z-20 mb-1 min-w-[140px] rounded-lg border border-gray-200 bg-white py-1 shadow-lg"
+              role="menu"
+            >
+              <button
+                type="button"
+                role="menuitem"
+                className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setMenuOpen(false);
+                  onSelect();
+                  onPlaceClick?.(place);
+                }}
+              >
+                View details
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setMenuOpen(false);
+                  handleSearchGoogle(e);
+                }}
+              >
+                Search on Google
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
@@ -130,6 +221,7 @@ export default function PlacesList({
   activePlaceId = null,
   onSelectPlace,
   onPlaceClick,
+  onCommentClick,
 }: PlacesListProps) {
   const listRef = useRef<HTMLUListElement>(null);
 
@@ -165,6 +257,7 @@ export default function PlacesList({
             isActive={activePlaceId === place.id}
             onSelect={() => handleSelectPlace(place.id)}
             onPlaceClick={onPlaceClick}
+            onCommentClick={onCommentClick}
           />
         </li>
       ))}

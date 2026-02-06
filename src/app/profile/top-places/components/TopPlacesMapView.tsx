@@ -2,7 +2,14 @@
 
 /**
  * Top Places full-screen Mapbox map: GeoJSON source, clustering, popup on point click.
- * 3D buildings + 2D/3D toggle; photo-based markers when zoomed in.
+ * 3D buildings + 2D/3D toggle; photo-based markers for clusters and unclustered points.
+ *
+ * Step 1 – Audit: Why photos might not have shown before
+ * - Cluster icon uses dynamic image id (cluster-${cluster_id}); images are added async on moveend/zoomend,
+ *   so clusters show default pin until syncClusterThumbnails runs and addImage completes.
+ * - Unclustered thumbnails only sync when zoom >= THUMB_ZOOM_MIN (6); below that, only default pin.
+ * - GeoJSON has imageUrl/thumbKey per feature; cluster representative was "first leaf" only (no visitedTime).
+ * - Cluster circle was fully opaque, so the orange circle dominated over the photo symbol.
  */
 
 import { useEffect, useRef, useCallback, useState } from "react";
@@ -17,6 +24,7 @@ import {
 } from "../../mapbox-3d-config";
 import MapView3DToggle from "../../components/MapView3DToggle";
 import { isWebGLSupported } from "../../components/MapView3DToggle";
+import MapZoomControls from "../../components/MapZoomControls";
 import { applyLinkedSpacesMapStyle } from "../../mapbox-linkedspaces-style";
 import {
   drawCircularThumb,
@@ -44,10 +52,11 @@ const ZOOM_EXTRA_ON_CLUSTER_CLICK = 3;
 const DEFAULT_PIN_ID = "top-places-default-pin";
 const THUMB_ZOOM_MIN = 6;
 const THUMB_CACHE_MAX = 100;
-const THUMB_BATCH_SIZE = 16;
+const THUMB_BATCH_SIZE = 40;
 const THUMB_SYNC_THROTTLE_MS = 180;
 const CLUSTER_ICON_CACHE_MAX = 50;
-const CLUSTER_ICON_BATCH_SIZE = 10;
+const CLUSTER_ICON_BATCH_SIZE = 20;
+const CLUSTER_LEAVES_FOR_REP = 25;
 
 const DEFAULT_PIN_SVG =
   "data:image/svg+xml," +
@@ -274,6 +283,7 @@ export default function TopPlacesMapView({
     [],
   );
 
+  /** Viewport-based unclustered thumbnails. Capped to THUMB_BATCH_SIZE (40) per moveend/zoomend. */
   const syncThumbnailsForViewport = useCallback(
     (map: any) => {
       if (map.getZoom() < THUMB_ZOOM_MIN) return;
@@ -347,7 +357,7 @@ export default function TopPlacesMapView({
     [setFallbackThumbKey],
   );
 
-  /** Load representative thumbnail for visible clusters (first leaf's imageUrl). Viewport-only, batched, with fallback to default pin. */
+  /** Load representative thumbnail for visible clusters. Pick most recent by visitedTime, else first leaf with imageUrl. Viewport-only, batched. */
   const syncClusterThumbnails = useCallback((map: any) => {
     const source = map.getSource(SOURCE_ID) as
       | {
@@ -392,7 +402,7 @@ export default function TopPlacesMapView({
       loading.add(clusterId);
       source.getClusterLeaves!(
         clusterId,
-        1,
+        CLUSTER_LEAVES_FOR_REP,
         0,
         (
           err: Error | null,
@@ -400,7 +410,17 @@ export default function TopPlacesMapView({
         ) => {
           loading.delete(clusterId);
           if (err || !leaves?.length || !map.getSource(SOURCE_ID)) return;
-          const leaf = leaves[0];
+          const withUrl = leaves.filter(
+            (l) =>
+              (l.properties as PlaceFeatureProps)?.imageUrl &&
+              String((l.properties as PlaceFeatureProps).imageUrl).trim(),
+          );
+          const byTime = [...withUrl].sort((a, b) => {
+            const ta = (a.properties as PlaceFeatureProps)?.visitedTime ?? "";
+            const tb = (b.properties as PlaceFeatureProps)?.visitedTime ?? "";
+            return tb.localeCompare(ta);
+          });
+          const leaf = byTime[0] ?? withUrl[0] ?? leaves[0];
           const props = leaf.properties as PlaceFeatureProps | undefined;
           const imageUrl = props?.imageUrl;
           if (!imageUrl || typeof imageUrl !== "string" || !imageUrl.trim())
@@ -473,8 +493,9 @@ export default function TopPlacesMapView({
       const mapboxgl = (await import("mapbox-gl")).default;
       mapboxglRef.current = mapboxgl;
       mapboxgl.accessToken = token;
+      if (!containerRef.current) return;
       map = new mapboxgl.Map({
-        container: containerRef.current!,
+        container: containerRef.current,
         style: "mapbox://styles/mapbox/streets-v12",
         center: DEFAULT_CENTER,
         zoom: DEFAULT_ZOOM,
@@ -525,6 +546,7 @@ export default function TopPlacesMapView({
               clusterMaxZoom: CLUSTER_MAX_ZOOM,
             });
 
+            /* Marker layers added after 3D buildings so they render above fill-extrusion. */
             map.addLayer({
               id: CLUSTER_LAYER_ID,
               type: "circle",
@@ -532,6 +554,7 @@ export default function TopPlacesMapView({
               filter: ["has", "point_count"],
               paint: {
                 "circle-color": "rgba(59, 130, 246, 0.75)",
+                "circle-opacity": 0.5,
                 "circle-radius": [
                   "step",
                   ["get", "point_count"],
@@ -582,9 +605,14 @@ export default function TopPlacesMapView({
               layout: {
                 "text-field": ["get", "point_count_abbreviated"],
                 "text-font": ["DIN Offc Pro Medium", "Arial Unicode MS Bold"],
-                "text-size": 13,
+                "text-size": 12,
+                "text-offset": [0.4, -0.4],
               },
-              paint: { "text-color": "#fff" },
+              paint: {
+                "text-color": "#fff",
+                "text-halo-color": "rgba(0,0,0,0.6)",
+                "text-halo-width": 1,
+              },
             });
             map.addLayer({
               id: UNCLUSTERED_LAYER_ID,
@@ -881,13 +909,15 @@ export default function TopPlacesMapView({
   return (
     <div className="relative h-full w-full">
       <div ref={containerRef} className="h-full w-full" />
-      {/* 3D toggle directly under the modal close (X) button, aligned right with spacing */}
-      <div className="absolute right-14 top-24 z-10 md:right-14 md:top-24">
+      {/* 3D toggle and zoom controls: right side, below modal close (X) */}
+      <div className="absolute right-14 top-24 z-10 flex flex-col items-end gap-2 md:right-14 md:top-24">
         <MapView3DToggle
           is3D={is3D}
           onToggle={handle3DToggle}
+          map={mapRef.current}
           disabled={!webGLSupported}
         />
+        <MapZoomControls map={mapRef.current} />
       </div>
       {!hasPoints && (
         <div className="absolute inset-0 flex items-center justify-center bg-gray-100/90">
