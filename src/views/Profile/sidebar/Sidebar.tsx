@@ -14,6 +14,8 @@ const MENU_ITEMS = [
     label: "My Places",
     href: "/profile/my-places",
     iconSrc: "/icons/map.svg",
+    /** Also highlight when on View All Places */
+    activePaths: ["/profile/my-places", "/profile/places"],
   },
   {
     key: "top-places",

@@ -63,6 +63,12 @@ type Props = {
    * container target changes.
    */
   containerResizeKey?: string | number;
+
+  /** When false, do not draw the orange dashed route line between place markers. Default true. */
+  showPlacePath?: boolean;
+
+  /** When true, use lightweight DOM-only place markers (no React roots). Reduces memory and improves performance. */
+  useSimpleMarkers?: boolean;
 };
 
 function PlaceMarker({
@@ -203,6 +209,8 @@ export default function MapboxMap({
   overlayTopLeft,
   overlayTopRight,
   containerResizeKey,
+  showPlacePath = true,
+  useSimpleMarkers = false,
 }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<MapboxMapType | null>(null);
@@ -215,6 +223,8 @@ export default function MapboxMap({
   const markersRef = useRef(markers);
   const placeMarkersRef = useRef(placeMarkers);
   const modeRef = useRef(mode);
+  const showPlacePathRef = useRef(showPlacePath);
+  const useSimpleMarkersRef = useRef(useSimpleMarkers);
   const activeMarkerIdRef = useRef<Props["activeMarkerId"]>(activeMarkerId);
   const activePlaceMarkerIdRef =
     useRef<Props["activePlaceMarkerId"]>(activePlaceMarkerId);
@@ -281,6 +291,14 @@ export default function MapboxMap({
   useEffect(() => {
     onPlaceMarkerClickRef.current = onPlaceMarkerClick;
   }, [onPlaceMarkerClick]);
+
+  useEffect(() => {
+    showPlacePathRef.current = showPlacePath;
+  }, [showPlacePath]);
+
+  useEffect(() => {
+    useSimpleMarkersRef.current = useSimpleMarkers;
+  }, [useSimpleMarkers]);
 
   const fallbackCenterByIso2: Record<string, [number, number]> = useMemo(
     () => ({
@@ -401,7 +419,7 @@ export default function MapboxMap({
   const clearMarkers = useCallback(() => {
     markerHandlesRef.current.forEach((h) => {
       h.marker.remove();
-      setTimeout(() => h.unmount(), 0);
+      if (typeof h.unmount === "function") h.unmount();
       h.el.remove();
     });
     markerHandlesRef.current = [];
@@ -419,6 +437,10 @@ export default function MapboxMap({
   const syncPlacePath = useCallback(() => {
     const map = mapRef.current;
     if (!map || !map.isStyleLoaded()) return;
+    if (!showPlacePathRef.current) {
+      clearPlacePath();
+      return;
+    }
 
     const coords = placeMarkersRef.current
       .filter((m) => Number.isFinite(m.lng) && Number.isFinite(m.lat))
@@ -483,6 +505,8 @@ export default function MapboxMap({
     const isPlaceMode = modeRef.current === "place";
 
     if (isPlaceMode) {
+      const useSimple = useSimpleMarkersRef.current;
+      const simpleSize = 48;
       placeMarkersRef.current.forEach((m) => {
         if (!Number.isFinite(m.lat) || !Number.isFinite(m.lng)) return;
 
@@ -494,6 +518,47 @@ export default function MapboxMap({
           onPlaceMarkerClickRef.current?.(m.id);
         };
         el.addEventListener("click", handleClick);
+
+        if (useSimple) {
+          el.style.width = `${simpleSize}px`;
+          el.style.height = `${simpleSize}px`;
+          el.style.position = "relative";
+          el.style.borderRadius = "9999px";
+          el.style.overflow = "hidden";
+          el.style.border = "2px solid rgba(255,255,255,0.9)";
+          el.style.boxShadow = "0 8px 20px rgba(0,0,0,0.18)";
+          el.style.background = "rgba(0,0,0,0.05)";
+          const img = document.createElement("img");
+          img.src = m.imageUrl;
+          img.alt = "";
+          img.style.width = "100%";
+          img.style.height = "100%";
+          img.style.objectFit = "cover";
+          img.style.display = "block";
+          el.appendChild(img);
+
+          const isActiveAtCreate = m.id === activePlaceMarkerIdRef.current;
+          el.style.zIndex = isActiveAtCreate ? "10" : "0";
+          if (isActiveAtCreate) {
+            el.style.border = "3px solid rgba(249, 115, 22, 0.98)";
+            el.style.boxShadow =
+              "0 8px 20px rgba(0,0,0,0.18), 0 0 0 8px rgba(249, 115, 22, 0.32)";
+            el.style.transform = "scale(1.03)";
+          }
+
+          const marker = new mapboxgl.Marker({ element: el, anchor: "center" })
+            .setLngLat([m.lng, m.lat])
+            .addTo(map);
+
+          markerHandlesRef.current.push({
+            id: m.id,
+            kind: "place",
+            marker,
+            el,
+            simple: true,
+          });
+          return;
+        }
 
         const root = createRoot(el);
         const render = (isActive: boolean) => {
@@ -581,15 +646,27 @@ export default function MapboxMap({
     const activeTripId = activeMarkerIdRef.current;
 
     markerHandlesRef.current.forEach((h) => {
-      if (h?.kind === "place" && typeof h?.render === "function") {
+      if (h?.kind === "place") {
         const isActive = h.id === activePlaceId;
-        h.render(isActive);
-
-        // Ensure highlighted marker is visually on top
-        if (h?.el) {
+        if (h?.simple && h?.el) {
           h.el.style.zIndex = isActive ? "10" : "0";
+          h.el.style.border = isActive
+            ? "3px solid rgba(249, 115, 22, 0.98)"
+            : "2px solid rgba(255,255,255,0.9)";
+          h.el.style.boxShadow = isActive
+            ? "0 8px 20px rgba(0,0,0,0.18), 0 0 0 8px rgba(249, 115, 22, 0.32)"
+            : "0 8px 20px rgba(0,0,0,0.18)";
+          h.el.style.transform = isActive ? "scale(1.03)" : "scale(1)";
           if (isActive && h.el.parentElement) {
             h.el.parentElement.appendChild(h.el);
+          }
+        } else if (typeof h?.render === "function") {
+          h.render(isActive);
+          if (h?.el) {
+            h.el.style.zIndex = isActive ? "10" : "0";
+            if (isActive && h.el.parentElement) {
+              h.el.parentElement.appendChild(h.el);
+            }
           }
         }
       }
@@ -774,6 +851,8 @@ export default function MapboxMap({
           center: [-98.5795, 39.8283], // 초기값(미국)이어도 OK: 이후 카메라 effect가 자연스럽게 이동시킴
           zoom: 1,
           renderWorldCopies: false,
+          antialias: false,
+          preserveDrawingBuffer: false,
         });
       } catch (e) {
         console.error("Failed to initialize WebGL for the map:", e);
@@ -823,7 +902,18 @@ export default function MapboxMap({
       map.on("rotatestart", markUserInteraction);
       map.on("pitchstart", markUserInteraction);
 
-      ro = new ResizeObserver(() => map.resize());
+      let resizeScheduled = false;
+      const throttledResize = () => {
+        if (resizeScheduled) return;
+        resizeScheduled = true;
+        requestAnimationFrame(() => {
+          resizeScheduled = false;
+          try {
+            map.resize();
+          } catch {}
+        });
+      };
+      ro = new ResizeObserver(throttledResize);
       ro.observe(containerRef.current!);
     })();
 

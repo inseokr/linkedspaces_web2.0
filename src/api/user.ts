@@ -58,6 +58,8 @@ export type BadgeProgress = {
 export type PlacePhoto = {
   uri?: string;
   selected?: boolean;
+  /** Caption/story for this photo (used for My Places card caption) */
+  story?: string;
 };
 
 export type PlaceVisitHistoryItem = {
@@ -70,6 +72,19 @@ export type PlaceVisitHistoryItem = {
   coordinate?: GeoCoordinate;
   photoList?: PlacePhoto[];
   privacyControl?: { level?: string; allowedUserList?: string[] };
+  /** Backend: display name for the place */
+  placeName?: string;
+  /** Backend: ISO or date string for sorting/display */
+  visitedTime?: string;
+  visitedTimeDigitized?: string;
+  /** Backend: "hidden" = exclude from My Places */
+  status?: string;
+  /** Backend: when true, use this entry when duplicates exist */
+  primaryPlace?: boolean;
+  /** Backend: e.g. ["Cafe", "Restaurant"] for filter pills */
+  categories?: string[];
+  /** Backend: place-level story/caption (fallback when no photo story) */
+  story?: string;
 };
 
 export type GeoCoordinate = {
