@@ -199,23 +199,35 @@ function throttle<T extends (...args: any[]) => void>(fn: T, ms: number): T {
   return run as T;
 }
 
+const SELECTED_PIN_LAYER_ID = "top-places-selected-pin";
+
 export interface TopPlacesMapViewProps {
   /** Filtered places (with valid lat/lng used for map; others skipped) */
   places: TopPlaceCardModel[];
   /** For DEBUG: current filter labels */
   activeCountryId?: string | null;
   activeCategory?: string | "All";
+  /** Currently selected place id; map centers on it and highlights its pin */
+  selectedPlaceId?: string | null;
+  /** Called when user clicks a place pin on the map */
+  onPlaceSelect?: (placeId: string) => void;
 }
 
 export default function TopPlacesMapView({
   places,
   activeCountryId,
   activeCategory,
+  selectedPlaceId = null,
+  onPlaceSelect,
 }: TopPlacesMapViewProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<any>(null);
   const mapboxglRef = useRef<any>(null);
   const popupRef = useRef<any>(null);
+  const selectedPlaceIdRef = useRef<string | null>(selectedPlaceId);
+  selectedPlaceIdRef.current = selectedPlaceId;
+  const onPlaceSelectRef = useRef(onPlaceSelect);
+  onPlaceSelectRef.current = onPlaceSelect;
   const geoJsonRef = useRef<GeoJSON.FeatureCollection<
     GeoJSON.Point,
     PlaceFeatureProps
@@ -628,6 +640,19 @@ export default function TopPlacesMapView({
               },
             });
             map.addLayer({
+              id: SELECTED_PIN_LAYER_ID,
+              type: "circle",
+              source: SOURCE_ID,
+              filter: ["==", ["get", "id"], selectedPlaceIdRef.current ?? ""],
+              paint: {
+                "circle-radius": 20,
+                "circle-opacity": 0,
+                "circle-stroke-width": 3,
+                "circle-stroke-color": "#fff",
+                "circle-stroke-opacity": 1,
+              },
+            });
+            map.addLayer({
               id: UNCLUSTERED_SYMBOL_LAYER_ID,
               type: "symbol",
               source: SOURCE_ID,
@@ -663,14 +688,23 @@ export default function TopPlacesMapView({
               },
             });
 
-            /** Anchor map to Top Places result #1 (first place for current category/country). */
+            /** Anchor map to selected place or Top Places result #1. */
             const fitBoundsOnce = () => {
               if (initialFitDoneRef.current) return;
               const features = geoJsonRef.current?.features;
               if (!features?.length) return;
               initialFitDoneRef.current = true;
-              const first = features[0] as GeoJSON.Feature<GeoJSON.Point>;
-              const c = first?.geometry?.coordinates;
+              const sid = selectedPlaceIdRef.current;
+              let target: GeoJSON.Feature<GeoJSON.Point> | undefined;
+              if (sid) {
+                target = features.find(
+                  (f: GeoJSON.Feature<GeoJSON.Point>) =>
+                    (f.properties as PlaceFeatureProps)?.id === sid,
+                ) as GeoJSON.Feature<GeoJSON.Point> | undefined;
+              }
+              if (!target)
+                target = features[0] as GeoJSON.Feature<GeoJSON.Point>;
+              const c = target?.geometry?.coordinates;
               if (c && c.length >= 2) {
                 const [lng, lat] = c;
                 map.flyTo({
@@ -754,6 +788,11 @@ export default function TopPlacesMapView({
               const feat = e.features?.[0];
               if (!feat?.geometry?.coordinates?.length) return;
               const props = feat.properties as PlaceFeatureProps;
+              const placeId = String(props.id ?? "");
+              if (onPlaceSelectRef.current && placeId) {
+                onPlaceSelectRef.current(placeId);
+                return;
+              }
               const [lng, lat] = feat.geometry.coordinates;
               if (popupRef.current) popupRef.current.remove();
               const thumbUrl = props.imageUrl
@@ -871,6 +910,7 @@ export default function TopPlacesMapView({
               } catch {}
             });
           [
+            SELECTED_PIN_LAYER_ID,
             "top-places-unclustered-name",
             UNCLUSTERED_SYMBOL_LAYER_ID,
             UNCLUSTERED_LAYER_ID,
@@ -920,10 +960,26 @@ export default function TopPlacesMapView({
     if (DEBUG_MAP)
       console.log("[TopPlacesMapView] setData: points =", data.features.length);
     logDebug(map);
-    // Anchor to Top Places result #1 when data changes (e.g. filter change)
+    // Update selected-pin highlight filter when data or selection changes
+    if (map.getLayer(SELECTED_PIN_LAYER_ID)) {
+      map.setFilter(SELECTED_PIN_LAYER_ID, [
+        "==",
+        ["get", "id"],
+        selectedPlaceId ?? "",
+      ]);
+    }
+    // Anchor to selected place or #1 when data changes (e.g. filter change)
     if (data.features.length > 0) {
-      const first = data.features[0] as GeoJSON.Feature<GeoJSON.Point>;
-      const c = first?.geometry?.coordinates;
+      const sid = selectedPlaceId;
+      let target = data.features[0] as GeoJSON.Feature<GeoJSON.Point>;
+      if (sid) {
+        const found = data.features.find(
+          (f: GeoJSON.Feature<GeoJSON.Point>) =>
+            (f.properties as PlaceFeatureProps)?.id === sid,
+        );
+        if (found) target = found as GeoJSON.Feature<GeoJSON.Point>;
+      }
+      const c = target?.geometry?.coordinates;
       if (c && c.length >= 2) {
         const [lng, lat] = c;
         map.flyTo({
@@ -933,7 +989,18 @@ export default function TopPlacesMapView({
         });
       }
     }
-  }, [placesWithCoords.length, places, logDebug]);
+  }, [placesWithCoords.length, places, selectedPlaceId, logDebug]);
+
+  // When selectedPlaceId changes, update highlight filter (flyTo is handled in the places/source effect above)
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !map.getLayer(SELECTED_PIN_LAYER_ID)) return;
+    map.setFilter(SELECTED_PIN_LAYER_ID, [
+      "==",
+      ["get", "id"],
+      selectedPlaceId ?? "",
+    ]);
+  }, [selectedPlaceId]);
 
   const hasPoints = placesWithCoords.length > 0;
 
@@ -987,7 +1054,7 @@ export default function TopPlacesMapView({
           </p>
         </div>
       )}
-      {hasPoints && (
+      {hasPoints && !onPlaceSelect && (
         <TopPlacesMapStrip
           places={places}
           onPlaceSelect={handleStripPlaceSelect}

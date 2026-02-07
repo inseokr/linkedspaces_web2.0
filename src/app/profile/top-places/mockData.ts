@@ -2,6 +2,8 @@
  * Mock data for Top Places page. Replace with API later.
  */
 
+import type { TopPlaceCardModel } from "./types";
+
 export type TopPlaceCategory =
   | "Cafe"
   | "Restaurants"
@@ -387,4 +389,54 @@ export function getCountryIdByName(name: string): string | undefined {
   return MOCK_COUNTRIES_WITH_COUNTS.find(
     (c) => c.name.toLowerCase() === name.toLowerCase(),
   )?.id;
+}
+
+/** Approximate [lat, lng] per city for map mock data */
+const CITY_COORDINATES: Record<string, [number, number]> = {
+  Tokyo: [35.6762, 139.6503],
+  Kyoto: [35.0116, 135.7681],
+  Rome: [41.9028, 12.4964],
+  Paris: [48.8566, 2.3522],
+  Florence: [43.7696, 11.2558],
+  "New York": [40.7128, -74.006],
+  Venice: [45.4408, 12.3155],
+  "San Francisco": [37.7749, -122.4194],
+  Seattle: [47.6062, -122.3321],
+  Naples: [40.8518, 14.2681],
+  Marseille: [43.2965, 5.3698],
+  Modena: [44.6471, 10.9252],
+  "Los Angeles": [34.0522, -118.2437],
+};
+
+const COUNTRY_TO_CODE: Record<string, string> = {
+  Japan: "JP",
+  Italy: "IT",
+  France: "FR",
+  "United States": "US",
+};
+
+/**
+ * Mock Top Places with coordinates for the Full Map page (UI only).
+ * Use this when real data is not wired yet.
+ */
+export function getMockTopPlacesForMap(): TopPlaceCardModel[] {
+  return MOCK_TOP_PLACES.map((p) => {
+    const coords = CITY_COORDINATES[p.city] ?? [0, 0];
+    return {
+      id: p.id,
+      title: p.title,
+      country: p.country,
+      countryCode:
+        COUNTRY_TO_CODE[p.country] ?? p.country.slice(0, 2).toUpperCase(),
+      city: p.city,
+      category: p.category,
+      imageUrl: p.imageUrl,
+      photosCount: p.photosCount,
+      visitsCount: p.visitsCount,
+      likesCount: p.likesCount,
+      rank: p.rank,
+      latitude: coords[0],
+      longitude: coords[1],
+    };
+  });
 }
