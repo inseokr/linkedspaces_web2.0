@@ -3,6 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { Search } from "lucide-react";
 import { getCachedUser } from "@/api/user";
 import {
   getViewAllPlacesFromUser,
@@ -119,6 +120,7 @@ function ViewAllPlacesPage() {
   >("All");
   const [selectedPlace, setSelectedPlace] =
     React.useState<PlaceWithSavedAt | null>(null);
+  const [searchQuery, setSearchQuery] = React.useState("");
 
   React.useEffect(() => {
     if (years.length > 0 && selectedYear === null) {
@@ -192,9 +194,20 @@ function ViewAllPlacesPage() {
         return false;
       if (selectedCategory !== "All" && p.category !== selectedCategory)
         return false;
+      if (
+        searchQuery.trim() &&
+        !p.title.toLowerCase().includes(searchQuery.trim().toLowerCase())
+      )
+        return false;
       return true;
     });
-  }, [allPlaces, effectiveYear, selectedCountryId, selectedCategory]);
+  }, [
+    allPlaces,
+    effectiveYear,
+    selectedCountryId,
+    selectedCategory,
+    searchQuery,
+  ]);
 
   const groups = React.useMemo(() => groupPlacesByMonth(filtered), [filtered]);
 
@@ -256,21 +269,41 @@ function ViewAllPlacesPage() {
 
   return (
     <div className="flex min-h-full flex-col">
-      {/* Top row: year pills + Go Back */}
-      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-gray-200 bg-white px-4 py-4 md:px-6 lg:px-8">
+      {/* My Places title + search bar + Go Back (same layout as My Places page) */}
+      <header className="shrink-0 border-b border-gray-200 bg-white px-4 pt-6 pb-4 md:px-6 md:pt-8 md:pb-5 lg:px-8">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h1 className="text-2xl font-bold text-gray-900 md:text-3xl">
+            My Places
+          </h1>
+          <div className="flex min-w-0 flex-1 items-center gap-2 rounded-full border-2 border-gray-300 bg-transparent px-4 py-2 text-gray-500 transition-colors focus-within:border-[var(--color-main)] focus-within:ring-2 focus-within:ring-[var(--color-main)] focus-within:ring-offset-2 sm:max-w-md">
+            <Search className="h-4 w-4 shrink-0 text-gray-400" aria-hidden />
+            <input
+              type="search"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search places"
+              className="min-w-0 flex-1 bg-transparent text-gray-900 placeholder:text-gray-500 focus:outline-none"
+              aria-label="Search places"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={() => router.back()}
+            className="shrink-0 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[var(--color-main)] focus:ring-offset-2"
+            aria-label="Go back"
+          >
+            Go Back
+          </button>
+        </div>
+      </header>
+
+      {/* Year pills row */}
+      <div className="flex flex-wrap items-center gap-4 border-b border-gray-200 bg-white px-4 py-4 md:px-6 lg:px-8">
         <YearPills
           years={years}
           selectedYear={effectiveYear}
           onSelect={setSelectedYear}
         />
-        <button
-          type="button"
-          onClick={() => router.back()}
-          className="shrink-0 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[var(--color-main)] focus:ring-offset-2"
-          aria-label="Go back"
-        >
-          Go Back
-        </button>
       </div>
 
       {/* Country filter row */}
