@@ -50,12 +50,12 @@ export default function BigPlaceCard({
       tabIndex={onPlaceClick ? 0 : undefined}
       onClick={onPlaceClick ? handleClick : undefined}
       onKeyDown={onPlaceClick ? handleKeyDown : undefined}
-      className={`flex h-full min-h-0 flex-col overflow-y-auto overflow-x-hidden rounded-xl border border-gray-200 bg-white shadow-md transition-shadow ${onPlaceClick ? "cursor-pointer hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-main)] focus:ring-offset-2" : ""}`}
+      className={`flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-md transition-shadow ${onPlaceClick ? "cursor-pointer hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-main)] focus:ring-offset-2" : ""}`}
       aria-label={`Featured: ${place.title}, ${place.city}, ${place.country}${onPlaceClick ? ". Click to open full screen" : ""}`}
     >
-      {/* Photo - full width, 4/3 aspect, image fills with object-cover */}
-      <div className="relative w-full shrink-0 overflow-hidden bg-gray-100">
-        <div className="aspect-[4/3] w-full">
+      {/* Photo - flexes to fill space so content below is always visible without scroll */}
+      <div className="relative min-h-0 flex-1 w-full overflow-hidden bg-gray-100">
+        <div className="h-full w-full">
           {!showPlaceholder ? (
             <img
               src={place.imageUrl}

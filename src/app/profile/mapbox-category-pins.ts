@@ -1,11 +1,36 @@
 /**
  * Category pins for Mapbox: orange circle + Google Material Icons.
- * Used on My Places map for unclustered markers when no thumbnail is available.
+ * Optional user sentiment badge (green/yellow/red) at top-right for thumbs up / side / down.
  */
 
 const ORANGE = "#f97316";
 const WHITE = "#ffffff";
-const SIZE = 48;
+/** Pin size in px (SVG); larger = bigger orange markers and category icons on the map */
+const SIZE = 64;
+
+/** User sentiment badge colors (top-right of place marker) */
+export const SENTIMENT_COLORS = {
+  positive: "#2ecc71",
+  neutral: "#f1c40f",
+  negative: "#e74c3c",
+} as const;
+
+export type UserSentiment = keyof typeof SENTIMENT_COLORS;
+
+/** Thumbs icons: white paths in 24px viewBox (Material-style). */
+const THUMB_UP_PATH =
+  "M1 21h4V9H1v12zm22-11c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 1 7.59 7.59C7.22 7.95 7 8.45 7 9v10c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z";
+const THUMB_DOWN_PATH =
+  "M15 3H6c-.83 0-1.54.5-1.84 1.22l-3.02 7.05c-.09.23-.14.47-.14.73v2c0 1.1.9 2 2 2h6.31l-.95 4.57-.03.32c0 .41.17.79.44 1.06L9.83 23l6.59-6.59c.36-.36.58-.86.58-1.41V5c0-1.1-.9-2-2-2zm4 0v12h4V3h-4z";
+/** Thumbs to side: hand with thumb/index pointing right (neutral) */
+const THUMB_SIDE_PATH =
+  "M22 12l-4-4 1.41-1.41L21 10.17H3v2h18.17l-2.58 2.58L22 12z";
+
+const SENTIMENT_PATHS: Record<UserSentiment, string> = {
+  positive: THUMB_UP_PATH,
+  neutral: THUMB_SIDE_PATH,
+  negative: THUMB_DOWN_PATH,
+};
 
 /** Material Icons 24px paths (Google Material Design Icons) */
 const ICON_PATHS: Record<string, string> = {
@@ -41,12 +66,17 @@ export function categoryToIconKey(category: string): string {
   return "place";
 }
 
-/** Image id for Mapbox addImage (e.g. "pin-cafe", "pin-place") */
-export function getCategoryPinImageId(category: string): string {
-  return `pin-${categoryToIconKey(category)}`;
+/** Image id for Mapbox addImage (e.g. "pin-cafe", "pin-place", or "pin-cafe-positive" with sentiment) */
+export function getCategoryPinImageId(
+  category: string,
+  sentiment?: UserSentiment,
+): string {
+  const key = categoryToIconKey(category);
+  if (sentiment) return `pin-${key}-${sentiment}`;
+  return `pin-${key}`;
 }
 
-/** All pin image ids that may be used (for preloading) */
+/** All base pin image ids (no sentiment badge) for preloading */
 export const CATEGORY_PIN_IDS = [
   "pin-cafe",
   "pin-restaurant",
@@ -55,14 +85,28 @@ export const CATEGORY_PIN_IDS = [
   "pin-place",
 ] as const;
 
+const CATEGORY_KEYS = ["cafe", "restaurant", "bar", "park", "place"] as const;
+
+/** All pin image ids including sentiment variants (for preloading when using sentiment badges) */
+export function getAllCategoryPinIdsForPreload(): string[] {
+  const ids: string[] = [...CATEGORY_PIN_IDS];
+  const sentiments: UserSentiment[] = ["positive", "neutral", "negative"];
+  for (const key of CATEGORY_KEYS) {
+    for (const s of sentiments) {
+      ids.push(`pin-${key}-${s}`);
+    }
+  }
+  return ids;
+}
+
 /**
  * Returns a data URL for an SVG: orange circle + white Material Icon in the center.
- * Size 48x48; icon scaled to fit inside the circle for better recognition.
+ * Icon scaled to fit inside the circle for better recognition.
  */
 export function getCategoryPinSvgDataUrl(category: string): string {
   const key = categoryToIconKey(category);
   const path = ICON_PATHS[key] ?? ICON_PATHS.place;
-  const iconSize = 20;
+  const iconSize = 26;
   const scale = iconSize / 24;
   const offset = (SIZE - iconSize) / 2;
   const center = SIZE / 2;
@@ -74,4 +118,133 @@ export function getCategoryPinSvgDataUrl(category: string): string {
   </g>
 </svg>`;
   return "data:image/svg+xml," + encodeURIComponent(svg);
+}
+
+/** Pin placement in composite: same as before so orange circle is at (0, 1) in composite */
+const BADGE_OFFSET_UP = 15;
+/** Sentiment badge: larger and overlapping the orange pin (top-right); center in pin’s clear of category icon */
+const BADGE_CX = 54;
+const BADGE_CY = 10;
+const BADGE_R = 18;
+const BADGE_ICON_SIZE = 22;
+/** Composite pin+badge canvas */
+const COMPOSITE_WIDTH = 84;
+const COMPOSITE_HEIGHT = 90;
+const VIEWBOX_MIN_Y = -20;
+/** Sentiment badge PNG size; positioned so it does not cover the category icon */
+const BADGE_IMAGE_SIZE = 36;
+const BADGE_IMAGE_X = BADGE_CX - BADGE_IMAGE_SIZE / 2;
+const BADGE_IMAGE_Y = BADGE_CY - BADGE_IMAGE_SIZE / 2;
+
+/** Public URLs for sentiment badge PNGs (fetch and set data URLs before preloading sentiment pins) */
+export const SENTIMENT_PNG_PATHS: Record<UserSentiment, string> = {
+  positive: "/images/sentiment/positive.png",
+  neutral: "/images/sentiment/neutral.png",
+  negative: "/images/sentiment/negative.png",
+};
+
+let sentimentPngDataUrls: Record<UserSentiment, string> | null = null;
+
+/** Call with fetched PNG data URLs so composite pins use your PNG assets instead of SVG-drawn badges */
+export function setSentimentPngDataUrls(
+  urls: Record<UserSentiment, string>,
+): void {
+  sentimentPngDataUrls = urls;
+}
+
+/** Fetch the three sentiment PNGs and return data URLs; calls setSentimentPngDataUrls on success. Returns true if all loaded. */
+export function fetchAndSetSentimentPngs(): Promise<boolean> {
+  const sentiments: UserSentiment[] = ["positive", "neutral", "negative"];
+  return Promise.all(
+    sentiments.map((s) =>
+      fetch(SENTIMENT_PNG_PATHS[s])
+        .then((r) =>
+          r.ok ? r.blob() : Promise.reject(new Error(r.statusText)),
+        )
+        .then(
+          (blob) =>
+            new Promise<string>((resolve, reject) => {
+              const r = new FileReader();
+              r.onload = () => resolve(r.result as string);
+              r.onerror = reject;
+              r.readAsDataURL(blob);
+            }),
+        ),
+    ),
+  )
+    .then((urls) => {
+      const record = { positive: urls[0], neutral: urls[1], negative: urls[2] };
+      setSentimentPngDataUrls(record);
+      return true;
+    })
+    .catch(() => false);
+}
+
+/**
+ * Returns a data URL for an SVG: orange category pin + user sentiment badge at top-right.
+ * Badge position: 15px up and 15px right of original. Uses PNG when set via setSentimentPngDataUrls.
+ */
+export function getCategoryPinWithSentimentSvgDataUrl(
+  category: string,
+  sentiment: UserSentiment,
+): string {
+  const key = categoryToIconKey(category);
+  const catPath = ICON_PATHS[key] ?? ICON_PATHS.place;
+  const iconSize = 26;
+  const scale = iconSize / 24;
+  const offset = (SIZE - iconSize) / 2;
+  const center = SIZE / 2;
+  const radius = SIZE / 2 - 2;
+  const pngDataUrl = sentimentPngDataUrls?.[sentiment];
+
+  if (pngDataUrl) {
+    const pinSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="${SIZE}" height="${SIZE}" viewBox="0 0 ${SIZE} ${SIZE}">
+  <circle cx="${center}" cy="${center}" r="${radius}" fill="${ORANGE}" stroke="${WHITE}" stroke-width="2"/>
+  <g transform="translate(${offset}, ${offset}) scale(${scale})">
+    <path fill="${WHITE}" d="${catPath}"/>
+  </g>
+</svg>`;
+    const pinDataUrl = "data:image/svg+xml," + encodeURIComponent(pinSvg);
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${COMPOSITE_WIDTH}" height="${COMPOSITE_HEIGHT}" viewBox="0 ${VIEWBOX_MIN_Y} ${COMPOSITE_WIDTH} ${COMPOSITE_HEIGHT}">
+  <image href="${pinDataUrl.replace(/"/g, "&quot;")}" x="0" y="${VIEWBOX_MIN_Y + BADGE_OFFSET_UP}" width="${SIZE}" height="${SIZE}"/>
+  <image href="${pngDataUrl.replace(/"/g, "&quot;")}" x="${BADGE_IMAGE_X}" y="${BADGE_IMAGE_Y}" width="${BADGE_IMAGE_SIZE}" height="${BADGE_IMAGE_SIZE}"/>
+</svg>`;
+    return "data:image/svg+xml," + encodeURIComponent(svg);
+  }
+
+  const color = SENTIMENT_COLORS[sentiment];
+  const thumbPath = SENTIMENT_PATHS[sentiment];
+  const thumbScale = BADGE_ICON_SIZE / 24;
+  const thumbOffset = BADGE_CX - (BADGE_ICON_SIZE / 2) * thumbScale;
+  const thumbY = BADGE_CY - (BADGE_ICON_SIZE / 2) * thumbScale;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${COMPOSITE_WIDTH}" height="${COMPOSITE_HEIGHT}" viewBox="0 ${VIEWBOX_MIN_Y} ${COMPOSITE_WIDTH} ${COMPOSITE_HEIGHT}">
+  <g transform="translate(0, ${VIEWBOX_MIN_Y + BADGE_OFFSET_UP})">
+    <circle cx="${center}" cy="${center}" r="${radius}" fill="${ORANGE}" stroke="${WHITE}" stroke-width="2"/>
+    <g transform="translate(${offset}, ${offset}) scale(${scale})">
+      <path fill="${WHITE}" d="${catPath}"/>
+    </g>
+  </g>
+  <circle cx="${BADGE_CX}" cy="${BADGE_CY}" r="${BADGE_R}" fill="${color}" stroke="${WHITE}" stroke-width="2"/>
+  <g transform="translate(${thumbOffset}, ${thumbY}) scale(${thumbScale})">
+    <path fill="${WHITE}" d="${thumbPath}"/>
+  </g>
+</svg>`;
+  return "data:image/svg+xml," + encodeURIComponent(svg);
+}
+
+/**
+ * Returns the data URL for a category pin image id (base or with sentiment).
+ * Use when preloading: if id is e.g. "pin-cafe-positive", returns composite SVG.
+ * Call setSentimentPngDataUrls with fetched PNG data URLs first to use PNG badges.
+ */
+export function getCategoryPinDataUrlById(imageId: string): string | null {
+  const match = imageId.match(
+    /^pin-(cafe|restaurant|bar|park|place)(-(positive|neutral|negative))?$/,
+  );
+  if (!match) return null;
+  const categoryKey = match[1];
+  const sentiment = match[2]?.slice(1) as UserSentiment | undefined;
+  if (sentiment)
+    return getCategoryPinWithSentimentSvgDataUrl(categoryKey, sentiment);
+  return getCategoryPinSvgDataUrl(categoryKey);
 }

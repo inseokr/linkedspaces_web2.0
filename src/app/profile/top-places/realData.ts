@@ -216,6 +216,53 @@ export function getCountryFilterId(place: TopPlaceCardModel): string {
   return place.countryCode || place.country.replace(/\s+/g, "-") || "unknown";
 }
 
+const ALL_CITIES_LABEL = "All cities";
+
+/**
+ * Derive city list for a selected country: "All cities" first, then city names
+ * sorted by activity (place count) descending. Empty/missing city strings are ignored.
+ * Use for the City filter row that appears when a country is selected.
+ */
+export function getCitiesForCountry(
+  places: TopPlaceCardModel[],
+  countryId: string,
+): string[] {
+  const inCountry = places.filter((p) => getCountryFilterId(p) === countryId);
+  const byCity = new Map<string, number>();
+  for (const p of inCountry) {
+    const city = (p.city ?? "").trim();
+    if (!city) continue;
+    byCity.set(city, (byCity.get(city) ?? 0) + 1);
+  }
+  const sorted = [...byCity.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .map(([name]) => name);
+  return [ALL_CITIES_LABEL, ...sorted];
+}
+
+export { ALL_CITIES_LABEL };
+
+/**
+ * Filter places by country and optional city. Use with other filters (category, sort).
+ * - selectedCountry "All" or empty: no country/city filter.
+ * - selectedCity "All cities": filter by country only.
+ * - selectedCity specific: filter by country and city.
+ */
+export function getFilteredPlaces(
+  places: TopPlaceCardModel[],
+  selectedCountry: string | null,
+  selectedCity: string,
+  getCountryId: (p: TopPlaceCardModel) => string = getCountryFilterId,
+): TopPlaceCardModel[] {
+  const isAllCountries = !selectedCountry || selectedCountry === "all";
+  if (isAllCountries) return places;
+  let result = places.filter((p) => getCountryId(p) === selectedCountry);
+  if (selectedCity && selectedCity !== ALL_CITIES_LABEL) {
+    result = result.filter((p) => (p.city ?? "").trim() === selectedCity);
+  }
+  return result;
+}
+
 /**
  * Filter placeVisitHistory: exclude hidden, use primary place when applicable.
  * Assume viewer is owner so privacy passes.

@@ -34,6 +34,9 @@ import {
 import {
   getCategoryPinImageId,
   getCategoryPinSvgDataUrl,
+  getCategoryPinDataUrlById,
+  getAllCategoryPinIdsForPreload,
+  fetchAndSetSentimentPngs,
   CATEGORY_PIN_IDS,
 } from "../../mapbox-category-pins";
 import type { TopPlaceCardModel } from "../types";
@@ -110,6 +113,7 @@ function buildGeoJSON(
     const imageUrl =
       p.imageUrl && String(p.imageUrl).trim() ? p.imageUrl.trim() : "";
     const category = (p.category ?? "Others").toString();
+    const sentiment = p.userSentiment;
     features.push({
       type: "Feature",
       geometry: { type: "Point", coordinates: [lng, lat] },
@@ -119,11 +123,57 @@ function buildGeoJSON(
         imageUrl,
         thumbKey: imageUrl ? `thumb:${p.id}` : DEFAULT_PIN_ID,
         category,
-        categoryPinId: getCategoryPinImageId(category),
+        categoryPinId: getCategoryPinImageId(category, sentiment),
       },
     });
   }
   return { type: "FeatureCollection", features };
+}
+
+/** Radius (mi) around map center to load places; improves performance by not rendering distant markers. */
+const VIEW_RADIUS_MILES = 500;
+const VIEW_RADIUS_KM = VIEW_RADIUS_MILES * 1.609344;
+
+/** Haversine distance in km between two points. */
+function distanceKm(
+  lat1: number,
+  lng1: number,
+  lat2: number,
+  lng2: number,
+): number {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLng / 2) *
+      Math.sin(dLng / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+/** Filter places within radius (km) of center; always include place with includePlaceId if provided. */
+function filterPlacesWithinRadius(
+  places: TopPlaceCardModel[],
+  centerLat: number,
+  centerLng: number,
+  radiusKm: number,
+  includePlaceId?: string | null,
+): TopPlaceCardModel[] {
+  const include = includePlaceId && places.find((p) => p.id === includePlaceId);
+  const filtered = places.filter((p) => {
+    if (!Number.isFinite(p.latitude) || !Number.isFinite(p.longitude))
+      return false;
+    return (
+      distanceKm(centerLat, centerLng, p.latitude, p.longitude) <= radiusKm
+    );
+  });
+  if (include && !filtered.some((p) => p.id === include.id)) {
+    filtered.push(include);
+  }
+  return filtered;
 }
 
 function ensureAbsoluteUrl(url: string): string {
@@ -256,6 +306,8 @@ export default function TopPlacesMapView({
   > | null>(null);
   const loadingClustersRef = useRef<Set<number>>(new Set());
   const initialFitDoneRef = useRef(false);
+  /** True after map has fired 'load'; used so the photos popup is created only when the map is ready (fixes popup missing on first open). */
+  const [mapReady, setMapReady] = useState(false);
   const [is3D, setIs3D] = useState(() => getPersisted3D());
   const is3DRef = useRef(is3D);
   is3DRef.current = is3D;
@@ -269,6 +321,8 @@ export default function TopPlacesMapView({
   const placesWithCoords = places.filter(
     (p) => Number.isFinite(p.latitude) && Number.isFinite(p.longitude),
   );
+  const placesWithCoordsRef = useRef(placesWithCoords);
+  placesWithCoordsRef.current = placesWithCoords;
   const geoJson = useRef(buildGeoJSON(placesWithCoords));
   geoJson.current = buildGeoJSON(placesWithCoords);
 
@@ -523,15 +577,30 @@ export default function TopPlacesMapView({
       mapboxglRef.current = mapboxgl;
       mapboxgl.accessToken = token;
       if (!containerRef.current) return;
+      // Open already positioned on #1 (or selected) place when possible
+      const withCoords = places.filter(
+        (p) => Number.isFinite(p.latitude) && Number.isFinite(p.longitude),
+      );
+      const initialPlace = withCoords.length
+        ? selectedPlaceId
+          ? (withCoords.find((p) => p.id === selectedPlaceId) ?? withCoords[0])
+          : withCoords[0]
+        : null;
+      const initialCenter: [number, number] = initialPlace
+        ? [initialPlace.longitude, initialPlace.latitude]
+        : DEFAULT_CENTER;
+      const initialZoom = initialPlace ? FIT_MAX_ZOOM : DEFAULT_ZOOM;
       map = new mapboxgl.Map({
         container: containerRef.current,
         style: "mapbox://styles/mapbox/streets-v12",
-        center: DEFAULT_CENTER,
-        zoom: DEFAULT_ZOOM,
+        center: initialCenter,
+        zoom: initialZoom,
       });
       mapRef.current = map;
+      if (initialPlace) initialFitDoneRef.current = true;
 
       map.on("load", () => {
+        setMapReady(true);
         applyLinkedSpacesMapStyle(map);
         add3DBuildingsLayer(map);
         const initial3D = getPersisted3D();
@@ -567,10 +636,20 @@ export default function TopPlacesMapView({
             if (!err && img && !map.hasImage(DEFAULT_PIN_ID))
               map.addImage(DEFAULT_PIN_ID, img, { sdf: false });
             const addSourceAndLayers = () => {
-              geoJsonRef.current = geoJson.current;
+              const centerLat = initialCenter[1];
+              const centerLng = initialCenter[0];
+              const filtered = filterPlacesWithinRadius(
+                withCoords,
+                centerLat,
+                centerLng,
+                VIEW_RADIUS_KM,
+                selectedPlaceIdRef.current ?? undefined,
+              );
+              const initialData = buildGeoJSON(filtered);
+              geoJsonRef.current = initialData;
               map.addSource(SOURCE_ID, {
                 type: "geojson",
-                data: geoJsonRef.current!,
+                data: initialData,
                 cluster: true,
                 clusterRadius: CLUSTER_RADIUS,
                 clusterMaxZoom: CLUSTER_MAX_ZOOM,
@@ -620,7 +699,7 @@ export default function TopPlacesMapView({
                       ],
                       DEFAULT_PIN_ID,
                     ],
-                    "icon-size": 0.6,
+                    "icon-size": 0.8,
                     "icon-allow-overlap": true,
                     "icon-ignore-placement": true,
                   },
@@ -651,7 +730,7 @@ export default function TopPlacesMapView({
                 filter: ["!", ["has", "point_count"]],
                 paint: {
                   "circle-color": "rgba(249, 115, 22, 0.9)",
-                  "circle-radius": 12,
+                  "circle-radius": 16,
                   "circle-stroke-width": 2,
                   "circle-stroke-color": "#fff",
                 },
@@ -662,7 +741,7 @@ export default function TopPlacesMapView({
                 source: SOURCE_ID,
                 filter: ["==", ["get", "id"], selectedPlaceIdRef.current ?? ""],
                 paint: {
-                  "circle-radius": 20,
+                  "circle-radius": 24,
                   "circle-opacity": 0,
                   "circle-stroke-width": 3,
                   "circle-stroke-color": "#fff",
@@ -681,7 +760,7 @@ export default function TopPlacesMapView({
                     ["coalesce", ["get", "categoryPinId"], "pin-place"],
                     ["get", "thumbKey"],
                   ],
-                  "icon-size": 0.65,
+                  "icon-size": 0.9,
                   "icon-allow-overlap": true,
                   "icon-ignore-placement": true,
                 },
@@ -693,15 +772,14 @@ export default function TopPlacesMapView({
                 filter: ["!", ["has", "point_count"]],
                 layout: {
                   "text-field": ["get", "name"],
-                  "text-font": [
-                    "DIN Offc Pro Medium",
-                    "Arial Unicode MS Regular",
-                  ],
+                  "text-font": ["DIN Offc Pro Bold", "Arial Unicode MS Bold"],
                   "text-size": 11,
-                  "text-anchor": "top",
-                  "text-offset": [0, 1.35],
+                  "text-anchor": "center",
+                  "text-justify": "center",
+                  "text-offset": [0, 2.6],
                   "text-max-width": 10,
-                  "text-allow-overlap": false,
+                  "text-allow-overlap": true,
+                  "text-ignore-placement": true,
                 },
                 paint: {
                   "text-color": "#fff",
@@ -813,6 +891,7 @@ export default function TopPlacesMapView({
                 const placeId = String(props.id ?? "");
                 if (onPlaceSelectRef.current && placeId) {
                   onPlaceSelectRef.current(placeId);
+                  onPlaceViewPhotosRef.current?.(placeId);
                   return;
                 }
                 const [lng, lat] = feat.geometry.coordinates;
@@ -830,7 +909,7 @@ export default function TopPlacesMapView({
                   .setLngLat([lng, lat])
                   .setHTML(
                     `<div style="max-width:200px;padding:4px 0;">
-                <div style="font-weight:600;font-size:14px;margin-bottom:6px;color:#111;">${escapeHtml(props.name || "Place")}</div>
+                <div style="font-weight:700;font-size:14px;margin-bottom:6px;color:#111;">${escapeHtml(props.name || "Place")}</div>
                 ${imgHtml}
                 <a href="/profile/top-places" style="display:inline-block;font-size:13px;color:var(--color-main,#2563eb);font-weight:500;">View place</a>
               </div>`,
@@ -846,92 +925,60 @@ export default function TopPlacesMapView({
                 onUnclusteredClick,
               );
 
+              const updateSourceByViewport = () => {
+                const src = map.getSource(SOURCE_ID) as
+                  | { setData?: (d: GeoJSON.FeatureCollection) => void }
+                  | undefined;
+                if (!src?.setData) return;
+                const center = map.getCenter();
+                const filtered = filterPlacesWithinRadius(
+                  placesWithCoordsRef.current,
+                  center.lat,
+                  center.lng,
+                  VIEW_RADIUS_KM,
+                  selectedPlaceIdRef.current ?? undefined,
+                );
+                const nextData = buildGeoJSON(filtered);
+                geoJsonRef.current = nextData;
+                src.setData(nextData);
+                if (DEBUG_MAP)
+                  console.log(
+                    "[TopPlacesMapView] moveend: points in view =",
+                    nextData.features.length,
+                  );
+              };
+              map.on("moveend", updateSourceByViewport);
+
               map.getCanvas().style.cursor = "default";
-              map.on(
-                "mouseenter",
-                CLUSTER_LAYER_ID,
-                () => (map.getCanvas().style.cursor = "pointer"),
-              );
-              map.on(
-                "mouseleave",
-                CLUSTER_LAYER_ID,
-                () => (map.getCanvas().style.cursor = "default"),
-              );
-              map.on(
-                "mouseenter",
-                CLUSTER_SYMBOL_LAYER_ID,
-                () => (map.getCanvas().style.cursor = "pointer"),
-              );
-              map.on(
-                "mouseleave",
-                CLUSTER_SYMBOL_LAYER_ID,
-                () => (map.getCanvas().style.cursor = "default"),
-              );
-              map.on(
-                "mouseenter",
-                CLUSTER_COUNT_LAYER_ID,
-                () => (map.getCanvas().style.cursor = "pointer"),
-              );
-              map.on(
-                "mouseleave",
-                CLUSTER_COUNT_LAYER_ID,
-                () => (map.getCanvas().style.cursor = "default"),
-              );
-              map.on(
-                "mouseenter",
-                UNCLUSTERED_LAYER_ID,
-                () => (map.getCanvas().style.cursor = "pointer"),
-              );
-              map.on(
-                "mouseleave",
-                UNCLUSTERED_LAYER_ID,
-                () => (map.getCanvas().style.cursor = "default"),
-              );
-              map.on(
-                "mouseenter",
-                UNCLUSTERED_SYMBOL_LAYER_ID,
-                () => (map.getCanvas().style.cursor = "pointer"),
-              );
-              map.on(
-                "mouseleave",
-                UNCLUSTERED_SYMBOL_LAYER_ID,
-                () => (map.getCanvas().style.cursor = "default"),
-              );
-              map.on(
-                "mouseenter",
-                "top-places-unclustered-name",
-                () => (map.getCanvas().style.cursor = "pointer"),
-              );
-              map.on(
-                "mouseleave",
-                "top-places-unclustered-name",
-                () => (map.getCanvas().style.cursor = "default"),
-              );
             };
-            let loaded = 0;
-            const total = CATEGORY_PIN_IDS.length;
-            CATEGORY_PIN_IDS.forEach((pinId) => {
-              if (map.hasImage(pinId)) {
-                loaded++;
-                if (loaded === total) addSourceAndLayers();
-                return;
-              }
-              const key = pinId.replace(/^pin-/, "");
-              const dataUrl = getCategoryPinSvgDataUrl(key);
-              const im = new Image();
-              im.onload = () => {
-                if (!map.hasImage(pinId))
-                  map.addImage(pinId, im, { sdf: false });
-                loaded++;
-                if (loaded === total) addSourceAndLayers();
-              };
-              im.onerror = () => {
-                loaded++;
-                if (loaded === total) addSourceAndLayers();
-              };
-              im.src = dataUrl;
+            const pinIdsToLoad = getAllCategoryPinIdsForPreload();
+            const total = pinIdsToLoad.length;
+            fetchAndSetSentimentPngs().then(() => {
+              let loaded = 0;
+              pinIdsToLoad.forEach((pinId) => {
+                if (map.hasImage(pinId)) {
+                  loaded++;
+                  if (loaded === total) addSourceAndLayers();
+                  return;
+                }
+                const dataUrl =
+                  getCategoryPinDataUrlById(pinId) ??
+                  getCategoryPinSvgDataUrl(pinId.replace(/^pin-/, ""));
+                const im = new Image();
+                im.onload = () => {
+                  if (!map.hasImage(pinId))
+                    map.addImage(pinId, im, { sdf: false });
+                  loaded++;
+                  if (loaded === total) addSourceAndLayers();
+                };
+                im.onerror = () => {
+                  loaded++;
+                  if (loaded === total) addSourceAndLayers();
+                };
+                im.src = dataUrl;
+              });
+              if (total === 0) addSourceAndLayers();
             });
-            if (total === 0) addSourceAndLayers();
           },
         ); // end loadImage callback
       }); // end map.on("load")
@@ -981,7 +1028,7 @@ export default function TopPlacesMapView({
           });
           if (map.getSource(SOURCE_ID)) map.removeSource(SOURCE_ID);
           if (map.hasImage(DEFAULT_PIN_ID)) map.removeImage(DEFAULT_PIN_ID);
-          CATEGORY_PIN_IDS.forEach((pinId) => {
+          getAllCategoryPinIdsForPreload().forEach((pinId) => {
             try {
               if (map.hasImage(pinId)) map.removeImage(pinId);
             } catch {}
@@ -996,6 +1043,7 @@ export default function TopPlacesMapView({
       clusterCacheRef.current = null;
       loadingClustersRef.current = new Set();
       initialFitDoneRef.current = false;
+      setMapReady(false);
     };
   }, [token, logDebug, syncThumbnailsForViewport, syncClusterThumbnails]);
 
@@ -1016,7 +1064,15 @@ export default function TopPlacesMapView({
       | { setData?: (d: GeoJSON.FeatureCollection) => void }
       | undefined;
     if (!source?.setData) return;
-    const data = geoJson.current;
+    const center = map.getCenter();
+    const filtered = filterPlacesWithinRadius(
+      placesWithCoords,
+      center.lat,
+      center.lng,
+      VIEW_RADIUS_KM,
+      selectedPlaceId ?? undefined,
+    );
+    const data = buildGeoJSON(filtered);
     geoJsonRef.current = data;
     source.setData(data);
     if (DEBUG_MAP)
@@ -1051,7 +1107,7 @@ export default function TopPlacesMapView({
         });
       }
     }
-  }, [placesWithCoords.length, places, selectedPlaceId, logDebug]);
+  }, [placesWithCoords, places, selectedPlaceId, logDebug]);
 
   // When selectedPlaceId changes, update highlight filter (flyTo is handled in the places/source effect above)
   useEffect(() => {
@@ -1064,8 +1120,10 @@ export default function TopPlacesMapView({
     ]);
   }, [selectedPlaceId]);
 
-  // Photos-around-pin popup: when a place is selected (e.g. in map modal), show its photos near the orange pin
+  // Photos-around-pin popup: when a place is selected (e.g. in map modal), show its photos near the orange pin.
+  // Depends on mapReady so we create the popup only after the map has loaded (fixes missing photos on first open).
   useEffect(() => {
+    if (!mapReady) return;
     const map = mapRef.current;
     const mapboxgl = mapboxglRef.current;
     if (!map || !mapboxgl) return;
@@ -1083,32 +1141,37 @@ export default function TopPlacesMapView({
       !Number.isFinite(place.longitude)
     )
       return;
-    const uris =
-      (place.photoListUris?.length ?? 0) > 0
-        ? place.photoListUris!
-        : place.imageUrl
-          ? [place.imageUrl]
-          : [];
+    // Use imageUrl first (same as BigPlaceCard / pin) so the main photo shows correctly when opening the map
+    const rest = (place.photoListUris ?? []).filter(
+      (u) => u && String(u).trim() !== String(place.imageUrl ?? "").trim(),
+    );
+    const uris = place.imageUrl
+      ? [place.imageUrl, ...rest]
+      : rest.length > 0
+        ? rest
+        : [];
     const urisToShow = uris.slice(0, 4);
     if (urisToShow.length === 0) return;
     const imgs = urisToShow
       .map(
-        (u) =>
-          `<img src="${escapeAttr(ensureAbsoluteUrl(u))}" alt="" loading="lazy" style="width:52px;height:52px;object-fit:cover;border-radius:8px;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,0.2);" />`,
+        (u, i) =>
+          `<img src="${escapeAttr(ensureAbsoluteUrl(u))}" alt="" loading="${i === 0 ? "eager" : "lazy"}" style="width:52px;height:52px;object-fit:cover;border-radius:8px;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,0.2);" />`,
       )
       .join("");
+    const placeTitle = escapeHtml(place.title || "Place");
     const viewBtnHtml =
       onPlaceViewPhotos != null
         ? `<button type="button" data-view-place style="margin-top:8px;width:100%;padding:6px 12px;font-size:13px;font-weight:500;color:#fff;background:var(--color-main,#2563eb);border:none;border-radius:8px;cursor:pointer;">View</button>`
         : "";
-    const html = `<div style="padding:6px;max-width:260px;background:rgba(255,255,255,0.95);border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,0.15);">
+    const html = `<div style="padding:14px 10px 10px;max-width:260px;background:rgba(255,255,255,0.95);border-radius:15px;box-shadow:0 2px 12px rgba(0,0,0,0.15);">
+      <div style="font-weight:700;font-size:14px;color:#111;margin-bottom:14px;">${placeTitle}</div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center;">${imgs}</div>
       ${viewBtnHtml}
     </div>`;
     const placeIdToView = selectedPlaceId;
     const popup = new mapboxgl.Popup({
       closeButton: false,
-      offset: 28,
+      offset: 52,
       anchor: "top",
     })
       .setLngLat([place.longitude, place.latitude])
@@ -1133,7 +1196,7 @@ export default function TopPlacesMapView({
         selectedPhotosPopupRef.current = null;
       }
     };
-  }, [selectedPlaceId, places, onPlaceSelect, onPlaceViewPhotos]);
+  }, [mapReady, selectedPlaceId, places, onPlaceSelect, onPlaceViewPhotos]);
 
   const hasPoints = placesWithCoords.length > 0;
 

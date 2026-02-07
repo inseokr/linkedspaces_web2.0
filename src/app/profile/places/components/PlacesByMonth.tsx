@@ -11,7 +11,7 @@ interface PlacesByMonthProps {
 }
 
 const MONTH_HEADING_STYLE =
-  "text-2xl font-bold text-gray-900 tracking-tight mt-8 first:mt-0 mb-4";
+  "text-2xl font-bold text-gray-900 tracking-tight mt-0 mb-4";
 
 const MONTH_ABBREV: Record<number, string> = {
   0: "Jan",
@@ -34,10 +34,11 @@ export default function PlacesByMonth({
 }: PlacesByMonthProps) {
   return (
     <div className="pb-12">
-      {groups.map(({ monthLabel, places }) => (
+      {groups.map(({ monthLabel, places }, index) => (
         <section
           key={monthLabel}
           aria-labelledby={`month-${monthLabel.replace(/\s/g, "-")}`}
+          className={index === 0 ? undefined : "pt-10"}
         >
           <h2
             id={`month-${monthLabel.replace(/\s/g, "-")}`}

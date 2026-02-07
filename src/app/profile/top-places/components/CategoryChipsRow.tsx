@@ -181,7 +181,6 @@ export default function CategoryChipsRow({
             aria-label={`Filter by ${cat.name}`}
           >
             {cat.name}
-            {cat.count != null ? ` (${cat.count})` : ""}
           </button>
         );
       })}

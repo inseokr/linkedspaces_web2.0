@@ -41,4 +41,6 @@ export interface TopPlaceCardModel {
   /** For map: from placeVisitHistory coordinate; omit if not available */
   latitude?: number;
   longitude?: number;
+  /** User sentiment for map marker badge: green (positive), yellow (neutral), red (negative) */
+  userSentiment?: "positive" | "neutral" | "negative";
 }

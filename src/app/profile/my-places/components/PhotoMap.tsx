@@ -36,7 +36,9 @@ import {
 import {
   getCategoryPinImageId,
   getCategoryPinSvgDataUrl,
-  CATEGORY_PIN_IDS,
+  getCategoryPinDataUrlById,
+  getAllCategoryPinIdsForPreload,
+  fetchAndSetSentimentPngs,
 } from "../../mapbox-category-pins";
 import type { SavedPlace } from "../mockData";
 
@@ -83,8 +85,8 @@ export interface PhotoMapProps {
   places: SavedPlace[];
   /** Single source of truth: which place is selected (list click). Drives marker highlight and camera flyTo. */
   activePlaceId?: string | null;
-  /** Called when user clicks a place marker; use to open full-screen place modal. */
-  onPlaceClick?: (placeId: string) => void;
+  /** Called when user clicks a place marker or a photo in the preview popup. Pass photoIndex (0-based) when opening from a specific thumbnail so the modal can start at that photo. */
+  onPlaceClick?: (placeId: string, photoIndex?: number) => void;
   /** Called when map view changes (moveend/zoomend) so parent can restore it when modal closes. */
   onMapViewChange?: (center: [number, number], zoom: number) => void;
   /** When set, map flies to this view (e.g. after closing place modal). Call onRestoreComplete when done. */
@@ -123,6 +125,7 @@ function buildGeoJSON(
         ? p.thumbnailUrl.trim()
         : null;
     const category = (p.category ?? "Others").toString();
+    const sentiment = p.sentiment;
     features.push({
       type: "Feature",
       id,
@@ -133,7 +136,7 @@ function buildGeoJSON(
         placeName: p.name ?? "",
         thumbnailUrl,
         thumbKey: thumbnailUrl ? `thumb:${p.id}` : DEFAULT_PIN_ID,
-        categoryPinId: getCategoryPinImageId(category),
+        categoryPinId: getCategoryPinImageId(category, sentiment),
         createdAt: p.visitedDate ?? "",
         address: p.address ?? "",
       },
@@ -178,6 +181,21 @@ function ensureAbsoluteUrl(url: string): string {
   return url;
 }
 
+function escapeAttr(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+function escapeHtml(s: string): string {
+  const el = document.createElement("div");
+  el.textContent = s;
+  return el.innerHTML;
+}
+
 const FOCUS_ZOOM = 14;
 const FLY_DURATION_MS = 800;
 
@@ -199,6 +217,15 @@ export default function PhotoMap({
   onMapViewChangeRef.current = onMapViewChange;
   const onMapBackgroundClickRef = useRef(onMapBackgroundClick);
   onMapBackgroundClickRef.current = onMapBackgroundClick;
+  const markerPopupRef = useRef<any>(null);
+  const placesForPopupRef = useRef<SavedPlace[]>([]);
+  const openPopupFromHoverRef = useRef(false);
+  const hoverCloseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+  const showPopupForPlaceIdRef = useRef<((placeId: string) => void) | null>(
+    null,
+  );
   const thumbCacheRef = useRef<ReturnType<typeof createThumbCache> | null>(
     null,
   );
@@ -225,6 +252,7 @@ export default function PhotoMap({
   const validPlaces = places.filter(
     (p) => Number.isFinite(p.lat) && Number.isFinite(p.lng),
   );
+  placesForPopupRef.current = validPlaces;
   const geoJson = useRef(buildGeoJSON(validPlaces));
   geoJson.current = buildGeoJSON(validPlaces);
 
@@ -456,7 +484,7 @@ export default function PhotoMap({
               }
 
               const addCategoryPinsThenLayers = () => {
-                const pinIds = [...CATEGORY_PIN_IDS];
+                const pinIds = getAllCategoryPinIdsForPreload();
                 let loaded = 0;
                 const total = pinIds.length;
                 const addSourceAndLayers = () => {
@@ -523,8 +551,8 @@ export default function PhotoMap({
                         "circle-radius": [
                           "case",
                           ["boolean", ["feature-state", "active"], false],
+                          26,
                           22,
-                          18,
                         ],
                         "circle-stroke-width": [
                           "case",
@@ -547,7 +575,7 @@ export default function PhotoMap({
                           ["coalesce", ["get", "categoryPinId"], "pin-place"],
                           ["get", "thumbKey"],
                         ],
-                        "icon-size": 0.9,
+                        "icon-size": 1.1,
                         "icon-allow-overlap": true,
                         "icon-ignore-placement": true,
                       },
@@ -565,7 +593,7 @@ export default function PhotoMap({
                         ],
                         "text-size": 11,
                         "text-anchor": "top",
-                        "text-offset": [0, 2.2],
+                        "text-offset": [0, 3.4],
                         "text-optional": true,
                         "text-allow-overlap": false,
                         "text-ignore-placement": false,
@@ -591,7 +619,7 @@ export default function PhotoMap({
                           ],
                           "text-size": 11,
                           "text-anchor": "top",
-                          "text-offset": [0, 2.2],
+                          "text-offset": [0, 3.4],
                           "text-optional": true,
                           "text-allow-overlap": false,
                           "text-ignore-placement": false,
@@ -613,28 +641,32 @@ export default function PhotoMap({
                   }
                 };
 
-                pinIds.forEach((pinId) => {
-                  if (map.hasImage(pinId)) {
-                    loaded++;
-                    if (loaded === total) addSourceAndLayers();
-                    return;
-                  }
-                  const key = pinId.replace(/^pin-/, "");
-                  const dataUrl = getCategoryPinSvgDataUrl(key);
-                  const im = new Image();
-                  im.onload = () => {
-                    if (!map.hasImage(pinId))
-                      map.addImage(pinId, im, { sdf: false });
-                    loaded++;
-                    if (loaded === total) addSourceAndLayers();
-                  };
-                  im.onerror = () => {
-                    loaded++;
-                    if (loaded === total) addSourceAndLayers();
-                  };
-                  im.src = dataUrl;
+                fetchAndSetSentimentPngs().then(() => {
+                  pinIds.forEach((pinId) => {
+                    if (map.hasImage(pinId)) {
+                      loaded++;
+                      if (loaded === total) addSourceAndLayers();
+                      return;
+                    }
+                    const key = pinId.replace(/^pin-/, "");
+                    const dataUrl =
+                      getCategoryPinDataUrlById(pinId) ??
+                      getCategoryPinSvgDataUrl(key);
+                    const im = new Image();
+                    im.onload = () => {
+                      if (!map.hasImage(pinId))
+                        map.addImage(pinId, im, { sdf: false });
+                      loaded++;
+                      if (loaded === total) addSourceAndLayers();
+                    };
+                    im.onerror = () => {
+                      loaded++;
+                      if (loaded === total) addSourceAndLayers();
+                    };
+                    im.src = dataUrl;
+                  });
+                  if (total === 0) addSourceAndLayers();
                 });
-                if (total === 0) addSourceAndLayers();
               };
 
               addCategoryPinsThenLayers();
@@ -733,8 +765,114 @@ export default function PhotoMap({
               map.on("click", CLUSTER_LAYER_ID, onClusterClick);
               map.on("click", CLUSTER_COUNT_LAYER_ID, onClusterClick);
 
-              const onMarkerClick = (e: any) => {
-                e.originalEvent?.stopPropagation();
+              const showMarkerPopup = (
+                placeId: string,
+                lng: number,
+                lat: number,
+                fromHover: boolean,
+              ) => {
+                const place = placesForPopupRef.current.find(
+                  (p) => p.id === String(placeId),
+                );
+                if (!place) return;
+                if (markerPopupRef.current) {
+                  try {
+                    markerPopupRef.current.remove();
+                  } catch {}
+                  markerPopupRef.current = null;
+                }
+                if (hoverCloseTimeoutRef.current) {
+                  clearTimeout(hoverCloseTimeoutRef.current);
+                  hoverCloseTimeoutRef.current = null;
+                }
+                openPopupFromHoverRef.current = fromHover;
+                const uris =
+                  (place.photoListUris?.length ?? 0) > 0
+                    ? place.photoListUris!.slice(0, 4)
+                    : place.thumbnailUrl
+                      ? [place.thumbnailUrl]
+                      : [];
+                const imgs = uris
+                  .map(
+                    (u, i) =>
+                      `<div data-view-place data-photo-index="${i}" style="cursor:pointer;line-height:0;border-radius:6px;overflow:hidden;"><img src="${escapeAttr(ensureAbsoluteUrl(u))}" alt="" loading="lazy" style="width:64px;height:64px;object-fit:cover;display:block;" /></div>`,
+                  )
+                  .join("");
+                const placeTitle = escapeHtml(place.name ?? "Place");
+                const viewBtnHtml = `<button type="button" data-view-place data-photo-index="0" style="margin-top:10px;width:100%;padding:10px 16px;font-size:14px;font-weight:600;color:#fff;background:var(--color-main,#2563eb);border:none;border-radius:10px;cursor:pointer;">View</button>`;
+                const html = `<div style="padding:18px 14px 14px;min-width:160px;max-width:280px;background:#fff;border-radius:15px;box-shadow:0 4px 20px rgba(0,0,0,0.12);">
+                  <div style="font-weight:600;font-size:14px;color:#111;margin-bottom:16px;">${placeTitle}</div>
+                  <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px;justify-items:stretch;">${imgs || '<div style="grid-column:1/-1;height:80px;background:#f3f4f6;border-radius:8px;"></div>'}</div>
+                  ${viewBtnHtml}
+                </div>`;
+                const popup = new mapboxgl.Popup({
+                  closeButton: true,
+                  offset: 52,
+                  anchor: "top",
+                  className: "my-map-marker-popup",
+                })
+                  .setLngLat([lng, lat])
+                  .setHTML(html);
+                const placeIdToView = String(placeId);
+                popup.on("open", () => {
+                  const el = popup.getElement();
+                  if (fromHover && el) {
+                    el.addEventListener("mouseenter", () => {
+                      if (hoverCloseTimeoutRef.current) {
+                        clearTimeout(hoverCloseTimeoutRef.current);
+                        hoverCloseTimeoutRef.current = null;
+                      }
+                    });
+                    el.addEventListener("mouseleave", onMarkerMouseLeave);
+                    popup.once("close", () => {
+                      el.removeEventListener("mouseleave", onMarkerMouseLeave);
+                    });
+                  }
+                  el?.querySelectorAll?.("[data-view-place]")?.forEach(
+                    (node) => {
+                      const handler = (ev: Event) => {
+                        ev.preventDefault();
+                        const el = ev.currentTarget as HTMLElement;
+                        const idxAttr = el?.getAttribute?.("data-photo-index");
+                        const photoIndex =
+                          idxAttr != null && idxAttr !== ""
+                            ? parseInt(idxAttr, 10)
+                            : 0;
+                        onPlaceClickRef.current?.(
+                          placeIdToView,
+                          Number.isFinite(photoIndex) ? photoIndex : 0,
+                        );
+                        try {
+                          popup.remove();
+                        } catch {}
+                        markerPopupRef.current = null;
+                      };
+                      node.addEventListener("click", handler);
+                      popup.once("close", () =>
+                        node.removeEventListener("click", handler),
+                      );
+                    },
+                  );
+                });
+                popup.addTo(map);
+                markerPopupRef.current = popup;
+              };
+
+              showPopupForPlaceIdRef.current = (placeId: string) => {
+                const feat = geoJsonRef.current?.features?.find(
+                  (f) =>
+                    (f.properties as Record<string, unknown>)?.placeId ===
+                      placeId ||
+                    (f as GeoJSON.Feature & { id?: string }).id === placeId,
+                ) as GeoJSON.Feature<GeoJSON.Point> | undefined;
+                const coords = feat?.geometry?.coordinates;
+                if (!coords || coords.length < 2) return;
+                showMarkerPopup(placeId, coords[0], coords[1], false);
+              };
+
+              const getPlaceIdAndCoordsFromEvent = (e: {
+                point: { x: number; y: number };
+              }): { placeId: string; lng: number; lat: number } | null => {
                 const features = map.queryRenderedFeatures(e.point, {
                   layers: [
                     UNCLUSTERED_CIRCLE_LAYER_ID,
@@ -743,11 +881,23 @@ export default function PhotoMap({
                     `${UNCLUSTERED_PLACE_NAME_LAYER_ID}-border`,
                   ],
                 });
-                if (!features.length) return;
+                if (!features.length) return null;
                 const placeId = (features[0].properties?.placeId ??
                   features[0].properties?.id) as string | undefined;
-                if (placeId) onPlaceClickRef.current?.(String(placeId));
+                if (!placeId) return null;
+                const geom = features[0].geometry as GeoJSON.Point;
+                const coords = geom?.coordinates;
+                const lng = coords?.[0] ?? 0;
+                const lat = coords?.[1] ?? 0;
+                return { placeId: String(placeId), lng, lat };
               };
+
+              const onMarkerClick = (e: any) => {
+                e.originalEvent?.stopPropagation();
+                const data = getPlaceIdAndCoordsFromEvent(e);
+                if (data) onPlaceClickRef.current?.(data.placeId, 0);
+              };
+
               map.on("click", UNCLUSTERED_CIRCLE_LAYER_ID, onMarkerClick);
               map.on("click", UNCLUSTERED_SYMBOL_LAYER_ID, onMarkerClick);
               map.on("click", UNCLUSTERED_PLACE_NAME_LAYER_ID, onMarkerClick);
@@ -774,50 +924,6 @@ export default function PhotoMap({
               map.on("click", onMapClick);
 
               map.getCanvas().style.cursor = "default";
-              map.on("mouseenter", CLUSTER_LAYER_ID, () => {
-                map.getCanvas().style.cursor = "pointer";
-              });
-              map.on("mouseleave", CLUSTER_LAYER_ID, () => {
-                map.getCanvas().style.cursor = "default";
-              });
-              map.on("mouseenter", CLUSTER_COUNT_LAYER_ID, () => {
-                map.getCanvas().style.cursor = "pointer";
-              });
-              map.on("mouseleave", CLUSTER_COUNT_LAYER_ID, () => {
-                map.getCanvas().style.cursor = "default";
-              });
-              map.on("mouseenter", UNCLUSTERED_CIRCLE_LAYER_ID, () => {
-                map.getCanvas().style.cursor = "pointer";
-              });
-              map.on("mouseleave", UNCLUSTERED_CIRCLE_LAYER_ID, () => {
-                map.getCanvas().style.cursor = "default";
-              });
-              map.on("mouseenter", UNCLUSTERED_SYMBOL_LAYER_ID, () => {
-                map.getCanvas().style.cursor = "pointer";
-              });
-              map.on("mouseleave", UNCLUSTERED_SYMBOL_LAYER_ID, () => {
-                map.getCanvas().style.cursor = "default";
-              });
-              map.on("mouseenter", UNCLUSTERED_PLACE_NAME_LAYER_ID, () => {
-                map.getCanvas().style.cursor = "pointer";
-              });
-              map.on("mouseleave", UNCLUSTERED_PLACE_NAME_LAYER_ID, () => {
-                map.getCanvas().style.cursor = "default";
-              });
-              map.on(
-                "mouseenter",
-                `${UNCLUSTERED_PLACE_NAME_LAYER_ID}-border`,
-                () => {
-                  map.getCanvas().style.cursor = "pointer";
-                },
-              );
-              map.on(
-                "mouseleave",
-                `${UNCLUSTERED_PLACE_NAME_LAYER_ID}-border`,
-                () => {
-                  map.getCanvas().style.cursor = "default";
-                },
-              );
             },
           );
         });
@@ -839,6 +945,17 @@ export default function PhotoMap({
       if (resizeObserverRef.current && containerRef.current) {
         resizeObserverRef.current.disconnect();
         resizeObserverRef.current = null;
+      }
+      if (hoverCloseTimeoutRef.current) {
+        clearTimeout(hoverCloseTimeoutRef.current);
+        hoverCloseTimeoutRef.current = null;
+      }
+      showPopupForPlaceIdRef.current = null;
+      if (markerPopupRef.current) {
+        try {
+          markerPopupRef.current.remove();
+        } catch {}
+        markerPopupRef.current = null;
       }
       if (map) {
         try {
@@ -863,7 +980,7 @@ export default function PhotoMap({
           });
           if (map.getSource(SOURCE_ID)) map.removeSource(SOURCE_ID);
           if (map.hasImage(DEFAULT_PIN_ID)) map.removeImage(DEFAULT_PIN_ID);
-          CATEGORY_PIN_IDS.forEach((id) => {
+          getAllCategoryPinIdsForPreload().forEach((id) => {
             try {
               if (map.hasImage(id)) map.removeImage(id);
             } catch {}

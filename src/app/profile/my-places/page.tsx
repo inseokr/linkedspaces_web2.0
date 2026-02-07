@@ -2,7 +2,14 @@
 
 import { useMemo, useState, useRef, useCallback, useEffect } from "react";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, LayoutGrid, Search, X } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  LayoutGrid,
+  Maximize2,
+  Search,
+  X,
+} from "lucide-react";
 import { getCachedUser } from "@/api/user";
 import { getMyPlacesFromUser } from "./realData";
 import type { PlaceCategory, SavedPlace } from "./mockData";
@@ -158,6 +165,7 @@ export default function ProfileMyPlacesPage() {
    */
   const [activePlaceId, setActivePlaceId] = useState<string | null>(null);
   const [selectedPlace, setSelectedPlace] = useState<SavedPlace | null>(null);
+  const [lightboxStartIndex, setLightboxStartIndex] = useState(0);
   const [openWithComments, setOpenWithComments] = useState(false);
   const [searchLightboxImages, setSearchLightboxImages] = useState<
     LightboxImage[] | null
@@ -345,6 +353,11 @@ export default function ProfileMyPlacesPage() {
   if (!hasPlaces) {
     return (
       <div className="flex min-h-full flex-col">
+        <header className="shrink-0 border-b border-gray-200 bg-white px-4 pt-6 pb-4 md:px-6 md:pt-8 md:pb-5 lg:px-8">
+          <h1 className="text-2xl font-bold text-gray-900 md:text-3xl">
+            My Places
+          </h1>
+        </header>
         <section className="shrink-0 border-b border-gray-200 bg-white px-4 py-6 md:px-6 lg:px-8">
           <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-xl font-semibold text-gray-900">
@@ -373,6 +386,13 @@ export default function ProfileMyPlacesPage() {
 
   return (
     <div className="flex min-h-full flex-col">
+      {/* Page title: My Places at top left; padding pushes Latest Activity and My Map down */}
+      <header className="shrink-0 border-b border-gray-200 bg-white px-4 pt-6 pb-4 md:px-6 md:pt-8 md:pb-5 lg:px-8">
+        <h1 className="text-2xl font-bold text-gray-900 md:text-3xl">
+          My Places
+        </h1>
+      </header>
+
       {/* Latest Activity: header and carousel share same horizontal layout for a clean stretch */}
       <section
         className="shrink-0 border-b border-gray-200 bg-white px-4 py-6 md:px-6 lg:px-8"
@@ -415,12 +435,14 @@ export default function ProfileMyPlacesPage() {
           onPlaceClick={(placeId) => {
             setSearchLightboxImages(null);
             setOpenWithComments(false);
+            setLightboxStartIndex(0);
             const full = savedPlaces.find((p) => p.id === placeId);
             if (full) setSelectedPlace(full);
           }}
           onCommentClick={(placeId) => {
             setSearchLightboxImages(null);
             setOpenWithComments(true);
+            setLightboxStartIndex(0);
             const full = savedPlaces.find((p) => p.id === placeId);
             if (full) setSelectedPlace(full);
           }}
@@ -462,13 +484,22 @@ export default function ProfileMyPlacesPage() {
           </div>
         )}
         {!mapFullScreen && (
-          <div className="mb-4">
+          <div className="mb-4 flex w-full items-center justify-between gap-3">
             <h2
               id="my-map-heading"
               className="text-xl font-semibold text-gray-900"
             >
               My Map
             </h2>
+            <button
+              type="button"
+              onClick={() => setMapFullScreen(true)}
+              className="ml-auto flex shrink-0 items-center gap-2 rounded-lg border border-gray-200 bg-white/95 px-3 py-2 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[var(--color-main)] focus:ring-offset-2"
+              aria-label="Full screen map"
+            >
+              <Maximize2 className="h-4 w-4" />
+              Full Screen
+            </button>
           </div>
         )}
 
@@ -498,12 +529,14 @@ export default function ProfileMyPlacesPage() {
                 saveMapViewBeforeOpen();
                 setSearchLightboxImages(null);
                 setOpenWithComments(false);
+                setLightboxStartIndex(0);
                 setSelectedPlace(place);
               }}
               onCommentClick={(place) => {
                 saveMapViewBeforeOpen();
                 setSearchLightboxImages(null);
                 setOpenWithComments(true);
+                setLightboxStartIndex(0);
                 setSelectedPlace(place);
               }}
             />
@@ -544,10 +577,11 @@ export default function ProfileMyPlacesPage() {
             <PhotoMap
               places={placesForMap}
               activePlaceId={activePlaceId}
-              onPlaceClick={(placeId) => {
+              onPlaceClick={(placeId, photoIndex) => {
                 saveMapViewBeforeOpen();
                 setSearchLightboxImages(null);
                 setActivePlaceId(placeId);
+                setLightboxStartIndex(photoIndex ?? 0);
                 const full = savedPlaces.find((p) => p.id === placeId);
                 if (full) setSelectedPlace(full);
               }}
@@ -587,13 +621,14 @@ export default function ProfileMyPlacesPage() {
           );
           setActivePlaceId(null);
           setOpenWithComments(false);
+          setLightboxStartIndex(0);
           if (searchLightboxImages != null) setSearchLightboxImages(null);
           else setSelectedPlace(null);
         }}
         images={
           searchLightboxImages?.length ? searchLightboxImages : lightboxImages
         }
-        startIndex={0}
+        startIndex={lightboxStartIndex}
         initialCommentsByPlaceId={initialCommentsByPlaceId}
         initialCommentsOpen={openWithComments}
         onEdit={

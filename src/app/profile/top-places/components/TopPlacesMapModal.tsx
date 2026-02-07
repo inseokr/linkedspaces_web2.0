@@ -226,9 +226,22 @@ export default function TopPlacesMapModal({
         />
       </div>
 
-      {/* Middle-left: Big Place Card + horizontal list — height tied to viewport, scrolls on short screens */}
+      {/* Middle-left: section title + Big Place Card + horizontal list — height tied to viewport, scrolls on short screens */}
       <div className="absolute bottom-4 left-6 top-[11rem] z-10 flex w-[min(540px,calc(100vw-4rem))] flex-col md:left-10 md:w-[min(580px,calc(100vw-5rem))] lg:left-12 lg:w-[min(620px,calc(100vw-6rem))]">
         <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overflow-x-hidden rounded-xl border border-gray-200/90 bg-white/95 p-3 shadow-xl backdrop-blur-sm md:gap-4 md:p-4 [scrollbar-width:thin]">
+          {/* Dynamic title: "Top Places Globally" or "Top Places [Country Name]" — matches main Top Places page */}
+          <h2 className="shrink-0 text-lg font-semibold text-gray-900 md:text-xl">
+            {activeCountryId && activeCountryId !== "all"
+              ? (() => {
+                  const country = countryPills.find(
+                    (c) => c.id === activeCountryId,
+                  );
+                  return country
+                    ? `Top Places ${country.name}`
+                    : "Top Places Globally";
+                })()
+              : "Top Places Globally"}
+          </h2>
           {/* Big Place Card at top — takes remaining space */}
           <div className="flex min-h-0 flex-1 flex-col">
             {selectedPlace ? (
@@ -273,10 +286,6 @@ export default function TopPlacesMapModal({
               </div>
             )}
           </div>
-          {/* Top Places title + horizontal list at bottom */}
-          <h3 className="mt-4 shrink-0 text-base font-semibold text-gray-900 md:mt-5 md:text-lg">
-            Top Places
-          </h3>
           <div className="mt-2 shrink-0 md:mt-3">
             <TopPlacesHorizontalList
               places={places}
