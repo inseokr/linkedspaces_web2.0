@@ -1,13 +1,8 @@
 "use client";
 
 import { useCallback, useRef, useState, useEffect } from "react";
-import {
-  ExternalLink,
-  MessageCircle,
-  MoreVertical,
-  ThumbsUp,
-  ThumbsDown,
-} from "lucide-react";
+import { ExternalLink, MessageCircle, MoreVertical } from "lucide-react";
+import SentimentIcon from "@/components/ui/SentimentIcon";
 import type { SavedPlace } from "../mockData";
 
 interface PlacesListProps {
@@ -31,44 +26,6 @@ function ThumbnailPlaceholder() {
           "linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 50%, #a5b4fc 100%)",
       }}
     />
-  );
-}
-
-/** Sentiment icon for top-right of place card: thumbs up (green), thumbs to the side (yellow), thumbs down (red). */
-function SentimentBadge({
-  sentiment,
-}: {
-  sentiment: "positive" | "neutral" | "negative";
-}) {
-  const config = {
-    positive: {
-      Icon: ThumbsUp,
-      iconClass: "h-4 w-4",
-      className: "text-green-600 bg-green-50 ring-green-200",
-      label: "Positive",
-    },
-    neutral: {
-      Icon: ThumbsUp,
-      iconClass: "h-4 w-4 rotate-[-90deg]",
-      className: "text-amber-600 bg-amber-50 ring-amber-200",
-      label: "Neutral (thumbs to the side)",
-    },
-    negative: {
-      Icon: ThumbsDown,
-      iconClass: "h-4 w-4",
-      className: "text-red-600 bg-red-50 ring-red-200",
-      label: "Negative",
-    },
-  };
-  const { Icon, iconClass, className, label } = config[sentiment];
-  return (
-    <span
-      className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full ring-1 ${className}`}
-      title={`Sentiment: ${label}`}
-      aria-label={`Sentiment: ${label}`}
-    >
-      <Icon className={iconClass} strokeWidth={2} aria-hidden />
-    </span>
   );
 }
 
@@ -155,7 +112,7 @@ function PlaceRow({
       {/* Sentiment: top-right corner */}
       {place.sentiment && (
         <div className="absolute right-4 top-4 z-10">
-          <SentimentBadge sentiment={place.sentiment} />
+          <SentimentIcon sentiment={place.sentiment} size={32} />
         </div>
       )}
       <div className="h-28 w-28 shrink-0 overflow-hidden rounded-lg bg-gray-100">

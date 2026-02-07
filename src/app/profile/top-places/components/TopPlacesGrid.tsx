@@ -80,6 +80,9 @@ function topPlaceToSavedPlace(p: TopPlaceCardModel): SavedPlace {
         : undefined,
     visitedTimeRaw: p.visitedTime,
     visibility: "public",
+    ...(p.userSentiment
+      ? { sentiment: p.userSentiment as SavedPlace["sentiment"] }
+      : {}),
   };
 }
 
@@ -184,6 +187,9 @@ export default function TopPlacesGrid({ places }: TopPlacesGridProps) {
           visibility: "public" as const,
           ...(caption ? { caption } : {}),
           ...(selectedPlace.city ? { placeCity: selectedPlace.city } : {}),
+          ...(selectedPlace.userSentiment
+            ? { sentiment: selectedPlace.userSentiment }
+            : {}),
         };
         return uris.length > 0
           ? uris.map((src) => ({ src, ...base }))

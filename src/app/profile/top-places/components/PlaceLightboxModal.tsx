@@ -10,7 +10,6 @@ import {
   Bookmark,
   Share2,
   Link as LinkIcon,
-  ThumbsUp,
   Globe,
   Lock,
   Reply,
@@ -21,6 +20,7 @@ import {
   TreePine,
   MapPin,
 } from "lucide-react";
+import SentimentIcon from "@/components/ui/SentimentIcon";
 import SaveForLaterPanel from "./SaveForLaterPanel";
 
 export interface LightboxImage {
@@ -37,6 +37,8 @@ export interface LightboxImage {
   visibility?: "private" | "public";
   /** Place category for category icon: Cafe, Restaurant, Bar, Park, Others, etc. */
   category?: string;
+  /** User sentiment: positive, neutral, negative (same icons as map/list). */
+  sentiment?: "positive" | "neutral" | "negative";
 }
 
 /** Category string to Lucide icon for the bottom overlay. */
@@ -541,13 +543,26 @@ export default function PlaceLightboxModal({
                         </div>
                         <span className="text-white/40">·</span>
                         <div className="flex items-center gap-1.5">
-                          <ThumbsUp
-                            className="h-3.5 w-3.5 text-white/80"
-                            aria-hidden
-                          />
-                          <span className="text-[11px] text-white/80">
-                            Recommend
-                          </span>
+                          {current.sentiment ? (
+                            <>
+                              <SentimentIcon
+                                sentiment={current.sentiment}
+                                size={24}
+                                className="shrink-0"
+                              />
+                              <span className="text-[11px] leading-none text-white/80">
+                                {current.sentiment === "positive"
+                                  ? "Positive"
+                                  : current.sentiment === "negative"
+                                    ? "Negative"
+                                    : "Neutral"}
+                              </span>
+                            </>
+                          ) : (
+                            <span className="text-[11px] leading-none text-white/60">
+                              —
+                            </span>
+                          )}
                         </div>
                         <span className="text-white/40">·</span>
                         <div className="flex items-center gap-1.5">

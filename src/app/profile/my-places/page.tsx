@@ -10,8 +10,12 @@ import {
   Search,
   X,
 } from "lucide-react";
-import { getCachedUser } from "@/api/user";
-import { getMyPlacesFromUser } from "./realData";
+import {
+  getCachedUser,
+  setCachedUser,
+  updatePlaceVisitHistoryStory,
+} from "@/api/user";
+import { getMyPlacesFromUser, updateUserPlaceVisitHistory } from "./realData";
 import type { PlaceCategory, SavedPlace } from "./mockData";
 import { PLACE_CATEGORIES } from "./mockData";
 import dynamic from "next/dynamic";
@@ -205,6 +209,10 @@ export default function ProfileMyPlacesPage() {
   const [categoryOverrides, setCategoryOverrides] = useState<
     Record<string, PlaceCategory>
   >({});
+  /** Local overrides for sentiment when user saves in Edit modal before backend persist. */
+  const [sentimentOverrides, setSentimentOverrides] = useState<
+    Record<string, "positive" | "neutral" | "negative">
+  >({});
   const listScrollRef = useRef<HTMLDivElement | null>(null);
   const lastMapViewRef = useRef<{
     center: [number, number];
@@ -257,11 +265,20 @@ export default function ProfileMyPlacesPage() {
     });
   }, [filteredPlaces, userLocation]);
 
+  /** Apply sentiment overrides so list and map show updated sentiment after edit. */
+  const placesWithOverrides = useMemo(
+    () =>
+      sortedPlacesForList.map((p) => ({
+        ...p,
+        sentiment: sentimentOverrides[p.id] ?? p.sentiment,
+      })),
+    [sortedPlacesForList, sentimentOverrides],
+  );
   /** Places to show on the map: filtered by map overlay category (All or single category), still sorted by distance. */
   const placesForMap = useMemo(() => {
-    if (mapCategoryFilter === "All") return sortedPlacesForList;
-    return sortedPlacesForList.filter((p) => p.category === mapCategoryFilter);
-  }, [sortedPlacesForList, mapCategoryFilter]);
+    if (mapCategoryFilter === "All") return placesWithOverrides;
+    return placesWithOverrides.filter((p) => p.category === mapCategoryFilter);
+  }, [placesWithOverrides, mapCategoryFilter]);
 
   const initialCommentsByPlaceId = useMemo((): Record<
     string,
@@ -291,6 +308,8 @@ export default function ProfileMyPlacesPage() {
       "public";
     const category =
       categoryOverrides[selectedPlace.id] ?? selectedPlace.category;
+    const sentiment =
+      sentimentOverrides[selectedPlace.id] ?? selectedPlace.sentiment;
     const base = {
       placeId: selectedPlace.id,
       placeName: selectedPlace.name,
@@ -299,11 +318,17 @@ export default function ProfileMyPlacesPage() {
       ...(category ? { category } : {}),
       ...(caption ? { caption } : {}),
       ...(selectedPlace.city ? { placeCity: selectedPlace.city } : {}),
+      ...(sentiment ? { sentiment } : {}),
     };
     return uris.length > 0
       ? uris.map((src) => ({ src, ...base }))
       : [{ src: "https://picsum.photos/400/600?random=placeholder", ...base }];
-  }, [selectedPlace, visibilityOverrides, categoryOverrides]);
+  }, [
+    selectedPlace,
+    visibilityOverrides,
+    categoryOverrides,
+    sentimentOverrides,
+  ]);
 
   const hasPlaces = savedPlaces.length > 0;
 
@@ -386,25 +411,12 @@ export default function ProfileMyPlacesPage() {
 
   return (
     <div className="flex min-h-full flex-col">
-      {/* Page title: My Places at top left; padding pushes Latest Activity and My Map down */}
+      {/* Page title row: My Places | Search bar | View All Places on same x-axis */}
       <header className="shrink-0 border-b border-gray-200 bg-white px-4 pt-6 pb-4 md:px-6 md:pt-8 md:pb-5 lg:px-8">
-        <h1 className="text-2xl font-bold text-gray-900 md:text-3xl">
-          My Places
-        </h1>
-      </header>
-
-      {/* Latest Activity: header and carousel share same horizontal layout for a clean stretch */}
-      <section
-        className="shrink-0 border-b border-gray-200 bg-white px-4 py-6 md:px-6 lg:px-8"
-        aria-labelledby="latest-activity-heading"
-      >
-        <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-          <h2
-            id="latest-activity-heading"
-            className="text-xl font-semibold text-gray-900"
-          >
-            Latest Activity
-          </h2>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h1 className="text-2xl font-bold text-gray-900 md:text-3xl">
+            My Places
+          </h1>
           <button
             type="button"
             onClick={() => setSearchOverlayOpen(true)}
@@ -430,6 +442,19 @@ export default function ProfileMyPlacesPage() {
             </button>
           </div>
         </div>
+      </header>
+
+      {/* Latest Activity: section heading and carousel */}
+      <section
+        className="shrink-0 border-b border-gray-200 bg-white px-4 py-6 md:px-6 lg:px-8"
+        aria-labelledby="latest-activity-heading"
+      >
+        <h2
+          id="latest-activity-heading"
+          className="mb-5 text-xl font-semibold text-gray-900"
+        >
+          Latest Activity
+        </h2>
         <LatestActivityCarousel
           places={latestActivity}
           onPlaceClick={(placeId) => {
@@ -665,29 +690,80 @@ export default function ProfileMyPlacesPage() {
                   categoryOverrides[editPlace.id] ??
                   editPlace.category ??
                   "Others",
+                sentiment:
+                  sentimentOverrides[editPlace.id] ?? editPlace.sentiment,
               }
             : null
         }
-        onClose={() => {
-          if (editPlace) setSelectedPlace(editPlace);
+        onClose={(result) => {
+          if (editPlace) {
+            if (result?.saved && result.updates) {
+              setSelectedPlace({
+                ...editPlace,
+                name: result.updates.name,
+                caption: result.updates.note,
+                snippet: result.updates.note,
+                ...(result.updates.category !== undefined
+                  ? { category: result.updates.category }
+                  : {}),
+                ...(result.updates.visibility !== undefined
+                  ? { visibility: result.updates.visibility }
+                  : {}),
+                ...(result.updates.sentiment !== undefined
+                  ? { sentiment: result.updates.sentiment }
+                  : {}),
+              });
+            } else setSelectedPlace(editPlace);
+          }
           setEditPlace(null);
         }}
-        onSave={(updates) => {
-          if (editPlace) {
-            if (updates.visibility !== undefined) {
-              setVisibilityOverrides((prev) => ({
-                ...prev,
-                [editPlace.id]: updates.visibility!,
-              }));
-            }
-            if (updates.category !== undefined) {
-              setCategoryOverrides((prev) => ({
-                ...prev,
-                [editPlace.id]: updates.category!,
-              }));
-            }
+        onSave={async (updates) => {
+          if (!editPlace || !user) return;
+          try {
+            // Persist caption/note to backend (place-level story)
+            await updatePlaceVisitHistoryStory({
+              placeKey: editPlace.id,
+              storyText: updates.note,
+              photoIndexType: "filtered",
+            });
+          } catch (err) {
+            console.warn("Failed to save place story:", err);
           }
-          // TODO: persist name/caption/visibility/category to backend
+          // Update cached user so caption, category, visibility persist (and survive refresh)
+          const updatedUser = updateUserPlaceVisitHistory(user, editPlace.id, {
+            story: updates.note,
+            ...(updates.category !== undefined
+              ? { category: updates.category }
+              : {}),
+            ...(updates.visibility !== undefined
+              ? { visibility: updates.visibility }
+              : {}),
+          });
+          setCachedUser(updatedUser);
+          setUser(getCachedUser());
+          // Clear overrides for fields we just wrote to cache so UI uses cache as source of truth
+          if (updates.visibility !== undefined) {
+            setVisibilityOverrides((prev) => {
+              const next = { ...prev };
+              delete next[editPlace.id];
+              return next;
+            });
+          }
+          if (updates.category !== undefined) {
+            setCategoryOverrides((prev) => {
+              const next = { ...prev };
+              delete next[editPlace.id];
+              return next;
+            });
+          }
+          // Sentiment has no backend field yet; keep in overrides
+          if (updates.sentiment !== undefined) {
+            setSentimentOverrides((prev) => ({
+              ...prev,
+              [editPlace.id]: updates.sentiment!,
+            }));
+          }
+          // Selected place is updated in onClose({ saved: true, updates })
         }}
         onDelete={
           editPlace

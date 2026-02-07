@@ -38,6 +38,8 @@ import {
   getAllCategoryPinIdsForPreload,
   fetchAndSetSentimentPngs,
   CATEGORY_PIN_IDS,
+  SENTIMENT_PIN_IDS,
+  SENTIMENT_PIN_ICON_OFFSET,
 } from "../../mapbox-category-pins";
 import type { TopPlaceCardModel } from "../types";
 
@@ -761,6 +763,16 @@ export default function TopPlacesMapView({
                     ["get", "thumbKey"],
                   ],
                   "icon-size": 0.9,
+                  "icon-offset": [
+                    "case",
+                    [
+                      "in",
+                      ["coalesce", ["get", "categoryPinId"], ""],
+                      ["literal", SENTIMENT_PIN_IDS],
+                    ],
+                    SENTIMENT_PIN_ICON_OFFSET,
+                    [0, 0],
+                  ],
                   "icon-allow-overlap": true,
                   "icon-ignore-placement": true,
                 },

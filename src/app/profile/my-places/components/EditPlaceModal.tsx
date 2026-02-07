@@ -2,25 +2,31 @@
 
 import * as React from "react";
 import { X, Trash2, Mic, ImagePlus, Lock, Globe } from "lucide-react";
+import SentimentIcon from "@/components/ui/SentimentIcon";
 import type { SavedPlace, PlaceCategory } from "../mockData";
 import { PLACE_CATEGORIES } from "../mockData";
 
 export type PlaceVisibility = "private" | "public";
 
+export type PlaceSentiment = "positive" | "neutral" | "negative";
+
+export type EditPlaceSaveUpdates = {
+  name: string;
+  note: string;
+  visibility?: PlaceVisibility;
+  category?: PlaceCategory;
+  sentiment?: PlaceSentiment;
+};
+
 export interface EditPlaceModalProps {
   isOpen: boolean;
   place: SavedPlace | null;
-  onClose: () => void;
-  onSave?: (updates: {
-    name: string;
-    note: string;
-    visibility?: PlaceVisibility;
-    category?: PlaceCategory;
-  }) => void;
+  /** Called when closing. If result.saved is true, the user clicked Save and result.updates has the saved values. */
+  onClose: (result?: { saved: true; updates: EditPlaceSaveUpdates }) => void;
+  onSave?: (updates: EditPlaceSaveUpdates) => void | Promise<void>;
   onDelete?: (placeId: string) => void;
-  /** Current visibility if known (e.g. from backend). Defaults to "public". */
+  /** @deprecated use onClose result for initial state */
   initialVisibility?: PlaceVisibility;
-  /** Categories for the dropdown; same list as My Places filter / getMyPlacesFromUser. Defaults to PLACE_CATEGORIES. */
   categories?: PlaceCategory[];
 }
 
@@ -58,6 +64,9 @@ export default function EditPlaceModal({
   const [category, setCategory] = React.useState<PlaceCategory>(
     normalizeCategory(place?.category),
   );
+  const [sentiment, setSentiment] = React.useState<PlaceSentiment>(
+    place?.sentiment ?? "neutral",
+  );
 
   React.useEffect(() => {
     if (place) {
@@ -65,6 +74,7 @@ export default function EditPlaceModal({
       setNote(place.caption ?? place.snippet ?? "");
       setVisibility(place.visibility ?? initialVisibility);
       setCategory(normalizeCategory(place.category));
+      setSentiment(place.sentiment ?? "neutral");
     }
   }, [
     place?.id,
@@ -73,6 +83,7 @@ export default function EditPlaceModal({
     place?.snippet,
     place?.visibility,
     place?.category,
+    place?.sentiment,
     initialVisibility,
     place,
   ]);
@@ -90,9 +101,16 @@ export default function EditPlaceModal({
   const mainImageUrl =
     photos[0] ?? "https://picsum.photos/400/400?random=place";
 
-  const handleSave = () => {
-    onSave?.({ name: name.trim(), note: note.trim(), visibility, category });
-    onClose();
+  const handleSave = async () => {
+    const updates: EditPlaceSaveUpdates = {
+      name: name.trim(),
+      note: note.trim(),
+      visibility,
+      category,
+      sentiment,
+    };
+    await onSave?.(updates);
+    onClose({ saved: true, updates });
   };
 
   const handleDelete = () => {
@@ -177,6 +195,41 @@ export default function EditPlaceModal({
                   />
                 </div>
               ))}
+            </div>
+            {/* User sentiment: three icons, selected = place sentiment */}
+            <div className="flex flex-col items-center gap-4">
+              <span className="text-xs text-gray-400">User sentiment</span>
+              <div
+                className="flex items-center gap-3"
+                role="group"
+                aria-label="User sentiment"
+              >
+                {(["positive", "neutral", "negative"] as const).map((s) => {
+                  const isSelected = sentiment === s;
+                  return (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => setSentiment(s)}
+                      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-all focus:outline-none focus:ring-2 focus:ring-white/50 focus:ring-offset-2 focus:ring-offset-gray-800 ${
+                        isSelected
+                          ? "ring-2 ring-white/90 ring-offset-1 ring-offset-gray-800"
+                          : "opacity-50 hover:opacity-80"
+                      }`}
+                      aria-pressed={isSelected}
+                      aria-label={
+                        s === "positive"
+                          ? "Positive"
+                          : s === "negative"
+                            ? "Negative"
+                            : "Neutral"
+                      }
+                    >
+                      <SentimentIcon sentiment={s} size={32} />
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
 

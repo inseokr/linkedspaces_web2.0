@@ -99,6 +99,19 @@ export function getAllCategoryPinIdsForPreload(): string[] {
   return ids;
 }
 
+/** Sentiment-only pin ids (composite 84x90); use for icon-offset so label stays under orange circle */
+export const SENTIMENT_PIN_IDS: string[] = (() => {
+  const ids: string[] = [];
+  const sentiments: UserSentiment[] = ["positive", "neutral", "negative"];
+  for (const key of CATEGORY_KEYS) {
+    for (const s of sentiments) ids.push(`pin-${key}-${s}`);
+  }
+  return ids;
+})();
+
+/** Icon offset for composite (sentiment) pins: orange center is at (32,33) in 84x90 image, so shift icon to align. Values in ems. */
+export const SENTIMENT_PIN_ICON_OFFSET: [number, number] = [-10 / 24, -12 / 24];
+
 /**
  * Returns a data URL for an SVG: orange circle + white Material Icon in the center.
  * Icon scaled to fit inside the circle for better recognition.

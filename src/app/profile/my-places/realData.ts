@@ -6,6 +6,7 @@
  */
 
 import type { User } from "@/api/user";
+import type { PlaceVisitHistoryItem } from "@/api/user";
 import { assetUrl } from "@/api/assets";
 import type {
   LatestActivityPlace,
@@ -454,4 +455,64 @@ export function getMyPlacesFromUser(user: User | null): {
     savedPlaces,
     categories,
   };
+}
+
+/**
+ * Compute the same stable id used for SavedPlace.id so we can find an entry by placeId.
+ */
+function getStableIdForEntry(
+  entry: PlaceVisitHistoryEntry | PlaceVisitHistoryItem | undefined,
+): string {
+  if (!entry || typeof entry !== "object") return "";
+  const e = entry as {
+    _id?: string;
+    placeName?: string;
+    coordinate?: { latitude?: number; longitude?: number };
+  };
+  if (e._id && String(e._id).trim()) return String(e._id).trim();
+  const name = String(e.placeName ?? "Place Name")
+    .trim()
+    .replace(/\s+/g, "-")
+    .slice(0, 24);
+  const lat = Number(e.coordinate?.latitude ?? 0);
+  const lng = Number(e.coordinate?.longitude ?? 0);
+  return `place-${name}-${lat.toFixed(4)}-${lng.toFixed(4)}`;
+}
+
+export type UpdatePlaceInCachePayload = {
+  story?: string;
+  category?: string;
+  visibility?: "private" | "public";
+};
+
+/**
+ * Returns a new user with the placeVisitHistory entry for placeId updated (story, category, visibility).
+ * Used after saving from Edit Place modal so the cache reflects changes until the next full user fetch.
+ */
+export function updateUserPlaceVisitHistory(
+  user: User,
+  placeId: string,
+  payload: UpdatePlaceInCachePayload,
+): User {
+  const history = user.placeVisitHistory ?? [];
+  const index = history.findIndex(
+    (e) => getStableIdForEntry(e as PlaceVisitHistoryEntry) === placeId,
+  );
+  if (index < 0) return user;
+
+  const entry = history[index] as Record<string, unknown> | undefined;
+  if (!entry || typeof entry !== "object") return user;
+
+  const nextEntry = { ...entry };
+  if (payload.story !== undefined) nextEntry.story = payload.story;
+  if (payload.category !== undefined) nextEntry.categories = [payload.category];
+  if (payload.visibility !== undefined)
+    nextEntry.privacyControl = {
+      level: payload.visibility === "private" ? "private" : "public",
+    };
+
+  const nextHistory = [...history];
+  nextHistory[index] = nextEntry as PlaceVisitHistoryItem;
+
+  return { ...user, placeVisitHistory: nextHistory };
 }

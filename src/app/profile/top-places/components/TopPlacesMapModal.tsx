@@ -118,6 +118,9 @@ export default function TopPlacesMapModal({
         ? { caption: placeForLightbox.caption }
         : {}),
       ...(placeForLightbox.city ? { placeCity: placeForLightbox.city } : {}),
+      ...(placeForLightbox.userSentiment
+        ? { sentiment: placeForLightbox.userSentiment }
+        : {}),
     };
     return uris.length > 0
       ? uris.map((src) => ({ src, ...base }))

@@ -212,6 +212,9 @@ function ViewAllPlacesPage() {
       placeName: selectedPlace.title,
       dateTime,
       ...(caption ? { caption } : {}),
+      ...(selectedPlace.sentiment
+        ? { sentiment: selectedPlace.sentiment }
+        : {}),
     };
     return uris.length > 0
       ? uris.map((src) => ({ src, ...base }))
