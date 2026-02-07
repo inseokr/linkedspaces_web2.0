@@ -3,11 +3,17 @@
 import * as React from "react";
 import type { CategoryWithCount } from "./FiltersPopover";
 
+/** Approximate width per category chip (content + padding) + gap, for responsive count. */
+const CHIP_ESTIMATE_PX = 88;
+/** Reserved width for "All" button + "+ View more" button + gaps. */
+const RESERVED_BASE_PX = 140;
+const LABEL_ESTIMATE_PX = 88;
+
 interface CategoryChipsRowProps {
   categories: CategoryWithCount[];
   selectedCategory: string | "All";
   onSelect: (category: string | "All") => void;
-  /** Max chips to show before "+ View more" */
+  /** Max chips to show before "+ View more" (used when container width unknown or as upper bound). */
   maxVisible?: number;
   /** When true, keep all chips on one line with horizontal scroll (e.g. for map overlay) */
   singleLine?: boolean;
@@ -15,6 +21,10 @@ interface CategoryChipsRowProps {
   hideLabel?: boolean;
   /** When false, do not show the "All" chip (e.g. for map overlay) */
   showAllButton?: boolean;
+  /** Category ids/names to hide until expanded (e.g. ["education","transportation","airport"]). Used in full-screen map. */
+  hiddenByDefault?: string[];
+  /** When true, derive visible count from container width (fewer chips on narrow screens). Default true. */
+  responsive?: boolean;
 }
 
 export default function CategoryChipsRow({
@@ -25,8 +35,38 @@ export default function CategoryChipsRow({
   singleLine = false,
   hideLabel = false,
   showAllButton = true,
+  hiddenByDefault,
+  responsive = true,
 }: CategoryChipsRowProps) {
   const [expanded, setExpanded] = React.useState(false);
+  const [containerWidth, setContainerWidth] = React.useState(0);
+  const containerRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    if (!responsive || singleLine) return;
+    const el = containerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver((entries) => {
+      const { width } = entries[0]?.contentRect ?? { width: 0 };
+      setContainerWidth(width);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [responsive, singleLine]);
+
+  const reservedPx = RESERVED_BASE_PX + (hideLabel ? 0 : LABEL_ESTIMATE_PX);
+  const maxVisibleFromWidth =
+    containerWidth > 0
+      ? Math.max(
+          1,
+          Math.floor((containerWidth - reservedPx) / CHIP_ESTIMATE_PX),
+        )
+      : maxVisible;
+  const effectiveMaxVisible =
+    responsive && containerWidth > 0
+      ? Math.min(maxVisible, maxVisibleFromWidth)
+      : maxVisible;
+
   const mainCategories = categories.filter((c) => {
     const idLower = c.id?.toLowerCase();
     const nameLower = c.name?.toLowerCase();
@@ -37,12 +77,60 @@ export default function CategoryChipsRow({
       nameLower !== "all"
     );
   });
+
+  const hiddenSet = React.useMemo(
+    () =>
+      hiddenByDefault == null
+        ? null
+        : new Set(hiddenByDefault.map((s) => s.toLowerCase())),
+    [hiddenByDefault],
+  );
+
+  const isHiddenByDefault = React.useCallback(
+    (c: CategoryWithCount) => {
+      if (hiddenSet == null) return false;
+      const id = c.id?.toLowerCase() ?? "";
+      const name = c.name?.toLowerCase() ?? "";
+      return hiddenSet.has(id) || hiddenSet.has(name);
+    },
+    [hiddenSet],
+  );
+
+  const primaryCategories =
+    hiddenSet != null
+      ? mainCategories.filter((c) => !isHiddenByDefault(c))
+      : mainCategories;
+
+  const primaryWithSelected =
+    hiddenSet != null
+      ? mainCategories.filter(
+          (c) =>
+            !isHiddenByDefault(c) ||
+            selectedCategory === c.id ||
+            selectedCategory === c.name,
+        )
+      : mainCategories;
+
   const visibleCategories = singleLine
     ? mainCategories
     : expanded
       ? mainCategories
-      : mainCategories.slice(0, maxVisible);
-  const hasMore = !singleLine && mainCategories.length > maxVisible;
+      : hiddenSet != null
+        ? primaryWithSelected.filter(
+            (c, i) =>
+              i < effectiveMaxVisible ||
+              selectedCategory === c.id ||
+              selectedCategory === c.name,
+          )
+        : mainCategories.slice(0, effectiveMaxVisible);
+
+  const hasMoreByCount =
+    !singleLine && mainCategories.length > effectiveMaxVisible;
+  const hasMoreByHidden =
+    hiddenSet != null && mainCategories.some(isHiddenByDefault);
+  const hasMoreByPrimaryCount =
+    hiddenSet != null && primaryWithSelected.length > effectiveMaxVisible;
+  const hasMore = hasMoreByCount || hasMoreByHidden || hasMoreByPrimaryCount;
 
   const containerClass = singleLine
     ? "flex flex-nowrap items-center gap-2 overflow-x-auto overflow-y-hidden pb-1 -mb-1"
@@ -52,6 +140,7 @@ export default function CategoryChipsRow({
 
   return (
     <div
+      ref={containerRef}
       className={containerClass}
       role="group"
       aria-label="Filter by category"

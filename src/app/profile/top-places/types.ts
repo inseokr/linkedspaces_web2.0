@@ -28,6 +28,8 @@ export interface TopPlaceCardModel {
   photosCount: number;
   visitsCount: number;
   likesCount: number;
+  /** Optional comment count for display on card */
+  commentsCount?: number;
   rank: number;
   /** For lightbox: first photo uri and optional extra uris */
   photoListUris?: string[];

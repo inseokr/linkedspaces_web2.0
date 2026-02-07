@@ -31,6 +31,11 @@ import {
   drawCircularThumb,
   canvasToImageBitmap,
 } from "../../mapbox-photo-marker-utils";
+import {
+  getCategoryPinImageId,
+  getCategoryPinSvgDataUrl,
+  CATEGORY_PIN_IDS,
+} from "../../mapbox-category-pins";
 import type { TopPlaceCardModel } from "../types";
 
 const DEBUG_MAP =
@@ -90,6 +95,8 @@ interface PlaceFeatureProps {
   name: string;
   imageUrl: string;
   thumbKey: string;
+  category: string;
+  categoryPinId: string;
 }
 
 function buildGeoJSON(
@@ -102,6 +109,7 @@ function buildGeoJSON(
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
     const imageUrl =
       p.imageUrl && String(p.imageUrl).trim() ? p.imageUrl.trim() : "";
+    const category = (p.category ?? "Others").toString();
     features.push({
       type: "Feature",
       geometry: { type: "Point", coordinates: [lng, lat] },
@@ -110,6 +118,8 @@ function buildGeoJSON(
         name: p.title || "Unnamed place",
         imageUrl,
         thumbKey: imageUrl ? `thumb:${p.id}` : DEFAULT_PIN_ID,
+        category,
+        categoryPinId: getCategoryPinImageId(category),
       },
     });
   }
@@ -199,23 +209,41 @@ function throttle<T extends (...args: any[]) => void>(fn: T, ms: number): T {
   return run as T;
 }
 
+const SELECTED_PIN_LAYER_ID = "top-places-selected-pin";
+
 export interface TopPlacesMapViewProps {
   /** Filtered places (with valid lat/lng used for map; others skipped) */
   places: TopPlaceCardModel[];
   /** For DEBUG: current filter labels */
   activeCountryId?: string | null;
   activeCategory?: string | "All";
+  /** Currently selected place id; map centers on it and highlights its pin */
+  selectedPlaceId?: string | null;
+  /** Called when user clicks a place pin on the map */
+  onPlaceSelect?: (placeId: string) => void;
+  /** Called when user clicks "View" in the marker photo popup to open the full photo modal */
+  onPlaceViewPhotos?: (placeId: string) => void;
 }
 
 export default function TopPlacesMapView({
   places,
   activeCountryId,
   activeCategory,
+  selectedPlaceId = null,
+  onPlaceSelect,
+  onPlaceViewPhotos,
 }: TopPlacesMapViewProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<any>(null);
   const mapboxglRef = useRef<any>(null);
   const popupRef = useRef<any>(null);
+  const selectedPhotosPopupRef = useRef<any>(null);
+  const selectedPlaceIdRef = useRef<string | null>(selectedPlaceId);
+  selectedPlaceIdRef.current = selectedPlaceId;
+  const onPlaceSelectRef = useRef(onPlaceSelect);
+  onPlaceSelectRef.current = onPlaceSelect;
+  const onPlaceViewPhotosRef = useRef(onPlaceViewPhotos);
+  onPlaceViewPhotosRef.current = onPlaceViewPhotos;
   const geoJsonRef = useRef<GeoJSON.FeatureCollection<
     GeoJSON.Point,
     PlaceFeatureProps
@@ -538,310 +566,372 @@ export default function TopPlacesMapView({
           ) => {
             if (!err && img && !map.hasImage(DEFAULT_PIN_ID))
               map.addImage(DEFAULT_PIN_ID, img, { sdf: false });
-            geoJsonRef.current = geoJson.current;
-            map.addSource(SOURCE_ID, {
-              type: "geojson",
-              data: geoJsonRef.current!,
-              cluster: true,
-              clusterRadius: CLUSTER_RADIUS,
-              clusterMaxZoom: CLUSTER_MAX_ZOOM,
-            });
+            const addSourceAndLayers = () => {
+              geoJsonRef.current = geoJson.current;
+              map.addSource(SOURCE_ID, {
+                type: "geojson",
+                data: geoJsonRef.current!,
+                cluster: true,
+                clusterRadius: CLUSTER_RADIUS,
+                clusterMaxZoom: CLUSTER_MAX_ZOOM,
+              });
 
-            /* Marker layers added after 3D buildings so they render above fill-extrusion. */
-            map.addLayer({
-              id: CLUSTER_LAYER_ID,
-              type: "circle",
-              source: SOURCE_ID,
-              filter: ["has", "point_count"],
-              paint: {
-                "circle-color": "rgba(249, 115, 22, 0.75)",
-                "circle-opacity": 0.5,
-                "circle-radius": [
-                  "step",
-                  ["get", "point_count"],
-                  20,
-                  10,
-                  28,
-                  25,
-                  36,
-                  50,
-                  50,
-                ],
-                "circle-stroke-width": 2,
-                "circle-stroke-color": "#fff",
-              },
-            });
-            // Cluster photo: representative thumbnail (first leaf). Fallback to default pin when not yet loaded.
-            map.addLayer(
-              {
-                id: CLUSTER_SYMBOL_LAYER_ID,
+              /* Marker layers added after 3D buildings so they render above fill-extrusion. */
+              map.addLayer({
+                id: CLUSTER_LAYER_ID,
+                type: "circle",
+                source: SOURCE_ID,
+                filter: ["has", "point_count"],
+                paint: {
+                  "circle-color": "rgba(249, 115, 22, 0.75)",
+                  "circle-opacity": 0.5,
+                  "circle-radius": [
+                    "step",
+                    ["get", "point_count"],
+                    20,
+                    10,
+                    28,
+                    25,
+                    36,
+                    50,
+                    50,
+                  ],
+                  "circle-stroke-width": 2,
+                  "circle-stroke-color": "#fff",
+                },
+              });
+              // Cluster photo: representative thumbnail (first leaf). Fallback to default pin when not yet loaded.
+              map.addLayer(
+                {
+                  id: CLUSTER_SYMBOL_LAYER_ID,
+                  type: "symbol",
+                  source: SOURCE_ID,
+                  filter: ["has", "point_count"],
+                  layout: {
+                    "icon-image": [
+                      "coalesce",
+                      [
+                        "image",
+                        [
+                          "concat",
+                          "cluster-",
+                          ["to-string", ["get", "cluster_id"]],
+                        ],
+                      ],
+                      DEFAULT_PIN_ID,
+                    ],
+                    "icon-size": 0.6,
+                    "icon-allow-overlap": true,
+                    "icon-ignore-placement": true,
+                  },
+                },
+                CLUSTER_COUNT_LAYER_ID,
+              );
+              map.addLayer({
+                id: CLUSTER_COUNT_LAYER_ID,
                 type: "symbol",
                 source: SOURCE_ID,
                 filter: ["has", "point_count"],
                 layout: {
+                  "text-field": ["get", "point_count_abbreviated"],
+                  "text-font": ["DIN Offc Pro Medium", "Arial Unicode MS Bold"],
+                  "text-size": 12,
+                  "text-offset": [0.4, -0.4],
+                },
+                paint: {
+                  "text-color": "#fff",
+                  "text-halo-color": "rgba(0,0,0,0.6)",
+                  "text-halo-width": 1,
+                },
+              });
+              map.addLayer({
+                id: UNCLUSTERED_LAYER_ID,
+                type: "circle",
+                source: SOURCE_ID,
+                filter: ["!", ["has", "point_count"]],
+                paint: {
+                  "circle-color": "rgba(249, 115, 22, 0.9)",
+                  "circle-radius": 12,
+                  "circle-stroke-width": 2,
+                  "circle-stroke-color": "#fff",
+                },
+              });
+              map.addLayer({
+                id: SELECTED_PIN_LAYER_ID,
+                type: "circle",
+                source: SOURCE_ID,
+                filter: ["==", ["get", "id"], selectedPlaceIdRef.current ?? ""],
+                paint: {
+                  "circle-radius": 20,
+                  "circle-opacity": 0,
+                  "circle-stroke-width": 3,
+                  "circle-stroke-color": "#fff",
+                  "circle-stroke-opacity": 1,
+                },
+              });
+              map.addLayer({
+                id: UNCLUSTERED_SYMBOL_LAYER_ID,
+                type: "symbol",
+                source: SOURCE_ID,
+                filter: ["!", ["has", "point_count"]],
+                layout: {
                   "icon-image": [
-                    "coalesce",
-                    [
-                      "image",
-                      [
-                        "concat",
-                        "cluster-",
-                        ["to-string", ["get", "cluster_id"]],
-                      ],
-                    ],
-                    DEFAULT_PIN_ID,
+                    "case",
+                    ["==", ["get", "thumbKey"], DEFAULT_PIN_ID],
+                    ["coalesce", ["get", "categoryPinId"], "pin-place"],
+                    ["get", "thumbKey"],
                   ],
-                  "icon-size": 0.6,
+                  "icon-size": 0.65,
                   "icon-allow-overlap": true,
                   "icon-ignore-placement": true,
                 },
-              },
-              CLUSTER_COUNT_LAYER_ID,
-            );
-            map.addLayer({
-              id: CLUSTER_COUNT_LAYER_ID,
-              type: "symbol",
-              source: SOURCE_ID,
-              filter: ["has", "point_count"],
-              layout: {
-                "text-field": ["get", "point_count_abbreviated"],
-                "text-font": ["DIN Offc Pro Medium", "Arial Unicode MS Bold"],
-                "text-size": 12,
-                "text-offset": [0.4, -0.4],
-              },
-              paint: {
-                "text-color": "#fff",
-                "text-halo-color": "rgba(0,0,0,0.6)",
-                "text-halo-width": 1,
-              },
-            });
-            map.addLayer({
-              id: UNCLUSTERED_LAYER_ID,
-              type: "circle",
-              source: SOURCE_ID,
-              filter: ["!", ["has", "point_count"]],
-              paint: {
-                "circle-color": "rgba(249, 115, 22, 0.9)",
-                "circle-radius": 12,
-                "circle-stroke-width": 2,
-                "circle-stroke-color": "#fff",
-              },
-            });
-            map.addLayer({
-              id: UNCLUSTERED_SYMBOL_LAYER_ID,
-              type: "symbol",
-              source: SOURCE_ID,
-              filter: ["!", ["has", "point_count"]],
-              layout: {
-                "icon-image": ["coalesce", ["get", "thumbKey"], DEFAULT_PIN_ID],
-                "icon-size": 0.65,
-                "icon-allow-overlap": true,
-                "icon-ignore-placement": true,
-              },
-            });
-            map.addLayer({
-              id: "top-places-unclustered-name",
-              type: "symbol",
-              source: SOURCE_ID,
-              filter: ["!", ["has", "point_count"]],
-              layout: {
-                "text-field": ["get", "name"],
-                "text-font": [
-                  "DIN Offc Pro Medium",
-                  "Arial Unicode MS Regular",
-                ],
-                "text-size": 11,
-                "text-anchor": "top",
-                "text-offset": [0, 1.35],
-                "text-max-width": 10,
-                "text-allow-overlap": false,
-              },
-              paint: {
-                "text-color": "#fff",
-                "text-halo-color": "rgba(0,0,0,0.75)",
-                "text-halo-width": 1.5,
-              },
-            });
-
-            /** Anchor map to Top Places result #1 (first place for current category/country). */
-            const fitBoundsOnce = () => {
-              if (initialFitDoneRef.current) return;
-              const features = geoJsonRef.current?.features;
-              if (!features?.length) return;
-              initialFitDoneRef.current = true;
-              const first = features[0] as GeoJSON.Feature<GeoJSON.Point>;
-              const c = first?.geometry?.coordinates;
-              if (c && c.length >= 2) {
-                const [lng, lat] = c;
-                map.flyTo({
-                  center: [lng, lat],
-                  zoom: FIT_MAX_ZOOM,
-                  duration: 0,
-                });
-              } else {
-                const bounds = new mapboxgl.LngLatBounds();
-                features.forEach((f: GeoJSON.Feature<GeoJSON.Point>) => {
-                  const coords = f.geometry?.coordinates;
-                  if (coords && coords.length >= 2)
-                    bounds.extend([coords[0], coords[1]]);
-                });
-                map.fitBounds(bounds, {
-                  padding: FIT_PADDING,
-                  maxZoom: FIT_MAX_ZOOM,
-                  duration: 0,
-                });
-              }
-            };
-
-            const throttledSync = throttle(() => {
-              syncThumbnailsForViewport(map);
-              syncClusterThumbnails(map);
-              logDebug(map);
-            }, THUMB_SYNC_THROTTLE_MS);
-
-            map.on(
-              "data",
-              (e: { sourceId?: string; isSourceLoaded?: boolean }) => {
-                if (e.sourceId === SOURCE_ID && e.isSourceLoaded) {
-                  fitBoundsOnce();
-                  setTimeout(() => throttledSync(), 300);
-                }
-              },
-            );
-
-            map.on("moveend", throttledSync);
-            map.on("zoomend", throttledSync);
-
-            const onClusterClick = (e: any) => {
-              e.originalEvent?.stopPropagation();
-              const source = map.getSource(SOURCE_ID);
-              if (
-                !source ||
-                typeof source.getClusterExpansionZoom !== "function"
-              )
-                return;
-              const features = map.queryRenderedFeatures(e.point, {
-                layers: [CLUSTER_LAYER_ID, CLUSTER_COUNT_LAYER_ID],
               });
-              if (!features.length) return;
-              const clusterId = features[0].properties?.cluster_id;
-              if (clusterId == null) return;
-              const geom = features[0].geometry as GeoJSON.Point;
-              const coords = geom?.coordinates;
-              if (!coords || coords.length < 2) return;
-              const [lng, lat] = coords;
-              source.getClusterExpansionZoom(
-                clusterId,
-                (err: Error | null, zoom: number) => {
-                  if (err) return;
-                  map.easeTo({
+              map.addLayer({
+                id: "top-places-unclustered-name",
+                type: "symbol",
+                source: SOURCE_ID,
+                filter: ["!", ["has", "point_count"]],
+                layout: {
+                  "text-field": ["get", "name"],
+                  "text-font": [
+                    "DIN Offc Pro Medium",
+                    "Arial Unicode MS Regular",
+                  ],
+                  "text-size": 11,
+                  "text-anchor": "top",
+                  "text-offset": [0, 1.35],
+                  "text-max-width": 10,
+                  "text-allow-overlap": false,
+                },
+                paint: {
+                  "text-color": "#fff",
+                  "text-halo-color": "rgba(0,0,0,0.75)",
+                  "text-halo-width": 1.5,
+                },
+              });
+
+              /** Anchor map to selected place or Top Places result #1. */
+              const fitBoundsOnce = () => {
+                if (initialFitDoneRef.current) return;
+                const features = geoJsonRef.current?.features;
+                if (!features?.length) return;
+                initialFitDoneRef.current = true;
+                const sid = selectedPlaceIdRef.current;
+                let target: GeoJSON.Feature<GeoJSON.Point> | undefined;
+                if (sid) {
+                  target = features.find(
+                    (f: GeoJSON.Feature<GeoJSON.Point>) =>
+                      (f.properties as PlaceFeatureProps)?.id === sid,
+                  ) as GeoJSON.Feature<GeoJSON.Point> | undefined;
+                }
+                if (!target)
+                  target = features[0] as GeoJSON.Feature<GeoJSON.Point>;
+                const c = target?.geometry?.coordinates;
+                if (c && c.length >= 2) {
+                  const [lng, lat] = c;
+                  map.flyTo({
                     center: [lng, lat],
-                    zoom: Math.min(
-                      zoom + ZOOM_EXTRA_ON_CLUSTER_CLICK,
-                      MAX_ZOOM_CLUSTER,
-                    ),
-                    duration: 350,
+                    zoom: FIT_MAX_ZOOM,
+                    duration: 0,
                   });
+                } else {
+                  const bounds = new mapboxgl.LngLatBounds();
+                  features.forEach((f: GeoJSON.Feature<GeoJSON.Point>) => {
+                    const coords = f.geometry?.coordinates;
+                    if (coords && coords.length >= 2)
+                      bounds.extend([coords[0], coords[1]]);
+                  });
+                  map.fitBounds(bounds, {
+                    padding: FIT_PADDING,
+                    maxZoom: FIT_MAX_ZOOM,
+                    duration: 0,
+                  });
+                }
+              };
+
+              const throttledSync = throttle(() => {
+                syncThumbnailsForViewport(map);
+                syncClusterThumbnails(map);
+                logDebug(map);
+              }, THUMB_SYNC_THROTTLE_MS);
+
+              map.on(
+                "data",
+                (e: { sourceId?: string; isSourceLoaded?: boolean }) => {
+                  if (e.sourceId === SOURCE_ID && e.isSourceLoaded) {
+                    fitBoundsOnce();
+                    setTimeout(() => throttledSync(), 300);
+                  }
                 },
               );
-            };
-            map.on("click", CLUSTER_LAYER_ID, onClusterClick);
-            map.on("click", CLUSTER_SYMBOL_LAYER_ID, onClusterClick);
-            map.on("click", CLUSTER_COUNT_LAYER_ID, onClusterClick);
 
-            const onUnclusteredClick = (e: any) => {
-              e.originalEvent?.stopPropagation();
-              const feat = e.features?.[0];
-              if (!feat?.geometry?.coordinates?.length) return;
-              const props = feat.properties as PlaceFeatureProps;
-              const [lng, lat] = feat.geometry.coordinates;
-              if (popupRef.current) popupRef.current.remove();
-              const thumbUrl = props.imageUrl
-                ? ensureAbsoluteUrl(props.imageUrl)
-                : "";
-              const imgHtml = thumbUrl
-                ? `<img src="${escapeAttr(thumbUrl)}" alt="" loading="lazy" style="width:120px;height:80px;object-fit:cover;border-radius:6px;display:block;margin-bottom:6px;" />`
-                : "";
-              const popup = new mapboxgl.Popup({
-                closeButton: true,
-                closeOnClick: false,
-              })
-                .setLngLat([lng, lat])
-                .setHTML(
-                  `<div style="max-width:200px;padding:4px 0;">
+              map.on("moveend", throttledSync);
+              map.on("zoomend", throttledSync);
+
+              const onClusterClick = (e: any) => {
+                e.originalEvent?.stopPropagation();
+                const source = map.getSource(SOURCE_ID);
+                if (
+                  !source ||
+                  typeof source.getClusterExpansionZoom !== "function"
+                )
+                  return;
+                const features = map.queryRenderedFeatures(e.point, {
+                  layers: [CLUSTER_LAYER_ID, CLUSTER_COUNT_LAYER_ID],
+                });
+                if (!features.length) return;
+                const clusterId = features[0].properties?.cluster_id;
+                if (clusterId == null) return;
+                const geom = features[0].geometry as GeoJSON.Point;
+                const coords = geom?.coordinates;
+                if (!coords || coords.length < 2) return;
+                const [lng, lat] = coords;
+                source.getClusterExpansionZoom(
+                  clusterId,
+                  (err: Error | null, zoom: number) => {
+                    if (err) return;
+                    map.easeTo({
+                      center: [lng, lat],
+                      zoom: Math.min(
+                        zoom + ZOOM_EXTRA_ON_CLUSTER_CLICK,
+                        MAX_ZOOM_CLUSTER,
+                      ),
+                      duration: 350,
+                    });
+                  },
+                );
+              };
+              map.on("click", CLUSTER_LAYER_ID, onClusterClick);
+              map.on("click", CLUSTER_SYMBOL_LAYER_ID, onClusterClick);
+              map.on("click", CLUSTER_COUNT_LAYER_ID, onClusterClick);
+
+              const onUnclusteredClick = (e: any) => {
+                e.originalEvent?.stopPropagation();
+                const feat = e.features?.[0];
+                if (!feat?.geometry?.coordinates?.length) return;
+                const props = feat.properties as PlaceFeatureProps;
+                const placeId = String(props.id ?? "");
+                if (onPlaceSelectRef.current && placeId) {
+                  onPlaceSelectRef.current(placeId);
+                  return;
+                }
+                const [lng, lat] = feat.geometry.coordinates;
+                if (popupRef.current) popupRef.current.remove();
+                const thumbUrl = props.imageUrl
+                  ? ensureAbsoluteUrl(props.imageUrl)
+                  : "";
+                const imgHtml = thumbUrl
+                  ? `<img src="${escapeAttr(thumbUrl)}" alt="" loading="lazy" style="width:120px;height:80px;object-fit:cover;border-radius:6px;display:block;margin-bottom:6px;" />`
+                  : "";
+                const popup = new mapboxgl.Popup({
+                  closeButton: true,
+                  closeOnClick: false,
+                })
+                  .setLngLat([lng, lat])
+                  .setHTML(
+                    `<div style="max-width:200px;padding:4px 0;">
                 <div style="font-weight:600;font-size:14px;margin-bottom:6px;color:#111;">${escapeHtml(props.name || "Place")}</div>
                 ${imgHtml}
                 <a href="/profile/top-places" style="display:inline-block;font-size:13px;color:var(--color-main,#2563eb);font-weight:500;">View place</a>
               </div>`,
-                )
-                .addTo(map);
-              popupRef.current = popup;
-            };
-            map.on("click", UNCLUSTERED_LAYER_ID, onUnclusteredClick);
-            map.on("click", UNCLUSTERED_SYMBOL_LAYER_ID, onUnclusteredClick);
-            map.on("click", "top-places-unclustered-name", onUnclusteredClick);
+                  )
+                  .addTo(map);
+                popupRef.current = popup;
+              };
+              map.on("click", UNCLUSTERED_LAYER_ID, onUnclusteredClick);
+              map.on("click", UNCLUSTERED_SYMBOL_LAYER_ID, onUnclusteredClick);
+              map.on(
+                "click",
+                "top-places-unclustered-name",
+                onUnclusteredClick,
+              );
 
-            map.getCanvas().style.cursor = "default";
-            map.on(
-              "mouseenter",
-              CLUSTER_LAYER_ID,
-              () => (map.getCanvas().style.cursor = "pointer"),
-            );
-            map.on(
-              "mouseleave",
-              CLUSTER_LAYER_ID,
-              () => (map.getCanvas().style.cursor = "default"),
-            );
-            map.on(
-              "mouseenter",
-              CLUSTER_SYMBOL_LAYER_ID,
-              () => (map.getCanvas().style.cursor = "pointer"),
-            );
-            map.on(
-              "mouseleave",
-              CLUSTER_SYMBOL_LAYER_ID,
-              () => (map.getCanvas().style.cursor = "default"),
-            );
-            map.on(
-              "mouseenter",
-              CLUSTER_COUNT_LAYER_ID,
-              () => (map.getCanvas().style.cursor = "pointer"),
-            );
-            map.on(
-              "mouseleave",
-              CLUSTER_COUNT_LAYER_ID,
-              () => (map.getCanvas().style.cursor = "default"),
-            );
-            map.on(
-              "mouseenter",
-              UNCLUSTERED_LAYER_ID,
-              () => (map.getCanvas().style.cursor = "pointer"),
-            );
-            map.on(
-              "mouseleave",
-              UNCLUSTERED_LAYER_ID,
-              () => (map.getCanvas().style.cursor = "default"),
-            );
-            map.on(
-              "mouseenter",
-              UNCLUSTERED_SYMBOL_LAYER_ID,
-              () => (map.getCanvas().style.cursor = "pointer"),
-            );
-            map.on(
-              "mouseleave",
-              UNCLUSTERED_SYMBOL_LAYER_ID,
-              () => (map.getCanvas().style.cursor = "default"),
-            );
-            map.on(
-              "mouseenter",
-              "top-places-unclustered-name",
-              () => (map.getCanvas().style.cursor = "pointer"),
-            );
-            map.on(
-              "mouseleave",
-              "top-places-unclustered-name",
-              () => (map.getCanvas().style.cursor = "default"),
-            );
+              map.getCanvas().style.cursor = "default";
+              map.on(
+                "mouseenter",
+                CLUSTER_LAYER_ID,
+                () => (map.getCanvas().style.cursor = "pointer"),
+              );
+              map.on(
+                "mouseleave",
+                CLUSTER_LAYER_ID,
+                () => (map.getCanvas().style.cursor = "default"),
+              );
+              map.on(
+                "mouseenter",
+                CLUSTER_SYMBOL_LAYER_ID,
+                () => (map.getCanvas().style.cursor = "pointer"),
+              );
+              map.on(
+                "mouseleave",
+                CLUSTER_SYMBOL_LAYER_ID,
+                () => (map.getCanvas().style.cursor = "default"),
+              );
+              map.on(
+                "mouseenter",
+                CLUSTER_COUNT_LAYER_ID,
+                () => (map.getCanvas().style.cursor = "pointer"),
+              );
+              map.on(
+                "mouseleave",
+                CLUSTER_COUNT_LAYER_ID,
+                () => (map.getCanvas().style.cursor = "default"),
+              );
+              map.on(
+                "mouseenter",
+                UNCLUSTERED_LAYER_ID,
+                () => (map.getCanvas().style.cursor = "pointer"),
+              );
+              map.on(
+                "mouseleave",
+                UNCLUSTERED_LAYER_ID,
+                () => (map.getCanvas().style.cursor = "default"),
+              );
+              map.on(
+                "mouseenter",
+                UNCLUSTERED_SYMBOL_LAYER_ID,
+                () => (map.getCanvas().style.cursor = "pointer"),
+              );
+              map.on(
+                "mouseleave",
+                UNCLUSTERED_SYMBOL_LAYER_ID,
+                () => (map.getCanvas().style.cursor = "default"),
+              );
+              map.on(
+                "mouseenter",
+                "top-places-unclustered-name",
+                () => (map.getCanvas().style.cursor = "pointer"),
+              );
+              map.on(
+                "mouseleave",
+                "top-places-unclustered-name",
+                () => (map.getCanvas().style.cursor = "default"),
+              );
+            };
+            let loaded = 0;
+            const total = CATEGORY_PIN_IDS.length;
+            CATEGORY_PIN_IDS.forEach((pinId) => {
+              if (map.hasImage(pinId)) {
+                loaded++;
+                if (loaded === total) addSourceAndLayers();
+                return;
+              }
+              const key = pinId.replace(/^pin-/, "");
+              const dataUrl = getCategoryPinSvgDataUrl(key);
+              const im = new Image();
+              im.onload = () => {
+                if (!map.hasImage(pinId))
+                  map.addImage(pinId, im, { sdf: false });
+                loaded++;
+                if (loaded === total) addSourceAndLayers();
+              };
+              im.onerror = () => {
+                loaded++;
+                if (loaded === total) addSourceAndLayers();
+              };
+              im.src = dataUrl;
+            });
+            if (total === 0) addSourceAndLayers();
           },
         ); // end loadImage callback
       }); // end map.on("load")
@@ -853,6 +943,12 @@ export default function TopPlacesMapView({
           popupRef.current.remove();
         } catch {}
         popupRef.current = null;
+      }
+      if (selectedPhotosPopupRef.current) {
+        try {
+          selectedPhotosPopupRef.current.remove();
+        } catch {}
+        selectedPhotosPopupRef.current = null;
       }
       if (map) {
         try {
@@ -871,6 +967,7 @@ export default function TopPlacesMapView({
               } catch {}
             });
           [
+            SELECTED_PIN_LAYER_ID,
             "top-places-unclustered-name",
             UNCLUSTERED_SYMBOL_LAYER_ID,
             UNCLUSTERED_LAYER_ID,
@@ -884,6 +981,11 @@ export default function TopPlacesMapView({
           });
           if (map.getSource(SOURCE_ID)) map.removeSource(SOURCE_ID);
           if (map.hasImage(DEFAULT_PIN_ID)) map.removeImage(DEFAULT_PIN_ID);
+          CATEGORY_PIN_IDS.forEach((pinId) => {
+            try {
+              if (map.hasImage(pinId)) map.removeImage(pinId);
+            } catch {}
+          });
         } catch {}
         map.remove();
       }
@@ -920,10 +1022,26 @@ export default function TopPlacesMapView({
     if (DEBUG_MAP)
       console.log("[TopPlacesMapView] setData: points =", data.features.length);
     logDebug(map);
-    // Anchor to Top Places result #1 when data changes (e.g. filter change)
+    // Update selected-pin highlight filter when data or selection changes
+    if (map.getLayer(SELECTED_PIN_LAYER_ID)) {
+      map.setFilter(SELECTED_PIN_LAYER_ID, [
+        "==",
+        ["get", "id"],
+        selectedPlaceId ?? "",
+      ]);
+    }
+    // Anchor to selected place or #1 when data changes (e.g. filter change)
     if (data.features.length > 0) {
-      const first = data.features[0] as GeoJSON.Feature<GeoJSON.Point>;
-      const c = first?.geometry?.coordinates;
+      const sid = selectedPlaceId;
+      let target = data.features[0] as GeoJSON.Feature<GeoJSON.Point>;
+      if (sid) {
+        const found = data.features.find(
+          (f: GeoJSON.Feature<GeoJSON.Point>) =>
+            (f.properties as PlaceFeatureProps)?.id === sid,
+        );
+        if (found) target = found as GeoJSON.Feature<GeoJSON.Point>;
+      }
+      const c = target?.geometry?.coordinates;
       if (c && c.length >= 2) {
         const [lng, lat] = c;
         map.flyTo({
@@ -933,7 +1051,89 @@ export default function TopPlacesMapView({
         });
       }
     }
-  }, [placesWithCoords.length, places, logDebug]);
+  }, [placesWithCoords.length, places, selectedPlaceId, logDebug]);
+
+  // When selectedPlaceId changes, update highlight filter (flyTo is handled in the places/source effect above)
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !map.getLayer(SELECTED_PIN_LAYER_ID)) return;
+    map.setFilter(SELECTED_PIN_LAYER_ID, [
+      "==",
+      ["get", "id"],
+      selectedPlaceId ?? "",
+    ]);
+  }, [selectedPlaceId]);
+
+  // Photos-around-pin popup: when a place is selected (e.g. in map modal), show its photos near the orange pin
+  useEffect(() => {
+    const map = mapRef.current;
+    const mapboxgl = mapboxglRef.current;
+    if (!map || !mapboxgl) return;
+    if (selectedPhotosPopupRef.current) {
+      try {
+        selectedPhotosPopupRef.current.remove();
+      } catch {}
+      selectedPhotosPopupRef.current = null;
+    }
+    if (!selectedPlaceId || !onPlaceSelect) return;
+    const place = places.find((p) => p.id === selectedPlaceId);
+    if (
+      !place ||
+      !Number.isFinite(place.latitude) ||
+      !Number.isFinite(place.longitude)
+    )
+      return;
+    const uris =
+      (place.photoListUris?.length ?? 0) > 0
+        ? place.photoListUris!
+        : place.imageUrl
+          ? [place.imageUrl]
+          : [];
+    const urisToShow = uris.slice(0, 4);
+    if (urisToShow.length === 0) return;
+    const imgs = urisToShow
+      .map(
+        (u) =>
+          `<img src="${escapeAttr(ensureAbsoluteUrl(u))}" alt="" loading="lazy" style="width:52px;height:52px;object-fit:cover;border-radius:8px;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,0.2);" />`,
+      )
+      .join("");
+    const viewBtnHtml =
+      onPlaceViewPhotos != null
+        ? `<button type="button" data-view-place style="margin-top:8px;width:100%;padding:6px 12px;font-size:13px;font-weight:500;color:#fff;background:var(--color-main,#2563eb);border:none;border-radius:8px;cursor:pointer;">View</button>`
+        : "";
+    const html = `<div style="padding:6px;max-width:260px;background:rgba(255,255,255,0.95);border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,0.15);">
+      <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center;">${imgs}</div>
+      ${viewBtnHtml}
+    </div>`;
+    const placeIdToView = selectedPlaceId;
+    const popup = new mapboxgl.Popup({
+      closeButton: false,
+      offset: 28,
+      anchor: "top",
+    })
+      .setLngLat([place.longitude, place.latitude])
+      .setHTML(html);
+    const onOpen = () => {
+      const el = popup.getElement();
+      const btn = el?.querySelector?.("[data-view-place]");
+      if (btn && placeIdToView) {
+        const handler = () => onPlaceViewPhotosRef.current?.(placeIdToView);
+        btn.addEventListener("click", handler);
+        popup.once("close", () => btn.removeEventListener("click", handler));
+      }
+    };
+    popup.on("open", onOpen);
+    popup.addTo(map);
+    selectedPhotosPopupRef.current = popup;
+    return () => {
+      if (selectedPhotosPopupRef.current) {
+        try {
+          selectedPhotosPopupRef.current.remove();
+        } catch {}
+        selectedPhotosPopupRef.current = null;
+      }
+    };
+  }, [selectedPlaceId, places, onPlaceSelect, onPlaceViewPhotos]);
 
   const hasPoints = placesWithCoords.length > 0;
 
@@ -987,7 +1187,7 @@ export default function TopPlacesMapView({
           </p>
         </div>
       )}
-      {hasPoints && (
+      {hasPoints && !onPlaceSelect && (
         <TopPlacesMapStrip
           places={places}
           onPlaceSelect={handleStripPlaceSelect}
