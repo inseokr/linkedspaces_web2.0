@@ -34,8 +34,7 @@ function filterAndSortPlaces(
     );
   }
 
-  const categoryAll =
-    filters.categoryIds.has("All") || filters.categoryIds.size === 0;
+  const categoryAll = filters.categoryIds.has("All");
   if (!categoryAll) {
     result = result.filter((p) => filters.categoryIds.has(p.category));
   }

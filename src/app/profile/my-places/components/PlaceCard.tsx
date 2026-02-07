@@ -2,7 +2,12 @@
 
 import { useState, useRef, useEffect } from "react";
 import type { LatestActivityPlace } from "../mockData";
-import { ThumbsUp, MessageCircle, MoreVertical } from "lucide-react";
+import {
+  ThumbsUp,
+  ThumbsDown,
+  MessageCircle,
+  MoreVertical,
+} from "lucide-react";
 
 interface PlaceCardProps {
   place: LatestActivityPlace;
@@ -25,12 +30,50 @@ function ImagePlaceholder() {
   );
 }
 
+/** Sentiment badge: thumbs up (green), thumbs to the side (yellow), thumbs down (red). Same design as list view. */
+function SentimentBadge({
+  sentiment,
+}: {
+  sentiment: "positive" | "neutral" | "negative";
+}) {
+  const config = {
+    positive: {
+      Icon: ThumbsUp,
+      iconClass: "h-4 w-4",
+      className: "text-green-600 bg-green-50 ring-green-200",
+      label: "Positive",
+    },
+    neutral: {
+      Icon: ThumbsUp,
+      iconClass: "h-4 w-4 rotate-[-90deg]",
+      className: "text-amber-600 bg-amber-50 ring-amber-200",
+      label: "Neutral (thumbs to the side)",
+    },
+    negative: {
+      Icon: ThumbsDown,
+      iconClass: "h-4 w-4",
+      className: "text-red-600 bg-red-50 ring-red-200",
+      label: "Negative",
+    },
+  };
+  const { Icon, iconClass, className, label } = config[sentiment];
+  return (
+    <span
+      className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full ring-1 ${className}`}
+      title={`Sentiment: ${label}`}
+      aria-label={`Sentiment: ${label}`}
+    >
+      <Icon className={iconClass} strokeWidth={2} aria-hidden />
+    </span>
+  );
+}
+
 export default function PlaceCard({
   place,
   onPlaceClick,
   onCommentClick,
 }: PlaceCardProps) {
-  const { id, name, date, category, imageUrl, caption, saved } = place;
+  const { id, name, date, category, imageUrl, caption, sentiment } = place;
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -95,11 +138,11 @@ export default function PlaceCard({
         >
           <ImagePlaceholder />
         </div>
-        <div className="absolute right-2 top-2 flex items-center gap-1 rounded-full bg-white/90 px-2 py-1 text-xs text-gray-700 shadow-sm">
-          {saved && (
-            <ThumbsUp className="h-3.5 w-3.5 text-green-600" aria-hidden />
-          )}
-          <span className="font-medium">{date}</span>
+        <div className="absolute right-2 top-2 z-10 flex items-center gap-1.5">
+          {sentiment && <SentimentBadge sentiment={sentiment} />}
+          <div className="flex items-center gap-1 rounded-full bg-white/90 px-2 py-1 text-xs text-gray-700 shadow-sm">
+            <span className="font-medium">{date}</span>
+          </div>
         </div>
       </div>
 

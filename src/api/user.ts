@@ -85,6 +85,10 @@ export type PlaceVisitHistoryItem = {
   categories?: string[];
   /** Backend: place-level story/caption (fallback when no photo story) */
   story?: string;
+  /** Backend: like/heart count for Top Places (optional) */
+  likes?: number;
+  likeCount?: number;
+  likesCount?: number;
 };
 
 export type GeoCoordinate = {

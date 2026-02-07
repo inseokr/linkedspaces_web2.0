@@ -22,6 +22,8 @@ export interface LatestActivityPlace {
   imageUrl: string | null;
   caption: string;
   saved?: boolean;
+  /** User sentiment: positive (green), neutral (yellow), negative (red). */
+  sentiment?: "positive" | "neutral" | "negative";
 }
 
 export interface SavedPlace {
@@ -125,7 +127,9 @@ const CAPTION_SNIPPET =
   "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.";
 
 /** Latest Activity: first N places from View All Places (newest first), same names & dates */
-export function getLatestActivityForMyPlaces(count = 7): LatestActivityPlace[] {
+export function getLatestActivityForMyPlaces(
+  count = 12,
+): LatestActivityPlace[] {
   const all = getMockPlaces();
   return all.slice(0, count).map((p) => {
     const { address } = mockAddress(p);
@@ -160,11 +164,18 @@ export function getSavedPlacesForMyPlaces(): SavedPlace[] {
   });
 }
 
-/** Default filter categories when no places (FilterPopover fallback) */
+/** All place categories for filters and map overlay (same breadth as View All / Top Places). */
 export const PLACE_CATEGORIES: PlaceCategory[] = [
   "Cafe",
   "Restaurant",
   "Bar",
   "Park",
+  "Shopping",
+  "Golf",
+  "Attractions",
+  "Sightseeing",
+  "Activity",
+  "Hotels/Resorts",
+  "Bakery",
   "Others",
 ];

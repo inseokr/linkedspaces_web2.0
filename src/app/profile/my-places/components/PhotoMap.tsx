@@ -15,7 +15,7 @@
  * - No console errors.
  */
 
-import { useEffect, useRef, useCallback, useState } from "react";
+import { useEffect, useRef, useCallback, useState, useMemo } from "react";
 import {
   add3DBuildingsLayer,
   getPersisted3D,
@@ -61,6 +61,7 @@ const CLUSTER_LAYER_ID = "my-places-clusters";
 const CLUSTER_COUNT_LAYER_ID = "my-places-cluster-count";
 const UNCLUSTERED_CIRCLE_LAYER_ID = "my-places-unclustered-circle";
 const UNCLUSTERED_SYMBOL_LAYER_ID = "my-places-unclustered-symbol";
+const UNCLUSTERED_PLACE_NAME_LAYER_ID = "my-places-unclustered-place-name";
 
 const CLUSTER_RADIUS = 50;
 const CLUSTER_MAX_ZOOM = 14;
@@ -89,6 +90,8 @@ export interface PhotoMapProps {
   /** When set, map flies to this view (e.g. after closing place modal). Call onRestoreComplete when done. */
   restoreView?: { center: [number, number]; zoom: number } | null;
   onRestoreComplete?: () => void;
+  /** Called when user clicks the map background (not on a pin or cluster). Use to open full-screen map view. */
+  onMapBackgroundClick?: () => void;
 }
 
 function buildGeoJSON(
@@ -108,12 +111,13 @@ function buildGeoJSON(
       });
       continue;
     }
-    const id = p.id;
-    if (id == null || String(id).trim() === "") {
+    const rawId = p.id;
+    if (rawId == null || String(rawId).trim() === "") {
       console.warn("[PhotoMap] Skipped place (missing id):", p.name);
       skipped++;
       continue;
     }
+    const id = String(rawId);
     const thumbnailUrl =
       p.thumbnailUrl && String(p.thumbnailUrl).trim()
         ? p.thumbnailUrl.trim()
@@ -184,6 +188,7 @@ export default function PhotoMap({
   onMapViewChange,
   restoreView,
   onRestoreComplete,
+  onMapBackgroundClick,
 }: PhotoMapProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<any>(null);
@@ -192,14 +197,24 @@ export default function PhotoMap({
   onPlaceClickRef.current = onPlaceClick;
   const onMapViewChangeRef = useRef(onMapViewChange);
   onMapViewChangeRef.current = onMapViewChange;
+  const onMapBackgroundClickRef = useRef(onMapBackgroundClick);
+  onMapBackgroundClickRef.current = onMapBackgroundClick;
   const thumbCacheRef = useRef<ReturnType<typeof createThumbCache> | null>(
     null,
   );
   const moveEndTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const resizeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const delayedResizeTimeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const resizeObserverRef = useRef<ResizeObserver | null>(null);
+  const initCancelRef = useRef<(() => void) | null>(null);
+  const cancelledRef = useRef(false);
+  const lastSyncThumbnailsRef = useRef(0);
+  const SYNC_THUMBNAILS_DEBOUNCE_MS = 500;
   const [is3D, setIs3D] = useState(() => getPersisted3D());
   const is3DRef = useRef(is3D);
   is3DRef.current = is3D;
   const [mapReady, setMapReady] = useState(false);
+  const [contextLost, setContextLost] = useState(false);
   const webGLSupported = isWebGLSupported();
 
   const token =
@@ -214,6 +229,11 @@ export default function PhotoMap({
   geoJson.current = buildGeoJSON(validPlaces);
 
   const syncThumbnailsForViewport = useCallback((map: any) => {
+    if (!map || !map.getSource(SOURCE_ID)) return;
+    const now = Date.now();
+    if (now - lastSyncThumbnailsRef.current < SYNC_THUMBNAILS_DEBOUNCE_MS)
+      return;
+    lastSyncThumbnailsRef.current = now;
     if (map.getZoom() < THUMB_ZOOM_MIN) return;
     const source = map.getSource(SOURCE_ID) as
       | { setData?: (d: GeoJSON.FeatureCollection) => void }
@@ -256,9 +276,7 @@ export default function PhotoMap({
             return;
           }
           cache.set(id, thumbKey);
-          if (source?.setData) source.setData(geoJsonRef.current!);
           map.triggerRepaint();
-          requestAnimationFrame(() => syncThumbnailsForViewport(map));
         };
         const canvas = drawCircularThumb(img);
         if (canvas instanceof HTMLCanvasElement) {
@@ -343,23 +361,43 @@ export default function PhotoMap({
       return () => clearTimeout(t);
     }
 
+    setContextLost(false);
     thumbCacheRef.current = createThumbCache(THUMB_CACHE_MAX);
+    cancelledRef.current = false;
+    initCancelRef.current = null;
     let map: any = null;
     let cancelRun: (() => void) | undefined;
 
     (async () => {
       const mapboxgl = (await import("mapbox-gl")).default;
       mapboxgl.accessToken = token;
+      if (cancelledRef.current) return;
 
       cancelRun = runWhenReady(() => {
-        if (!containerRef.current) return;
-        map = new mapboxgl.Map({
-          container: containerRef.current,
-          style: "mapbox://styles/mapbox/streets-v12",
-          center: DEFAULT_CENTER,
-          zoom: DEFAULT_ZOOM,
-        });
+        if (cancelledRef.current || !containerRef.current) return;
+        try {
+          map = new mapboxgl.Map({
+            container: containerRef.current,
+            style: "mapbox://styles/mapbox/streets-v12",
+            center: DEFAULT_CENTER,
+            zoom: DEFAULT_ZOOM,
+            preserveDrawingBuffer: true,
+          });
+        } catch (err) {
+          if (typeof console !== "undefined")
+            console.error("[PhotoMap] Map init failed", err);
+          setContextLost(true);
+          return;
+        }
         mapRef.current = map;
+
+        const canvas = map.getCanvas();
+        if (canvas) {
+          canvas.addEventListener("webglcontextlost", (e: Event) => {
+            e.preventDefault();
+            setContextLost(true);
+          });
+        }
 
         map.on("load", () => {
           applyLinkedSpacesMapStyle(map);
@@ -379,11 +417,25 @@ export default function PhotoMap({
           setMapReady(true);
           map.resize();
           requestAnimationFrame(() => map.resize());
-          const ro =
-            containerRef.current &&
-            new ResizeObserver(() => {
+          // Delayed resizes so map picks up final container size after layout settles (fixes pixelated tiles).
+          const t1 = setTimeout(() => {
+            if (mapRef.current) mapRef.current.resize();
+          }, 150);
+          const t2 = setTimeout(() => {
+            if (mapRef.current) mapRef.current.resize();
+          }, 500);
+          delayedResizeTimeoutsRef.current = [t1, t2];
+          const debouncedResize = () => {
+            if (resizeTimeoutRef.current)
+              clearTimeout(resizeTimeoutRef.current);
+            resizeTimeoutRef.current = setTimeout(() => {
+              resizeTimeoutRef.current = null;
               if (mapRef.current) mapRef.current.resize();
-            });
+            }, 150);
+          };
+          const ro =
+            containerRef.current && new ResizeObserver(debouncedResize);
+          resizeObserverRef.current = ro;
           if (ro && containerRef.current) ro.observe(containerRef.current);
           map.loadImage(
             DEFAULT_PIN_SVG,
@@ -391,104 +443,174 @@ export default function PhotoMap({
               err: Error | null,
               img: HTMLImageElement | ImageBitmap | undefined,
             ) => {
-              if (!err && img && !map.hasImage(DEFAULT_PIN_ID))
-                map.addImage(DEFAULT_PIN_ID, img, { sdf: false });
+              if (cancelledRef.current || !mapRef.current) return;
+              if (!err && img && !map.hasImage(DEFAULT_PIN_ID)) {
+                try {
+                  map.addImage(DEFAULT_PIN_ID, img, { sdf: false });
+                } catch (e) {
+                  if (DEBUG_MAP)
+                    console.warn("[PhotoMap] addImage default pin failed", e);
+                  setContextLost(true);
+                  return;
+                }
+              }
 
               const addCategoryPinsThenLayers = () => {
                 const pinIds = [...CATEGORY_PIN_IDS];
                 let loaded = 0;
                 const total = pinIds.length;
                 const addSourceAndLayers = () => {
-                  geoJsonRef.current = geoJson.current;
-                  map.addSource(SOURCE_ID, {
-                    type: "geojson",
-                    data: geoJsonRef.current!,
-                    cluster: true,
-                    clusterRadius: CLUSTER_RADIUS,
-                    clusterMaxZoom: CLUSTER_MAX_ZOOM,
-                  });
+                  try {
+                    if (cancelledRef.current || !mapRef.current) return;
+                    geoJsonRef.current = geoJson.current;
+                    map.addSource(SOURCE_ID, {
+                      type: "geojson",
+                      data: geoJsonRef.current!,
+                      cluster: true,
+                      clusterRadius: CLUSTER_RADIUS,
+                      clusterMaxZoom: CLUSTER_MAX_ZOOM,
+                    });
 
-                  map.addLayer({
-                    id: CLUSTER_LAYER_ID,
-                    type: "circle",
-                    source: SOURCE_ID,
-                    filter: ["has", "point_count"],
-                    paint: {
-                      "circle-color": "rgba(249, 115, 22, 0.75)",
-                      "circle-radius": [
-                        "step",
-                        ["get", "point_count"],
-                        20,
-                        10,
-                        28,
-                        25,
-                        36,
-                        50,
-                        50,
-                      ],
-                      "circle-stroke-width": 2,
-                      "circle-stroke-color": "#fff",
-                    },
-                  });
-                  map.addLayer({
-                    id: CLUSTER_COUNT_LAYER_ID,
-                    type: "symbol",
-                    source: SOURCE_ID,
-                    filter: ["has", "point_count"],
-                    layout: {
-                      "text-field": ["get", "point_count_abbreviated"],
-                      "text-font": [
-                        "DIN Offc Pro Medium",
-                        "Arial Unicode MS Bold",
-                      ],
-                      "text-size": 13,
-                    },
-                    paint: { "text-color": "#fff" },
-                  });
-                  map.addLayer({
-                    id: UNCLUSTERED_CIRCLE_LAYER_ID,
-                    type: "circle",
-                    source: SOURCE_ID,
-                    filter: ["!", ["has", "point_count"]],
-                    paint: {
-                      "circle-color": [
-                        "case",
-                        ["boolean", ["feature-state", "active"], false],
-                        "rgba(234, 88, 12, 1)",
-                        "rgba(249, 115, 22, 0.9)",
-                      ],
-                      "circle-radius": [
-                        "case",
-                        ["boolean", ["feature-state", "active"], false],
-                        22,
-                        18,
-                      ],
-                      "circle-stroke-width": [
-                        "case",
-                        ["boolean", ["feature-state", "active"], false],
-                        3,
-                        2,
-                      ],
-                      "circle-stroke-color": "#fff",
-                    },
-                  });
-                  map.addLayer({
-                    id: UNCLUSTERED_SYMBOL_LAYER_ID,
-                    type: "symbol",
-                    source: SOURCE_ID,
-                    filter: ["!", ["has", "point_count"]],
-                    layout: {
-                      "icon-image": [
-                        "case",
-                        ["==", ["get", "thumbKey"], DEFAULT_PIN_ID],
-                        ["coalesce", ["get", "categoryPinId"], "pin-place"],
-                        ["get", "thumbKey"],
-                      ],
-                      "icon-size": 0.9,
-                      "icon-allow-overlap": true,
-                      "icon-ignore-placement": true,
-                    },
-                  });
+                    map.addLayer({
+                      id: CLUSTER_LAYER_ID,
+                      type: "circle",
+                      source: SOURCE_ID,
+                      filter: ["has", "point_count"],
+                      paint: {
+                        "circle-color": "rgba(249, 115, 22, 0.75)",
+                        "circle-radius": [
+                          "step",
+                          ["get", "point_count"],
+                          20,
+                          10,
+                          28,
+                          25,
+                          36,
+                          50,
+                          50,
+                        ],
+                        "circle-stroke-width": 2,
+                        "circle-stroke-color": "#fff",
+                      },
+                    });
+                    map.addLayer({
+                      id: CLUSTER_COUNT_LAYER_ID,
+                      type: "symbol",
+                      source: SOURCE_ID,
+                      filter: ["has", "point_count"],
+                      layout: {
+                        "text-field": ["get", "point_count_abbreviated"],
+                        "text-font": [
+                          "DIN Offc Pro Medium",
+                          "Arial Unicode MS Bold",
+                        ],
+                        "text-size": 13,
+                      },
+                      paint: { "text-color": "#fff" },
+                    });
+                    map.addLayer({
+                      id: UNCLUSTERED_CIRCLE_LAYER_ID,
+                      type: "circle",
+                      source: SOURCE_ID,
+                      filter: ["!", ["has", "point_count"]],
+                      paint: {
+                        "circle-color": [
+                          "case",
+                          ["boolean", ["feature-state", "active"], false],
+                          "rgba(234, 88, 12, 1)",
+                          "rgba(249, 115, 22, 0.9)",
+                        ],
+                        "circle-radius": [
+                          "case",
+                          ["boolean", ["feature-state", "active"], false],
+                          22,
+                          18,
+                        ],
+                        "circle-stroke-width": [
+                          "case",
+                          ["boolean", ["feature-state", "active"], false],
+                          3,
+                          2,
+                        ],
+                        "circle-stroke-color": "#fff",
+                      },
+                    });
+                    map.addLayer({
+                      id: UNCLUSTERED_SYMBOL_LAYER_ID,
+                      type: "symbol",
+                      source: SOURCE_ID,
+                      filter: ["!", ["has", "point_count"]],
+                      layout: {
+                        "icon-image": [
+                          "case",
+                          ["==", ["get", "thumbKey"], DEFAULT_PIN_ID],
+                          ["coalesce", ["get", "categoryPinId"], "pin-place"],
+                          ["get", "thumbKey"],
+                        ],
+                        "icon-size": 0.9,
+                        "icon-allow-overlap": true,
+                        "icon-ignore-placement": true,
+                      },
+                    });
+                    map.addLayer({
+                      id: UNCLUSTERED_PLACE_NAME_LAYER_ID,
+                      type: "symbol",
+                      source: SOURCE_ID,
+                      filter: ["!", ["has", "point_count"]],
+                      layout: {
+                        "text-field": ["coalesce", ["get", "placeName"], ""],
+                        "text-font": [
+                          "DIN Offc Pro Regular",
+                          "Arial Unicode MS Regular",
+                        ],
+                        "text-size": 11,
+                        "text-anchor": "top",
+                        "text-offset": [0, 2.2],
+                        "text-optional": true,
+                        "text-allow-overlap": false,
+                        "text-ignore-placement": false,
+                        "text-max-width": 10,
+                      },
+                      paint: {
+                        "text-color": "#1f2937",
+                        "text-halo-color": "#fff",
+                        "text-halo-width": 2.5,
+                      },
+                    });
+                    map.addLayer(
+                      {
+                        id: `${UNCLUSTERED_PLACE_NAME_LAYER_ID}-border`,
+                        type: "symbol",
+                        source: SOURCE_ID,
+                        filter: ["!", ["has", "point_count"]],
+                        layout: {
+                          "text-field": ["coalesce", ["get", "placeName"], ""],
+                          "text-font": [
+                            "DIN Offc Pro Regular",
+                            "Arial Unicode MS Regular",
+                          ],
+                          "text-size": 11,
+                          "text-anchor": "top",
+                          "text-offset": [0, 2.2],
+                          "text-optional": true,
+                          "text-allow-overlap": false,
+                          "text-ignore-placement": false,
+                          "text-max-width": 10,
+                        },
+                        paint: {
+                          "text-color": "#1f2937",
+                          "text-opacity": 0,
+                          "text-halo-color": "#c2410c",
+                          "text-halo-width": 3,
+                        },
+                      },
+                      UNCLUSTERED_PLACE_NAME_LAYER_ID,
+                    );
+                  } catch (e) {
+                    if (typeof console !== "undefined")
+                      console.error("[PhotoMap] addSourceAndLayers failed", e);
+                    setContextLost(true);
+                  }
                 };
 
                 pinIds.forEach((pinId) => {
@@ -617,6 +739,8 @@ export default function PhotoMap({
                   layers: [
                     UNCLUSTERED_CIRCLE_LAYER_ID,
                     UNCLUSTERED_SYMBOL_LAYER_ID,
+                    UNCLUSTERED_PLACE_NAME_LAYER_ID,
+                    `${UNCLUSTERED_PLACE_NAME_LAYER_ID}-border`,
                   ],
                 });
                 if (!features.length) return;
@@ -626,6 +750,28 @@ export default function PhotoMap({
               };
               map.on("click", UNCLUSTERED_CIRCLE_LAYER_ID, onMarkerClick);
               map.on("click", UNCLUSTERED_SYMBOL_LAYER_ID, onMarkerClick);
+              map.on("click", UNCLUSTERED_PLACE_NAME_LAYER_ID, onMarkerClick);
+              map.on(
+                "click",
+                `${UNCLUSTERED_PLACE_NAME_LAYER_ID}-border`,
+                onMarkerClick,
+              );
+
+              const allInteractiveLayers = [
+                CLUSTER_LAYER_ID,
+                CLUSTER_COUNT_LAYER_ID,
+                UNCLUSTERED_CIRCLE_LAYER_ID,
+                UNCLUSTERED_SYMBOL_LAYER_ID,
+                UNCLUSTERED_PLACE_NAME_LAYER_ID,
+                `${UNCLUSTERED_PLACE_NAME_LAYER_ID}-border`,
+              ];
+              const onMapClick = (e: any) => {
+                const features = map.queryRenderedFeatures(e.point, {
+                  layers: allInteractiveLayers,
+                });
+                if (features.length === 0) onMapBackgroundClickRef.current?.();
+              };
+              map.on("click", onMapClick);
 
               map.getCanvas().style.cursor = "default";
               map.on("mouseenter", CLUSTER_LAYER_ID, () => {
@@ -652,14 +798,48 @@ export default function PhotoMap({
               map.on("mouseleave", UNCLUSTERED_SYMBOL_LAYER_ID, () => {
                 map.getCanvas().style.cursor = "default";
               });
+              map.on("mouseenter", UNCLUSTERED_PLACE_NAME_LAYER_ID, () => {
+                map.getCanvas().style.cursor = "pointer";
+              });
+              map.on("mouseleave", UNCLUSTERED_PLACE_NAME_LAYER_ID, () => {
+                map.getCanvas().style.cursor = "default";
+              });
+              map.on(
+                "mouseenter",
+                `${UNCLUSTERED_PLACE_NAME_LAYER_ID}-border`,
+                () => {
+                  map.getCanvas().style.cursor = "pointer";
+                },
+              );
+              map.on(
+                "mouseleave",
+                `${UNCLUSTERED_PLACE_NAME_LAYER_ID}-border`,
+                () => {
+                  map.getCanvas().style.cursor = "default";
+                },
+              );
             },
           );
         });
-      }); // close runWhenReady callback
+      });
+      initCancelRef.current = cancelRun ?? null;
     })();
 
     return () => {
+      cancelledRef.current = true;
+      initCancelRef.current?.();
+      initCancelRef.current = null;
       if (moveEndTimeoutRef.current) clearTimeout(moveEndTimeoutRef.current);
+      if (resizeTimeoutRef.current) {
+        clearTimeout(resizeTimeoutRef.current);
+        resizeTimeoutRef.current = null;
+      }
+      delayedResizeTimeoutsRef.current.forEach((t) => clearTimeout(t));
+      delayedResizeTimeoutsRef.current = [];
+      if (resizeObserverRef.current && containerRef.current) {
+        resizeObserverRef.current.disconnect();
+        resizeObserverRef.current = null;
+      }
       if (map) {
         try {
           const cache = thumbCacheRef.current;
@@ -670,6 +850,8 @@ export default function PhotoMap({
               } catch {}
             });
           [
+            `${UNCLUSTERED_PLACE_NAME_LAYER_ID}-border`,
+            UNCLUSTERED_PLACE_NAME_LAYER_ID,
             UNCLUSTERED_SYMBOL_LAYER_ID,
             UNCLUSTERED_CIRCLE_LAYER_ID,
             CLUSTER_COUNT_LAYER_ID,
@@ -698,35 +880,68 @@ export default function PhotoMap({
 
   const previousActivePlaceIdRef = useRef<string | null>(null);
 
+  /** Set of feature ids in current GeoJSON (string) for safe setFeatureState. */
+  const featureIdSet = useMemo(() => {
+    const set = new Set<string>();
+    for (const f of geoJson.current.features) {
+      const id = (f as GeoJSON.Feature & { id?: string | number }).id;
+      if (id != null) set.add(String(id));
+    }
+    return set;
+  }, [validPlaces.length, places]);
+
+  /** Stable key so setData runs only when the list of places actually changes, not on every parent re-render. */
+  const placesDataKey = useMemo(
+    () => validPlaces.map((p) => p.id).join(","),
+    [validPlaces],
+  );
+
+  // Update map data only when places change — do not run on activePlaceId change (avoids redundant setData and races).
   useEffect(() => {
     const map = mapRef.current;
-    const source = map?.getSource(SOURCE_ID) as
+    if (!map || cancelledRef.current) return;
+    const source = map.getSource(SOURCE_ID) as
       | { setData?: (d: GeoJSON.FeatureCollection) => void }
       | undefined;
     if (!source?.setData) return;
-    geoJsonRef.current = geoJson.current;
-    source.setData(geoJsonRef.current!);
-    if (DEBUG_MAP)
-      console.log(
-        "[PhotoMap] setData: points =",
-        geoJson.current.features.length,
-      );
-    const markerIds = geoJson.current.features.map(
-      (f) =>
-        (f as GeoJSON.Feature & { id?: string }).id ??
-        (f.properties as Record<string, unknown>)?.id,
-    );
-    debugLog("setData: marker ids =", markerIds);
-    if (activePlaceId && map) {
-      try {
-        map.setFeatureState(
-          { source: SOURCE_ID, id: activePlaceId },
-          { active: true },
+    try {
+      geoJsonRef.current = geoJson.current;
+      source.setData(geoJsonRef.current!);
+      if (DEBUG_MAP)
+        console.log(
+          "[PhotoMap] setData: points =",
+          geoJson.current.features.length,
         );
-        previousActivePlaceIdRef.current = activePlaceId;
-      } catch (_) {}
+      const markerIds = geoJson.current.features.map(
+        (f) =>
+          (f as GeoJSON.Feature & { id?: string }).id ??
+          (f.properties as Record<string, unknown>)?.id,
+      );
+      debugLog("setData: marker ids =", markerIds);
+    } catch (e) {
+      if (DEBUG_MAP) console.warn("[PhotoMap] setData failed", e);
     }
-  }, [validPlaces.length, places, activePlaceId]);
+  }, [placesDataKey]);
+
+  // When the places list changes (e.g. map category filter), fly to the first (nearest) place so the map stays anchored to the most relevant location.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || cancelledRef.current) return;
+    const source = map.getSource(SOURCE_ID);
+    if (!source) return;
+    const features = geoJson.current?.features;
+    if (!features?.length) return;
+    const first = features[0] as GeoJSON.Feature<GeoJSON.Point>;
+    const c = first?.geometry?.coordinates;
+    if (c && c.length >= 2) {
+      map.flyTo({
+        center: [c[0], c[1]],
+        zoom: FOCUS_ZOOM,
+        duration: 400,
+        essential: true,
+      });
+    }
+  }, [placesDataKey]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -739,6 +954,7 @@ export default function PhotoMap({
     update3DBuildingsVisibility(map, is3D);
   }, [is3D]);
 
+  // Only update feature state for active place; guard so we never call setFeatureState if source is missing or id not in data.
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
@@ -746,11 +962,13 @@ export default function PhotoMap({
 
     const setFeatureActive = (placeId: string | null, active: boolean) => {
       if (!placeId) return;
+      const idStr = String(placeId);
+      if (!featureIdSet.has(idStr)) return;
       try {
-        map.setFeatureState({ source: SOURCE_ID, id: placeId }, { active });
-        debugLog("setFeatureState", placeId, { active });
+        map.setFeatureState({ source: SOURCE_ID, id: idStr }, { active });
+        debugLog("setFeatureState", idStr, { active });
       } catch (e) {
-        debugLog("setFeatureState failed", placeId, e);
+        debugLog("setFeatureState failed", idStr, e);
       }
     };
 
@@ -758,10 +976,7 @@ export default function PhotoMap({
     if (prev && prev !== activePlaceId) setFeatureActive(prev, false);
     if (activePlaceId) setFeatureActive(activePlaceId, true);
     previousActivePlaceIdRef.current = activePlaceId;
-
-    // Do not fly the map to the place when opening the modal — keep the map
-    // where the user left it. Restore on modal close still returns to saved view.
-  }, [activePlaceId, validPlaces]);
+  }, [activePlaceId, featureIdSet]);
 
   const onRestoreCompleteRef = useRef(onRestoreComplete);
   onRestoreCompleteRef.current = onRestoreComplete;
@@ -804,6 +1019,17 @@ export default function PhotoMap({
     return (
       <div className="absolute inset-0 flex items-center justify-center rounded-xl border border-gray-200 bg-gray-100 text-sm text-gray-500">
         Add NEXT_PUBLIC_MAPBOX_TOKEN to .env.local to show the map.
+      </div>
+    );
+  }
+
+  if (contextLost) {
+    return (
+      <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 rounded-xl border border-gray-200 bg-gray-100 p-4 text-center text-sm text-gray-600">
+        <p>Map temporarily unavailable.</p>
+        <p className="text-gray-500">
+          Try closing and reopening the map or refreshing the page.
+        </p>
       </div>
     );
   }

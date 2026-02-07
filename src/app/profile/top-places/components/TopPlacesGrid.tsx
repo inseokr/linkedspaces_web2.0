@@ -100,6 +100,7 @@ export default function TopPlacesGrid({ places }: TopPlacesGridProps) {
   const [editPlace, setEditPlace] = React.useState<SavedPlace | null>(null);
   const placeBeforeEditRef = React.useRef<TopPlaceCardModel | null>(null);
   const [visibleCount, setVisibleCount] = React.useState(INITIAL_VISIBLE);
+  const loadMoreSentinelRef = React.useRef<HTMLDivElement | null>(null);
   const [interaction, setInteraction] = React.useState<CardInteractionState>({
     bookmarked: new Set(),
     liked: new Set(),
@@ -109,6 +110,30 @@ export default function TopPlacesGrid({ places }: TopPlacesGridProps) {
   const visiblePlaces = places.slice(0, visibleCount);
   const hasMore = visibleCount < places.length;
   const isExpanded = visibleCount > INITIAL_VISIBLE;
+
+  const handleShowMore = React.useCallback(() => {
+    setVisibleCount((c) => Math.min(c + LOAD_MORE_COUNT, places.length));
+  }, [places.length]);
+
+  React.useEffect(() => {
+    if (places.length > 0) setVisibleCount((c) => Math.min(c, places.length));
+  }, [places.length]);
+
+  React.useEffect(() => {
+    if (!hasMore) return;
+    const sentinel = loadMoreSentinelRef.current;
+    if (!sentinel) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const [e] = entries;
+        if (!e?.isIntersecting) return;
+        setVisibleCount((c) => Math.min(c + LOAD_MORE_COUNT, places.length));
+      },
+      { root: null, rootMargin: "200px 0px", threshold: 0 },
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [hasMore, places.length]);
 
   const onBookmarkToggle = React.useCallback((placeId: string) => {
     setInteraction((prev) => {
@@ -134,9 +159,9 @@ export default function TopPlacesGrid({ places }: TopPlacesGridProps) {
     });
   }, []);
 
-  const handleShowMore = () => {
+  const handleShowMoreClick = () => {
     if (hasMore) {
-      setVisibleCount((c) => Math.min(c + LOAD_MORE_COUNT, places.length));
+      handleShowMore();
     } else {
       setVisibleCount(INITIAL_VISIBLE);
     }
@@ -216,10 +241,13 @@ export default function TopPlacesGrid({ places }: TopPlacesGridProps) {
         }}
       />
 
+      {hasMore && (
+        <div ref={loadMoreSentinelRef} className="h-4 w-full" aria-hidden />
+      )}
       <div className="mt-10 flex justify-center">
         <button
           type="button"
-          onClick={handleShowMore}
+          onClick={handleShowMoreClick}
           className="inline-flex items-center gap-2 rounded-full border border-gray-300 bg-white px-6 py-3 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[var(--color-main)] focus:ring-offset-2"
           aria-label={hasMore ? "Show more spaces" : "Show less spaces"}
         >

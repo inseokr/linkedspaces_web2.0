@@ -27,9 +27,16 @@ export default function CategoryChipsRow({
   showAllButton = true,
 }: CategoryChipsRowProps) {
   const [expanded, setExpanded] = React.useState(false);
-  const mainCategories = categories.filter(
-    (c) => c.id !== "All" && c.name !== "All",
-  );
+  const mainCategories = categories.filter((c) => {
+    const idLower = c.id?.toLowerCase();
+    const nameLower = c.name?.toLowerCase();
+    return (
+      c.id !== "All" &&
+      c.name !== "All" &&
+      idLower !== "all" &&
+      nameLower !== "all"
+    );
+  });
   const visibleCategories = singleLine
     ? mainCategories
     : expanded

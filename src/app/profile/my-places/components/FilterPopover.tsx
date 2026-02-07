@@ -80,10 +80,15 @@ export default function FilterPopover({
               type="button"
               onClick={toggleAll}
               className="text-left text-sm font-medium text-[var(--color-main)] hover:underline"
+              aria-label={
+                selectedCategories.size === categories.length
+                  ? "Clear all categories"
+                  : "Select all categories"
+              }
             >
               {selectedCategories.size === categories.length
-                ? "Clear all"
-                : "Select all"}
+                ? "Clear All"
+                : "Select All"}
             </button>
           </div>
           <ul className="max-h-[70vh] overflow-y-auto py-1">

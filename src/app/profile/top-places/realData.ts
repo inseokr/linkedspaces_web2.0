@@ -61,24 +61,51 @@ export function mapPlaceVisitHistoryToTopPlacesModel(
     country.slice(0, 2).toUpperCase();
   const city = entry.city?.trim() || "";
   const photoList = entry.photoList ?? [];
-  const firstPhoto = photoList.find(
+  const withUri = photoList.filter(
     (p) => p?.uri && !String(p.uri).startsWith("file://"),
   );
+  const firstPhoto = withUri[0] ?? photoList.find((p) => p?.uri);
   const imageUrl = firstPhoto?.uri
     ? assetUrl(firstPhoto.uri)
     : PLACEHOLDER_IMAGE;
-  const photoListUris = photoList
-    .filter((p) => p?.uri && !String(p.uri).startsWith("file://"))
-    .map((p) => assetUrl(p!.uri));
+  let photoListUris = withUri.map((p) => assetUrl(p!.uri));
+  type EntryExt = {
+    photoUris?: string[];
+    additionalPhotoUris?: string[];
+    story?: string;
+    caption?: string;
+  };
+  const entryExt = entry as EntryExt;
+  const extraUris = entryExt.photoUris ?? entryExt.additionalPhotoUris;
+  if (Array.isArray(extraUris) && extraUris.length > 0) {
+    const existing = new Set(photoListUris);
+    for (const u of extraUris) {
+      const s = typeof u === "string" ? u.trim() : "";
+      if (s && !existing.has(s)) {
+        existing.add(s);
+        photoListUris.push(s);
+      }
+    }
+  }
 
   const categories = entry.categories ?? [];
   const category = categories[0]?.trim() || "Others";
 
-  const entryAny = entry as { story?: string; caption?: string };
+  const entryWithLikes = entry as PlaceVisitHistoryEntry & {
+    likes?: number;
+    likeCount?: number;
+    likesCount?: number;
+  };
+  const likesCount = getNumber(
+    entryWithLikes.likes ??
+      entryWithLikes.likeCount ??
+      entryWithLikes.likesCount,
+  );
+
   const placeStory =
-    typeof entryAny.story === "string" ? entryAny.story.trim() : "";
+    typeof entryExt.story === "string" ? entryExt.story.trim() : "";
   const placeCaption =
-    typeof entryAny.caption === "string" ? entryAny.caption.trim() : "";
+    typeof entryExt.caption === "string" ? entryExt.caption.trim() : "";
   const getPhotoCaption = (p: unknown): string => {
     const q = p as { story?: string; caption?: string } | undefined;
     if (!q) return "";
@@ -115,9 +142,9 @@ export function mapPlaceVisitHistoryToTopPlacesModel(
     city,
     category,
     imageUrl,
-    photosCount: photoList.length,
+    photosCount: Math.max(photoList.length, photoListUris.length),
     visitsCount: getNumber((entry as PlaceVisitHistoryEntry).visitedCount),
-    likesCount: 0,
+    likesCount,
     rank,
     photoListUris: photoListUris.length > 0 ? photoListUris : undefined,
     visitedTime: entry.visitedTime ?? entry.visitedTimeDigitized,
@@ -163,7 +190,8 @@ export function deriveCategoryFilterCounts(
 ): Array<{ id: string; name: string; count: number }> {
   const byName = new Map<string, number>();
   for (const p of places) {
-    const name = p.category || "Others";
+    let name = p.category || "Others";
+    if (name.toLowerCase() === "all") name = "Others";
     byName.set(name, (byName.get(name) ?? 0) + 1);
   }
   const list = [...byName.entries()]

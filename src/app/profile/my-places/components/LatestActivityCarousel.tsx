@@ -16,10 +16,9 @@ interface LatestActivityCarouselProps {
 /** PlaceCard width and gap must match PlaceCard.tsx (w-[320px]) and gap-4 */
 const CARD_WIDTH = 320;
 const GAP = 16;
-/** Scroll by 4 full cards so the next 4 are fully visible */
-const PAGE_SCROLL = 4 * CARD_WIDTH + 3 * GAP;
-/** Viewport shows 4 full cards + slight peek of 5th (4.2 cards) */
-const VIEWPORT_MAX_WIDTH = 4.2 * CARD_WIDTH + 3.2 * GAP;
+/** Scroll by this many cards so the next set is visible (responsive: ~4 cards on small, more on wide) */
+const CARDS_PER_PAGE = 4;
+const PAGE_SCROLL = CARDS_PER_PAGE * CARD_WIDTH + (CARDS_PER_PAGE - 1) * GAP;
 
 export default function LatestActivityCarousel({
   places,
@@ -47,7 +46,7 @@ export default function LatestActivityCarousel({
   };
 
   return (
-    <div className="relative flex items-center gap-2">
+    <div className="relative flex w-full min-w-0 items-center gap-2">
       <button
         type="button"
         onClick={() => scroll("left")}
@@ -59,8 +58,7 @@ export default function LatestActivityCarousel({
 
       <div
         ref={scrollRef}
-        className="flex flex-1 gap-4 overflow-x-auto scroll-smooth scrollbar-hide py-2"
-        style={{ maxWidth: VIEWPORT_MAX_WIDTH }}
+        className="min-w-0 flex-1 overflow-x-auto scroll-smooth scrollbar-hide py-2 flex gap-4"
         role="region"
         aria-label="Latest activity carousel"
       >

@@ -2,14 +2,17 @@
 
 import { useMemo, useState, useRef, useCallback, useEffect } from "react";
 import Link from "next/link";
-import { LayoutGrid, Search } from "lucide-react";
+import { ChevronLeft, ChevronRight, LayoutGrid, Search, X } from "lucide-react";
 import { getCachedUser } from "@/api/user";
 import { getMyPlacesFromUser } from "./realData";
 import type { PlaceCategory, SavedPlace } from "./mockData";
+import { PLACE_CATEGORIES } from "./mockData";
 import dynamic from "next/dynamic";
 import LatestActivityCarousel from "./components/LatestActivityCarousel";
 import PlacesList from "./components/PlacesList";
-import FilterPopover from "./components/FilterPopover";
+import MapCategoryChips, {
+  type MapCategoryFilter,
+} from "./components/MapCategoryChips";
 import PlaceLightboxModal, {
   type LightboxImage,
   type PlaceComment,
@@ -18,8 +21,40 @@ import EditPlaceModal from "./components/EditPlaceModal";
 import MyPlacesSearchOverlay from "./components/MyPlacesSearchOverlay";
 import type { SearchPlace } from "./searchMockData";
 import ScrollToTopButton from "@/components/ui/ScrollToTopButton";
+import { useLayoutMode } from "@/components/layout/LayoutModeContext";
 
 const PLACEHOLDER_IMAGE = "https://picsum.photos/400/600?random=place";
+
+/** Approximate distance in km between two points (Haversine). */
+function distanceKm(
+  lat1: number,
+  lng1: number,
+  lat2: number,
+  lng2: number,
+): number {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLng / 2) *
+      Math.sin(dLng / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+/** Centroid of places with valid coords; fallback to first place or null. */
+function centroid(places: SavedPlace[]): { lat: number; lng: number } | null {
+  const valid = places.filter(
+    (p) => Number.isFinite(p.lat) && Number.isFinite(p.lng),
+  );
+  if (valid.length === 0) return null;
+  const lat = valid.reduce((s, p) => s + p.lat, 0) / valid.length;
+  const lng = valid.reduce((s, p) => s + p.lng, 0) / valid.length;
+  return { lat, lng };
+}
 
 /** Parse date/time: ISO, YYYY-MM-DD, or "YYYY:MM:DD HH:mm:ss" (digitizedTime). */
 function parseDateTime(s: string): Date | null {
@@ -74,23 +109,45 @@ const PhotoMap = dynamic(() => import("./components/PhotoMap"), {
 
 export default function ProfileMyPlacesPage() {
   const [mounted, setMounted] = useState(false);
-  const user = mounted ? getCachedUser() : null;
+  const [user, setUser] = useState<ReturnType<typeof getCachedUser>>(null);
   const { latestActivity, savedPlaces, categories } = useMemo(
     () => getMyPlacesFromUser(user),
     [user],
   );
+  /** User's current location for sorting the list (nearest first). Null until resolved or unavailable. */
+  const [userLocation, setUserLocation] = useState<{
+    lat: number;
+    lng: number;
+  } | null>(null);
 
   useEffect(() => {
-    const id = setTimeout(() => setMounted(true), 0);
-    return () => clearTimeout(id);
+    const syncUser = () => {
+      setUser(getCachedUser());
+      setMounted(true);
+    };
+    queueMicrotask(syncUser);
+    window.addEventListener("focus", syncUser);
+    return () => window.removeEventListener("focus", syncUser);
   }, []);
 
-  const ALL_CATEGORIES = useMemo(
-    () => new Set<PlaceCategory>(categories),
-    [categories],
-  );
-  const [selectedCategories, setSelectedCategories] =
-    useState<Set<PlaceCategory>>(ALL_CATEGORIES);
+  useEffect(() => {
+    if (!user || typeof navigator === "undefined" || !navigator.geolocation)
+      return;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        if (Number.isFinite(lat) && Number.isFinite(lng))
+          setUserLocation({ lat, lng });
+      },
+      () => {},
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 },
+    );
+  }, [user]);
+
+  const [selectedCategories, setSelectedCategories] = useState<
+    Set<PlaceCategory>
+  >(() => new Set(PLACE_CATEGORIES));
   /**
    * Single source of truth for list-map sync (PR: list/map mismatch fix).
    * Root cause: Previously we had scroll-based focus + click both updating "focusedPlaceId",
@@ -107,6 +164,31 @@ export default function ProfileMyPlacesPage() {
   >(null);
   const [searchOverlayOpen, setSearchOverlayOpen] = useState(false);
   const [editPlace, setEditPlace] = useState<SavedPlace | null>(null);
+  const [mapFullScreen, setMapFullScreen] = useState(false);
+  const [mapCategoryFilter, setMapCategoryFilter] =
+    useState<MapCategoryFilter>("All");
+  const [listPanelExpanded, setListPanelExpanded] = useState(false);
+  const LIST_PANEL_NARROW_PX = 480;
+  const LIST_PANEL_WIDE_PX = 720;
+  const listPanelWidthPx = listPanelExpanded
+    ? LIST_PANEL_WIDE_PX
+    : LIST_PANEL_NARROW_PX;
+  const { setFullScreenMapActive } = useLayoutMode();
+
+  useEffect(() => {
+    if (!mapFullScreen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMapFullScreen(false);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [mapFullScreen]);
+
+  useEffect(() => {
+    setFullScreenMapActive(mapFullScreen);
+    return () => setFullScreenMapActive(false);
+  }, [mapFullScreen, setFullScreenMapActive]);
+
   /** Local overrides for visibility (private/public) when user saves in Edit modal before backend persist. */
   const [visibilityOverrides, setVisibilityOverrides] = useState<
     Record<string, "private" | "public">
@@ -150,6 +232,28 @@ export default function ProfileMyPlacesPage() {
       selectedCategories.has(p.category),
     );
   }, [savedPlaces, selectedCategories]);
+
+  const sortedPlacesForList = useMemo(() => {
+    if (filteredPlaces.length === 0) return filteredPlaces;
+    const ref = userLocation ?? centroid(filteredPlaces);
+    if (!ref) return filteredPlaces;
+    return [...filteredPlaces].sort((a, b) => {
+      const aOk = Number.isFinite(a.lat) && Number.isFinite(a.lng);
+      const bOk = Number.isFinite(b.lat) && Number.isFinite(b.lng);
+      if (!aOk && !bOk) return 0;
+      if (!aOk) return 1;
+      if (!bOk) return -1;
+      const dA = distanceKm(a.lat, a.lng, ref.lat, ref.lng);
+      const dB = distanceKm(b.lat, b.lng, ref.lat, ref.lng);
+      return dA - dB;
+    });
+  }, [filteredPlaces, userLocation]);
+
+  /** Places to show on the map: filtered by map overlay category (All or single category), still sorted by distance. */
+  const placesForMap = useMemo(() => {
+    if (mapCategoryFilter === "All") return sortedPlacesForList;
+    return sortedPlacesForList.filter((p) => p.category === mapCategoryFilter);
+  }, [sortedPlacesForList, mapCategoryFilter]);
 
   const initialCommentsByPlaceId = useMemo((): Record<
     string,
@@ -196,19 +300,19 @@ export default function ProfileMyPlacesPage() {
   const hasPlaces = savedPlaces.length > 0;
 
   useEffect(() => {
-    if (!listScrollReady || filteredPlaces.length === 0) return;
+    if (!listScrollReady || placesForMap.length === 0) return;
     const prev = prevFilteredPlacesRef.current;
     const listChanged =
-      prev !== filteredPlaces ||
-      prev.length !== filteredPlaces.length ||
-      prev[0]?.id !== filteredPlaces[0]?.id;
-    prevFilteredPlacesRef.current = filteredPlaces;
+      prev !== placesForMap ||
+      prev.length !== placesForMap.length ||
+      prev[0]?.id !== placesForMap[0]?.id;
+    prevFilteredPlacesRef.current = placesForMap;
     if (listChanged) {
-      const nextId = filteredPlaces[0].id;
+      const nextId = placesForMap[0].id;
       const id = setTimeout(() => setActivePlaceId(nextId), 0);
       return () => clearTimeout(id);
     }
-  }, [listScrollReady, filteredPlaces]);
+  }, [listScrollReady, placesForMap]);
 
   if (!mounted) {
     return (
@@ -284,7 +388,7 @@ export default function ProfileMyPlacesPage() {
           <button
             type="button"
             onClick={() => setSearchOverlayOpen(true)}
-            className="flex min-w-0 flex-1 items-center gap-2 rounded-full border border-gray-200 bg-transparent px-4 py-2 text-left text-gray-500 transition-colors hover:border-gray-300 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-[var(--color-main)] focus:ring-offset-2 sm:max-w-md"
+            className="flex min-w-0 flex-1 items-center gap-2 rounded-full border-2 border-gray-300 bg-transparent px-4 py-2 text-left text-gray-500 transition-colors hover:border-gray-400 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-[var(--color-main)] focus:ring-offset-2 focus:border-[var(--color-main)] sm:max-w-md"
             aria-label="Search places"
           >
             <Search className="h-4 w-4 shrink-0 text-gray-400" />
@@ -323,34 +427,71 @@ export default function ProfileMyPlacesPage() {
         />
       </section>
 
-      {/* My Map: larger fixed height (5 places visible); header sits flush under main header when scrolled to top */}
+      {/* My Map: larger fixed height (5 places visible); header sits flush under main header when scrolled to top. Click map background to expand full screen. */}
       <section
-        className="shrink-0 border-t border-gray-200 bg-white px-4 pt-4 pb-6 md:px-6 md:pt-4 lg:px-8"
+        className={
+          mapFullScreen
+            ? "fixed top-0 right-0 bottom-0 z-[100] flex flex-col bg-white overflow-hidden"
+            : "shrink-0 border-t border-gray-200 bg-white px-4 pt-4 pb-6 md:px-6 md:pt-4 lg:px-8"
+        }
+        style={
+          mapFullScreen ? { left: "var(--sidebar-offset, 0px)" } : undefined
+        }
         aria-labelledby="my-map-heading"
+        role={mapFullScreen ? "dialog" : undefined}
+        aria-modal={mapFullScreen ? "true" : undefined}
+        aria-label={mapFullScreen ? "My Map full screen" : undefined}
       >
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <h2
-            id="my-map-heading"
-            className="text-xl font-semibold text-gray-900"
-          >
-            My Map
-          </h2>
-          <FilterPopover
-            selectedCategories={selectedCategories}
-            onSelectionChange={setSelectedCategories}
-            categories={categories}
-            label="Filter"
-          />
-        </div>
+        {mapFullScreen && (
+          /* Top bar above map/list so Close is always clickable (same pattern as Top Places map modal) */
+          <div className="absolute left-0 top-0 right-0 z-10 flex items-center justify-between gap-3 border-b border-gray-200 bg-white px-4 py-3 pr-14 md:px-6 md:pr-14">
+            <h2
+              id="my-map-heading"
+              className="text-xl font-semibold text-gray-900"
+            >
+              My Map
+            </h2>
+            <button
+              type="button"
+              onClick={() => setMapFullScreen(false)}
+              className="absolute right-3 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-gray-200 bg-white/95 text-gray-700 shadow-md transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[var(--color-main)] focus:ring-offset-2"
+              aria-label="Close full screen map"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+        )}
+        {!mapFullScreen && (
+          <div className="mb-4">
+            <h2
+              id="my-map-heading"
+              className="text-xl font-semibold text-gray-900"
+            >
+              My Map
+            </h2>
+          </div>
+        )}
 
-        {/* Fixed height (~5 place cards visible in list); list scrolls inside, map stays fixed. Stacked on small screens. */}
-        <div className="grid grid-cols-1 grid-rows-[770px_770px] gap-6 lg:h-[770px] lg:grid-cols-[minmax(0,380px)_1fr] lg:grid-rows-none">
+        {/* List on left, resize handle, map on right. Full screen: same layout, fills viewport; non–full screen: fixed height. */}
+        <div
+          className={
+            mapFullScreen
+              ? "grid min-h-0 flex-1 grid-rows-1 gap-0 px-4 pb-4 pt-14 md:px-6 md:pt-14"
+              : "grid grid-cols-1 grid-rows-[770px_0_770px] gap-6 lg:h-[770px] lg:grid-rows-none lg:[grid-template-columns:var(--list-panel-width,380px)_20px_1fr]"
+          }
+          style={{
+            ["--list-panel-width" as string]: `${listPanelWidthPx}px`,
+            ...(mapFullScreen
+              ? { gridTemplateColumns: `${listPanelWidthPx}px 20px 1fr` }
+              : {}),
+          }}
+        >
           <div
             ref={setListScrollRef}
             className="relative min-h-0 min-w-0 overflow-y-auto pr-1"
           >
             <PlacesList
-              places={filteredPlaces}
+              places={placesForMap}
               activePlaceId={activePlaceId}
               onSelectPlace={(placeId) => setActivePlaceId(placeId)}
               onPlaceClick={(place) => {
@@ -372,9 +513,36 @@ export default function ProfileMyPlacesPage() {
               showAfterPx={400}
             />
           </div>
+          {/* Resize handle: arrow right = expand list, arrow left = collapse */}
+          <div
+            className={`flex items-center justify-center bg-gray-100 hover:bg-gray-200 transition-colors ${
+              mapFullScreen
+                ? "w-5"
+                : "hidden lg:flex w-5 row-start-2 lg:row-auto"
+            }`}
+            style={!mapFullScreen ? { minHeight: 0 } : undefined}
+          >
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setListPanelExpanded((prev) => !prev);
+              }}
+              className="flex h-full w-full items-center justify-center text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-[var(--color-main)]"
+              aria-label={
+                listPanelExpanded ? "Narrow place list" : "Widen place list"
+              }
+            >
+              {listPanelExpanded ? (
+                <ChevronLeft className="h-5 w-5 shrink-0" aria-hidden />
+              ) : (
+                <ChevronRight className="h-5 w-5 shrink-0" aria-hidden />
+              )}
+            </button>
+          </div>
           <div className="relative h-full min-h-[400px] min-w-0 w-full">
             <PhotoMap
-              places={filteredPlaces}
+              places={placesForMap}
               activePlaceId={activePlaceId}
               onPlaceClick={(placeId) => {
                 saveMapViewBeforeOpen();
@@ -388,7 +556,17 @@ export default function ProfileMyPlacesPage() {
               }}
               restoreView={viewToRestore}
               onRestoreComplete={() => setViewToRestore(null)}
+              onMapBackgroundClick={() => setMapFullScreen(true)}
             />
+            <div className="absolute left-0 top-0 z-10 w-full p-3 pointer-events-none">
+              <div className="pointer-events-auto">
+                <MapCategoryChips
+                  categories={PLACE_CATEGORIES}
+                  selected={mapCategoryFilter}
+                  onSelect={setMapCategoryFilter}
+                />
+              </div>
+            </div>
           </div>
         </div>
       </section>

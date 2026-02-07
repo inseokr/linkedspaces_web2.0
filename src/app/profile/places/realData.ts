@@ -61,6 +61,23 @@ function allPhotoUris(
     .map((p) => assetUrl(p!.uri!));
 }
 
+/** Infer simple sentiment from caption/story text for list view */
+function inferSentiment(text: string): "positive" | "neutral" | "negative" {
+  const lower = text.trim().toLowerCase();
+  if (!lower) return "neutral";
+  const positive =
+    /\b(love|lovely|loved|great|amazing|awesome|best|recommend|wonderful|excellent|fantastic|perfect|would (get|go|visit|come) again)\b/.test(
+      lower,
+    );
+  const negative =
+    /\b(disappoint|bad|worst|avoid|overrated|mediocre|never again|not worth)\b/.test(
+      lower,
+    );
+  if (positive && !negative) return "positive";
+  if (negative && !positive) return "negative";
+  return "neutral";
+}
+
 /** Caption from place-level or first photo's story/caption */
 function getCaptionForViewAll(entry: PlaceVisitHistoryEntry): string {
   const placeStory = typeof entry.story === "string" ? entry.story.trim() : "";
@@ -187,6 +204,7 @@ type ViewAllRow = {
   photoListUris?: string[];
   caption?: string;
   visitedTimeRaw?: string;
+  sentiment?: "positive" | "neutral" | "negative";
 };
 
 const DEBUG_VIEW_ALL =
@@ -265,6 +283,7 @@ function fromPlaceVisitHistoryEntries(
       caption: getCaptionForViewAll(entry) || undefined,
       visitedTimeRaw:
         (entry.visitedTime ?? entry.visitedTimeDigitized ?? "") || undefined,
+      sentiment: inferSentiment(getCaptionForViewAll(entry)),
     };
   });
 }
@@ -309,6 +328,9 @@ function fromTripsAndHistory(user: User): ViewAllRow[] {
         ? (hist.visitedTime ?? hist.visitedTimeDigitized ?? "") || undefined
         : undefined;
 
+      const caption = hist
+        ? getCaptionForViewAll(hist) || undefined
+        : undefined;
       out.push({
         id: `${trip.blogKey}-${placeIndex}`,
         title,
@@ -318,8 +340,9 @@ function fromTripsAndHistory(user: User): ViewAllRow[] {
         savedAt: tripSavedAt,
         imageUrl: firstPhotoUri(hist?.photoList) ?? null,
         photoListUris: uris.length > 0 ? uris : undefined,
-        caption: hist ? getCaptionForViewAll(hist) || undefined : undefined,
+        caption,
         visitedTimeRaw,
+        sentiment: inferSentiment(caption ?? ""),
       });
     });
   }
@@ -392,6 +415,7 @@ function flattenToViewAllShape(user: User): PlaceWithSavedAt[] {
       photoListUris: r.photoListUris,
       caption: r.caption,
       visitedTimeRaw: r.visitedTimeRaw,
+      sentiment: r.sentiment,
     }));
   }
   const rows = fromTripsAndHistory(user);
@@ -405,6 +429,7 @@ function flattenToViewAllShape(user: User): PlaceWithSavedAt[] {
     photoListUris: r.photoListUris,
     caption: r.caption,
     visitedTimeRaw: r.visitedTimeRaw,
+    sentiment: r.sentiment,
   }));
 }
 

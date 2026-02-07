@@ -1,6 +1,27 @@
 "use client";
 
+import { ThumbsUp, ThumbsDown } from "lucide-react";
 import type { PlaceWithSavedAt } from "../mockData";
+
+/** Sentiment icon: thumbs up (green), thumbs to the side (yellow), thumbs down (red). Same as My Map list. */
+function SentimentIcon({
+  sentiment,
+}: {
+  sentiment: "positive" | "neutral" | "negative";
+}) {
+  if (sentiment === "positive") {
+    return <ThumbsUp className="h-4 w-4 shrink-0 text-green-400" aria-hidden />;
+  }
+  if (sentiment === "negative") {
+    return <ThumbsDown className="h-4 w-4 shrink-0 text-red-400" aria-hidden />;
+  }
+  return (
+    <ThumbsUp
+      className="h-4 w-4 shrink-0 rotate-[-90deg] text-amber-400"
+      aria-hidden
+    />
+  );
+}
 
 interface PlaceCardProps {
   place: PlaceWithSavedAt;
@@ -69,13 +90,27 @@ export default function PlaceCard({
           <ImagePlaceholder />
         </div>
       </div>
-      {/* Top-right: abbreviated month + date on the photo */}
-      {dateLabel ? (
+      {/* Top-right: sentiment (if any) + date on the photo */}
+      {place.sentiment || dateLabel ? (
         <div
-          className="absolute right-3 top-3 rounded-md bg-black/50 px-2 py-1 text-sm font-medium text-white backdrop-blur-sm"
+          className="absolute right-3 top-3 flex items-center gap-1.5 rounded-md bg-black/50 px-2 py-1 text-sm font-medium text-white backdrop-blur-sm"
           aria-hidden
         >
-          {dateLabel}
+          {place.sentiment ? (
+            <span
+              title={`Sentiment: ${place.sentiment}`}
+              aria-label={`Sentiment: ${place.sentiment}`}
+              className="flex items-center"
+            >
+              <SentimentIcon sentiment={place.sentiment} />
+            </span>
+          ) : null}
+          {place.sentiment && dateLabel ? (
+            <span className="opacity-75" aria-hidden>
+              ·
+            </span>
+          ) : null}
+          {dateLabel ? <span>{dateLabel}</span> : null}
         </div>
       ) : null}
       {/* Bottom overlay with gradient */}

@@ -393,6 +393,7 @@ function toLatestActivityPlace(p: FlattenedPlace): LatestActivityPlace {
     imageUrl: p.thumbnailUrl,
     caption: p.caption || p.snippet || "",
     saved: true,
+    ...(p.sentiment ? { sentiment: p.sentiment } : {}),
   };
 }
 
@@ -431,7 +432,7 @@ export function getMyPlacesFromUser(user: User | null): {
   }
 
   const flat = flattenUserPlaces(user);
-  const latestActivity = flat.slice(0, 7).map(toLatestActivityPlace);
+  const latestActivity = flat.slice(0, 12).map(toLatestActivityPlace);
   const savedPlaces = flat.map(toSavedPlace);
 
   const invalidCategory = (c: string | undefined) =>

@@ -26,6 +26,8 @@ export interface PlaceWithSavedAt {
   caption?: string;
   /** For lightbox: raw visited date string (e.g. YYYY-MM-DD) */
   visitedTimeRaw?: string;
+  /** User sentiment for list view (e.g. positive / neutral / negative) */
+  sentiment?: "positive" | "neutral" | "negative";
 }
 
 export interface CountryWithCount {

@@ -7,6 +7,9 @@ type LayoutMode = "profile" | "bare";
 type LayoutModeCtx = {
   layoutMode: LayoutMode;
   setLayoutMode: (mode: LayoutMode) => void;
+  /** When true, profile layout hides the sidebar with CSS (keeps same tree so children don't unmount). */
+  fullScreenMapActive: boolean;
+  setFullScreenMapActive: (active: boolean) => void;
 };
 
 const Ctx = createContext<LayoutModeCtx | null>(null);
@@ -17,8 +20,17 @@ export function LayoutModeProvider({
   children: React.ReactNode;
 }) {
   const [layoutMode, setLayoutMode] = useState<LayoutMode>("profile");
+  const [fullScreenMapActive, setFullScreenMapActive] = useState(false);
 
-  const value = useMemo(() => ({ layoutMode, setLayoutMode }), [layoutMode]);
+  const value = useMemo(
+    () => ({
+      layoutMode,
+      setLayoutMode,
+      fullScreenMapActive,
+      setFullScreenMapActive,
+    }),
+    [layoutMode, fullScreenMapActive],
+  );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

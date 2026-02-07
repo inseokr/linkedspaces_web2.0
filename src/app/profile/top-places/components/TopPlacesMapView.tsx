@@ -26,6 +26,7 @@ import MapView3DToggle from "../../components/MapView3DToggle";
 import { isWebGLSupported } from "../../components/MapView3DToggle";
 import MapZoomControls from "../../components/MapZoomControls";
 import { applyLinkedSpacesMapStyle } from "../../mapbox-linkedspaces-style";
+import TopPlacesMapStrip from "./TopPlacesMapStrip";
 import {
   drawCircularThumb,
   canvasToImageBitmap,
@@ -61,7 +62,7 @@ const CLUSTER_LEAVES_FOR_REP = 25;
 const DEFAULT_PIN_SVG =
   "data:image/svg+xml," +
   encodeURIComponent(
-    '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40"><circle cx="20" cy="20" r="17" fill="#3b82f6" stroke="#fff" stroke-width="2"/></svg>',
+    '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40"><circle cx="20" cy="20" r="17" fill="#f97316" stroke="#fff" stroke-width="2"/></svg>',
   );
 const MAX_ZOOM_CLUSTER = 20;
 const DEFAULT_CENTER: [number, number] = [-98.5795, 39.8283];
@@ -553,7 +554,7 @@ export default function TopPlacesMapView({
               source: SOURCE_ID,
               filter: ["has", "point_count"],
               paint: {
-                "circle-color": "rgba(59, 130, 246, 0.75)",
+                "circle-color": "rgba(249, 115, 22, 0.75)",
                 "circle-opacity": 0.5,
                 "circle-radius": [
                   "step",
@@ -620,8 +621,8 @@ export default function TopPlacesMapView({
               source: SOURCE_ID,
               filter: ["!", ["has", "point_count"]],
               paint: {
-                "circle-color": "rgba(59, 130, 246, 0.9)",
-                "circle-radius": 10,
+                "circle-color": "rgba(249, 115, 22, 0.9)",
+                "circle-radius": 12,
                 "circle-stroke-width": 2,
                 "circle-stroke-color": "#fff",
               },
@@ -638,24 +639,58 @@ export default function TopPlacesMapView({
                 "icon-ignore-placement": true,
               },
             });
+            map.addLayer({
+              id: "top-places-unclustered-name",
+              type: "symbol",
+              source: SOURCE_ID,
+              filter: ["!", ["has", "point_count"]],
+              layout: {
+                "text-field": ["get", "name"],
+                "text-font": [
+                  "DIN Offc Pro Medium",
+                  "Arial Unicode MS Regular",
+                ],
+                "text-size": 11,
+                "text-anchor": "top",
+                "text-offset": [0, 1.35],
+                "text-max-width": 10,
+                "text-allow-overlap": false,
+              },
+              paint: {
+                "text-color": "#fff",
+                "text-halo-color": "rgba(0,0,0,0.75)",
+                "text-halo-width": 1.5,
+              },
+            });
 
+            /** Anchor map to Top Places result #1 (first place for current category/country). */
             const fitBoundsOnce = () => {
               if (initialFitDoneRef.current) return;
-              const features = geoJsonRef.current?.features?.length ?? 0;
-              if (features === 0) return;
+              const features = geoJsonRef.current?.features;
+              if (!features?.length) return;
               initialFitDoneRef.current = true;
-              const bounds = new mapboxgl.LngLatBounds();
-              geoJsonRef.current!.features.forEach(
-                (f: GeoJSON.Feature<GeoJSON.Point>) => {
-                  const c = f.geometry?.coordinates;
-                  if (c && c.length >= 2) bounds.extend([c[0], c[1]]);
-                },
-              );
-              map.fitBounds(bounds, {
-                padding: FIT_PADDING,
-                maxZoom: FIT_MAX_ZOOM,
-                duration: 0,
-              });
+              const first = features[0] as GeoJSON.Feature<GeoJSON.Point>;
+              const c = first?.geometry?.coordinates;
+              if (c && c.length >= 2) {
+                const [lng, lat] = c;
+                map.flyTo({
+                  center: [lng, lat],
+                  zoom: FIT_MAX_ZOOM,
+                  duration: 0,
+                });
+              } else {
+                const bounds = new mapboxgl.LngLatBounds();
+                features.forEach((f: GeoJSON.Feature<GeoJSON.Point>) => {
+                  const coords = f.geometry?.coordinates;
+                  if (coords && coords.length >= 2)
+                    bounds.extend([coords[0], coords[1]]);
+                });
+                map.fitBounds(bounds, {
+                  padding: FIT_PADDING,
+                  maxZoom: FIT_MAX_ZOOM,
+                  duration: 0,
+                });
+              }
             };
 
             const throttledSync = throttle(() => {
@@ -744,6 +779,7 @@ export default function TopPlacesMapView({
             };
             map.on("click", UNCLUSTERED_LAYER_ID, onUnclusteredClick);
             map.on("click", UNCLUSTERED_SYMBOL_LAYER_ID, onUnclusteredClick);
+            map.on("click", "top-places-unclustered-name", onUnclusteredClick);
 
             map.getCanvas().style.cursor = "default";
             map.on(
@@ -796,6 +832,16 @@ export default function TopPlacesMapView({
               UNCLUSTERED_SYMBOL_LAYER_ID,
               () => (map.getCanvas().style.cursor = "default"),
             );
+            map.on(
+              "mouseenter",
+              "top-places-unclustered-name",
+              () => (map.getCanvas().style.cursor = "pointer"),
+            );
+            map.on(
+              "mouseleave",
+              "top-places-unclustered-name",
+              () => (map.getCanvas().style.cursor = "default"),
+            );
           },
         ); // end loadImage callback
       }); // end map.on("load")
@@ -825,6 +871,7 @@ export default function TopPlacesMapView({
               } catch {}
             });
           [
+            "top-places-unclustered-name",
             UNCLUSTERED_SYMBOL_LAYER_ID,
             UNCLUSTERED_LAYER_ID,
             CLUSTER_COUNT_LAYER_ID,
@@ -873,23 +920,37 @@ export default function TopPlacesMapView({
     if (DEBUG_MAP)
       console.log("[TopPlacesMapView] setData: points =", data.features.length);
     logDebug(map);
-    // Fit bounds to filtered points when data changes (e.g. filter change)
-    const mapboxgl = mapboxglRef.current;
-    if (mapboxgl && data.features.length > 0) {
-      const bounds = new mapboxgl.LngLatBounds();
-      data.features.forEach((f: GeoJSON.Feature<GeoJSON.Point>) => {
-        const c = f.geometry?.coordinates;
-        if (c && c.length >= 2) bounds.extend([c[0], c[1]]);
-      });
-      map.fitBounds(bounds, {
-        padding: FIT_PADDING,
-        maxZoom: FIT_MAX_ZOOM,
-        duration: 600,
-      });
+    // Anchor to Top Places result #1 when data changes (e.g. filter change)
+    if (data.features.length > 0) {
+      const first = data.features[0] as GeoJSON.Feature<GeoJSON.Point>;
+      const c = first?.geometry?.coordinates;
+      if (c && c.length >= 2) {
+        const [lng, lat] = c;
+        map.flyTo({
+          center: [lng, lat],
+          zoom: FIT_MAX_ZOOM,
+          duration: 600,
+        });
+      }
     }
   }, [placesWithCoords.length, places, logDebug]);
 
   const hasPoints = placesWithCoords.length > 0;
+
+  const handleStripPlaceSelect = useCallback((place: TopPlaceCardModel) => {
+    const lat = place.latitude;
+    const lng = place.longitude;
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+    const map = mapRef.current;
+    if (!map) return;
+    map.flyTo({
+      center: [lng, lat],
+      zoom: 14,
+      duration: 0.6,
+      essential: true,
+    });
+  }, []);
+
   const handle3DToggle = useCallback(() => {
     setIs3D((prev) => {
       const next = !prev;
@@ -925,6 +986,12 @@ export default function TopPlacesMapView({
             No places match these filters.
           </p>
         </div>
+      )}
+      {hasPoints && (
+        <TopPlacesMapStrip
+          places={places}
+          onPlaceSelect={handleStripPlaceSelect}
+        />
       )}
     </div>
   );
