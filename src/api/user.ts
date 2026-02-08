@@ -89,11 +89,20 @@ export type PlaceVisitHistoryItem = {
   likes?: number;
   likeCount?: number;
   likesCount?: number;
+  /** Backend: user sentiment for map badge - positive | neutral | negative */
+  sentiment?: "positive" | "neutral" | "negative";
 };
 
 export type GeoCoordinate = {
   latitude: number;
   longitude: number;
+};
+
+/** Friend summary for Home/network (when backend includes in user or /network) */
+export type UserFriend = {
+  _id: string;
+  username: string;
+  profile_picture?: string;
 };
 
 export type User = {
@@ -108,7 +117,11 @@ export type User = {
   direct_friends?: {
     trips?: Trip[];
   };
+  /** When backend provides a friends list (e.g. in /me or login), used for Home friends row */
+  friends?: UserFriend[];
   trips?: Trip[];
+  /** User's neighborhood / home area from settings; used as default map center when geolocation is unavailable */
+  homeLocation?: GeoCoordinate;
 };
 
 const USER_KEY = "user";
@@ -159,7 +172,7 @@ function safeRemoveStorageItem(key: string) {
 }
 
 function toSlimCachedUser(user: User): User {
-  // Keep only what most UI needs (sidebar/menu/stats/badges/recap list).
+  // Keep only what most UI needs (sidebar/menu/stats/badges/recap list, home friends, home location for map).
   // This is used as a fallback when the full user object exceeds storage quota.
   return {
     _id: user._id,
@@ -168,9 +181,9 @@ function toSlimCachedUser(user: User): User {
     countriesVisited: user.countriesVisited ?? [],
     citiesVisited: user.citiesVisited ?? [],
     badgeProgress: user.badgeProgress,
-    // Recap Blogs relies on `user.trips` to render the list.
-    // This is typically much smaller than `placeVisitHistory`.
+    friends: user.friends ?? [],
     trips: user.trips ?? [],
+    homeLocation: user.homeLocation,
   };
 }
 

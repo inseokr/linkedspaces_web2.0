@@ -96,9 +96,10 @@ export default function PlaceCard({
         >
           <ImagePlaceholder />
         </div>
+        {/* Row: inline-flex + items-center so sentiment icon and date pill share the same vertical center; pill uses leading-none to avoid line-height shifting the icon. */}
         <div className="absolute right-2 top-2 z-10 flex items-center gap-2">
           {sentiment && <SentimentIcon sentiment={sentiment} size={32} />}
-          <span className="rounded-md bg-black/50 px-2 py-1 text-sm font-medium text-white backdrop-blur-sm">
+          <span className="inline-flex items-center rounded-md bg-black/50 px-2 py-1 text-sm font-medium leading-none text-white backdrop-blur-sm">
             {date}
           </span>
         </div>

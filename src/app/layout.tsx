@@ -40,7 +40,11 @@ export default function RootLayout({
 
   const isAuthPage = pathname === "/sign-in";
   const forceLightTheme =
-    pathname === "/privacy" || pathname === "/contact" || pathname === "/terms";
+    pathname === "/privacy" ||
+    pathname === "/contact" ||
+    pathname === "/terms" ||
+    pathname === "/home" ||
+    pathname === "/explore";
 
   return (
     <html

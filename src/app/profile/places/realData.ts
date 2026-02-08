@@ -1,6 +1,6 @@
 /**
  * View All Places: real data from getCachedUser().placeVisitHistory.
- * Same filtering as My Places: status !== "hidden", primaryPlace !== false.
+ * Same filtering as My Places: only exclude status === "hidden" so View All shows the same set as Feed/My Places.
  * Sort by visitedTime newest first. Map to PlaceWithSavedAt and derive year/country/category filters.
  */
 
@@ -232,11 +232,6 @@ function fromPlaceVisitHistoryEntries(
         excluded.push({ name, reason: "status === 'hidden'", index });
       return false;
     }
-    if (e.primaryPlace === false && "primaryPlace" in e) {
-      if (DEBUG_VIEW_ALL)
-        excluded.push({ name, reason: "primaryPlace === false", index });
-      return false;
-    }
     return true;
   }) as PlaceVisitHistoryEntry[];
 
@@ -352,29 +347,15 @@ function fromTripsAndHistory(user: User): ViewAllRow[] {
 }
 
 /**
- * Prefer full placeVisitHistory when it looks like a list of visits (any entry has
- * placeName, visitedTime, visitedTimeDigitized, or country). That way we show all
- * visits and counts per country/category are correct. Only fall back to trips when
- * history is empty or purely index-based (no per-entry fields).
+ * Use full placeVisitHistory when non-empty so every visit appears (same as My Places / Feed).
+ * Only fall back to trips when history is empty.
  */
 function flattenToViewAllShape(user: User): PlaceWithSavedAt[] {
   const history = user.placeVisitHistory ?? [];
-  const looksLikeFullList = history.some((e) => {
-    if (!e || typeof e !== "object") return false;
-    const x = e as PlaceVisitHistoryEntry;
-    return (
-      typeof x.placeName === "string" ||
-      typeof x.visitedTime === "string" ||
-      typeof x.visitedTimeDigitized === "string" ||
-      typeof x.country === "string"
-    );
-  });
   if (DEBUG_VIEW_ALL) {
     console.log(
       "[View All Places] Data source:",
-      looksLikeFullList
-        ? "full placeVisitHistory"
-        : "trips fallback (only trip-linked places)",
+      history.length > 0 ? "full placeVisitHistory" : "trips fallback",
     );
     console.log(
       "[View All Places] Raw placeVisitHistory length:",
@@ -401,7 +382,7 @@ function flattenToViewAllShape(user: User): PlaceWithSavedAt[] {
         allNames.slice(0, 50),
       );
   }
-  if (looksLikeFullList && history.length > 0) {
+  if (history.length > 0) {
     const rows = fromPlaceVisitHistoryEntries(
       history as (PlaceVisitHistoryEntry | undefined)[],
     );

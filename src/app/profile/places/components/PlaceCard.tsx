@@ -70,7 +70,7 @@ export default function PlaceCard({
           <ImagePlaceholder />
         </div>
       </div>
-      {/* Top-right: sentiment + date badge (aligned to top, not over-centered) */}
+      {/* Top-right: flex items-center + leading-none on pill so sentiment icon and date pill align on the same vertical center (no line-height/baseline shift). */}
       {place.sentiment || dateLabel ? (
         <div
           className="absolute right-3 top-3 flex items-center gap-2"
@@ -80,7 +80,7 @@ export default function PlaceCard({
             <SentimentIcon sentiment={place.sentiment} size={28} />
           ) : null}
           {dateLabel ? (
-            <span className="rounded-md bg-black/50 px-2 py-1 text-sm font-medium text-white backdrop-blur-sm">
+            <span className="inline-flex items-center rounded-md bg-black/50 px-2 py-1 text-sm font-medium leading-none text-white backdrop-blur-sm">
               {dateLabel}
             </span>
           ) : null}

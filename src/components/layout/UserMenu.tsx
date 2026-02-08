@@ -2,9 +2,11 @@
 
 import Image from "next/image";
 import { useEffect, useId, useRef, useState } from "react";
+import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
 import { assetUrl } from "@/api/assets";
 import { getCachedUser, type User } from "@/api/user";
+import { isAdminUsername } from "@/lib/admin";
 
 type Props = {
   /** Placeholder until we wire real user profile data */
@@ -192,7 +194,7 @@ export default function UserMenu({ displayName, avatarSrc, className }: Props) {
                 )}
                 style={{ color: "var(--foreground)" }}
               >
-                Profile Setting
+                Profile Settings
               </button>
 
               <button
@@ -206,8 +208,23 @@ export default function UserMenu({ displayName, avatarSrc, className }: Props) {
                 )}
                 style={{ color: "var(--foreground)" }}
               >
-                Account Setting
+                Account Settings
               </button>
+
+              {isAdminUsername(user?.username) && (
+                <Link
+                  href="/admin/dashboard"
+                  role="menuitem"
+                  className={cn(
+                    "block rounded-xl px-3 py-2.5 text-[15px] font-semibold text-left w-full",
+                    "transition hover:bg-[var(--user-menu-item-hover)]",
+                  )}
+                  style={{ color: "var(--foreground)" }}
+                  onClick={() => setOpen(false)}
+                >
+                  User Dashboard
+                </Link>
+              )}
             </div>
 
             <div

@@ -34,13 +34,19 @@ export default function SentimentIcon({
   const src = SENTIMENT_PNG_PATHS[sentiment];
   const label = SENTIMENT_LABELS[sentiment];
 
+  // Block display removes the baseline gap that inline <img> gets, so the icon
+  // aligns vertically with adjacent pill text when the row uses flex items-center.
   const image = (
     <Image
       src={src}
       alt=""
       width={size}
       height={size}
-      className={badge ? "h-full w-full object-contain p-0.5" : className}
+      className={
+        badge
+          ? "h-full w-full object-contain p-0.5"
+          : `block ${className}`.trim()
+      }
       title={`Sentiment: ${label}`}
       aria-hidden
       unoptimized
@@ -60,6 +66,8 @@ export default function SentimentIcon({
     );
   }
 
+  // Wrapper: inline-flex + fixed size + flex center so the icon is visually
+  // centered and aligns with pill/text in a flex row (no baseline/line-height shift).
   return (
     <span
       className={`inline-flex shrink-0 items-center justify-center self-center ${className}`}

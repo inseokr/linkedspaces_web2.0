@@ -2,9 +2,19 @@
  * Shared Mapbox visual style for LinkedSpaces: simple, easy to read.
  * Applied to My Places embedded map and Top Spaces full-screen map.
  * Prioritizes readable map text (city names, POIs). Light palette so labels stand out.
+ *
+ * To use a custom style from Mapbox Studio (studio.mapbox.com or Styles in your account):
+ * Set NEXT_PUBLIC_MAPBOX_STYLE in .env.local to your style URL, e.g.:
+ *   mapbox://styles/your-username/your-style-id
+ * Then restart the dev server. The map will load your style; layer overrides below may still run.
  */
 
- 
+const DEFAULT_MAPBOX_STYLE = "mapbox://styles/mapbox/streets-v12";
+
+/** Map style URL. Use NEXT_PUBLIC_MAPBOX_STYLE to point to a style edited in Mapbox Studio. */
+export const MAPBOX_STYLE_URL =
+  (typeof process !== "undefined" && process.env.NEXT_PUBLIC_MAPBOX_STYLE) ||
+  DEFAULT_MAPBOX_STYLE;
 
 // —— Simple, readable palette: light background, clear labels ——
 

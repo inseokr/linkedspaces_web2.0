@@ -2,7 +2,7 @@
  * Builds My Places UI data from getCachedUser().placeVisitHistory (and trips fallback).
  * Filters: status !== "hidden", prefer primaryPlace === true.
  * Sort: newest to oldest by visitedTime (fallback visitedTimeDigitized).
- * Caption/snippet from entry.story or photoList[0].story.
+ * Caption/snippet from entry.story, or selected/cover photo story, then first photo.
  */
 
 import type { User } from "@/api/user";
@@ -124,20 +124,28 @@ function allPhotoUris(
     .map((p) => assetUrl(p!.uri!));
 }
 
-/** Get caption/snippet from place-level or first photo's story/caption (backend may send either field) */
+/** Get caption/snippet from place-level story/caption, or from the selected (cover) photo, then first photo (backend may send either field) */
 function getCaption(
   entry:
     | PlaceVisitHistoryEntry
     | {
         story?: string;
         caption?: string;
-        photoList?: Array<{ story?: string; caption?: string }>;
+        photoList?: Array<{
+          story?: string;
+          caption?: string;
+          selected?: boolean;
+        }>;
       },
 ): string {
   const entryAny = entry as {
     story?: string;
     caption?: string;
-    photoList?: Array<{ story?: string; caption?: string }>;
+    photoList?: Array<{
+      story?: string;
+      caption?: string;
+      selected?: boolean;
+    }>;
   };
   const placeStory =
     typeof entryAny.story === "string" ? entryAny.story.trim() : "";
@@ -146,12 +154,17 @@ function getCaption(
     typeof entryAny.caption === "string" ? entryAny.caption.trim() : "";
   if (placeCaption) return placeCaption;
   const list = Array.isArray(entryAny.photoList) ? entryAny.photoList : [];
-  const first = list[0];
+  const selectedPhoto = list.find((p) => p?.selected);
+  const photoForCaption = selectedPhoto ?? list[0];
   const photoStory =
-    first && typeof first.story === "string" ? first.story.trim() : "";
+    photoForCaption && typeof photoForCaption.story === "string"
+      ? photoForCaption.story.trim()
+      : "";
   if (photoStory) return photoStory;
   const photoCaption =
-    first && typeof first.caption === "string" ? first.caption.trim() : "";
+    photoForCaption && typeof photoForCaption.caption === "string"
+      ? photoForCaption.caption.trim()
+      : "";
   return photoCaption ?? "";
 }
 
@@ -206,14 +219,18 @@ function inferSentiment(text: string): "positive" | "neutral" | "negative" {
   return "neutral";
 }
 
-/** Build from placeVisitHistory when entries have placeName/visitedTime (new backend shape) */
+/**
+ * Build from placeVisitHistory when entries have placeName/visitedTime (new backend shape).
+ * Only excludes status === "hidden" so My Places shows the same set as the Home Feed
+ * (every place with a photo that isn’t hidden). We no longer exclude primaryPlace === false
+ * so duplicate/alternate entries still appear in My Places.
+ */
 function fromPlaceVisitHistoryEntries(
   history: (PlaceVisitHistoryEntry | undefined)[],
 ): FlattenedPlace[] {
   const entries = history.filter((e): e is PlaceVisitHistoryEntry => {
     if (!e || typeof e !== "object") return false;
     if (e.status === "hidden") return false;
-    if (e.primaryPlace === false && "primaryPlace" in e) return false;
     return true;
   }) as PlaceVisitHistoryEntry[];
 
@@ -371,13 +388,8 @@ function fromTripsAndHistory(user: User): FlattenedPlace[] {
 
 function flattenUserPlaces(user: User): FlattenedPlace[] {
   const history = user.placeVisitHistory ?? [];
-  const hasNewShape = history.some(
-    (e) =>
-      e &&
-      (typeof (e as PlaceVisitHistoryEntry).placeName === "string" ||
-        typeof (e as PlaceVisitHistoryEntry).visitedTime === "string"),
-  );
-  if (hasNewShape && history.length > 0) {
+  // Use full placeVisitHistory so every visit appears in My Places (same set as Home Feed). Fall back to trips only when history is empty.
+  if (history.length > 0) {
     return fromPlaceVisitHistoryEntries(
       history as (PlaceVisitHistoryEntry | undefined)[],
     );

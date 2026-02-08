@@ -15,6 +15,7 @@ import {
   type ReactNode,
 } from "react";
 import { createRoot } from "react-dom/client";
+import { MAPBOX_STYLE_URL } from "@/app/profile/mapbox-linkedspaces-style";
 import CircleTripMarker from "@/views/Profile/recap-blogs/components/CircleTripMarker";
 
 export type MarkerData = {
@@ -847,7 +848,7 @@ export default function MapboxMap({
       try {
         map = new mapboxgl.Map({
           container: containerRef.current!,
-          style: "mapbox://styles/mapbox/streets-v12",
+          style: MAPBOX_STYLE_URL,
           center: [-98.5795, 39.8283], // 초기값(미국)이어도 OK: 이후 카메라 effect가 자연스럽게 이동시킴
           zoom: 1,
           renderWorldCopies: false,

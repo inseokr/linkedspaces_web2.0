@@ -5,8 +5,9 @@
  * GeoJSON source + clustering; viewport-based thumbnail loading; DEBUG support.
  * Uses REAL data (places from getMyPlacesFromUser / realData).
  *
- * List-map sync: activePlaceId (from parent) drives marker highlight (feature-state)
- * and camera flyTo. Toggle debug: window.__DEBUG_MAP_INTERACTIONS = true
+ * List-map sync: activePlaceId (from parent) drives marker highlight (selected-ring overlay)
+ * and camera flyTo. State A (feature-state active with larger circle/photo) was removed;
+ * markers use one fixed size; selection is a separate overlay ring only. Toggle debug: window.__DEBUG_MAP_INTERACTIONS = true
  *
  * Manual test plan:
  * - Click 5 random list items in a row; map highlights correct marker each time.
@@ -15,7 +16,14 @@
  * - No console errors.
  */
 
-import { useEffect, useRef, useCallback, useState, useMemo } from "react";
+import React, {
+  useEffect,
+  useRef,
+  useCallback,
+  useState,
+  useMemo,
+} from "react";
+import { createRoot } from "react-dom/client";
 import {
   add3DBuildingsLayer,
   getPersisted3D,
@@ -28,20 +36,29 @@ import {
 import MapView3DToggle from "../../components/MapView3DToggle";
 import { isWebGLSupported } from "../../components/MapView3DToggle";
 import MapZoomControls from "../../components/MapZoomControls";
-import { applyLinkedSpacesMapStyle } from "../../mapbox-linkedspaces-style";
+import {
+  applyLinkedSpacesMapStyle,
+  MAPBOX_STYLE_URL,
+} from "../../mapbox-linkedspaces-style";
 import {
   drawCircularThumb,
   canvasToImageBitmap,
 } from "../../mapbox-photo-marker-utils";
+import {
+  MARKER_CIRCLE_RADIUS,
+  MARKER_CIRCLE_STROKE_WIDTH,
+  MARKER_SELECTED_RING_RADIUS,
+  MARKER_SELECTED_RING_STROKE_WIDTH,
+} from "../../mapbox-marker-constants";
 import {
   getCategoryPinImageId,
   getCategoryPinSvgDataUrl,
   getCategoryPinDataUrlById,
   getAllCategoryPinIdsForPreload,
   fetchAndSetSentimentPngs,
-  SENTIMENT_PIN_IDS,
-  SENTIMENT_PIN_ICON_OFFSET,
 } from "../../mapbox-category-pins";
+import type { UserSentiment } from "../../mapbox-category-pins";
+import OrangePlaceMarker from "../../components/OrangePlaceMarker";
 import type { SavedPlace } from "../mockData";
 
 const DEBUG_MAP =
@@ -64,6 +81,8 @@ const SOURCE_ID = "my-places-photos";
 const CLUSTER_LAYER_ID = "my-places-clusters";
 const CLUSTER_COUNT_LAYER_ID = "my-places-cluster-count";
 const UNCLUSTERED_CIRCLE_LAYER_ID = "my-places-unclustered-circle";
+/** Selected-place overlay ring only; base marker size never changes (State A removed). */
+const SELECTED_RING_LAYER_ID = "my-places-selected-ring";
 const UNCLUSTERED_SYMBOL_LAYER_ID = "my-places-unclustered-symbol";
 const UNCLUSTERED_PLACE_NAME_LAYER_ID = "my-places-unclustered-place-name";
 
@@ -136,6 +155,8 @@ function buildGeoJSON(
         id,
         placeId: id,
         placeName: p.name ?? "",
+        category,
+        sentiment: sentiment ?? undefined,
         thumbnailUrl,
         thumbKey: thumbnailUrl ? `thumb:${p.id}` : DEFAULT_PIN_ID,
         categoryPinId: getCategoryPinImageId(category, sentiment),
@@ -239,6 +260,14 @@ export default function PhotoMap({
   const cancelledRef = useRef(false);
   const lastSyncThumbnailsRef = useRef(0);
   const SYNC_THUMBNAILS_DEBOUNCE_MS = 500;
+  /** DOM markers (OrangePlaceMarker) keyed by feature id; synced on moveend/zoomend. */
+  const domMarkersRef = useRef<
+    Map<
+      string,
+      { marker: any; root: ReturnType<typeof createRoot>; el: HTMLDivElement }
+    >
+  >(new Map());
+  const syncDomMarkersRef = useRef<((map: any) => void) | null>(null);
   const [is3D, setIs3D] = useState(() => getPersisted3D());
   const is3DRef = useRef(is3D);
   is3DRef.current = is3D;
@@ -408,7 +437,7 @@ export default function PhotoMap({
         try {
           map = new mapboxgl.Map({
             container: containerRef.current,
-            style: "mapbox://styles/mapbox/streets-v12",
+            style: MAPBOX_STYLE_URL,
             center: DEFAULT_CENTER,
             zoom: DEFAULT_ZOOM,
             preserveDrawingBuffer: true,
@@ -538,114 +567,128 @@ export default function PhotoMap({
                       },
                       paint: { "text-color": "#fff" },
                     });
+                    /* Invisible circle layer: used only for queryRenderedFeatures so we know which points are unclustered. OrangePlaceMarker (DOM) draws the visible marker. */
                     map.addLayer({
                       id: UNCLUSTERED_CIRCLE_LAYER_ID,
                       type: "circle",
                       source: SOURCE_ID,
                       filter: ["!", ["has", "point_count"]],
                       paint: {
-                        "circle-color": [
-                          "case",
-                          ["boolean", ["feature-state", "active"], false],
-                          "rgba(234, 88, 12, 1)",
-                          "rgba(249, 115, 22, 0.9)",
-                        ],
-                        "circle-radius": [
-                          "case",
-                          ["boolean", ["feature-state", "active"], false],
-                          26,
-                          22,
-                        ],
-                        "circle-stroke-width": [
-                          "case",
-                          ["boolean", ["feature-state", "active"], false],
-                          3,
-                          2,
-                        ],
+                        "circle-color": "rgba(249, 115, 22, 0.9)",
+                        "circle-radius": MARKER_CIRCLE_RADIUS,
+                        "circle-stroke-width": MARKER_CIRCLE_STROKE_WIDTH,
                         "circle-stroke-color": "#fff",
+                        "circle-opacity": 0,
                       },
                     });
+                    // Selected-place overlay ring; filter updated in effect. Base marker never resizes.
                     map.addLayer({
-                      id: UNCLUSTERED_SYMBOL_LAYER_ID,
-                      type: "symbol",
+                      id: SELECTED_RING_LAYER_ID,
+                      type: "circle",
                       source: SOURCE_ID,
-                      filter: ["!", ["has", "point_count"]],
-                      layout: {
-                        "icon-image": [
-                          "case",
-                          ["==", ["get", "thumbKey"], DEFAULT_PIN_ID],
-                          ["coalesce", ["get", "categoryPinId"], "pin-place"],
-                          ["get", "thumbKey"],
-                        ],
-                        "icon-size": 1.1,
-                        "icon-offset": [
-                          "case",
-                          [
-                            "in",
-                            ["coalesce", ["get", "categoryPinId"], ""],
-                            ["literal", SENTIMENT_PIN_IDS],
-                          ],
-                          SENTIMENT_PIN_ICON_OFFSET,
-                          [0, 0],
-                        ],
-                        "icon-allow-overlap": true,
-                        "icon-ignore-placement": true,
-                      },
-                    });
-                    map.addLayer({
-                      id: UNCLUSTERED_PLACE_NAME_LAYER_ID,
-                      type: "symbol",
-                      source: SOURCE_ID,
-                      filter: ["!", ["has", "point_count"]],
-                      layout: {
-                        "text-field": ["coalesce", ["get", "placeName"], ""],
-                        "text-font": [
-                          "DIN Offc Pro Regular",
-                          "Arial Unicode MS Regular",
-                        ],
-                        "text-size": 11,
-                        "text-anchor": "top",
-                        "text-offset": [0, 3.4],
-                        "text-optional": true,
-                        "text-allow-overlap": false,
-                        "text-ignore-placement": false,
-                        "text-max-width": 10,
-                      },
+                      filter: [
+                        "==",
+                        ["get", "id"],
+                        activePlaceIdRef.current ?? "",
+                      ],
                       paint: {
-                        "text-color": "#1f2937",
-                        "text-halo-color": "#fff",
-                        "text-halo-width": 2.5,
+                        "circle-radius": MARKER_SELECTED_RING_RADIUS,
+                        "circle-opacity": 0,
+                        "circle-stroke-width":
+                          MARKER_SELECTED_RING_STROKE_WIDTH,
+                        "circle-stroke-color": "#fff",
+                        "circle-stroke-opacity": 1,
                       },
                     });
-                    map.addLayer(
-                      {
-                        id: `${UNCLUSTERED_PLACE_NAME_LAYER_ID}-border`,
-                        type: "symbol",
-                        source: SOURCE_ID,
-                        filter: ["!", ["has", "point_count"]],
-                        layout: {
-                          "text-field": ["coalesce", ["get", "placeName"], ""],
-                          "text-font": [
-                            "DIN Offc Pro Regular",
-                            "Arial Unicode MS Regular",
-                          ],
-                          "text-size": 11,
-                          "text-anchor": "top",
-                          "text-offset": [0, 3.4],
-                          "text-optional": true,
-                          "text-allow-overlap": false,
-                          "text-ignore-placement": false,
-                          "text-max-width": 10,
-                        },
-                        paint: {
-                          "text-color": "#1f2937",
-                          "text-opacity": 0,
-                          "text-halo-color": "#c2410c",
-                          "text-halo-width": 3,
-                        },
-                      },
-                      UNCLUSTERED_PLACE_NAME_LAYER_ID,
-                    );
+                    /* Sync DOM markers (OrangePlaceMarker): one stable component per unclustered point so label stays centered by layout. */
+                    const syncDomMarkers = (m: any) => {
+                      if (!m || !m.getSource(SOURCE_ID)) return;
+                      const features = m.queryRenderedFeatures(undefined, {
+                        layers: [UNCLUSTERED_CIRCLE_LAYER_ID],
+                      }) as GeoJSON.Feature<
+                        GeoJSON.Point,
+                        Record<string, unknown>
+                      >[];
+                      const currentIds = new Set(
+                        features.map((f) =>
+                          String(
+                            f.properties?.id ??
+                              (f as GeoJSON.Feature & { id?: string }).id ??
+                              "",
+                          ),
+                        ),
+                      );
+                      const activeId = activePlaceIdRef.current ?? "";
+
+                      for (const f of features) {
+                        const id = String(
+                          f.properties?.id ??
+                            (f as GeoJSON.Feature & { id?: string }).id ??
+                            "",
+                        );
+                        if (!id) continue;
+                        const coords = f.geometry?.coordinates;
+                        if (!coords || coords.length < 2) continue;
+                        const props = f.properties ?? {};
+                        const placeName = String(props.placeName ?? "");
+                        const category = String(props.category ?? "Others");
+                        const sentiment =
+                          (props.sentiment as UserSentiment | undefined) ??
+                          null;
+
+                        if (domMarkersRef.current.has(id)) {
+                          const entry = domMarkersRef.current.get(id)!;
+                          entry.marker.setLngLat([coords[0], coords[1]]);
+                          entry.root.render(
+                            React.createElement(OrangePlaceMarker, {
+                              placeName,
+                              category,
+                              sentiment,
+                              selected: id === activeId,
+                            }),
+                          );
+                          continue;
+                        }
+                        const el = document.createElement("div");
+                        el.className = "orange-place-marker-wrapper";
+                        el.style.cursor = "pointer";
+                        el.addEventListener("click", (ev) => {
+                          ev.stopPropagation();
+                          onPlaceClickRef.current?.(id, 0);
+                        });
+                        const root = createRoot(el);
+                        root.render(
+                          React.createElement(OrangePlaceMarker, {
+                            placeName,
+                            category,
+                            sentiment,
+                            selected: id === activeId,
+                          }),
+                        );
+                        const marker = new mapboxgl.Marker({ element: el })
+                          .setLngLat([coords[0], coords[1]])
+                          .addTo(m);
+                        domMarkersRef.current.set(id, { marker, root, el });
+                      }
+
+                      for (const [
+                        id,
+                        entry,
+                      ] of domMarkersRef.current.entries()) {
+                        if (!currentIds.has(id)) {
+                          try {
+                            entry.marker.remove();
+                            entry.root.unmount();
+                          } catch {}
+                          domMarkersRef.current.delete(id);
+                        }
+                      }
+                    };
+
+                    syncDomMarkersRef.current = syncDomMarkers;
+                    syncDomMarkers(map);
+                    map.on("moveend", () => syncDomMarkersRef.current?.(map));
+                    map.on("zoomend", () => syncDomMarkersRef.current?.(map));
                   } catch (e) {
                     if (typeof console !== "undefined")
                       console.error("[PhotoMap] addSourceAndLayers failed", e);
@@ -813,7 +856,7 @@ export default function PhotoMap({
                 const placeTitle = escapeHtml(place.name ?? "Place");
                 const viewBtnHtml = `<button type="button" data-view-place data-photo-index="0" style="margin-top:10px;width:100%;padding:10px 16px;font-size:14px;font-weight:600;color:#fff;background:var(--color-main,#2563eb);border:none;border-radius:10px;cursor:pointer;">View</button>`;
                 const html = `<div style="padding:18px 14px 14px;min-width:160px;max-width:280px;background:#fff;border-radius:15px;box-shadow:0 4px 20px rgba(0,0,0,0.12);">
-                  <div style="font-weight:600;font-size:14px;color:#111;margin-bottom:16px;">${placeTitle}</div>
+                  <div style="font-weight:700;font-size:15px;color:#111;margin-bottom:16px;letter-spacing:0.01em;">${placeTitle}</div>
                   <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px;justify-items:stretch;">${imgs || '<div style="grid-column:1/-1;height:80px;background:#f3f4f6;border-radius:8px;"></div>'}</div>
                   ${viewBtnHtml}
                 </div>`;
@@ -886,12 +929,7 @@ export default function PhotoMap({
                 point: { x: number; y: number };
               }): { placeId: string; lng: number; lat: number } | null => {
                 const features = map.queryRenderedFeatures(e.point, {
-                  layers: [
-                    UNCLUSTERED_CIRCLE_LAYER_ID,
-                    UNCLUSTERED_SYMBOL_LAYER_ID,
-                    UNCLUSTERED_PLACE_NAME_LAYER_ID,
-                    `${UNCLUSTERED_PLACE_NAME_LAYER_ID}-border`,
-                  ],
+                  layers: [UNCLUSTERED_CIRCLE_LAYER_ID],
                 });
                 if (!features.length) return null;
                 const placeId = (features[0].properties?.placeId ??
@@ -911,21 +949,11 @@ export default function PhotoMap({
               };
 
               map.on("click", UNCLUSTERED_CIRCLE_LAYER_ID, onMarkerClick);
-              map.on("click", UNCLUSTERED_SYMBOL_LAYER_ID, onMarkerClick);
-              map.on("click", UNCLUSTERED_PLACE_NAME_LAYER_ID, onMarkerClick);
-              map.on(
-                "click",
-                `${UNCLUSTERED_PLACE_NAME_LAYER_ID}-border`,
-                onMarkerClick,
-              );
 
               const allInteractiveLayers = [
                 CLUSTER_LAYER_ID,
                 CLUSTER_COUNT_LAYER_ID,
                 UNCLUSTERED_CIRCLE_LAYER_ID,
-                UNCLUSTERED_SYMBOL_LAYER_ID,
-                UNCLUSTERED_PLACE_NAME_LAYER_ID,
-                `${UNCLUSTERED_PLACE_NAME_LAYER_ID}-border`,
               ];
               const onMapClick = (e: any) => {
                 const features = map.queryRenderedFeatures(e.point, {
@@ -971,6 +999,14 @@ export default function PhotoMap({
       }
       if (map) {
         try {
+          domMarkersRef.current.forEach((entry) => {
+            try {
+              entry.marker.remove();
+              entry.root.unmount();
+            } catch {}
+          });
+          domMarkersRef.current.clear();
+          syncDomMarkersRef.current = null;
           const cache = thumbCacheRef.current;
           if (cache)
             cache.imageIds().forEach((id) => {
@@ -979,9 +1015,6 @@ export default function PhotoMap({
               } catch {}
             });
           [
-            `${UNCLUSTERED_PLACE_NAME_LAYER_ID}-border`,
-            UNCLUSTERED_PLACE_NAME_LAYER_ID,
-            UNCLUSTERED_SYMBOL_LAYER_ID,
             UNCLUSTERED_CIRCLE_LAYER_ID,
             CLUSTER_COUNT_LAYER_ID,
             CLUSTER_LAYER_ID,
@@ -1007,9 +1040,10 @@ export default function PhotoMap({
     };
   }, [token, syncThumbnailsForViewport]);
 
-  const previousActivePlaceIdRef = useRef<string | null>(null);
+  const activePlaceIdRef = useRef<string | null>(null);
+  activePlaceIdRef.current = activePlaceId ?? null;
 
-  /** Set of feature ids in current GeoJSON (string) for safe setFeatureState. */
+  /** Set of feature ids in current GeoJSON (string). */
   const featureIdSet = useMemo(() => {
     const set = new Set<string>();
     for (const f of geoJson.current.features) {
@@ -1083,29 +1117,26 @@ export default function PhotoMap({
     update3DBuildingsVisibility(map, is3D);
   }, [is3D]);
 
-  // Only update feature state for active place; guard so we never call setFeatureState if source is missing or id not in data.
+  // Update selected-ring layer filter when activePlaceId changes. State A (feature-state size change) was removed; selection is overlay-only.
   useEffect(() => {
     const map = mapRef.current;
-    if (!map) return;
-    if (!map.getSource(SOURCE_ID)) return;
+    if (!map || !map.getLayer(SELECTED_RING_LAYER_ID)) return;
+    try {
+      map.setFilter(SELECTED_RING_LAYER_ID, [
+        "==",
+        ["get", "id"],
+        activePlaceId ?? "",
+      ]);
+      debugLog("setFilter selected ring", activePlaceId ?? "");
+    } catch (e) {
+      debugLog("setFilter selected ring failed", e);
+    }
+  }, [activePlaceId]);
 
-    const setFeatureActive = (placeId: string | null, active: boolean) => {
-      if (!placeId) return;
-      const idStr = String(placeId);
-      if (!featureIdSet.has(idStr)) return;
-      try {
-        map.setFeatureState({ source: SOURCE_ID, id: idStr }, { active });
-        debugLog("setFeatureState", idStr, { active });
-      } catch (e) {
-        debugLog("setFeatureState failed", idStr, e);
-      }
-    };
-
-    const prev = previousActivePlaceIdRef.current;
-    if (prev && prev !== activePlaceId) setFeatureActive(prev, false);
-    if (activePlaceId) setFeatureActive(activePlaceId, true);
-    previousActivePlaceIdRef.current = activePlaceId;
-  }, [activePlaceId, featureIdSet]);
+  // Re-sync DOM markers when activePlaceId changes so OrangePlaceMarker selected prop updates.
+  useEffect(() => {
+    syncDomMarkersRef.current?.(mapRef.current);
+  }, [activePlaceId]);
 
   const onRestoreCompleteRef = useRef(onRestoreComplete);
   onRestoreCompleteRef.current = onRestoreComplete;

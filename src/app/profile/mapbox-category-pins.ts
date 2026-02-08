@@ -22,9 +22,9 @@ const THUMB_UP_PATH =
   "M1 21h4V9H1v12zm22-11c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 1 7.59 7.59C7.22 7.95 7 8.45 7 9v10c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z";
 const THUMB_DOWN_PATH =
   "M15 3H6c-.83 0-1.54.5-1.84 1.22l-3.02 7.05c-.09.23-.14.47-.14.73v2c0 1.1.9 2 2 2h6.31l-.95 4.57-.03.32c0 .41.17.79.44 1.06L9.83 23l6.59-6.59c.36-.36.58-.86.58-1.41V5c0-1.1-.9-2-2-2zm4 0v12h4V3h-4z";
-/** Thumbs to side: hand with thumb/index pointing right (neutral) */
+/** Hand to side (neutral): palm-down hand / flat hand gesture, 24px viewBox */
 const THUMB_SIDE_PATH =
-  "M22 12l-4-4 1.41-1.41L21 10.17H3v2h18.17l-2.58 2.58L22 12z";
+  "M12 2C9.25 2 7 4.25 7 7v4.5c0 .83-.67 1.5-1.5 1.5S4 12.33 4 11.5V7H2v4.5C2 14.43 4.57 17 7.5 17H12c2.21 0 4-1.79 4-4V7c0-2.75-2.25-5-5-5zm0 2c1.66 0 3 1.34 3 3v5c0 1.1-.9 2-2 2H7.5C6.12 17 5 15.88 5 14.5S6.12 12 7.5 12H11V7c0-1.66-1.34-3-3-3z";
 
 const SENTIMENT_PATHS: Record<UserSentiment, string> = {
   positive: THUMB_UP_PATH,
@@ -42,6 +42,17 @@ const ICON_PATHS: Record<string, string> = {
   place:
     "M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z",
 };
+
+/** Return SVG path d for category icon (24px viewBox). Used by OrangePlaceMarker. */
+export function getCategoryIconPath(category: string): string {
+  const key = categoryToIconKey(category);
+  return ICON_PATHS[key] ?? ICON_PATHS.place;
+}
+
+/** Return SVG path d for sentiment icon (24px viewBox). Used by OrangePlaceMarker. */
+export function getSentimentIconPath(sentiment: UserSentiment): string {
+  return SENTIMENT_PATHS[sentiment];
+}
 
 /** Map PlaceCategory (or any string) to icon key used in ICON_PATHS */
 export function categoryToIconKey(category: string): string {
@@ -124,8 +135,9 @@ export function getCategoryPinSvgDataUrl(category: string): string {
   const offset = (SIZE - iconSize) / 2;
   const center = SIZE / 2;
   const radius = SIZE / 2 - 2;
+  /* No stroke on circle: stroke caused a partial white "ghost ring" where the sentiment badge overlays the pin. */
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${SIZE}" height="${SIZE}" viewBox="0 0 ${SIZE} ${SIZE}">
-  <circle cx="${center}" cy="${center}" r="${radius}" fill="${ORANGE}" stroke="${WHITE}" stroke-width="2"/>
+  <circle cx="${center}" cy="${center}" r="${radius}" fill="${ORANGE}"/>
   <g transform="translate(${offset}, ${offset}) scale(${scale})">
     <path fill="${WHITE}" d="${path}"/>
   </g>
@@ -212,7 +224,7 @@ export function getCategoryPinWithSentimentSvgDataUrl(
 
   if (pngDataUrl) {
     const pinSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="${SIZE}" height="${SIZE}" viewBox="0 0 ${SIZE} ${SIZE}">
-  <circle cx="${center}" cy="${center}" r="${radius}" fill="${ORANGE}" stroke="${WHITE}" stroke-width="2"/>
+  <circle cx="${center}" cy="${center}" r="${radius}" fill="${ORANGE}"/>
   <g transform="translate(${offset}, ${offset}) scale(${scale})">
     <path fill="${WHITE}" d="${catPath}"/>
   </g>
@@ -230,14 +242,15 @@ export function getCategoryPinWithSentimentSvgDataUrl(
   const thumbScale = BADGE_ICON_SIZE / 24;
   const thumbOffset = BADGE_CX - (BADGE_ICON_SIZE / 2) * thumbScale;
   const thumbY = BADGE_CY - (BADGE_ICON_SIZE / 2) * thumbScale;
+  /* No stroke on circles: stroke on the orange circle caused a partial white "ghost ring" (visible where the badge does not cover it). */
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${COMPOSITE_WIDTH}" height="${COMPOSITE_HEIGHT}" viewBox="0 ${VIEWBOX_MIN_Y} ${COMPOSITE_WIDTH} ${COMPOSITE_HEIGHT}">
   <g transform="translate(0, ${VIEWBOX_MIN_Y + BADGE_OFFSET_UP})">
-    <circle cx="${center}" cy="${center}" r="${radius}" fill="${ORANGE}" stroke="${WHITE}" stroke-width="2"/>
+    <circle cx="${center}" cy="${center}" r="${radius}" fill="${ORANGE}"/>
     <g transform="translate(${offset}, ${offset}) scale(${scale})">
       <path fill="${WHITE}" d="${catPath}"/>
     </g>
   </g>
-  <circle cx="${BADGE_CX}" cy="${BADGE_CY}" r="${BADGE_R}" fill="${color}" stroke="${WHITE}" stroke-width="2"/>
+  <circle cx="${BADGE_CX}" cy="${BADGE_CY}" r="${BADGE_R}" fill="${color}"/>
   <g transform="translate(${thumbOffset}, ${thumbY}) scale(${thumbScale})">
     <path fill="${WHITE}" d="${thumbPath}"/>
   </g>

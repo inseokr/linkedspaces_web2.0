@@ -12,7 +12,8 @@
  * - Cluster circle was fully opaque, so the orange circle dominated over the photo symbol.
  */
 
-import { useEffect, useRef, useCallback, useState } from "react";
+import React, { useEffect, useRef, useCallback, useState } from "react";
+import { createRoot } from "react-dom/client";
 import {
   add3DBuildingsLayer,
   getPersisted3D,
@@ -25,7 +26,10 @@ import {
 import MapView3DToggle from "../../components/MapView3DToggle";
 import { isWebGLSupported } from "../../components/MapView3DToggle";
 import MapZoomControls from "../../components/MapZoomControls";
-import { applyLinkedSpacesMapStyle } from "../../mapbox-linkedspaces-style";
+import {
+  applyLinkedSpacesMapStyle,
+  MAPBOX_STYLE_URL,
+} from "../../mapbox-linkedspaces-style";
 import TopPlacesMapStrip from "./TopPlacesMapStrip";
 import {
   drawCircularThumb,
@@ -38,9 +42,9 @@ import {
   getAllCategoryPinIdsForPreload,
   fetchAndSetSentimentPngs,
   CATEGORY_PIN_IDS,
-  SENTIMENT_PIN_IDS,
-  SENTIMENT_PIN_ICON_OFFSET,
 } from "../../mapbox-category-pins";
+import type { UserSentiment } from "../../mapbox-category-pins";
+import OrangePlaceMarker from "../../components/OrangePlaceMarker";
 import type { TopPlaceCardModel } from "../types";
 
 const DEBUG_MAP =
@@ -55,7 +59,6 @@ const CLUSTER_LAYER_ID = "top-places-clusters";
 const CLUSTER_SYMBOL_LAYER_ID = "top-places-clusters-symbol";
 const CLUSTER_COUNT_LAYER_ID = "top-places-cluster-count";
 const UNCLUSTERED_LAYER_ID = "top-places-unclustered";
-const UNCLUSTERED_SYMBOL_LAYER_ID = "top-places-unclustered-symbol";
 
 const CLUSTER_RADIUS = 50;
 const CLUSTER_MAX_ZOOM = 14;
@@ -102,6 +105,7 @@ interface PlaceFeatureProps {
   thumbKey: string;
   category: string;
   categoryPinId: string;
+  sentiment?: "positive" | "neutral" | "negative";
 }
 
 function buildGeoJSON(
@@ -126,6 +130,7 @@ function buildGeoJSON(
         thumbKey: imageUrl ? `thumb:${p.id}` : DEFAULT_PIN_ID,
         category,
         categoryPinId: getCategoryPinImageId(category, sentiment),
+        sentiment: sentiment ?? undefined,
       },
     });
   }
@@ -310,6 +315,14 @@ export default function TopPlacesMapView({
   const initialFitDoneRef = useRef(false);
   /** True after map has fired 'load'; used so the photos popup is created only when the map is ready (fixes popup missing on first open). */
   const [mapReady, setMapReady] = useState(false);
+  /** DOM markers (OrangePlaceMarker) keyed by feature id; synced on moveend/zoomend. */
+  const domMarkersRef = useRef<
+    Map<
+      string,
+      { marker: any; root: ReturnType<typeof createRoot>; el: HTMLDivElement }
+    >
+  >(new Map());
+  const syncDomMarkersRef = useRef<((map: any) => void) | null>(null);
   const [is3D, setIs3D] = useState(() => getPersisted3D());
   const is3DRef = useRef(is3D);
   is3DRef.current = is3D;
@@ -594,7 +607,7 @@ export default function TopPlacesMapView({
       const initialZoom = initialPlace ? FIT_MAX_ZOOM : DEFAULT_ZOOM;
       map = new mapboxgl.Map({
         container: containerRef.current,
-        style: "mapbox://styles/mapbox/streets-v12",
+        style: MAPBOX_STYLE_URL,
         center: initialCenter,
         zoom: initialZoom,
       });
@@ -725,6 +738,7 @@ export default function TopPlacesMapView({
                   "text-halo-width": 1,
                 },
               });
+              /* Invisible circle: used only for queryRenderedFeatures. OrangePlaceMarker (DOM) draws the visible marker. */
               map.addLayer({
                 id: UNCLUSTERED_LAYER_ID,
                 type: "circle",
@@ -733,8 +747,9 @@ export default function TopPlacesMapView({
                 paint: {
                   "circle-color": "rgba(249, 115, 22, 0.9)",
                   "circle-radius": 16,
-                  "circle-stroke-width": 2,
+                  "circle-stroke-width": 0,
                   "circle-stroke-color": "#fff",
+                  "circle-opacity": 0,
                 },
               });
               map.addLayer({
@@ -750,55 +765,83 @@ export default function TopPlacesMapView({
                   "circle-stroke-opacity": 1,
                 },
               });
-              map.addLayer({
-                id: UNCLUSTERED_SYMBOL_LAYER_ID,
-                type: "symbol",
-                source: SOURCE_ID,
-                filter: ["!", ["has", "point_count"]],
-                layout: {
-                  "icon-image": [
-                    "case",
-                    ["==", ["get", "thumbKey"], DEFAULT_PIN_ID],
-                    ["coalesce", ["get", "categoryPinId"], "pin-place"],
-                    ["get", "thumbKey"],
-                  ],
-                  "icon-size": 0.9,
-                  "icon-offset": [
-                    "case",
-                    [
-                      "in",
-                      ["coalesce", ["get", "categoryPinId"], ""],
-                      ["literal", SENTIMENT_PIN_IDS],
-                    ],
-                    SENTIMENT_PIN_ICON_OFFSET,
-                    [0, 0],
-                  ],
-                  "icon-allow-overlap": true,
-                  "icon-ignore-placement": true,
-                },
-              });
-              map.addLayer({
-                id: "top-places-unclustered-name",
-                type: "symbol",
-                source: SOURCE_ID,
-                filter: ["!", ["has", "point_count"]],
-                layout: {
-                  "text-field": ["get", "name"],
-                  "text-font": ["DIN Offc Pro Bold", "Arial Unicode MS Bold"],
-                  "text-size": 11,
-                  "text-anchor": "center",
-                  "text-justify": "center",
-                  "text-offset": [0, 2.6],
-                  "text-max-width": 10,
-                  "text-allow-overlap": true,
-                  "text-ignore-placement": true,
-                },
-                paint: {
-                  "text-color": "#fff",
-                  "text-halo-color": "rgba(0,0,0,0.75)",
-                  "text-halo-width": 1.5,
-                },
-              });
+
+              /* Sync DOM markers (OrangePlaceMarker) so label stays centered by layout. */
+              const syncDomMarkers = (m: any) => {
+                if (!m || !m.getSource(SOURCE_ID)) return;
+                const features = m.queryRenderedFeatures(undefined, {
+                  layers: [UNCLUSTERED_LAYER_ID],
+                }) as GeoJSON.Feature<GeoJSON.Point, PlaceFeatureProps>[];
+                const currentIds = new Set(
+                  features.map((f) =>
+                    String((f.properties as PlaceFeatureProps)?.id ?? ""),
+                  ),
+                );
+                const selectedId = selectedPlaceIdRef.current ?? "";
+
+                for (const f of features) {
+                  const id = String(
+                    (f.properties as PlaceFeatureProps)?.id ?? "",
+                  );
+                  if (!id) continue;
+                  const coords = f.geometry?.coordinates;
+                  if (!coords || coords.length < 2) continue;
+                  const props = f.properties ?? {};
+                  const placeName = String(props.name ?? "");
+                  const category = String(props.category ?? "Others");
+                  const sentiment =
+                    (props.sentiment as UserSentiment | undefined) ?? null;
+
+                  if (domMarkersRef.current.has(id)) {
+                    const entry = domMarkersRef.current.get(id)!;
+                    entry.marker.setLngLat([coords[0], coords[1]]);
+                    entry.root.render(
+                      React.createElement(OrangePlaceMarker, {
+                        placeName,
+                        category,
+                        sentiment,
+                        selected: id === selectedId,
+                      }),
+                    );
+                    continue;
+                  }
+                  const el = document.createElement("div");
+                  el.className = "orange-place-marker-wrapper";
+                  el.style.cursor = "pointer";
+                  el.addEventListener("click", (ev) => {
+                    ev.stopPropagation();
+                    onPlaceSelectRef.current?.(id);
+                  });
+                  const root = createRoot(el);
+                  root.render(
+                    React.createElement(OrangePlaceMarker, {
+                      placeName,
+                      category,
+                      sentiment,
+                      selected: id === selectedId,
+                    }),
+                  );
+                  const marker = new mapboxgl.Marker({ element: el })
+                    .setLngLat([coords[0], coords[1]])
+                    .addTo(m);
+                  domMarkersRef.current.set(id, { marker, root, el });
+                }
+
+                for (const [id, entry] of domMarkersRef.current.entries()) {
+                  if (!currentIds.has(id)) {
+                    try {
+                      entry.marker.remove();
+                      entry.root.unmount();
+                    } catch {}
+                    domMarkersRef.current.delete(id);
+                  }
+                }
+              };
+
+              syncDomMarkersRef.current = syncDomMarkers;
+              syncDomMarkers(map);
+              map.on("moveend", () => syncDomMarkersRef.current?.(map));
+              map.on("zoomend", () => syncDomMarkersRef.current?.(map));
 
               /** Anchor map to selected place or Top Places result #1. */
               const fitBoundsOnce = () => {
@@ -921,7 +964,7 @@ export default function TopPlacesMapView({
                   .setLngLat([lng, lat])
                   .setHTML(
                     `<div style="max-width:200px;padding:4px 0;">
-                <div style="font-weight:700;font-size:14px;margin-bottom:6px;color:#111;">${escapeHtml(props.name || "Place")}</div>
+                <div style="font-weight:700;font-size:15px;margin-bottom:6px;color:#111;letter-spacing:0.01em;">${escapeHtml(props.name || "Place")}</div>
                 ${imgHtml}
                 <a href="/profile/top-places" style="display:inline-block;font-size:13px;color:var(--color-main,#2563eb);font-weight:500;">View place</a>
               </div>`,
@@ -930,12 +973,6 @@ export default function TopPlacesMapView({
                 popupRef.current = popup;
               };
               map.on("click", UNCLUSTERED_LAYER_ID, onUnclusteredClick);
-              map.on("click", UNCLUSTERED_SYMBOL_LAYER_ID, onUnclusteredClick);
-              map.on(
-                "click",
-                "top-places-unclustered-name",
-                onUnclusteredClick,
-              );
 
               const updateSourceByViewport = () => {
                 const src = map.getSource(SOURCE_ID) as
@@ -1025,10 +1062,16 @@ export default function TopPlacesMapView({
                 if (map.hasImage(id)) map.removeImage(id);
               } catch {}
             });
+          for (const [, entry] of domMarkersRef.current.entries()) {
+            try {
+              entry.marker.remove();
+              entry.root.unmount();
+            } catch {}
+          }
+          domMarkersRef.current.clear();
+          syncDomMarkersRef.current = null;
           [
             SELECTED_PIN_LAYER_ID,
-            "top-places-unclustered-name",
-            UNCLUSTERED_SYMBOL_LAYER_ID,
             UNCLUSTERED_LAYER_ID,
             CLUSTER_COUNT_LAYER_ID,
             CLUSTER_SYMBOL_LAYER_ID,
@@ -1121,15 +1164,18 @@ export default function TopPlacesMapView({
     }
   }, [placesWithCoords, places, selectedPlaceId, logDebug]);
 
-  // When selectedPlaceId changes, update highlight filter (flyTo is handled in the places/source effect above)
+  // When selectedPlaceId changes, update highlight filter and DOM marker selected state
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !map.getLayer(SELECTED_PIN_LAYER_ID)) return;
-    map.setFilter(SELECTED_PIN_LAYER_ID, [
-      "==",
-      ["get", "id"],
-      selectedPlaceId ?? "",
-    ]);
+    if (!map) return;
+    if (map.getLayer(SELECTED_PIN_LAYER_ID)) {
+      map.setFilter(SELECTED_PIN_LAYER_ID, [
+        "==",
+        ["get", "id"],
+        selectedPlaceId ?? "",
+      ]);
+    }
+    syncDomMarkersRef.current?.(map);
   }, [selectedPlaceId]);
 
   // Photos-around-pin popup: when a place is selected (e.g. in map modal), show its photos near the orange pin.
@@ -1176,7 +1222,7 @@ export default function TopPlacesMapView({
         ? `<button type="button" data-view-place style="margin-top:8px;width:100%;padding:6px 12px;font-size:13px;font-weight:500;color:#fff;background:var(--color-main,#2563eb);border:none;border-radius:8px;cursor:pointer;">View</button>`
         : "";
     const html = `<div style="padding:14px 10px 10px;max-width:260px;background:rgba(255,255,255,0.95);border-radius:15px;box-shadow:0 2px 12px rgba(0,0,0,0.15);">
-      <div style="font-weight:700;font-size:14px;color:#111;margin-bottom:14px;">${placeTitle}</div>
+      <div style="font-weight:700;font-size:15px;color:#111;margin-bottom:14px;letter-spacing:0.01em;">${placeTitle}</div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center;">${imgs}</div>
       ${viewBtnHtml}
     </div>`;
@@ -1185,6 +1231,7 @@ export default function TopPlacesMapView({
       closeButton: false,
       offset: 52,
       anchor: "top",
+      className: "top-places-marker-popup",
     })
       .setLngLat([place.longitude, place.latitude])
       .setHTML(html);
