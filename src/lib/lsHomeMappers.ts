@@ -75,25 +75,60 @@ export function feedPostsFromFriendsVisitHistory(
   });
 }
 
-/** Build recap blog cards from loadFriendsTrip response. Trips with at least one place; sort by endTimestamp desc, top 10. */
+/** Build recap blog cards from loadFriendsTrip response. Sort by endTimestamp desc; show at most 1 per user (top 10). */
 export function recapBlogsFromFriendsTrips(
   trips: LsTrip[],
   options?: { defaultCoverUrl?: string },
 ): MockRecapBlog[] {
   const defaultCover = options?.defaultCoverUrl ?? "/images/recap/kr.png";
 
+  // Backend trip payloads are not consistent: some include `placeList`, others only
+  // include location-like hints (e.g. `visitedPlaceName`, `country`, etc.). Don't
+  // drop trips solely because `placeList` is missing.
   const filtered = trips.filter((t) => {
+    if (!t) return false;
+    if (t.status === "hidden") return false;
+    if ((t as any)?.privacyControl?.level === "hidden") return false;
     const list = t.placeList;
-    return Array.isArray(list) && list.length >= 1;
+    if (Array.isArray(list) && list.length >= 1) return true;
+    const visitedPlaceName = (t as any).visitedPlaceName;
+    if (Array.isArray(visitedPlaceName) && visitedPlaceName.length >= 1)
+      return true;
+    const country = (t as any).country;
+    const city = (t as any).city;
+    const location = (t as any).location;
+    return Boolean(country || city || location);
   });
+
+  const tripSortKey = (trip: LsTrip): number => {
+    const a = trip?.endTimestamp ?? trip?.startTimestamp;
+    if (typeof a === "number" && Number.isFinite(a)) return a;
+    // Backward-compat: some older payloads used string timestamps.
+    const b = (trip as any)?.endTimestamp ?? (trip as any)?.startTimestamp;
+    const n = typeof b === "string" ? Number(b) : NaN;
+    return Number.isFinite(n) ? n : 0;
+  };
 
   const sorted = [...filtered].sort((a, b) => {
-    const ta = a.endTimestamp || a.startTimestamp || "";
-    const tb = b.endTimestamp || b.startTimestamp || "";
-    return tb.localeCompare(ta);
+    return tripSortKey(b) - tripSortKey(a);
   });
 
-  const top10 = sorted.slice(0, 10);
+  // Pick at most one trip per user (latest one wins due to sorting).
+  const top10: LsTrip[] = [];
+  const seenUsers = new Set<string>();
+  for (const trip of sorted) {
+    const userKey = String(
+      (trip as any)?.username ?? (trip as any)?.owner ?? "",
+    )
+      .trim()
+      .toLowerCase();
+    const key =
+      userKey || `unknown::${String((trip as any)?.blogKey ?? top10.length)}`;
+    if (seenUsers.has(key)) continue;
+    seenUsers.add(key);
+    top10.push(trip);
+    if (top10.length >= 10) break;
+  }
 
   return top10.map((trip) => {
     const username = (trip as any).username ?? (trip as any).owner ?? "unknown";
@@ -103,7 +138,11 @@ export function recapBlogsFromFriendsTrips(
     const coverUri = trip.coverPhotoUri;
     const coverImageUrl = coverUri ? assetUrl(coverUri) : defaultCover;
     const locationLabel =
-      (trip as any).country ?? (trip as any).visitedPlaceName?.[0] ?? "";
+      (trip as any).country ??
+      (trip as any).visitedPlaceName?.[0] ??
+      (trip as any).city ??
+      (trip as any).location ??
+      "";
     const dateLabel = trip.endTimeString ?? trip.startTimeString ?? "";
 
     return {
