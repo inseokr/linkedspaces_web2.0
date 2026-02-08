@@ -126,6 +126,7 @@ export default function UserMenu({ displayName, avatarSrc, className }: Props) {
             src={imgSrc}
             alt="Profile"
             fill
+            sizes="28px"
             className="object-cover"
             onError={() => setHasImgError(true)}
           />

@@ -105,6 +105,20 @@ export type UserFriend = {
   profile_picture?: string;
 };
 
+/**
+ * Backend payloads have not been fully consistent for direct friends.
+ * We accept several shapes and normalize in UI helpers.
+ */
+export type DirectFriends =
+  | UserFriend[]
+  | string[]
+  | Record<string, UserFriend>
+  | {
+      friends?: UserFriend[] | string[];
+      list?: UserFriend[] | string[];
+      usernames?: string[];
+    };
+
 export type User = {
   _id: string;
   username: string;
@@ -114,9 +128,11 @@ export type User = {
 
   badgeProgress?: BadgeProgress;
   placeVisitHistory?: Array<PlaceVisitHistoryItem | undefined>;
-  direct_friends?: {
-    trips?: Trip[];
-  };
+  /**
+   * Direct friends list (shape varies by endpoint/version).
+   * Prefer `friends` when present; fallback to `direct_friends` in Home.
+   */
+  direct_friends?: DirectFriends;
   /** When backend provides a friends list (e.g. in /me or login), used for Home friends row */
   friends?: UserFriend[];
   trips?: Trip[];

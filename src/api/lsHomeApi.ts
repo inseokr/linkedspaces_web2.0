@@ -121,10 +121,11 @@ export type LsFriendsVisitEntry = {
   likesCount?: number;
 };
 
-/** Response shape: array, or { list/visits/placeVisitHistory }, or [{ username, placeVisitHistory }] */
+/** Response shape: array, or { visitedHistory/list/visits/placeVisitHistory }, or [{ username, placeVisitHistory }] */
 export type LsFriendsVisitHistoryRaw =
   | LsFriendsVisitEntry[]
   | {
+      visitedHistory?: LsFriendsVisitEntry[];
       list?: LsFriendsVisitEntry[];
       visits?: LsFriendsVisitEntry[];
       placeVisitHistory?: LsFriendsVisitEntry[];
@@ -160,6 +161,7 @@ function extractFriendsVisitEntries(
   }
   const o = raw as Record<string, unknown>;
   const list =
+    (o.visitedHistory as LsFriendsVisitEntry[] | undefined) ??
     (o.list as LsFriendsVisitEntry[] | undefined) ??
     (o.visits as LsFriendsVisitEntry[] | undefined) ??
     (o.placeVisitHistory as LsFriendsVisitEntry[] | undefined) ??
@@ -175,7 +177,18 @@ export function getFriendsVisitHistory(
     query: { username, userName: username },
   }).then((r) => {
     if (!r.success) return r;
-    const data = extractFriendsVisitEntries(r.data);
+    const me = String(username ?? "")
+      .trim()
+      .toLowerCase();
+    const data = extractFriendsVisitEntries(r.data).filter((e) => {
+      // This endpoint is intended to be "friends" only, but some backends
+      // include the requesting user in the result. Exclude self to avoid
+      // showing my own visit history in the friends feed.
+      const un = String(e?.username ?? "")
+        .trim()
+        .toLowerCase();
+      return !(me && un && un === me);
+    });
     return { success: true, data };
   });
 }
@@ -202,7 +215,60 @@ export function getPlaceVisitHistory(
     query.maxDistance = String(params.maxDistance);
   if (params.showAll != null) query.showAll = String(params.showAll);
   if (params.category) query.category = params.category;
+  console.log("[getPlaceVisitHistory] query:", query);
   return request("/placeVisitHistory", { method: "GET", query });
+}
+
+// --- Single user visit history (for per-friend Home feed) ---
+
+type LsUserVisitHistoryRaw =
+  | LsFriendsVisitEntry[]
+  | {
+      visitedHistory?: LsFriendsVisitEntry[];
+      list?: LsFriendsVisitEntry[];
+      visits?: LsFriendsVisitEntry[];
+      placeVisitHistory?: LsFriendsVisitEntry[];
+      data?: LsFriendsVisitEntry[];
+    }
+  | {
+      visitedHistory?: LsFriendsVisitEntry[];
+      placeVisitHistory?: LsFriendsVisitEntry[];
+    };
+
+function extractUserVisitEntries(raw: unknown): LsFriendsVisitEntry[] {
+  if (!raw) return [];
+  if (Array.isArray(raw)) return raw as LsFriendsVisitEntry[];
+  if (typeof raw !== "object") return [];
+  const o = raw as Record<string, unknown>;
+  const list =
+    (o.visitedHistory as LsFriendsVisitEntry[] | undefined) ??
+    (o.list as LsFriendsVisitEntry[] | undefined) ??
+    (o.visits as LsFriendsVisitEntry[] | undefined) ??
+    (o.placeVisitHistory as LsFriendsVisitEntry[] | undefined) ??
+    (o.data as LsFriendsVisitEntry[] | undefined);
+  return Array.isArray(list) ? list : [];
+}
+
+/**
+ * Load a specific user's place visit history (used to build Home feed per direct friend).
+ * Note: backend may omit `username` on entries, so we inject it.
+ */
+export function getUserVisitHistory(
+  username: string,
+  params: LsPlaceVisitHistoryParams = {},
+): Promise<LsApiResult<LsFriendsVisitEntry[]>> {
+  return (async () => {
+    const r = await getPlaceVisitHistory(username, params);
+    if (!r.success) return r as LsApiResult<LsFriendsVisitEntry[]>;
+    const entries = extractUserVisitEntries(
+      r.data as LsUserVisitHistoryRaw,
+    ).map((e) => ({
+      ...e,
+      username:
+        String((e as any)?.username ?? username ?? "unknown") || "unknown",
+    }));
+    return { success: true, data: entries };
+  })();
 }
 
 // --- Friends trips (for Recap / Blogs) ---
