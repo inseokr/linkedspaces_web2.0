@@ -12,7 +12,13 @@ export interface FeedCardProps {
 
 export default function FeedCard({ post, onMenuClick }: FeedCardProps) {
   const { src, unoptimized } = normalizeImageSrc(post.imageUrl);
-  const avatarSrc = normalizeImageSrc(post.userAvatarUrl).src;
+  const avatarInput =
+    post.userAvatarUrl ??
+    (post.username
+      ? `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(post.username)}`
+      : undefined);
+  const { src: avatarSrc, unoptimized: avatarUnoptimized } =
+    normalizeImageSrc(avatarInput);
 
   return (
     <article className="rounded-2xl border border-[var(--card-border)] bg-white shadow-sm overflow-hidden">
@@ -23,7 +29,7 @@ export default function FeedCard({ post, onMenuClick }: FeedCardProps) {
             src={avatarSrc}
             alt=""
             fill
-            unoptimized
+            unoptimized={avatarUnoptimized}
             className="object-cover"
             sizes="40px"
           />

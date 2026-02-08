@@ -307,10 +307,35 @@ export default function HomePage() {
             ? realFeed
             : MOCK_FEED_POSTS;
 
+    const friendsResolved = realFriends.length > 0 ? realFriends : MOCK_FRIENDS;
+    const avatarByUsername = new Map(
+      friendsResolved
+        .map(
+          (f) =>
+            [
+              String(f?.username ?? "")
+                .trim()
+                .toLowerCase(),
+              f?.avatarUrl,
+            ] as const,
+        )
+        .filter(([k, v]) => Boolean(k) && Boolean(v)),
+    );
+
+    // Ensure feed posts reuse the same profile picture as the Friends row.
+    const feedWithAvatars = feedResolved.map((p) => {
+      if (p?.userAvatarUrl) return p;
+      const key = String(p?.username ?? "")
+        .trim()
+        .toLowerCase();
+      const avatarUrl = key ? avatarByUsername.get(key) : undefined;
+      return avatarUrl ? { ...p, userAvatarUrl: avatarUrl } : p;
+    });
+
     return {
-      friends: realFriends.length > 0 ? realFriends : MOCK_FRIENDS,
+      friends: friendsResolved,
       recapBlogs: recapResolved,
-      feedPosts: feedResolved,
+      feedPosts: feedWithAvatars,
     };
   }, [user, friendsFeed, friendsRecap]);
 
