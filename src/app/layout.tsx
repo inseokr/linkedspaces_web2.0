@@ -44,7 +44,9 @@ export default function RootLayout({
     pathname === "/contact" ||
     pathname === "/terms" ||
     pathname === "/home" ||
-    pathname === "/explore";
+    pathname === "/explore" ||
+    pathname === "/profile" ||
+    (pathname?.startsWith("/profile/") ?? false);
 
   return (
     <html

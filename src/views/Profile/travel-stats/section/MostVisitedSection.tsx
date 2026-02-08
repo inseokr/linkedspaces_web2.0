@@ -15,12 +15,10 @@ type Props = {
 
 export default function MostVisitedSection({ items, className = "" }: Props) {
   return (
-    <section className={`space-y-2 ${className}`}>
-      <h2 className="ml-12 font-[Inter] text-[18px] font-semibold leading-[28px] tracking-[-0.5px] text-[#7C7C7C]">
-        Most Visited
-      </h2>
+    <section className={`space-y-4 ${className}`}>
+      <h2 className="text-lg font-semibold text-gray-900">Top 3 Countries</h2>
 
-      <div className="space-y-2">
+      <div className="space-y-2 w-full">
         {items.map((item, idx) => (
           <CountryStatCard
             key={item.country}
@@ -28,8 +26,8 @@ export default function MostVisitedSection({ items, className = "" }: Props) {
             visits={item.visits}
             subtitle={item.subtitle}
             countryCode={item.countryCode}
-            highlight={idx === 0} // 첫 번째만 강조
-            className="ml-12" // Most Visited 섹션에서만 오른쪽 이동
+            highlight={idx === 0}
+            className="w-full"
           />
         ))}
       </div>

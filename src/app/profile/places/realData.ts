@@ -170,6 +170,157 @@ const COUNTRY_NAME_TO_CANONICAL: Record<string, string> = {
   kr: "South Korea",
 };
 
+/** US state/territory 2-letter codes so we can infer United States when only state (e.g. CA) is set */
+const US_STATE_CODES = new Set([
+  "al",
+  "ak",
+  "az",
+  "ar",
+  "ca",
+  "co",
+  "ct",
+  "de",
+  "fl",
+  "ga",
+  "hi",
+  "id",
+  "il",
+  "in",
+  "ia",
+  "ks",
+  "ky",
+  "la",
+  "me",
+  "md",
+  "ma",
+  "mi",
+  "mn",
+  "ms",
+  "mo",
+  "mt",
+  "ne",
+  "nv",
+  "nh",
+  "nj",
+  "nm",
+  "ny",
+  "nc",
+  "nd",
+  "oh",
+  "ok",
+  "or",
+  "pa",
+  "ri",
+  "sc",
+  "sd",
+  "tn",
+  "tx",
+  "ut",
+  "vt",
+  "va",
+  "wa",
+  "wv",
+  "wi",
+  "wy",
+  "dc",
+  "gu",
+  "pr",
+  "vi",
+  "as",
+  "mp",
+]);
+
+/** Common US state names (lowercase) for inference when backend sends "California" etc. */
+const US_STATE_NAMES: Record<string, string> = {
+  alabama: "United States",
+  alaska: "United States",
+  arizona: "United States",
+  arkansas: "United States",
+  california: "United States",
+  colorado: "United States",
+  connecticut: "United States",
+  delaware: "United States",
+  florida: "United States",
+  georgia: "United States",
+  hawaii: "United States",
+  idaho: "United States",
+  illinois: "United States",
+  indiana: "United States",
+  iowa: "United States",
+  kansas: "United States",
+  kentucky: "United States",
+  louisiana: "United States",
+  maine: "United States",
+  maryland: "United States",
+  massachusetts: "United States",
+  michigan: "United States",
+  minnesota: "United States",
+  mississippi: "United States",
+  missouri: "United States",
+  montana: "United States",
+  nebraska: "United States",
+  nevada: "United States",
+  "new hampshire": "United States",
+  "new jersey": "United States",
+  "new mexico": "United States",
+  "new york": "United States",
+  "north carolina": "United States",
+  "north dakota": "United States",
+  ohio: "United States",
+  oklahoma: "United States",
+  oregon: "United States",
+  pennsylvania: "United States",
+  "rhode island": "United States",
+  "south carolina": "United States",
+  "south dakota": "United States",
+  tennessee: "United States",
+  texas: "United States",
+  utah: "United States",
+  vermont: "United States",
+  virginia: "United States",
+  washington: "United States",
+  "west virginia": "United States",
+  wisconsin: "United States",
+  wyoming: "United States",
+  "district of columbia": "United States",
+};
+
+/** When country/countryCode are empty, infer country from state (e.g. CA or California → United States). */
+function inferCountryFromState(state: string | undefined): string {
+  const s = (state ?? "").trim();
+  if (!s) return "";
+  const lower = s.toLowerCase();
+  if (lower.length === 2 && US_STATE_CODES.has(lower)) return "United States";
+  return US_STATE_NAMES[lower] ?? "";
+}
+
+/** Infer US when city contains ", CA" or ", California" etc. (e.g. "San Ramon, CA" with no separate state/country). */
+function inferCountryFromCity(city: string | undefined): string {
+  const s = (city ?? "").trim();
+  if (!s) return "";
+  const lower = s.toLowerCase();
+  const commaLast = /,\s*([^,]+)$/.exec(lower);
+  if (commaLast) {
+    const part = commaLast[1].trim();
+    if (part.length === 2 && US_STATE_CODES.has(part)) return "United States";
+    if (US_STATE_NAMES[part]) return "United States";
+  }
+  return "";
+}
+
+/** Rough US bounding box (continental + Alaska + Hawaii) to infer country when only coordinates exist. */
+function isCoordinateInUS(coord: unknown): boolean {
+  if (!coord || typeof coord !== "object") return false;
+  const c = coord as Record<string, unknown>;
+  const lat = Number(c.latitude ?? c.lat);
+  const lng = Number(c.longitude ?? c.lng);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return false;
+  if (lat >= 24 && lat <= 50 && lng >= -125 && lng <= -66) return true;
+  if (lat >= 51 && lat <= 72 && lng >= -180 && lng <= -130) return true;
+  if (lat >= 18 && lat <= 23 && lng >= -161 && lng <= -154) return true;
+  return false;
+}
+
 function normalizeCountry(country: string, countryCode?: string): string {
   const trimmed = (country ?? "").trim();
   if (trimmed) {
@@ -260,7 +411,13 @@ function fromPlaceVisitHistoryEntries(
   return withTime.map(({ entry, savedAt, index }) => {
     const rawCountry = entry.country ?? "";
     const code = (entry.countryCode ?? "").trim().toLowerCase();
-    const country = normalizeCountry(rawCountry, entry.countryCode);
+    const stateOrRegion =
+      entry.state ?? (entry as { region?: string }).region ?? "";
+    const country =
+      normalizeCountry(rawCountry, entry.countryCode) ||
+      inferCountryFromState(stateOrRegion) ||
+      inferCountryFromCity(entry.city) ||
+      (isCoordinateInUS(entry.coordinate) ? "United States" : "");
     const uris = allPhotoUris(entry.photoList);
     return {
       id: entry._id ?? `place-${index}`,
@@ -311,10 +468,14 @@ function fromTripsAndHistory(user: User): ViewAllRow[] {
         hist?.country ??
         "Place Name";
       const category = toViewAllCategory(hist?.categories);
-      const country = normalizeCountry(
-        hist?.country ?? tripCountry,
-        hist?.countryCode ?? trip.countryCode,
-      );
+      const country =
+        normalizeCountry(
+          hist?.country ?? tripCountry,
+          hist?.countryCode ?? trip.countryCode,
+        ) ||
+        inferCountryFromState(hist?.state) ||
+        inferCountryFromCity(hist?.city) ||
+        (isCoordinateInUS(hist?.coordinate) ? "United States" : "");
       const countryCode =
         (hist?.countryCode ?? trip.countryCode ?? "").toLowerCase() ||
         "unknown";

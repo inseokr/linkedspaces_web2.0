@@ -138,9 +138,12 @@ function PlaceRow({
         </div>
       </div>
 
-      <div className="min-w-0 flex-1">
+      <div className={`min-w-0 flex-1 ${place.sentiment ? "pr-12" : ""}`}>
         <div className="flex flex-wrap items-center gap-2">
-          <h3 className="truncate text-base font-semibold text-gray-900">
+          <h3
+            className="min-w-0 flex-1 truncate text-base font-semibold text-gray-900"
+            title={place.name}
+          >
             {place.name}
           </h3>
           <span className="shrink-0 rounded-full bg-gray-200 px-2 py-0.5 text-xs font-medium text-gray-700">

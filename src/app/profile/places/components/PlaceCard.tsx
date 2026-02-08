@@ -86,12 +86,15 @@ export default function PlaceCard({
           ) : null}
         </div>
       ) : null}
-      {/* Bottom overlay with gradient */}
+      {/* Bottom overlay with gradient: reserve right space so long names don't run under sentiment/date */}
       <div
-        className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent pt-16 pb-3 pl-3 pr-3"
+        className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent pt-16 pb-3 pl-3 pr-14"
         aria-hidden
       >
-        <h3 className="text-base font-semibold leading-tight text-white drop-shadow-sm">
+        <h3
+          className="truncate text-base font-semibold leading-tight text-white drop-shadow-sm"
+          title={title}
+        >
           {title}
         </h3>
       </div>

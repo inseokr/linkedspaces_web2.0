@@ -277,24 +277,53 @@ export type LsTripPlaceRef = { placeIndex: number; _id?: string };
 
 export type LsTrip = {
   blogKey: number;
+  username?: string;
+  owner?: string;
   status?: string;
   startTimeString?: string;
   endTimeString?: string;
-  startTimestamp?: string;
-  endTimestamp?: string;
+  startTimestamp?: number;
+  endTimestamp?: number;
+  startingYear?: string;
   title?: string;
+  tripHighlight?: string;
   coverPhotoUri?: string;
+  coordinate?: { longitude: number; latitude: number };
+  visitedPlaceName?: string[];
+  country?: string;
+  countryCode?: string;
   placeList?: LsTripPlaceRef[];
+  privacyControl?: {
+    level?: "hidden" | "public" | "private" | "limited" | string;
+    allowedUserList?: Array<{
+      profile_picture?: string;
+      friend_id?: string;
+      username?: string;
+    }>;
+  };
   [key: string]: unknown;
 };
 
 /** Response: array of trips or { trips / tripList / data } */
+export type LsTripsByUser = {
+  username?: string;
+  owner?: string;
+  trips?: LsTrip[];
+  tripList?: LsTrip[];
+  [key: string]: unknown;
+};
+
 export type LsFriendsTripsRaw =
   | LsTrip[]
+  | LsTripsByUser
+  | LsTripsByUser[]
   | {
-      trips?: LsTrip[];
-      tripList?: LsTrip[];
-      data?: LsTrip[] | { trips?: LsTrip[] };
+      result?: string;
+      message?: string;
+      error?: string;
+      trips?: LsTrip[] | LsTripsByUser[] | LsTripsByUser;
+      tripList?: LsTrip[] | LsTripsByUser[] | LsTripsByUser;
+      data?: unknown;
     };
 
 export function getFriendsTrips(
@@ -307,21 +336,114 @@ export function getFriendsTrips(
     token: token ?? getToken(),
   }).then((r) => {
     if (!r.success) return r;
-    const raw = r.data;
-    let list: LsTrip[] | undefined;
-    if (Array.isArray(raw)) {
-      list = raw;
-    } else {
-      const o = raw as Record<string, unknown>;
-      list =
-        (o.trips as LsTrip[] | undefined) ??
-        (o.tripList as LsTrip[] | undefined);
-      if (!list && o.data) {
-        const d = o.data as LsTrip[] | { trips?: LsTrip[] };
-        list = Array.isArray(d) ? d : d.trips;
+    const tripSortKey = (trip: any): number => {
+      const a = trip?.endTimestamp ?? trip?.startTimestamp;
+      if (typeof a === "number" && Number.isFinite(a)) return a;
+      const b = trip?.endTimestamp ?? trip?.startTimestamp;
+      const n = typeof b === "string" ? Number(b) : NaN;
+      return Number.isFinite(n) ? n : 0;
+    };
+
+    const normalizeTrip = (trip: any, owner?: string): LsTrip => {
+      const un = owner?.trim();
+      return {
+        ...(trip as Record<string, unknown>),
+        username: (trip as any)?.username ?? (un || undefined),
+        owner: (trip as any)?.owner ?? (un || undefined),
+      } as LsTrip;
+    };
+
+    const flattenMaybeGroupedArray = (arr: any[]): LsTrip[] => {
+      const out: LsTrip[] = [];
+      for (const item of arr) {
+        if (
+          item &&
+          typeof item === "object" &&
+          (Array.isArray((item as any).trips) ||
+            Array.isArray((item as any).tripList))
+        ) {
+          const owner = String(
+            (item as any).owner ?? (item as any).username ?? "",
+          ).trim();
+          const trips =
+            (Array.isArray((item as any).trips) && (item as any).trips) ||
+            (Array.isArray((item as any).tripList) && (item as any).tripList) ||
+            [];
+          for (const t of trips) out.push(normalizeTrip(t, owner || undefined));
+          continue;
+        }
+        out.push(normalizeTrip(item, undefined));
       }
+      return out;
+    };
+
+    const normalize = (raw: unknown): LsTrip[] => {
+      if (!raw) return [];
+      if (Array.isArray(raw)) return flattenMaybeGroupedArray(raw as any[]);
+      if (typeof raw !== "object") return [];
+
+      const o = raw as Record<string, unknown>;
+      // Some backends return HTTP 200 even for failures; use `result` when present.
+      const result = typeof o.result === "string" ? o.result : undefined;
+      if (result && result.toUpperCase() !== "OK") {
+        const msg =
+          (typeof o.message === "string" && o.message) ||
+          (typeof o.error === "string" && o.error) ||
+          `Unexpected result: ${result}`;
+        throw new Error(msg);
+      }
+
+      // Common payload containers.
+      const candidate =
+        o.trips ??
+        o.tripList ??
+        (o as any).data ??
+        (o as any).trip ??
+        undefined;
+
+      // Group wrapper: { username/owner, trips: [...] }
+      if (
+        (typeof (o as any).username === "string" ||
+          typeof (o as any).owner === "string") &&
+        (Array.isArray((o as any).trips) || Array.isArray((o as any).tripList))
+      ) {
+        return flattenMaybeGroupedArray([o as any]);
+      }
+
+      // Direct list or grouped list inside container keys.
+      return normalize(candidate);
+    };
+
+    let list: LsTrip[] = [];
+    try {
+      list = normalize(r.data);
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e);
+      return { success: false, error: message };
     }
-    return { success: true, data: Array.isArray(list) ? list : [] };
+
+    // De-dupe by (owner, blogKey), keeping the latest timestamp.
+    const best = new Map<string, LsTrip>();
+    const extras: LsTrip[] = [];
+    for (const t of list) {
+      const blogKey = (t as any)?.blogKey;
+      const owner = String((t as any)?.owner ?? (t as any)?.username ?? "")
+        .trim()
+        .toLowerCase();
+      if (blogKey == null || blogKey === "") {
+        extras.push(t);
+        continue;
+      }
+      const key = `${owner}::${String(blogKey)}`;
+      const prev = best.get(key);
+      if (!prev) {
+        best.set(key, t);
+        continue;
+      }
+      if (tripSortKey(t) > tripSortKey(prev)) best.set(key, t);
+    }
+
+    return { success: true, data: [...best.values(), ...extras] };
   });
 }
 

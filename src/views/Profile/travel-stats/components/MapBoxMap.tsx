@@ -41,6 +41,9 @@ type Props = {
   countryStats?: CountryStat[];
   worldview?: string;
 
+  /** When focusing on a country (e.g. initial view), use this zoom so the map doesn't zoom in too much and other countries stay visible. Ignored when focusing on markers/lat-lng. */
+  defaultFocusZoom?: number;
+
   focusLatLng?: { lat: number; lng: number };
 
   mode?: "place";
@@ -195,6 +198,7 @@ export default function MapboxMap({
   countryCode,
   countryStats = [],
   worldview = "US",
+  defaultFocusZoom,
 
   mode,
   focusLatLng,
@@ -232,6 +236,8 @@ export default function MapboxMap({
 
   const focusLatLngRef = useRef<Props["focusLatLng"]>(focusLatLng);
   const countryCodeRef = useRef<Props["countryCode"]>(countryCode);
+  const defaultFocusZoomRef =
+    useRef<Props["defaultFocusZoom"]>(defaultFocusZoom);
   const onMarkerClickRef = useRef(onMarkerClick);
   const onPlaceMarkerClickRef = useRef(onPlaceMarkerClick);
 
@@ -284,6 +290,10 @@ export default function MapboxMap({
   useEffect(() => {
     countryCodeRef.current = countryCode;
   }, [countryCode]);
+
+  useEffect(() => {
+    defaultFocusZoomRef.current = defaultFocusZoom;
+  }, [defaultFocusZoom]);
 
   useEffect(() => {
     onMarkerClickRef.current = onMarkerClick;
@@ -756,6 +766,9 @@ export default function MapboxMap({
       const map = mapRef.current;
       if (!map) return;
 
+      const useWiderZoom = defaultFocusZoomRef.current;
+      const targetZoom = useWiderZoom ?? 4;
+
       const runFocus = () => {
         try {
           const features = map.querySourceFeatures("countries", {
@@ -785,13 +798,24 @@ export default function MapboxMap({
             features.forEach((f) => walk((f.geometry as any).coordinates));
 
             map.stop();
-            map.fitBounds(
-              [
-                [minX, minY],
-                [maxX, maxY],
-              ],
-              { padding: 60, duration: 650, maxZoom: 5 },
-            );
+            // When defaultFocusZoom is set (e.g. Travel Stats), center on country at that zoom so other countries stay visible.
+            if (useWiderZoom != null) {
+              const centerLng = (minX + maxX) / 2;
+              const centerLat = (minY + maxY) / 2;
+              map.easeTo({
+                center: [centerLng, centerLat],
+                zoom: useWiderZoom,
+                duration: 650,
+              });
+            } else {
+              map.fitBounds(
+                [
+                  [minX, minY],
+                  [maxX, maxY],
+                ],
+                { padding: 60, duration: 650, maxZoom: 5 },
+              );
+            }
             return;
           }
         } catch {}
@@ -801,7 +825,7 @@ export default function MapboxMap({
           center: fallbackCenterByIso2[iso2.toUpperCase()] || [
             -98.5795, 39.8283,
           ],
-          zoom: 4,
+          zoom: targetZoom,
           duration: 650,
         });
       };

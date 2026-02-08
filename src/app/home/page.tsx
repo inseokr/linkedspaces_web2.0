@@ -134,36 +134,38 @@ export default function HomePage() {
     };
 
     (async () => {
+      // Trips endpoint can return grouped results for multiple users.
+      // Calling it once avoids duplicated trip groups across per-friend loops.
+      const bulkTripsPromise = getFriendsTrips(user.username);
+
       // Preferred strategy: iterate friend list and load per friend.
       const perFriend = await mapWithConcurrency(
         friendUsernamesUnique,
         4,
         async (friendUsername) => {
-          console.log(
-            "[Home] loading visit history and trips for:",
-            friendUsername,
-          );
-          const [visitRes, tripsRes] = await Promise.all([
-            getUserVisitHistory(friendUsername, { showAll: true }),
-            getFriendsTrips(friendUsername),
-          ]);
-          // let's print out the length of the visitRes and tripsRes
-          console.log("[Home] visit history:", visitRes);
-          return { friendUsername, visitRes, tripsRes };
+          console.log("[Home] loading visit history for:", friendUsername);
+          const visitRes = await getUserVisitHistory(friendUsername, {
+            showAll: true,
+          });
+          return { friendUsername, visitRes };
         },
       );
 
       if (cancelled) return;
 
-      const anySuccess = perFriend.some(
-        (r) => r.visitRes.success || r.tripsRes.success,
-      );
+      const tripsRes = await bulkTripsPromise;
+      if (cancelled) return;
+
+      const anySuccess =
+        perFriend.some((r) => r.visitRes.success) || tripsRes.success;
 
       // Fallback: if per-friend calls all failed, use the previous bulk endpoints.
       if (!anySuccess) {
-        const [visitRes, tripsRes] = await Promise.all([
+        const [visitRes, tripsRes2] = await Promise.all([
           getFriendsVisitHistory(user.username),
-          getFriendsTrips(user.username),
+          tripsRes.success
+            ? Promise.resolve(tripsRes)
+            : getFriendsTrips(user.username),
         ]);
         if (cancelled) return;
 
@@ -176,9 +178,9 @@ export default function HomePage() {
           );
           console.log(
             "[Home] loadFriendsTrip (bulk fallback):",
-            tripsRes.success
-              ? `ok, ${tripsRes.data.length} trips`
-              : tripsRes.error,
+            tripsRes2.success
+              ? `ok, ${tripsRes2.data.length} trips`
+              : tripsRes2.error,
           );
         }
 
@@ -195,10 +197,10 @@ export default function HomePage() {
               : visitRes.data;
           setFriendsFeed(feedPostsFromFriendsVisitHistory(filtered));
         }
-        if (tripsRes.success) {
+        if (tripsRes2.success) {
           const filtered =
             allowed != null
-              ? tripsRes.data.filter((t) => {
+              ? tripsRes2.data.filter((t) => {
                   const owner = String(
                     (t as any)?.username ?? (t as any)?.owner ?? "",
                   )
@@ -206,7 +208,8 @@ export default function HomePage() {
                     .toLowerCase();
                   return owner ? allowed.has(owner) : false;
                 })
-              : tripsRes.data;
+              : tripsRes2.data;
+
           setFriendsRecap(recapBlogsFromFriendsTrips(filtered));
         }
         return;
@@ -222,19 +225,7 @@ export default function HomePage() {
         }));
       });
 
-      const trips = perFriend.flatMap((r) => {
-        if (!r.tripsRes.success) return [];
-        return r.tripsRes.data.map((t) => {
-          const un = String(
-            (t as any)?.username ?? (t as any)?.owner ?? r.friendUsername ?? "",
-          ).trim();
-          return {
-            ...t,
-            username: un || (t as any)?.username,
-            owner: (t as any)?.owner ?? (un || undefined),
-          };
-        });
-      });
+      const trips = tripsRes.success ? tripsRes.data : [];
 
       const visitEntriesFiltered =
         allowed != null
@@ -261,11 +252,10 @@ export default function HomePage() {
 
       if (process.env.NODE_ENV === "development") {
         const okVisits = perFriend.filter((r) => r.visitRes.success).length;
-        const okTrips = perFriend.filter((r) => r.tripsRes.success).length;
         console.debug("[Home] per-friend network load", {
           friendsRequested: friendUsernamesUnique.length,
           okVisits,
-          okTrips,
+          tripsEndpointOk: tripsRes.success,
           visitEntries: visitEntriesFiltered.length,
           trips: tripsFiltered.length,
         });
@@ -286,6 +276,11 @@ export default function HomePage() {
     const realFriends = getHomeFriends(user ?? null);
     const realRecap = getHomeRecapBlogs(user ?? null);
     const realFeed = getHomeFeedPosts(user ?? null);
+
+    // print out friendsRecap length
+    console.log("[Home] friendsRecap length:", friendsRecap?.length);
+    // print out realRecap length
+    console.log("[Home] realRecap length:", realRecap.length);
 
     const recapResolved =
       friendsRecap !== null
@@ -331,6 +326,9 @@ export default function HomePage() {
       const avatarUrl = key ? avatarByUsername.get(key) : undefined;
       return avatarUrl ? { ...p, userAvatarUrl: avatarUrl } : p;
     });
+
+    // print out recapResolved length
+    console.log("[Home] recapResolved length:", recapResolved.length);
 
     return {
       friends: friendsResolved,

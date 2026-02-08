@@ -84,20 +84,40 @@ const MONTH_LABELS: Record<number, string> = {
   11: "December",
 };
 
+/** Date for year/month: use savedAt, or parse visitedTimeRaw when savedAt is epoch. Keeps filtering and grouping consistent. */
+function getEffectiveDate(place: PlaceWithSavedAt): Date {
+  const fromSavedAt = place.savedAt?.getTime();
+  if (fromSavedAt != null && fromSavedAt > 0) {
+    const y = place.savedAt.getFullYear();
+    if (Number.isFinite(y) && y >= 1970 && y <= 2100) return place.savedAt;
+  }
+  if (place.visitedTimeRaw?.trim()) {
+    const d = parseDateTime(place.visitedTimeRaw);
+    if (d && !Number.isNaN(d.getTime())) return d;
+  }
+  return place.savedAt ?? new Date(0);
+}
+
+/** Year for filtering: same as getEffectiveDate(...).getFullYear(). Ensures country count and list stay in sync. */
+function getEffectiveYear(place: PlaceWithSavedAt): number {
+  return getEffectiveDate(place).getFullYear();
+}
+
 function groupPlacesByMonth(
   places: PlaceWithSavedAt[],
 ): { monthLabel: string; places: PlaceWithSavedAt[] }[] {
   const byKey = new Map<string, PlaceWithSavedAt[]>();
   for (const p of places) {
-    const month = p.savedAt.getMonth();
-    const year = p.savedAt.getFullYear();
+    const d = getEffectiveDate(p);
+    const month = d.getMonth();
+    const year = d.getFullYear();
     const label = `${MONTH_LABELS[month]} ${year}`;
     if (!byKey.has(label)) byKey.set(label, []);
     byKey.get(label)!.push(p);
   }
   const sorted = Array.from(byKey.entries()).sort((a, b) => {
-    const placesA = a[1][0]?.savedAt.getTime() ?? 0;
-    const placesB = b[1][0]?.savedAt.getTime() ?? 0;
+    const placesA = a[1][0] ? getEffectiveDate(a[1][0]).getTime() : 0;
+    const placesB = b[1][0] ? getEffectiveDate(b[1][0]).getTime() : 0;
     return placesB - placesA;
   });
   return sorted.map(([monthLabel, places]) => ({ monthLabel, places }));
@@ -106,10 +126,19 @@ function groupPlacesByMonth(
 function ViewAllPlacesPage() {
   const router = useRouter();
   const user = getCachedUser();
-  const { places: allPlaces, years } = React.useMemo(
+  const { places: allPlaces } = React.useMemo(
     () => getViewAllPlacesFromUser(user),
     [user],
   );
+  /** Years derived from effective year (savedAt or visitedTimeRaw) so pills and counts match the list. */
+  const years = React.useMemo(() => {
+    const set = new Set(
+      allPlaces
+        .map((p) => getEffectiveYear(p))
+        .filter((y) => Number.isFinite(y) && y > 0),
+    );
+    return Array.from(set).sort((a, b) => b - a);
+  }, [allPlaces]);
 
   const [selectedYear, setSelectedYear] = React.useState<number | null>(null);
   const [selectedCountryId, setSelectedCountryId] = React.useState<
@@ -136,9 +165,9 @@ function ViewAllPlacesPage() {
 
   const effectiveYear = selectedYear ?? years[0] ?? new Date().getFullYear();
 
-  /** Places in the selected year (for country pills) */
+  /** Places in the selected year (for country pills) — use effective year so count matches list. */
   const placesInSelectedYear = React.useMemo(
-    () => allPlaces.filter((p) => p.savedAt.getFullYear() === effectiveYear),
+    () => allPlaces.filter((p) => getEffectiveYear(p) === effectiveYear),
     [allPlaces, effectiveYear],
   );
   const countriesForYear = React.useMemo(
@@ -149,7 +178,7 @@ function ViewAllPlacesPage() {
   /** Places in selected year + country (for category pills: only show categories that exist in this set) */
   const placesForYearAndCountry = React.useMemo(() => {
     return allPlaces.filter((p) => {
-      if (p.savedAt.getFullYear() !== effectiveYear) return false;
+      if (getEffectiveYear(p) !== effectiveYear) return false;
       if (
         selectedCountryId &&
         selectedCountryId !== "all" &&
@@ -185,7 +214,7 @@ function ViewAllPlacesPage() {
 
   const filtered = React.useMemo(() => {
     return allPlaces.filter((p) => {
-      if (p.savedAt.getFullYear() !== effectiveYear) return false;
+      if (getEffectiveYear(p) !== effectiveYear) return false;
       if (
         selectedCountryId &&
         selectedCountryId !== "all" &&
