@@ -9,7 +9,7 @@ export interface PulseCardProps {
 export default function PulseCard({ onInviteFriends }: PulseCardProps) {
   return (
     <section className="w-full">
-      <h2 className="mb-4 text-lg font-semibold text-[var(--card-text)]">
+      <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-[var(--card-text-muted)]">
         Invited Pulses
       </h2>
       <div
@@ -29,8 +29,7 @@ export default function PulseCard({ onInviteFriends }: PulseCardProps) {
             where you are.
           </p>
           <p className="mt-4 text-sm text-[var(--card-text-muted)]">
-            No Pulse invitations yet! Wait for friends to invite you to their
-            adventures.
+            Currently No Active Pulses.
           </p>
           <div className="mt-6">
             <Button

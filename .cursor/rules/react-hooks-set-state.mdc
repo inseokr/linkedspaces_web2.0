@@ -1,0 +1,19 @@
+---
+description: Avoid synchronous setState in useEffect (satisfies react-hooks/set-state-in-effect)
+globs: "**/*.{tsx,jsx}"
+alwaysApply: false
+---
+
+# React: No synchronous setState in useEffect
+
+This project enforces `react-hooks/set-state-in-effect`. Do **not** call `setState` (or any state setter) synchronously inside `useEffect`.
+
+## Allowed patterns
+
+- **Hydration / mounted:** Use `useSyncExternalStore(() => () => {}, () => true, () => false)` instead of `useEffect(() => setMounted(true), [])`.
+- **Read cache on mount:** Defer: `useEffect(() => { queueMicrotask(() => setUser(getCachedUser())); }, []);`
+- **Clamp derived state:** Derive during render, e.g. `const effectivePage = Math.min(page, maxPage)` and use that; do not use an effect to reset `page`.
+- **matchMedia / external subscriptions:** Use `useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot)` instead of effect + setState.
+- **When setState in effect is required:** Wrap in `queueMicrotask(() => setState(...))`.
+
+See `docs/ESLint-React-Hooks-Conventions.md` for full examples.

@@ -11,6 +11,7 @@ import { usePathname } from "next/navigation";
 import "mapbox-gl/dist/mapbox-gl.css";
 
 import { LayoutModeProvider } from "@/components/layout/LayoutModeContext"; // 1029추가 - sidebar 없애기 위함
+import { FriendsNetworkProvider } from "@/contexts/FriendsNetworkContext";
 
 const montserrat = Montserrat({
   subsets: ["latin"],
@@ -58,12 +59,14 @@ export default function RootLayout({
       <body className="min-h-screen flex flex-col overflow-x-hidden">
         {/* 여기서 Provider로 감싸기 */}
         <LayoutModeProvider>
-          {!isAuthPage &&
-            (isAuthenticated ? <AfterLoginHeader /> : <BerforeLoginHeader />)}
+          <FriendsNetworkProvider>
+            {!isAuthPage &&
+              (isAuthenticated ? <AfterLoginHeader /> : <BerforeLoginHeader />)}
 
-          <main className="flex-1">{children}</main>
+            <main className="flex-1">{children}</main>
 
-          {!isAuthenticated && <Footer />}
+            {!isAuthenticated && <Footer />}
+          </FriendsNetworkProvider>
         </LayoutModeProvider>
       </body>
     </html>

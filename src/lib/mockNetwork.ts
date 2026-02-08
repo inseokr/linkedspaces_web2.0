@@ -19,6 +19,8 @@ export type MockRecapBlog = {
   authorUsername: string;
   authorAvatarUrl?: string;
   href?: string;
+  /** ISO date string; when set, used for "this month" filters (e.g. Popular Blogs This Month). */
+  createdAt?: string;
 };
 
 export type MockFeedPost = {
@@ -27,11 +29,15 @@ export type MockFeedPost = {
   username: string;
   userAvatarUrl?: string;
   placeName: string;
+  /** City/location for Google search link (e.g. "Place Name, City Name"). */
+  cityName?: string;
   placeId?: string;
   imageUrl: string;
   timeAgo: string;
   likeCount: number;
   commentCount: number;
+  /** ISO date string; when set, used for "this month" filters (e.g. Top Poster / Trending Places). */
+  createdAt?: string;
 };
 
 /** User sentiment for map marker badge: positive (green), neutral (yellow), negative (red) */

@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useMemo, useState, useSyncExternalStore } from "react";
+import { ChevronLeft, ChevronRight, Search } from "lucide-react";
 import ExploreMap from "@/components/explore/ExploreMap";
 import ExplorePlacesList from "@/components/explore/ExplorePlacesList";
 import PhotoLightbox from "@/components/ui/PhotoLightbox";
@@ -9,6 +9,8 @@ import { MOCK_NETWORK_PLACES } from "@/lib/mockNetwork";
 import type { MockPlace } from "@/lib/mockNetwork";
 import { getCachedUser } from "@/api/user";
 import { getNetworkPlacesFromUser } from "@/lib/homeNetworkData";
+import { useFriendsNetwork } from "@/contexts/FriendsNetworkContext";
+import { networkPlacesFromFriendsVisitHistory } from "@/lib/lsHomeMappers";
 
 const PLACEHOLDER_PHOTO =
   "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800&q=80";
@@ -21,27 +23,42 @@ function normalizeCategory(cat: string | undefined): string {
   return t ? t.charAt(0).toUpperCase() + t.slice(1).toLowerCase() : "Others";
 }
 
+const emptySubscribe = () => () => {};
+
 export default function ExplorePage() {
+  const mounted = useSyncExternalStore(
+    emptySubscribe,
+    () => true,
+    () => false,
+  );
+
   const user = getCachedUser();
+  const { visitEntries } = useFriendsNetwork();
+
   const places = useMemo(() => {
-    const realPlaces = getNetworkPlacesFromUser(user ?? null);
-    return realPlaces.length > 0 ? realPlaces : MOCK_NETWORK_PLACES;
-  }, [user?._id, user?.placeVisitHistory?.length]);
+    const myPlaces = getNetworkPlacesFromUser(user ?? null);
+    const friendsPlaces =
+      visitEntries !== null
+        ? networkPlacesFromFriendsVisitHistory(visitEntries)
+        : [];
+    const combined = [...myPlaces, ...friendsPlaces];
+    return combined.length > 0 ? combined : MOCK_NETWORK_PLACES;
+  }, [user, visitEntries]);
 
   const categories = useMemo(() => {
+    if (!mounted) return ["All"];
     const set = new Set<string>();
     places.forEach((p) => {
       const c = normalizeCategory(p.category);
       if (c !== "All") set.add(c);
     });
     return ["All", ...[...set].sort((a, b) => a.localeCompare(b))];
-  }, [places]);
+  }, [places, mounted]);
 
+  const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
   const [selectedPlace, setSelectedPlace] = useState<MockPlace | null>(null);
-  /** Highlight in list when user clicks map marker or list row */
   const [activePlaceId, setActivePlaceId] = useState<string | null>(null);
-  /** Expand list panel width (arrow button toggles). */
   const [listPanelExpanded, setListPanelExpanded] = useState(false);
   const LIST_PANEL_NARROW_PX = 380;
   const LIST_PANEL_WIDE_PX = 720;
@@ -50,11 +67,23 @@ export default function ExplorePage() {
     : LIST_PANEL_NARROW_PX;
 
   const filteredPlaces = useMemo(() => {
-    if (selectedCategory === "All") return places;
-    return places.filter(
-      (p) => normalizeCategory(p.category) === selectedCategory,
-    );
-  }, [places, selectedCategory]);
+    let list = places;
+    if (selectedCategory !== "All") {
+      list = list.filter(
+        (p) => normalizeCategory(p.category) === selectedCategory,
+      );
+    }
+    const q = searchQuery.trim().toLowerCase();
+    if (q) {
+      list = list.filter(
+        (p) =>
+          (p.name && p.name.toLowerCase().includes(q)) ||
+          (p.username && p.username.toLowerCase().includes(q)) ||
+          (p.category && p.category.toLowerCase().includes(q)),
+      );
+    }
+    return list;
+  }, [places, selectedCategory, searchQuery]);
 
   const lightboxPhotos = selectedPlace
     ? selectedPlace.imageUrl
@@ -69,7 +98,7 @@ export default function ExplorePage() {
 
   return (
     <div className="flex h-[calc(100vh-77px)] w-full flex-col">
-      <div className="flex flex-wrap items-center gap-2 border-b border-gray-200 bg-white px-4 py-3 shadow-sm">
+      <div className="flex flex-wrap items-center gap-3 border-b border-gray-200 bg-white px-4 py-3 shadow-sm">
         <span className="shrink-0 text-sm font-medium text-gray-600">
           Category:
         </span>
@@ -110,13 +139,28 @@ export default function ExplorePage() {
           ["--explore-list-px" as string]: `${listPanelWidthPx}px`,
         }}
       >
-        <div className="relative min-h-0 min-w-0 overflow-y-auto border-b border-gray-200 bg-gray-50/50 px-4 py-4 pr-3 lg:border-b-0 lg:border-r">
-          <ExplorePlacesList
-            places={filteredPlaces}
-            activePlaceId={activePlaceId}
-            onSelectPlace={setActivePlaceId}
-            onPlaceClick={handlePlaceClick}
-          />
+        <div className="relative flex min-h-0 min-w-0 flex-col border-b border-gray-200 bg-gray-50/50 lg:border-b-0 lg:border-r">
+          <div className="sticky top-0 z-10 shrink-0 border-b border-gray-200 bg-gray-50/50 px-4 py-3">
+            <div className="flex items-center gap-2 rounded-full border-2 border-gray-300 bg-white px-4 py-2 text-gray-500 transition-colors focus-within:border-[var(--color-main)] focus-within:ring-2 focus-within:ring-[var(--color-main)] focus-within:ring-offset-2">
+              <Search className="h-4 w-4 shrink-0 text-gray-400" aria-hidden />
+              <input
+                type="search"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search places"
+                className="min-w-0 flex-1 bg-transparent text-gray-900 placeholder:text-gray-500 focus:outline-none"
+                aria-label="Search places"
+              />
+            </div>
+          </div>
+          <div className="min-h-0 min-w-0 flex-1 overflow-y-auto px-4 py-4 pr-3">
+            <ExplorePlacesList
+              places={filteredPlaces}
+              activePlaceId={activePlaceId}
+              onSelectPlace={setActivePlaceId}
+              onPlaceClick={handlePlaceClick}
+            />
+          </div>
         </div>
         {/* Resize handle: arrow right = expand list, arrow left = collapse (visible on lg only) */}
         <div className="hidden w-5 shrink-0 items-center justify-center bg-gray-100 transition-colors hover:bg-gray-200 lg:flex">

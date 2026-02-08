@@ -1,8 +1,12 @@
+import path from "path";
 import type { NextConfig } from "next";
 
 const BLOG_ORIGIN = process.env.BLOG_ORIGIN;
 
 const nextConfig: NextConfig = {
+  // Use this directory as the workspace root for output file tracing (avoids
+  // "multiple lockfiles" warning when a parent repo also has a package-lock.json).
+  outputFileTracingRoot: path.join(__dirname),
   // Next.js 16 uses Turbopack by default in dev. Since we also provide a custom
   // webpack config (used for `next build` and `next dev --webpack`), add an
   // explicit Turbopack config to avoid the "webpack config with no turbopack

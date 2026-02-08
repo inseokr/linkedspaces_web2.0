@@ -216,6 +216,8 @@ export function getHomeFeedPosts(user: User | null): MockFeedPost[] {
     const uri = getFirstPhotoUri(place);
     const placeName =
       place.placeName || place.visitedCity || place.city || "A place";
+    const cityName =
+      (place as any).city ?? (place as any).visitedCity ?? undefined;
     const timeStr = place.visitedTime || place.visitedTimeDigitized;
     const likeCount = place.likes ?? place.likeCount ?? place.likesCount ?? 0;
     const commentCount = 0; // Backend could add later
@@ -226,6 +228,7 @@ export function getHomeFeedPosts(user: User | null): MockFeedPost[] {
       username,
       userAvatarUrl: avatarUrl,
       placeName,
+      cityName,
       placeId: (place as any)._id,
       imageUrl: uri ? assetUrl(uri) : "",
       timeAgo: formatTimeAgo(timeStr),

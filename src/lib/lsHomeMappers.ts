@@ -8,8 +8,17 @@ import type {
   LsPlacePhoto,
   LsTrip,
 } from "@/api/lsHomeApi";
-import type { MockFeedPost, MockRecapBlog } from "./mockNetwork";
+import type { MockFeedPost, MockRecapBlog, MockPlace } from "./mockNetwork";
 import { formatTimeAgo } from "./homeNetworkData";
+
+const VALID_SENTIMENTS = ["positive", "neutral", "negative"] as const;
+type MockPlaceSentiment = (typeof VALID_SENTIMENTS)[number];
+function toSentiment(s: unknown): MockPlaceSentiment | undefined {
+  const t = typeof s === "string" ? s.trim().toLowerCase() : "";
+  if (VALID_SENTIMENTS.includes(t as MockPlaceSentiment))
+    return t as MockPlaceSentiment;
+  return undefined;
+}
 
 function firstPhotoUri(entry: LsFriendsVisitEntry): string | undefined {
   const photos = entry.photoList;
@@ -45,6 +54,8 @@ export function feedPostsFromFriendsVisitHistory(
     const uri = firstPhotoUri(entry);
     const placeName =
       entry.placeName || entry.visitedCity || entry.city || "A place";
+    const cityName =
+      (entry as any).city ?? (entry as any).visitedCity ?? undefined;
     const timeStr = entry.visitedTime || entry.visitedTimeDigitized;
     const likeCount = entry.likes ?? entry.likeCount ?? entry.likesCount ?? 0;
     const commentCount = Array.isArray(entry.photoList)
@@ -66,6 +77,7 @@ export function feedPostsFromFriendsVisitHistory(
       username,
       userAvatarUrl: undefined,
       placeName,
+      cityName,
       placeId: entry._id,
       imageUrl: uri ? assetUrl(uri) : FEED_PLACEHOLDER_IMAGE,
       timeAgo: formatTimeAgo(timeStr),
@@ -73,6 +85,43 @@ export function feedPostsFromFriendsVisitHistory(
       commentCount,
     };
   });
+}
+
+/** Build network places for Explore map from friends' visit history (entries with coordinates). */
+export function networkPlacesFromFriendsVisitHistory(
+  entries: LsFriendsVisitEntry[],
+): MockPlace[] {
+  return entries
+    .filter((e) => {
+      if (!e) return false;
+      if (e.status === "hidden") return false;
+      const coord = e.coordinate;
+      return (
+        coord != null &&
+        Number.isFinite(coord.latitude) &&
+        Number.isFinite(coord.longitude)
+      );
+    })
+    .map((entry, index) => {
+      const username = entry.username ?? "unknown";
+      const firstUri = firstPhotoUri(entry);
+      const photoStory = entry.photoList?.find((p) => p?.story)?.story;
+      const caption = (entry as any).story ?? photoStory ?? undefined;
+      return {
+        id:
+          (entry as any)._id ??
+          `place-${username}-${entry.placeIndex ?? index}`,
+        name: entry.placeName || entry.visitedCity || entry.city || "Place",
+        lat: entry.coordinate!.latitude,
+        lng: entry.coordinate!.longitude,
+        category: (entry as any).categories?.[0],
+        userId: (entry as any).userId ?? username,
+        username,
+        sentiment: toSentiment((entry as any).sentiment),
+        imageUrl: firstUri ? assetUrl(firstUri) : undefined,
+        caption: caption || undefined,
+      };
+    });
 }
 
 /** Build recap blog cards from loadFriendsTrip response. Sort by endTimestamp desc; show at most 1 per user (top 10). */

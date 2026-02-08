@@ -1,308 +1,79 @@
 "use client";
 
-import { useMemo, useEffect, useState } from "react";
+import { useMemo, useEffect, useState, useRef, useCallback } from "react";
 import HomeFriendsRow from "@/components/home/HomeFriendsRow";
 import PulseCard from "@/components/home/PulseCard";
-import RecapBlogsCarousel from "@/components/home/RecapBlogsCarousel";
+import RecapsModule from "@/components/home/RecapsModule";
 import FeedList from "@/components/home/FeedList";
-import {
-  MOCK_FRIENDS,
-  MOCK_RECAP_BLOGS,
-  MOCK_FEED_POSTS,
-} from "@/lib/mockNetwork";
+import HomeStickyBar from "@/components/home/HomeStickyBar";
+import NetworkSnapshotCard from "@/components/home/NetworkSnapshotCard";
+import EmptyStateCard from "@/components/home/EmptyStateCard";
+import Button from "@/components/ui/Button";
+import Link from "next/link";
 import { getCachedUser, type User } from "@/api/user";
 import {
   getHomeFriends,
-  getHomeDirectFriendUsernames,
   getHomeRecapBlogs,
   getHomeFeedPosts,
 } from "@/lib/homeNetworkData";
 import {
-  getFriendsVisitHistory,
-  getFriendsTrips,
-  getUserVisitHistory,
-} from "@/api/lsHomeApi";
-import {
   feedPostsFromFriendsVisitHistory,
   recapBlogsFromFriendsTrips,
 } from "@/lib/lsHomeMappers";
+import { useFriendsNetwork } from "@/contexts/FriendsNetworkContext";
+import { useHomeUIState } from "./useHomeUIState";
 import type { MockFeedPost, MockRecapBlog } from "@/lib/mockNetwork";
 
+function enrichFeedWithAvatars(
+  posts: MockFeedPost[],
+  avatarByUsername: Map<string, string>,
+): MockFeedPost[] {
+  return posts.map((p) => {
+    if (p?.userAvatarUrl) return p;
+    const key = String(p?.username ?? "")
+      .trim()
+      .toLowerCase();
+    const avatarUrl = key ? avatarByUsername.get(key) : undefined;
+    return avatarUrl ? { ...p, userAvatarUrl: avatarUrl } : p;
+  });
+}
+
 export default function HomePage() {
-  // IMPORTANT: do NOT read cached user during render (SSR + first client render must match).
-  // Otherwise, server renders with `null` while client reads localStorage and immediately
-  // renders a different tree, causing hydration mismatches.
   const [user, setUser] = useState<User | null>(null);
+  const feedSectionRef = useRef<HTMLDivElement>(null);
+  const { visitEntries, trips, loading } = useFriendsNetwork();
+  const {
+    activeFilter,
+    setActiveFilter,
+    searchQuery,
+    setSearchQuery,
+    selectedFriend,
+    setSelectedFriend,
+    clearFriendFilter,
+    sortMode,
+    setSortMode,
+    saveLastSeenFeedLength,
+    getLastSeenFeedLength,
+  } = useHomeUIState();
 
   useEffect(() => {
-    setUser(getCachedUser());
+    queueMicrotask(() => setUser(getCachedUser()));
   }, []);
-
-  const [friendsFeed, setFriendsFeed] = useState<MockFeedPost[] | null>(null);
-  const [friendsRecap, setFriendsRecap] = useState<MockRecapBlog[] | null>(
-    null,
-  );
-
-  useEffect(() => {
-    if (!user?.username) {
-      if (process.env.NODE_ENV === "development") {
-        console.debug(
-          "[Home] skip friends network load: missing user.username",
-          {
-            userIsNull: user == null,
-            cachedUsername: user?.username,
-          },
-        );
-      }
-      return;
-    }
-
-    let cancelled = false;
-    const friendUsernames = getHomeDirectFriendUsernames(user);
-    console.log("[Home] direct friend usernames:", friendUsernames);
-    const normalizedFriendUsernames = friendUsernames
-      .map((u) =>
-        String(u ?? "")
-          .trim()
-          .toLowerCase(),
-      )
-      .filter(Boolean);
-    const allowed =
-      friendUsernames.length > 0 ? new Set(normalizedFriendUsernames) : null;
-
-    // Preserve original casing for requests while deduping case-insensitively.
-    const friendUsernamesUnique = Array.from(
-      friendUsernames.reduce((acc, u) => {
-        const trimmed = String(u ?? "").trim();
-        if (!trimmed) return acc;
-        const key = trimmed.toLowerCase();
-        if (!acc.has(key)) acc.set(key, trimmed);
-        return acc;
-      }, new Map<string, string>()),
-    ).map(([, v]) => v);
-
-    if (process.env.NODE_ENV === "development") {
-      const directFriends = (user as any)?.direct_friends;
-      console.debug("[Home] friend usernames (pre-filter)", {
-        user: user.username,
-        friendsFieldType: Array.isArray((user as any)?.friends)
-          ? "array"
-          : typeof (user as any)?.friends,
-        friendsFieldCount: Array.isArray((user as any)?.friends)
-          ? (user as any).friends.length
-          : null,
-        directFriendsType: Array.isArray(directFriends)
-          ? "array"
-          : directFriends == null
-            ? "nullish"
-            : typeof directFriends,
-        friendUsernamesCount: friendUsernames.length,
-        friendUsernamesSample: friendUsernames.slice(0, 10),
-        normalizedCount: normalizedFriendUsernames.length,
-        normalizedSample: normalizedFriendUsernames.slice(0, 10),
-        allowedIsNull: allowed == null,
-        allowedSize: allowed?.size ?? 0,
-        allowedSample: allowed ? Array.from(allowed).slice(0, 10) : [],
-      });
-    }
-
-    if (friendUsernamesUnique.length === 0) {
-      // Keep `friendsFeed/friendsRecap` as null so UI falls back to user-based network data.
-      return () => {
-        cancelled = true;
-      };
-    }
-
-    const mapWithConcurrency = async <T, R>(
-      items: T[],
-      limit: number,
-      fn: (item: T) => Promise<R>,
-    ): Promise<R[]> => {
-      const results: R[] = new Array(items.length);
-      let idx = 0;
-      const workers = new Array(Math.min(limit, items.length))
-        .fill(0)
-        .map(async () => {
-          while (!cancelled) {
-            const i = idx++;
-            if (i >= items.length) return;
-            results[i] = await fn(items[i]);
-          }
-        });
-      await Promise.all(workers);
-      return results;
-    };
-
-    (async () => {
-      // Trips endpoint can return grouped results for multiple users.
-      // Calling it once avoids duplicated trip groups across per-friend loops.
-      const bulkTripsPromise = getFriendsTrips(user.username);
-
-      // Preferred strategy: iterate friend list and load per friend.
-      const perFriend = await mapWithConcurrency(
-        friendUsernamesUnique,
-        4,
-        async (friendUsername) => {
-          console.log("[Home] loading visit history for:", friendUsername);
-          const visitRes = await getUserVisitHistory(friendUsername, {
-            showAll: true,
-          });
-          return { friendUsername, visitRes };
-        },
-      );
-
-      if (cancelled) return;
-
-      const tripsRes = await bulkTripsPromise;
-      if (cancelled) return;
-
-      const anySuccess =
-        perFriend.some((r) => r.visitRes.success) || tripsRes.success;
-
-      // Fallback: if per-friend calls all failed, use the previous bulk endpoints.
-      if (!anySuccess) {
-        const [visitRes, tripsRes2] = await Promise.all([
-          getFriendsVisitHistory(user.username),
-          tripsRes.success
-            ? Promise.resolve(tripsRes)
-            : getFriendsTrips(user.username),
-        ]);
-        if (cancelled) return;
-
-        if (process.env.NODE_ENV === "development") {
-          console.log(
-            "[Home] loadFriendsVisitHistory (bulk fallback):",
-            visitRes.success
-              ? `ok, ${visitRes.data.length} entries`
-              : visitRes.error,
-          );
-          console.log(
-            "[Home] loadFriendsTrip (bulk fallback):",
-            tripsRes2.success
-              ? `ok, ${tripsRes2.data.length} trips`
-              : tripsRes2.error,
-          );
-        }
-
-        if (visitRes.success) {
-          const filtered =
-            allowed != null
-              ? visitRes.data.filter((e) =>
-                  allowed.has(
-                    String(e?.username ?? "")
-                      .trim()
-                      .toLowerCase(),
-                  ),
-                )
-              : visitRes.data;
-          setFriendsFeed(feedPostsFromFriendsVisitHistory(filtered));
-        }
-        if (tripsRes2.success) {
-          const filtered =
-            allowed != null
-              ? tripsRes2.data.filter((t) => {
-                  const owner = String(
-                    (t as any)?.username ?? (t as any)?.owner ?? "",
-                  )
-                    .trim()
-                    .toLowerCase();
-                  return owner ? allowed.has(owner) : false;
-                })
-              : tripsRes2.data;
-
-          setFriendsRecap(recapBlogsFromFriendsTrips(filtered));
-        }
-        return;
-      }
-
-      const visitEntries = perFriend.flatMap((r) => {
-        if (!r.visitRes.success) return [];
-        // Ensure username is present/consistent for downstream mapping.
-        return r.visitRes.data.map((e) => ({
-          ...e,
-          username:
-            String(e?.username ?? r.friendUsername ?? "unknown") || "unknown",
-        }));
-      });
-
-      const trips = tripsRes.success ? tripsRes.data : [];
-
-      const visitEntriesFiltered =
-        allowed != null
-          ? visitEntries.filter((e) =>
-              allowed.has(
-                String(e?.username ?? "")
-                  .trim()
-                  .toLowerCase(),
-              ),
-            )
-          : visitEntries;
-
-      const tripsFiltered =
-        allowed != null
-          ? trips.filter((t) => {
-              const owner = String(
-                (t as any)?.username ?? (t as any)?.owner ?? "",
-              )
-                .trim()
-                .toLowerCase();
-              return owner ? allowed.has(owner) : false;
-            })
-          : trips;
-
-      if (process.env.NODE_ENV === "development") {
-        const okVisits = perFriend.filter((r) => r.visitRes.success).length;
-        console.debug("[Home] per-friend network load", {
-          friendsRequested: friendUsernamesUnique.length,
-          okVisits,
-          tripsEndpointOk: tripsRes.success,
-          visitEntries: visitEntriesFiltered.length,
-          trips: tripsFiltered.length,
-        });
-      }
-
-      // These setters intentionally accept [] (not null) so Home won't fall back to mocks
-      // when friends exist but the network returns no posts/trips.
-      setFriendsFeed(feedPostsFromFriendsVisitHistory(visitEntriesFiltered));
-      setFriendsRecap(recapBlogsFromFriendsTrips(tripsFiltered));
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [user]);
 
   const { friends, recapBlogs, feedPosts } = useMemo(() => {
     const realFriends = getHomeFriends(user ?? null);
     const realRecap = getHomeRecapBlogs(user ?? null);
     const realFeed = getHomeFeedPosts(user ?? null);
 
-    // print out friendsRecap length
-    console.log("[Home] friendsRecap length:", friendsRecap?.length);
-    // print out realRecap length
-    console.log("[Home] realRecap length:", realRecap.length);
+    const fromNetwork = visitEntries !== null && trips !== null;
+    const recapResolved: MockRecapBlog[] =
+      trips !== null ? recapBlogsFromFriendsTrips(trips) : realRecap;
+    const feedResolved: MockFeedPost[] =
+      visitEntries !== null
+        ? feedPostsFromFriendsVisitHistory(visitEntries)
+        : realFeed;
 
-    const recapResolved =
-      friendsRecap !== null
-        ? friendsRecap.length > 0
-          ? friendsRecap
-          : []
-        : realRecap.length > 0
-          ? realRecap
-          : MOCK_RECAP_BLOGS;
-
-    const feedResolved =
-      friendsFeed !== null
-        ? friendsFeed
-        : realFriends.length > 0
-          ? realFeed.length > 0
-            ? realFeed
-            : MOCK_FEED_POSTS
-          : realFeed.length > 0
-            ? realFeed
-            : MOCK_FEED_POSTS;
-
-    const friendsResolved = realFriends.length > 0 ? realFriends : MOCK_FRIENDS;
+    const friendsResolved = realFriends;
     const avatarByUsername = new Map(
       friendsResolved
         .map(
@@ -314,55 +85,241 @@ export default function HomePage() {
               f?.avatarUrl,
             ] as const,
         )
-        .filter(([k, v]) => Boolean(k) && Boolean(v)),
+        .filter(([k, v]) => Boolean(k) && v) as [string, string][],
     );
-
-    // Ensure feed posts reuse the same profile picture as the Friends row.
-    const feedWithAvatars = feedResolved.map((p) => {
-      if (p?.userAvatarUrl) return p;
-      const key = String(p?.username ?? "")
-        .trim()
-        .toLowerCase();
-      const avatarUrl = key ? avatarByUsername.get(key) : undefined;
-      return avatarUrl ? { ...p, userAvatarUrl: avatarUrl } : p;
-    });
-
-    // print out recapResolved length
-    console.log("[Home] recapResolved length:", recapResolved.length);
+    const feedWithAvatars = enrichFeedWithAvatars(
+      feedResolved,
+      avatarByUsername,
+    );
 
     return {
       friends: friendsResolved,
       recapBlogs: recapResolved,
       feedPosts: feedWithAvatars,
     };
-  }, [user, friendsFeed, friendsRecap]);
+  }, [user, visitEntries, trips]);
 
-  const handleFriendClick = (friendId: string) => {
-    if (typeof window !== "undefined") {
-      console.log("[Home] friend clicked:", friendId);
-    }
-  };
+  const newActivityCount = useMemo(() => {
+    const prev = getLastSeenFeedLength();
+    const curr = feedPosts.length;
+    return Math.max(0, curr - prev);
+  }, [feedPosts.length, getLastSeenFeedLength]);
 
-  const handleInviteFriends = () => {
-    if (typeof window !== "undefined") {
-      console.log("[Home] Invite Friends clicked");
-    }
-  };
+  useEffect(() => {
+    return () => {
+      saveLastSeenFeedLength(feedPosts.length);
+    };
+  }, [feedPosts.length, saveLastSeenFeedLength]);
 
-  const handleFeedMenuClick = (postId: string) => {
-    if (typeof window !== "undefined") {
-      console.log("[Home] feed menu:", postId);
+  const q = searchQuery.trim().toLowerCase();
+  const filteredFeedPosts = useMemo(() => {
+    let list = feedPosts;
+    if (selectedFriend) {
+      const friendUsername = friends.find(
+        (f) => f.id === selectedFriend || f.username === selectedFriend,
+      )?.username;
+      const match = friendUsername?.toLowerCase();
+      if (match)
+        list = list.filter((p) => (p.username ?? "").toLowerCase() === match);
     }
-  };
+    if (activeFilter === "Blogs") return [];
+    if (q) {
+      list = list.filter(
+        (p) =>
+          (p.username ?? "").toLowerCase().includes(q) ||
+          (p.placeName ?? "").toLowerCase().includes(q),
+      );
+    }
+    return list;
+  }, [feedPosts, selectedFriend, friends, activeFilter, q]);
+
+  const filteredRecapBlogs = useMemo(() => {
+    if (activeFilter === "Places") return [];
+    let list = recapBlogs;
+    if (q) {
+      list = list.filter(
+        (r) =>
+          (r.authorUsername ?? "").toLowerCase().includes(q) ||
+          (r.title ?? "").toLowerCase().includes(q) ||
+          (r.locationLabel ?? "").toLowerCase().includes(q),
+      );
+    }
+    return list;
+  }, [recapBlogs, activeFilter, q]);
+
+  const handleFriendClick = useCallback(
+    (friendId: string) => {
+      setSelectedFriend(friendId);
+      setTimeout(() => {
+        feedSectionRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      }, 100);
+    },
+    [setSelectedFriend],
+  );
+
+  const handleInviteFriends = useCallback(() => {
+    // Placeholder: could open share sheet or modal
+  }, []);
+
+  const handleFeedMenuClick = useCallback((_postId: string) => {
+    // Placeholder: could open menu
+  }, []);
+
+  const userPlaceTokens = useMemo(() => {
+    const set = new Set<string>();
+    const history = user?.placeVisitHistory ?? [];
+    for (const p of history) {
+      const name = (p as { placeName?: string; city?: string }).placeName ?? "";
+      const city = (p as { city?: string }).city ?? "";
+      name
+        .toLowerCase()
+        .replace(/[^\w\s]/g, " ")
+        .split(/\s+/)
+        .forEach((t) => {
+          if (t.length > 1) set.add(t);
+        });
+      city
+        .toLowerCase()
+        .replace(/[^\w\s]/g, " ")
+        .split(/\s+/)
+        .forEach((t) => {
+          if (t.length > 1) set.add(t);
+        });
+    }
+    return set;
+  }, [user?.placeVisitHistory]);
+
+  const showRecaps = activeFilter === "All" || activeFilter === "Blogs";
+  const showFeed = activeFilter === "All" || activeFilter === "Places";
 
   return (
-    <div className="min-h-screen bg-[var(--color-bg)]">
-      <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
-        <div className="flex flex-col gap-12">
-          <HomeFriendsRow friends={friends} onFriendClick={handleFriendClick} />
-          <PulseCard onInviteFriends={handleInviteFriends} />
-          <RecapBlogsCarousel items={recapBlogs} />
-          <FeedList posts={feedPosts} onMenuClick={handleFeedMenuClick} />
+    <div className="min-h-screen bg-[var(--color-bg)] lg:h-[calc(100vh-77px)] lg:overflow-hidden lg:flex lg:flex-col">
+      <div className="relative mx-auto flex w-full max-w-5xl flex-1 flex-col px-4 py-6 sm:px-6 lg:min-h-0 lg:px-8">
+        <HomeStickyBar
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          activeFilter={activeFilter}
+          onFilterChange={setActiveFilter}
+          newActivityCount={newActivityCount}
+        />
+
+        <div className="mt-6 flex flex-1 flex-col gap-8 lg:min-h-0 lg:flex-row lg:gap-8">
+          <div className="min-w-0 flex flex-col gap-8 lg:flex-1 lg:min-h-0 lg:overflow-y-auto">
+            <HomeFriendsRow
+              friends={friends}
+              onFriendClick={handleFriendClick}
+              selectedFriendId={selectedFriend}
+              feedPosts={feedPosts}
+              isEmpty={friends.length === 0}
+              loading={loading}
+            />
+            {showRecaps && (
+              <>
+                {loading ? (
+                  <RecapsModule
+                    items={[]}
+                    isLoading
+                    viewMode={activeFilter === "Blogs" ? "grid" : "carousel"}
+                  />
+                ) : filteredRecapBlogs.length > 0 ? (
+                  <RecapsModule
+                    items={filteredRecapBlogs}
+                    userPlaceTokens={userPlaceTokens}
+                    viewMode={activeFilter === "Blogs" ? "grid" : "carousel"}
+                  />
+                ) : (
+                  <EmptyStateCard
+                    title="No blogs yet"
+                    description="Add friends to see their recap blogs, or create your first blog from your trips."
+                    actions={
+                      <>
+                        <Link href="/profile">
+                          <Button variant="neutral" radius="md">
+                            My profile
+                          </Button>
+                        </Link>
+                        <Link href="/explore">
+                          <Button variant="main" radius="md">
+                            Explore map
+                          </Button>
+                        </Link>
+                      </>
+                    }
+                  />
+                )}
+              </>
+            )}
+
+            {showFeed && (
+              <div ref={feedSectionRef}>
+                {loading ? (
+                  <FeedList
+                    posts={[]}
+                    onMenuClick={handleFeedMenuClick}
+                    isLoading
+                    sortMode={sortMode}
+                    onSortChange={setSortMode}
+                    selectedFriend={selectedFriend}
+                    onClearFriendFilter={clearFriendFilter}
+                    friendUsername={
+                      selectedFriend
+                        ? friends.find(
+                            (f) =>
+                              f.id === selectedFriend ||
+                              f.username === selectedFriend,
+                          )?.username
+                        : undefined
+                    }
+                  />
+                ) : filteredFeedPosts.length > 0 ? (
+                  <FeedList
+                    posts={filteredFeedPosts}
+                    onMenuClick={handleFeedMenuClick}
+                    sortMode={sortMode}
+                    onSortChange={setSortMode}
+                    selectedFriend={selectedFriend}
+                    onClearFriendFilter={clearFriendFilter}
+                    friendUsername={
+                      selectedFriend
+                        ? friends.find(
+                            (f) =>
+                              f.id === selectedFriend ||
+                              f.username === selectedFriend,
+                          )?.username
+                        : undefined
+                    }
+                    lastSeenFeedLength={getLastSeenFeedLength()}
+                  />
+                ) : (
+                  <EmptyStateCard
+                    title="No feed yet"
+                    description="Add friends or add places to see activity here."
+                    actions={
+                      <>
+                        <Link href="/explore">
+                          <Button variant="main" radius="md">
+                            Explore map
+                          </Button>
+                        </Link>
+                      </>
+                    }
+                  />
+                )}
+              </div>
+            )}
+          </div>
+
+          <aside className="flex flex-col gap-6 lg:w-[320px] lg:shrink-0 lg:self-start lg:max-h-full lg:overflow-y-auto lg:gap-8">
+            <PulseCard onInviteFriends={handleInviteFriends} />
+            <NetworkSnapshotCard
+              feedPosts={feedPosts}
+              recapBlogs={recapBlogs}
+              isLoading={loading}
+            />
+          </aside>
         </div>
       </div>
     </div>
