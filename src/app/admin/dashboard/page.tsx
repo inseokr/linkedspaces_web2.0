@@ -55,6 +55,8 @@ export default function AdminDashboardPage() {
     null,
   );
   const [userDetailsLoading, setUserDetailsLoading] = useState(false);
+  const [userDetailsError, setUserDetailsError] = useState<string | null>(null);
+  const [userDetailsDebug, setUserDetailsDebug] = useState<string | null>(null);
 
   const [filters, setFilters] = useState<Filters>({
     dateRange: { start: DEFAULT_DATE_START, end: DEFAULT_DATE_END },
@@ -112,20 +114,40 @@ export default function AdminDashboardPage() {
   useEffect(() => {
     if (!selectedUsername) {
       setUserDetails(null);
+      setUserDetailsError(null);
+      setUserDetailsDebug(null);
       return;
     }
     let cancelled = false;
     setUserDetailsLoading(true);
     setUserDetails(null);
+    setUserDetailsError(null);
+    setUserDetailsDebug(
+      `GET /LS_API/admin/dashboard/user/${encodeURIComponent(
+        selectedUsername,
+      )} (fallback: /LS_API/mynetwork/profile_summary/:username on 404)`,
+    );
     fetchUserDetails(selectedUsername)
       .then((data) => {
         if (!cancelled) {
           setUserDetails(data);
         }
       })
-      .catch(() => {
+      .catch((e: unknown) => {
         if (!cancelled) {
           setUserDetails(null);
+          const status = (e as any)?.status;
+          const detail = (e as any)?.detail;
+          const message =
+            status != null
+              ? `Failed to load per-user details (HTTP ${status}).`
+              : e instanceof Error
+                ? e.message
+                : "Failed to load per-user details.";
+          setUserDetailsError(
+            detail ? `${message}\n${String(detail).slice(0, 500)}` : message,
+          );
+          console.debug("[admin-dashboard] per-user fetch failed", e);
         }
       })
       .finally(() => {
@@ -311,6 +333,8 @@ export default function AdminDashboardPage() {
             onSelectUsername={setSelectedUsername}
             perUserDetail={perUserDetail}
             perUserLoading={userDetailsLoading}
+            perUserError={userDetailsError}
+            perUserDebug={userDetailsDebug}
             onExport={exportPerUserCsv}
           />
           <DashboardApiUsage data={apiUsage} />

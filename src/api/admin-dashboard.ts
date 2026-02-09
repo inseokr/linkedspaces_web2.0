@@ -271,6 +271,97 @@ export type BackendUserDetails = {
   friendCount: number;
 };
 
+type RealPerUserDashboardResponse = {
+  result: "OK" | "FAIL" | string;
+  data?: {
+    overview?: {
+      username?: string;
+      joinedDate?: string;
+      totalPlaces?: number;
+      totalPhotos?: number;
+      friendCount?: number;
+    };
+    geography?: {
+      placesByCountry?: Array<{ country: string; count: number }>;
+      placesByCity?: Array<{ city: string; count: number }>;
+    };
+    categories?: Array<{
+      category: string;
+      count: number;
+      percentage: string | number;
+    }>;
+    engagement?: {
+      averagePhotosPerPlace?: string | number;
+      photosWithStoryPct?: string | number;
+      photosWithAudioPct?: string | number;
+      averageStoryLengthChars?: number;
+    };
+  };
+  message?: string;
+  reason?: string;
+  error?: string;
+};
+
+function normalizeRealPerUserToLegacy(
+  res: RealPerUserDashboardResponse,
+  requestedUsername: string,
+): BackendUserDetails {
+  const result = String(res?.result ?? "").toUpperCase();
+  if (result !== "OK") {
+    const msg =
+      res?.reason ??
+      res?.message ??
+      res?.error ??
+      `Unexpected result: ${result}`;
+    throw new Error(String(msg));
+  }
+
+  const data = res?.data ?? {};
+  const o = data.overview ?? {};
+  const g = data.geography ?? {};
+  const e = data.engagement ?? {};
+
+  const placesByCountryArr = Array.isArray(g.placesByCountry)
+    ? g.placesByCountry
+    : [];
+  const placesByCityArr = Array.isArray(g.placesByCity) ? g.placesByCity : [];
+
+  const placesByCountry: Record<string, number> = {};
+  for (const x of placesByCountryArr) {
+    if (!x || typeof x.country !== "string") continue;
+    placesByCountry[x.country] = asNumber(x.count);
+  }
+
+  const placesByCity: Record<string, number> = {};
+  for (const x of placesByCityArr) {
+    if (!x || typeof x.city !== "string") continue;
+    placesByCity[x.city] = asNumber(x.count);
+  }
+
+  const placesByCategory = Array.isArray(data.categories)
+    ? data.categories.map((c) => ({
+        category: String(c.category ?? ""),
+        count: asNumber(c.count),
+        percentage: String(c.percentage ?? "0"),
+      }))
+    : [];
+
+  return {
+    username: String(o.username ?? requestedUsername),
+    joinedDate: String(o.joinedDate ?? ""),
+    totalPlaces: asNumber(o.totalPlaces),
+    totalPhotos: asNumber(o.totalPhotos),
+    friendCount: asNumber(o.friendCount),
+    placesByCountry,
+    placesByCity,
+    placesByCategory,
+    avgPhotosPerPlace: String(e.averagePhotosPerPlace ?? "0"),
+    photosWithStoryPercentage: String(e.photosWithStoryPct ?? "0"),
+    audioCaptionPercentage: String(e.photosWithAudioPct ?? "0"),
+    avgStoryLength: asNumber(e.averageStoryLengthChars),
+  };
+}
+
 /**
  * Fetch dashboard analytics (all users). Returns 403 if not admin.
  */
@@ -401,18 +492,42 @@ export async function fetchUserDetails(
   const token = getAuthToken();
   const encoded = encodeURIComponent(username);
   try {
-    return await apiFetch<BackendUserDetails>(
-      `/admin/user-details/${encoded}`,
+    console.debug(
+      "[admin-dashboard] fetchUserDetails: GET",
+      `/LS_API/admin/dashboard/user/${encoded}`,
+    );
+    const res = await apiFetch<RealPerUserDashboardResponse>(
+      `/admin/dashboard/user/${encoded}`,
       {
         method: "GET",
         token,
       },
     );
+    return normalizeRealPerUserToLegacy(res, username);
   } catch (e: unknown) {
     const status = (e as any)?.status;
+    console.debug("[admin-dashboard] fetchUserDetails failed", {
+      status,
+      message: (e as any)?.message,
+      detail: (e as any)?.detail,
+    });
     if (status !== 404) throw e;
 
+    console.debug(
+      "[admin-dashboard] fetchUserDetails fallback: GET",
+      `/LS_API/mynetwork/profile_summary/${encoded}`,
+    );
     const summary = await fetchProfileSummary(username);
+    console.debug("[admin-dashboard] fetchUserDetails fallback ok", {
+      hasBasicInfo: Boolean((summary as any)?.basicInfo),
+      hasStats: Boolean((summary as any)?.stats),
+      recentTrips: Array.isArray((summary as any)?.recentTrips)
+        ? (summary as any).recentTrips.length
+        : null,
+      recentPlaces: Array.isArray((summary as any)?.recentPlaces)
+        ? (summary as any).recentPlaces.length
+        : null,
+    });
     const stats = summary?.stats ?? {};
     const totalPlaces = pickNumber(stats, [
       "totalPlaces",
