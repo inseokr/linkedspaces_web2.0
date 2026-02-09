@@ -221,6 +221,12 @@ export function getMockUserActivityMetrics(): UserActivityMetrics {
     monthlyPlacesSaved: 18_200,
     totalBlogs: 3_840,
     engagementByPage: MOCK_ENGAGEMENT_BY_PAGE,
+    backendEngagement: {
+      photosWithStoryPct: 62,
+      photosWithAudioPct: 18,
+      totalStories: 48_200,
+      totalAudioCaptions: 12_400,
+    },
     mostUsedAddPlaceFlow: MOCK_ADD_PLACE_FLOW,
     referralRatePercent: 12.5,
   };

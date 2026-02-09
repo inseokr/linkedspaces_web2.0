@@ -62,6 +62,17 @@ export type UserActivityMetrics = {
   monthlyPlacesSaved: number;
   totalBlogs: number;
   engagementByPage: EngagementByPage[];
+  /**
+   * Aggregate engagement numbers that come directly from the backend analytics
+   * endpoint (when available). This is separate from the mock "engagementByPage"
+   * chart, which requires page-analytics instrumentation.
+   */
+  backendEngagement?: {
+    photosWithStoryPct: number;
+    photosWithAudioPct: number;
+    totalStories: number;
+    totalAudioCaptions: number;
+  };
   mostUsedAddPlaceFlow: AddPlaceFlowStats;
   referralRatePercent: number;
 };
