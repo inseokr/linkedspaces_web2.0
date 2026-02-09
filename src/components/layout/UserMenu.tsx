@@ -212,6 +212,19 @@ export default function UserMenu({ displayName, avatarSrc, className }: Props) {
                 Account Settings
               </button>
 
+              <Link
+                href="/dashboard"
+                role="menuitem"
+                className={cn(
+                  "block rounded-xl px-3 py-2.5 text-[15px] font-semibold text-left w-full",
+                  "transition hover:bg-[var(--user-menu-item-hover)]",
+                )}
+                style={{ color: "var(--foreground)" }}
+                onClick={() => setOpen(false)}
+              >
+                Dashboard
+              </Link>
+
               {isAdminUsername(user?.username) && (
                 <Link
                   href="/admin/dashboard"
@@ -223,7 +236,7 @@ export default function UserMenu({ displayName, avatarSrc, className }: Props) {
                   style={{ color: "var(--foreground)" }}
                   onClick={() => setOpen(false)}
                 >
-                  User Dashboard
+                  Admin Dashboard
                 </Link>
               )}
             </div>

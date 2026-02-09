@@ -8,6 +8,8 @@ type Props = {
   onSelectUsername: (username: string | null) => void;
   perUserDetail: PerUserMetrics | null;
   perUserLoading: boolean;
+  perUserError?: string | null;
+  perUserDebug?: string | null;
   onExport?: (username: string) => void;
 };
 
@@ -17,6 +19,8 @@ export default function DashboardPerUser({
   onSelectUsername,
   perUserDetail,
   perUserLoading,
+  perUserError,
+  perUserDebug,
   onExport,
 }: Props) {
   const firstUsername = topActiveUsers[0]?.username ?? null;
@@ -56,6 +60,22 @@ export default function DashboardPerUser({
           </button>
         )}
       </div>
+
+      {selectedUsername && (perUserDebug || perUserError) && (
+        <div className="mt-3 space-y-2">
+          {perUserDebug && (
+            <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-700">
+              <div className="font-semibold text-gray-900">Debug</div>
+              <div className="mt-1 break-words">{perUserDebug}</div>
+            </div>
+          )}
+          {perUserError && (
+            <pre className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs whitespace-pre-wrap text-rose-900">
+              {perUserError}
+            </pre>
+          )}
+        </div>
+      )}
 
       {perUserLoading ? (
         <div className="mt-6 flex items-center gap-2 text-sm text-gray-500">

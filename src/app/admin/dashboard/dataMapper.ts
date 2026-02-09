@@ -86,6 +86,14 @@ export function mapToActivityMetrics(
     monthlyPlacesSaved: mock.monthlyPlacesSaved,
     engagementByPage: mock.engagementByPage,
     recentActivity: mock.recentActivity,
+    backendEngagement: {
+      photosWithStoryPct: parseNum(
+        backend.engagement.photosWithStoryPercentage,
+      ),
+      photosWithAudioPct: parseNum(backend.engagement.audioCaptionPercentage),
+      totalStories: backend.engagement.totalStories,
+      totalAudioCaptions: backend.engagement.totalAudioCaptions,
+    },
     mostUsedAddPlaceFlow: mock.mostUsedAddPlaceFlow,
     referralRatePercent: mock.referralRatePercent,
   };

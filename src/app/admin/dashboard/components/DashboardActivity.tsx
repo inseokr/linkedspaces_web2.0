@@ -21,6 +21,7 @@ export default function DashboardActivity({ data }: Props) {
     monthlyPlacesSaved,
     totalBlogs,
     engagementByPage,
+    backendEngagement,
     mostUsedAddPlaceFlow,
     referralRatePercent,
   } = data;
@@ -49,10 +50,39 @@ export default function DashboardActivity({ data }: Props) {
             <li>
               Total blogs: <strong>{totalBlogs.toLocaleString()}</strong>
             </li>
+            {backendEngagement && (
+              <>
+                <li>
+                  Photos with story:{" "}
+                  <strong>{backendEngagement.photosWithStoryPct}%</strong>
+                </li>
+                <li>
+                  Photos with audio:{" "}
+                  <strong>{backendEngagement.photosWithAudioPct}%</strong>
+                </li>
+                <li>
+                  Total stories:{" "}
+                  <strong>
+                    {backendEngagement.totalStories.toLocaleString()}
+                  </strong>
+                </li>
+                <li>
+                  Total audio captions:{" "}
+                  <strong>
+                    {backendEngagement.totalAudioCaptions.toLocaleString()}
+                  </strong>
+                </li>
+              </>
+            )}
             <li>
               Referral rate: <strong>{referralRatePercent}%</strong>
             </li>
           </ul>
+          <p className="mt-2 text-xs text-gray-400">
+            Note: the page-level engagement chart, recent activity feed, and
+            add-place flow are mock until we add event instrumentation to the
+            backend.
+          </p>
         </div>
         <div>
           <h3 className="text-sm font-medium text-gray-700">
