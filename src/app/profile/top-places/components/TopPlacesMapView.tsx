@@ -695,32 +695,30 @@ export default function TopPlacesMapView({
                 },
               });
               // Cluster photo: representative thumbnail (first leaf). Fallback to default pin when not yet loaded.
-              map.addLayer(
-                {
-                  id: CLUSTER_SYMBOL_LAYER_ID,
-                  type: "symbol",
-                  source: SOURCE_ID,
-                  filter: ["has", "point_count"],
-                  layout: {
-                    "icon-image": [
-                      "coalesce",
+              map.addLayer({
+                id: CLUSTER_SYMBOL_LAYER_ID,
+                type: "symbol",
+                source: SOURCE_ID,
+                filter: ["has", "point_count"],
+                layout: {
+                  "icon-image": [
+                    "coalesce",
+                    [
+                      "image",
                       [
-                        "image",
-                        [
-                          "concat",
-                          "cluster-",
-                          ["to-string", ["get", "cluster_id"]],
-                        ],
+                        "concat",
+                        "cluster-",
+                        ["to-string", ["get", "cluster_id"]],
                       ],
-                      DEFAULT_PIN_ID,
                     ],
-                    "icon-size": 0.8,
-                    "icon-allow-overlap": true,
-                    "icon-ignore-placement": true,
-                  },
+                    DEFAULT_PIN_ID,
+                  ],
+                  "icon-size": 0.8,
+                  "icon-allow-overlap": true,
+                  "icon-ignore-placement": true,
                 },
-                CLUSTER_COUNT_LAYER_ID,
-              );
+              });
+              // Cluster count text on top of thumbnail.
               map.addLayer({
                 id: CLUSTER_COUNT_LAYER_ID,
                 type: "symbol",

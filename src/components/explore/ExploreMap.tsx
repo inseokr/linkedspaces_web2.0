@@ -21,6 +21,7 @@ import {
 import type { UserSentiment } from "@/app/profile/mapbox-category-pins";
 import OrangePlaceMarker from "@/app/profile/components/OrangePlaceMarker";
 import { getCachedUser } from "@/api/user";
+import { useCachedUserLocation } from "@/contexts/UserLocationContext";
 
 const VALID_SENTIMENTS: UserSentiment[] = ["positive", "neutral", "negative"];
 
@@ -31,10 +32,11 @@ function getExploreMarkerSentiment(value: unknown): UserSentiment {
   return "neutral";
 }
 
-const RADIUS_MILES = 500;
+const DEFAULT_RADIUS_MILES = 500;
 const SAN_JOSE_CENTER = { lat: 37.3382, lng: -121.8863 };
 /** Zoom level when centered on user location or neighborhood; zoomed in to see markers clearly. */
 const DEFAULT_ZOOM = 14;
+const FLY_TO_ZOOM = 15;
 function getDefaultMapCenter(): { lat: number; lng: number } {
   const user = getCachedUser();
   const home = user?.homeLocation;
@@ -50,12 +52,18 @@ function getDefaultMapCenter(): { lat: number; lng: number } {
 /** Zoom in by this much on cluster click to disperse clusters (same as My Places / Top Places). */
 const ZOOM_EXTRA_ON_CLUSTER_CLICK = 3;
 const MAX_ZOOM_CLUSTER = 18;
-/** Duration for flying to closest place on load or category change */
+/** Duration for flying to closest place on load and when flyToTarget changes */
 const FLY_TO_CLOSEST_DURATION_MS = 800;
 
 export interface ExploreMapProps {
   places: MockPlace[];
   className?: string;
+  /** Radius in miles for filtering pins (default 500). */
+  radiusMiles?: number;
+  /** When set, map flies to this point (e.g. when user clicks a card). */
+  flyToLngLat?: { lng: number; lat: number } | null;
+  /** Place id to highlight (selected ring on marker). */
+  highlightedPlaceId?: string | null;
   /** Called when user clicks a place marker; use to open the place photo modal */
   onPlaceClick?: (place: MockPlace) => void;
 }
@@ -63,14 +71,15 @@ export interface ExploreMapProps {
 function usePlacesWithinRadius(
   places: MockPlace[],
   center: { lat: number; lng: number } | null,
+  radiusMiles: number,
 ) {
   return useMemo(() => {
     if (!center) return [];
     return places.filter(
       (p) =>
-        haversineMiles(center.lat, center.lng, p.lat, p.lng) <= RADIUS_MILES,
+        haversineMiles(center.lat, center.lng, p.lat, p.lng) <= radiusMiles,
     );
-  }, [places, center]);
+  }, [places, center, radiusMiles]);
 }
 
 /** Find the place in the list closest to the given center (for positioning the map). */
@@ -100,6 +109,9 @@ function findClosestPlace(
 export default function ExploreMap({
   places,
   className = "",
+  radiusMiles = DEFAULT_RADIUS_MILES,
+  flyToLngLat,
+  highlightedPlaceId = null,
   onPlaceClick,
 }: ExploreMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -109,50 +121,30 @@ export default function ExploreMap({
   const onPlaceClickRef = useRef<((place: MockPlace) => void) | undefined>(
     onPlaceClick,
   );
-  const [userLocation, setUserLocation] = useState<{
-    lat: number;
-    lng: number;
-  } | null>(null);
-  const [locationResolved, setLocationResolved] = useState(false);
+  const highlightedPlaceIdRef = useRef<string | null>(
+    highlightedPlaceId ?? null,
+  );
+  highlightedPlaceIdRef.current = highlightedPlaceId ?? null;
+  const { position: userLocation } = useCachedUserLocation();
   const [mapReady, setMapReady] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
 
   const neighborhoodCenter = useMemo(() => getDefaultMapCenter(), []);
   const center = userLocation ?? neighborhoodCenter;
-  const filteredPlaces = usePlacesWithinRadius(places, center);
+  const filteredPlaces = usePlacesWithinRadius(places, center, radiusMiles);
   filteredPlacesRef.current = filteredPlaces;
   onPlaceClickRef.current = onPlaceClick;
 
-  /** Closest place in current category to user/neighborhood — map flies here on load and on category change */
+  /** Fly target: explicit flyToLngLat from card click, or closest place, or center */
   const closestPlace = useMemo(
     () => findClosestPlace(places, center),
     [places, center],
   );
   const flyToTarget = useMemo(() => {
+    if (flyToLngLat) return flyToLngLat;
     if (closestPlace) return { lng: closestPlace.lng, lat: closestPlace.lat };
     return { lng: center.lng, lat: center.lat };
-  }, [closestPlace, center]);
-
-  useEffect(() => {
-    if (!navigator?.geolocation) {
-      setLocationResolved(true);
-      return;
-    }
-    const id = navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setUserLocation({
-          lat: pos.coords.latitude,
-          lng: pos.coords.longitude,
-        });
-        setLocationResolved(true);
-      },
-      () => {
-        setLocationResolved(true);
-      },
-      { enableHighAccuracy: false, timeout: 8000, maximumAge: 300000 },
-    );
-    return () => navigator.geolocation.clearWatch(id);
-  }, []);
+  }, [flyToLngLat, closestPlace, center]);
 
   const initialCenterRef = useRef(center);
   initialCenterRef.current = center;
@@ -208,16 +200,17 @@ export default function ExploreMap({
     };
   }, [initMap]);
 
-  /** On load and when category/center changes, fly to closest place (or center if no places) */
+  /** On load and when flyToTarget changes, fly to that point (zoom in when flyToLngLat is set) */
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !mapReady) return;
+    const zoom = flyToLngLat ? FLY_TO_ZOOM : DEFAULT_ZOOM;
     map.easeTo({
       center: [flyToTarget.lng, flyToTarget.lat],
-      zoom: DEFAULT_ZOOM,
+      zoom,
       duration: FLY_TO_CLOSEST_DURATION_MS,
     });
-  }, [mapReady, flyToTarget.lat, flyToTarget.lng]);
+  }, [mapReady, flyToTarget.lat, flyToTarget.lng, flyToLngLat]);
 
   const sourceId = "explore-places";
   const clusterLayerId = "explore-clusters";
@@ -312,6 +305,7 @@ export default function ExploreMap({
         const category = String(props.category ?? "Others");
         const sentiment = getExploreMarkerSentiment(props.sentiment);
         const subtext = props.username ? String(props.username) : undefined;
+        const selected = id === (highlightedPlaceIdRef.current ?? "");
 
         if (domMarkersRef.current.has(id)) {
           const entry = domMarkersRef.current.get(id)!;
@@ -322,7 +316,7 @@ export default function ExploreMap({
               category,
               sentiment,
               subtext: subtext ?? null,
-              selected: false,
+              selected,
             }),
           );
           continue;
@@ -342,7 +336,7 @@ export default function ExploreMap({
             category,
             sentiment,
             subtext: subtext ?? null,
-            selected: false,
+            selected,
           }),
         );
         const marker = new mapboxgl.default.Marker({ element: el })
@@ -458,9 +452,9 @@ export default function ExploreMap({
         geometry: { type: "Point", coordinates: [p.lng, p.lat] },
       })),
     });
-    // Re-sync DOM markers after data change (viewport may show new/removed points).
+    // Re-sync DOM markers after data change and when highlight changes.
     setTimeout(() => syncDomMarkersRef.current?.(map), 0);
-  }, [mapReady, filteredPlaces]);
+  }, [mapReady, filteredPlaces, highlightedPlaceId]);
 
   if (loadError) {
     return (

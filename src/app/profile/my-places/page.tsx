@@ -33,6 +33,7 @@ import MyPlacesSearchOverlay from "./components/MyPlacesSearchOverlay";
 import type { SearchPlace } from "./searchMockData";
 import ScrollToTopButton from "@/components/ui/ScrollToTopButton";
 import { useLayoutMode } from "@/components/layout/LayoutModeContext";
+import { useCachedUserLocation } from "@/contexts/UserLocationContext";
 
 const PLACEHOLDER_IMAGE = "https://picsum.photos/400/600?random=place";
 
@@ -125,11 +126,8 @@ export default function ProfileMyPlacesPage() {
     () => getMyPlacesFromUser(user),
     [user],
   );
-  /** User's current location for sorting the list (nearest first). Null until resolved or unavailable. */
-  const [userLocation, setUserLocation] = useState<{
-    lat: number;
-    lng: number;
-  } | null>(null);
+  /** User's current location for sorting the list (nearest first). From shared cache so we don't re-prompt. */
+  const { position: userLocation } = useCachedUserLocation();
 
   useEffect(() => {
     const syncUser = () => {
@@ -140,21 +138,6 @@ export default function ProfileMyPlacesPage() {
     window.addEventListener("focus", syncUser);
     return () => window.removeEventListener("focus", syncUser);
   }, []);
-
-  useEffect(() => {
-    if (!user || typeof navigator === "undefined" || !navigator.geolocation)
-      return;
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const lat = pos.coords.latitude;
-        const lng = pos.coords.longitude;
-        if (Number.isFinite(lat) && Number.isFinite(lng))
-          setUserLocation({ lat, lng });
-      },
-      () => {},
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 },
-    );
-  }, [user]);
 
   const [selectedCategories, setSelectedCategories] = useState<
     Set<PlaceCategory>

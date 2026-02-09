@@ -41,10 +41,10 @@ function enrichFeedWithAvatars(
 export default function HomePage() {
   const [user, setUser] = useState<User | null>(null);
   const feedSectionRef = useRef<HTMLDivElement>(null);
+  const leftColumnRef = useRef<HTMLDivElement>(null);
   const { visitEntries, trips, loading } = useFriendsNetwork();
   const {
     activeFilter,
-    setActiveFilter,
     searchQuery,
     setSearchQuery,
     selectedFriend,
@@ -58,6 +58,12 @@ export default function HomePage() {
 
   useEffect(() => {
     queueMicrotask(() => setUser(getCachedUser()));
+  }, []);
+
+  // Ensure Home loads with scroll at top so search bar, filters, and Friends section are not off-placed
+  useEffect(() => {
+    if (typeof window !== "undefined") window.scrollTo(0, 0);
+    leftColumnRef.current?.scrollTo(0, 0);
   }, []);
 
   const { friends, recapBlogs, feedPosts } = useMemo(() => {
@@ -197,17 +203,20 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-[var(--color-bg)] lg:h-[calc(100vh-77px)] lg:overflow-hidden lg:flex lg:flex-col">
-      <div className="relative mx-auto flex w-full max-w-5xl flex-1 flex-col px-4 py-6 sm:px-6 lg:min-h-0 lg:px-8">
+      <div className="relative mx-auto flex w-full max-w-5xl flex-1 flex-col px-4 pt-0 pb-6 sm:px-6 lg:min-h-0 lg:px-8">
         <HomeStickyBar
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
-          activeFilter={activeFilter}
-          onFilterChange={setActiveFilter}
           newActivityCount={newActivityCount}
         />
 
-        <div className="mt-6 flex flex-1 flex-col gap-8 lg:min-h-0 lg:flex-row lg:gap-8">
-          <div className="min-w-0 flex flex-col gap-8 lg:flex-1 lg:min-h-0 lg:overflow-y-auto">
+        {/* Same two-column layout: left = Friends + tab content, right = Pulse + Network Snapshot. Extra top margin for spacing below the search bar. */}
+        <div className="mt-10 flex flex-1 flex-col gap-8 lg:min-h-0 lg:flex-row lg:gap-8 lg:mt-12">
+          <div
+            ref={leftColumnRef}
+            className="min-w-0 flex flex-col gap-8 pt-8 lg:flex-1 lg:min-h-0 lg:overflow-y-auto lg:pt-10"
+          >
+            {/* Friends section: same on every tab (arrows, Last Moments popover, etc.) */}
             <HomeFriendsRow
               friends={friends}
               onFriendClick={handleFriendClick}
@@ -219,16 +228,12 @@ export default function HomePage() {
             {showRecaps && (
               <>
                 {loading ? (
-                  <RecapsModule
-                    items={[]}
-                    isLoading
-                    viewMode={activeFilter === "Blogs" ? "grid" : "carousel"}
-                  />
+                  <RecapsModule items={[]} isLoading viewMode="carousel" />
                 ) : filteredRecapBlogs.length > 0 ? (
                   <RecapsModule
                     items={filteredRecapBlogs}
                     userPlaceTokens={userPlaceTokens}
-                    viewMode={activeFilter === "Blogs" ? "grid" : "carousel"}
+                    viewMode="carousel"
                   />
                 ) : (
                   <EmptyStateCard
@@ -312,7 +317,11 @@ export default function HomePage() {
             )}
           </div>
 
-          <aside className="flex flex-col gap-6 lg:w-[320px] lg:shrink-0 lg:self-start lg:max-h-full lg:overflow-y-auto lg:gap-8">
+          {/* Sidebar: Invited Pulses + Network Snapshot — same on All, Places, and Blogs */}
+          <aside
+            className="flex flex-col gap-6 lg:w-[320px] lg:shrink-0 lg:self-start lg:max-h-full lg:overflow-y-auto lg:gap-8"
+            aria-label="Invited Pulses and Network snapshot"
+          >
             <PulseCard onInviteFriends={handleInviteFriends} />
             <NetworkSnapshotCard
               feedPosts={feedPosts}

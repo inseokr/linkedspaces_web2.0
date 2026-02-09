@@ -687,6 +687,21 @@ export default function PhotoMap({
 
                     syncDomMarkersRef.current = syncDomMarkers;
                     syncDomMarkers(map);
+                    // After source is loaded and a frame has painted, sync again so OrangePlaceMarker DOM is created (fixes orange markers missing on page load/revisit).
+                    const onSourceLoaded = (e: {
+                      sourceId?: string;
+                      isSourceLoaded?: boolean;
+                    }) => {
+                      if (e.sourceId !== SOURCE_ID || !e.isSourceLoaded) return;
+                      map.off("sourcedata", onSourceLoaded);
+                      requestAnimationFrame(() => {
+                        requestAnimationFrame(() =>
+                          syncDomMarkersRef.current?.(map),
+                        );
+                      });
+                    };
+                    map.on("sourcedata", onSourceLoaded);
+                    map.once("idle", () => syncDomMarkersRef.current?.(map));
                     map.on("moveend", () => syncDomMarkersRef.current?.(map));
                     map.on("zoomend", () => syncDomMarkersRef.current?.(map));
                   } catch (e) {
@@ -1015,6 +1030,7 @@ export default function PhotoMap({
               } catch {}
             });
           [
+            SELECTED_RING_LAYER_ID,
             UNCLUSTERED_CIRCLE_LAYER_ID,
             CLUSTER_COUNT_LAYER_ID,
             CLUSTER_LAYER_ID,

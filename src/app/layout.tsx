@@ -12,6 +12,7 @@ import "mapbox-gl/dist/mapbox-gl.css";
 
 import { LayoutModeProvider } from "@/components/layout/LayoutModeContext"; // 1029추가 - sidebar 없애기 위함
 import { FriendsNetworkProvider } from "@/contexts/FriendsNetworkContext";
+import { UserLocationProvider } from "@/contexts/UserLocationContext";
 
 const montserrat = Montserrat({
   subsets: ["latin"],
@@ -59,14 +60,20 @@ export default function RootLayout({
       <body className="min-h-screen flex flex-col overflow-x-hidden">
         {/* 여기서 Provider로 감싸기 */}
         <LayoutModeProvider>
-          <FriendsNetworkProvider>
-            {!isAuthPage &&
-              (isAuthenticated ? <AfterLoginHeader /> : <BerforeLoginHeader />)}
+          <UserLocationProvider>
+            <FriendsNetworkProvider>
+              {!isAuthPage &&
+                (isAuthenticated ? (
+                  <AfterLoginHeader />
+                ) : (
+                  <BerforeLoginHeader />
+                ))}
 
-            <main className="flex-1">{children}</main>
+              <main className="flex-1">{children}</main>
 
-            {!isAuthenticated && <Footer />}
-          </FriendsNetworkProvider>
+              {!isAuthenticated && <Footer />}
+            </FriendsNetworkProvider>
+          </UserLocationProvider>
         </LayoutModeProvider>
       </body>
     </html>

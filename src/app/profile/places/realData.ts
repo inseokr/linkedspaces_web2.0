@@ -168,6 +168,7 @@ const COUNTRY_NAME_TO_CANONICAL: Record<string, string> = {
   "republic of korea": "South Korea",
   korea: "South Korea",
   kr: "South Korea",
+  대한민국: "South Korea",
 };
 
 /** US state/territory 2-letter codes so we can infer United States when only state (e.g. CA) is set */
@@ -583,16 +584,20 @@ export function deriveYears(places: PlaceWithSavedAt[]): number[] {
   return Array.from(set).sort((a, b) => b - a);
 }
 
-/** Slug for country filter; canonical so "United States" and "United States of America" share one id */
-export function countryToId(country: string): string {
+/** Canonical English display name for country filter pills (e.g. "대한민국" → "South Korea"). */
+export function countryToDisplayName(country: string): string {
   const c = (country ?? "").trim();
   const lower = c.toLowerCase();
-  const canonical =
-    COUNTRY_NAME_TO_CANONICAL[lower] ?? COUNTRY_CODE_TO_NAME[lower] ?? c;
+  return COUNTRY_NAME_TO_CANONICAL[lower] ?? COUNTRY_CODE_TO_NAME[lower] ?? c;
+}
+
+/** Slug for country filter; canonical so "United States" and "United States of America" share one id */
+export function countryToId(country: string): string {
+  const canonical = countryToDisplayName(country);
   return (canonical || "").replace(/\s+/g, "-").toLowerCase() || "unknown";
 }
 
-/** Countries with counts; one pill per canonical country. Ordered most places to least (left to right). */
+/** Countries with counts; one pill per canonical country. Ordered most places to least (left to right). Uses English display names. */
 export function deriveCountries(
   places: PlaceWithSavedAt[],
 ): CountryWithCount[] {
@@ -600,7 +605,7 @@ export function deriveCountries(
   for (const p of places) {
     if (!p.country) continue;
     const id = countryToId(p.country);
-    if (!byId.has(id)) byId.set(id, p.country);
+    if (!byId.has(id)) byId.set(id, countryToDisplayName(p.country));
   }
   const counts = new Map<string, number>();
   for (const p of places) {

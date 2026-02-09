@@ -10,6 +10,7 @@ import {
   Share2,
   Link as LinkIcon,
 } from "lucide-react";
+import SentimentIcon from "@/components/ui/SentimentIcon";
 import type { MockFeedPost } from "@/lib/mockNetwork";
 import { normalizeImageSrc } from "@/utils/normalizeImageSrc";
 
@@ -117,6 +118,23 @@ export default function FeedPlaceModal({ post, onClose }: FeedPlaceModalProps) {
         className="relative flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-white/10 bg-black/20 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
+        {/* User sentiment - top right (left of Close), consistent with Top Places / View All */}
+        {post.sentiment && (
+          <div
+            className="absolute right-14 top-2 z-20 flex items-center gap-2 rounded-full bg-black/50 px-3 py-2 text-white"
+            aria-label={`User sentiment: ${post.sentiment === "positive" ? "Positive" : post.sentiment === "negative" ? "Negative" : "Neutral"}`}
+          >
+            <span className="text-[11px] font-medium text-white/90">
+              User sentiment
+            </span>
+            <SentimentIcon
+              sentiment={post.sentiment}
+              size={28}
+              className="shrink-0"
+            />
+          </div>
+        )}
+
         {/* Close button */}
         <button
           type="button"

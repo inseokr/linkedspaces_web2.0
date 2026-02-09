@@ -38,6 +38,8 @@ export type MockFeedPost = {
   commentCount: number;
   /** ISO date string; when set, used for "this month" filters (e.g. Top Poster / Trending Places). */
   createdAt?: string;
+  /** User sentiment: positive (green), neutral (yellow), negative (red). Shown on feed card and place modal. */
+  sentiment?: "positive" | "neutral" | "negative";
 };
 
 /** User sentiment for map marker badge: positive (green), neutral (yellow), negative (red) */

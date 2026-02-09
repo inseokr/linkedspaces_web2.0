@@ -18,6 +18,7 @@ function postToLightboxImages(post: MockFeedPost): LightboxImage[] {
       placeId: post.placeId,
       placeCity: post.cityName,
       visibility: "public",
+      sentiment: post.sentiment,
     },
   ];
 }

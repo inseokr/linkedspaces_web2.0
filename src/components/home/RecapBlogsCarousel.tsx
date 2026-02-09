@@ -21,7 +21,7 @@ export default function RecapBlogsCarousel({
 }: RecapBlogsCarouselProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [activeIndex, setActiveIndex] = useState(0);
-  const cardWidthRef = useRef(280);
+  const CARD_WIDTH = 380;
   const gap = 16;
 
   useEffect(() => {
@@ -29,7 +29,7 @@ export default function RecapBlogsCarousel({
     if (!el) return;
     const onScroll = () => {
       const scrollLeft = el.scrollLeft;
-      const width = cardWidthRef.current + gap;
+      const width = CARD_WIDTH + gap;
       const index = Math.round(scrollLeft / width);
       setActiveIndex(Math.min(index, Math.max(0, items.length - 1)));
     };
@@ -41,7 +41,7 @@ export default function RecapBlogsCarousel({
   const goTo = (index: number) => {
     const el = scrollRef.current;
     if (!el) return;
-    const width = cardWidthRef.current + gap;
+    const width = CARD_WIDTH + gap;
     el.scrollTo({ left: index * width, behavior: "smooth" });
   };
 
@@ -56,7 +56,7 @@ export default function RecapBlogsCarousel({
           {[1, 2, 3].map((i) => (
             <div
               key={i}
-              className="h-[200px] w-[280px] shrink-0 animate-pulse rounded-xl bg-gray-200"
+              className="h-[240px] w-[380px] shrink-0 animate-pulse rounded-xl bg-gray-200"
             />
           ))}
         </div>
@@ -68,7 +68,7 @@ export default function RecapBlogsCarousel({
     <section className="w-full">
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-xl font-semibold text-[var(--card-text)]">
-          Recap Blogs
+          Latest Recap Blogs
         </h2>
         {!showArrows && (
           <span className="text-sm text-[var(--card-text-muted)]">
@@ -108,12 +108,12 @@ export default function RecapBlogsCarousel({
             return (
               <div
                 key={item.id}
-                className="flex w-[280px] shrink-0 flex-col gap-2"
+                className="flex w-[380px] shrink-0 flex-col gap-2"
                 style={{ scrollSnapAlign: "start" }}
               >
                 <Link
                   href={href}
-                  className="relative h-[200px] w-full overflow-hidden rounded-xl border border-[var(--card-border)] bg-white shadow-sm transition-shadow hover:shadow-md"
+                  className="relative h-[240px] w-full overflow-hidden rounded-xl border border-[var(--card-border)] bg-white shadow-sm transition-shadow hover:shadow-md"
                 >
                   <Image
                     src={src}
@@ -121,7 +121,7 @@ export default function RecapBlogsCarousel({
                     fill
                     unoptimized={unoptimized}
                     className="object-cover"
-                    sizes="280px"
+                    sizes="380px"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
                   {/* Top left: avatar + username pill */}

@@ -9,6 +9,7 @@ import {
   Share2,
   Link as LinkIcon,
 } from "lucide-react";
+import SentimentIcon from "@/components/ui/SentimentIcon";
 import type { MockFeedPost } from "@/lib/mockNetwork";
 import { normalizeImageSrc } from "@/utils/normalizeImageSrc";
 
@@ -99,6 +100,14 @@ export default function FeedCard({
             {post.timeAgo}
           </p>
         </div>
+        {post.sentiment && (
+          <div
+            className="shrink-0"
+            aria-label={`User sentiment: ${post.sentiment}`}
+          >
+            <SentimentIcon sentiment={post.sentiment} size={28} />
+          </div>
+        )}
         <button
           type="button"
           onClick={(e) => {

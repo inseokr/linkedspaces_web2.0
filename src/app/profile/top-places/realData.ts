@@ -134,6 +134,12 @@ export function mapPlaceVisitHistoryToTopPlacesModel(
   const longitude =
     coord && Number.isFinite(coord.longitude) ? coord.longitude : undefined;
 
+  const entrySentiment = (
+    entry as PlaceVisitHistoryEntry & {
+      sentiment?: "positive" | "neutral" | "negative";
+    }
+  ).sentiment;
+
   return {
     id: entry._id ?? `place-${index}-${rank}`,
     title: placeName,
@@ -152,6 +158,7 @@ export function mapPlaceVisitHistoryToTopPlacesModel(
     ...(captionFromOtherPhoto ? { captionFromOtherPhoto: true } : {}),
     latitude,
     longitude,
+    ...(entrySentiment ? { userSentiment: entrySentiment } : {}),
   };
 }
 

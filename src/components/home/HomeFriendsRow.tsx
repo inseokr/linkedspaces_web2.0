@@ -126,7 +126,7 @@ export default function HomeFriendsRow({
           View all
         </Link>
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex items-start gap-2">
         {showArrows && (
           <button
             type="button"
@@ -135,7 +135,7 @@ export default function HomeFriendsRow({
             }
             disabled={effectivePage === 0}
             aria-label="Previous friends"
-            className="relative z-30 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[var(--card-border)] bg-white text-[var(--card-text)] shadow-sm transition-colors hover:bg-gray-50 disabled:pointer-events-none disabled:opacity-40 focus:outline-none focus:ring-2 focus:ring-[var(--color-main)] focus:ring-offset-2"
+            className="relative z-30 mt-2 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[var(--card-border)] bg-white text-[var(--card-text)] shadow-sm transition-colors hover:bg-gray-50 disabled:pointer-events-none disabled:opacity-40 focus:outline-none focus:ring-2 focus:ring-[var(--color-main)] focus:ring-offset-2"
           >
             <ChevronLeft className="h-5 w-5" aria-hidden />
           </button>
@@ -211,7 +211,7 @@ export default function HomeFriendsRow({
             onClick={() => setPage((p) => Math.min(maxPage, p + 1))}
             disabled={effectivePage >= maxPage}
             aria-label="Next friends"
-            className="relative z-30 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[var(--card-border)] bg-white text-[var(--card-text)] shadow-sm transition-colors hover:bg-gray-50 disabled:pointer-events-none disabled:opacity-40 focus:outline-none focus:ring-2 focus:ring-[var(--color-main)] focus:ring-offset-2"
+            className="relative z-30 mt-2 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[var(--card-border)] bg-white text-[var(--card-text)] shadow-sm transition-colors hover:bg-gray-50 disabled:pointer-events-none disabled:opacity-40 focus:outline-none focus:ring-2 focus:ring-[var(--color-main)] focus:ring-offset-2"
           >
             <ChevronRight className="h-5 w-5" aria-hidden />
           </button>

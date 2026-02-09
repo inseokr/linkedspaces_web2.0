@@ -513,6 +513,23 @@ export default function PlaceLightboxModal({
                   <span>Edit</span>
                 </button>
 
+                {/* User sentiment - top right (consistent with PlaceCard / My Places) */}
+                {current?.sentiment && (
+                  <div
+                    className="absolute right-16 top-3 z-10 flex items-center gap-2 rounded-full bg-gray-800/90 px-3 py-2 text-white/90"
+                    aria-label={`User sentiment: ${current.sentiment === "positive" ? "Positive" : current.sentiment === "negative" ? "Negative" : "Neutral"}`}
+                  >
+                    <span className="text-[11px] font-medium text-white/80">
+                      User sentiment
+                    </span>
+                    <SentimentIcon
+                      sentiment={current.sentiment}
+                      size={28}
+                      className="shrink-0"
+                    />
+                  </div>
+                )}
+
                 {/* Close - top right */}
                 <button
                   type="button"
