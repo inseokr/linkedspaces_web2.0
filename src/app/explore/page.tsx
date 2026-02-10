@@ -216,7 +216,7 @@ export default function ExplorePage() {
     <div className="relative h-[calc(100vh-77px)] w-full">
       <div className="flex h-full w-full flex-col lg:flex-row">
         {/* ── Left Sidebar ── */}
-        <div className="w-full shrink-0 overflow-y-auto border-b border-gray-200 bg-gray-50/50 lg:h-full lg:w-[420px] lg:border-b-0 lg:border-r">
+        <div className="w-1/2 shrink-0 overflow-y-auto border-b border-gray-200 bg-gray-50/50 lg:h-full lg:w-1/2 lg:border-b-0 lg:border-r">
           <ExploreHeader
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
@@ -286,7 +286,7 @@ export default function ExplorePage() {
         </div>
 
         {/* ── Map Panel ── */}
-        <div className="min-h-[300px] min-w-0 flex-1 lg:h-full">
+        <div className="w-1/2 lg:2-1/2 min-h-[300px] min-w-0 flex-1 lg:h-full">
           <ExploreMapPanel
             places={filteredPlaces}
             radiusMiles={radiusMi}
