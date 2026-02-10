@@ -286,7 +286,7 @@ export default function ExplorePage() {
         </div>
 
         {/* ── Map Panel ── */}
-        <div className="w-1/2 lg:2-1/2 min-h-[300px] min-w-0 flex-1 lg:h-full">
+        <div className="w-1/2 lg:w-1/2 min-h-[300px] min-w-0 flex-1 lg:h-full">
           <ExploreMapPanel
             places={filteredPlaces}
             radiusMiles={radiusMi}
