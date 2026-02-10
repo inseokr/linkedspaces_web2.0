@@ -63,14 +63,14 @@ export default function ExploreHeader({
 }: ExploreHeaderProps) {
   return (
     <header className="shrink-0 space-y-4">
-      <div>
+      <div className="pt-4 pl-4 border-l-2 border-[var(--card-border)]">
         <h1 className="text-2xl font-bold text-[var(--card-text)]">Explore</h1>
         <p className="mt-0.5 text-sm text-[var(--card-text-muted)]">
           See what your network is up to.
         </p>
       </div>
 
-      <div className="flex items-center gap-2 rounded-full border-2 border-[var(--input-border)] bg-[var(--input-bg)] px-4 py-2.5 transition-colors focus-within:border-[var(--color-main)] focus-within:ring-2 focus-within:ring-[var(--color-main)] focus-within:ring-offset-2">
+      <div className="flex w-[98%] mx-auto items-center gap-2 rounded-full border-2 border-[var(--input-border)] bg-[var(--input-bg)] px-4 py-2.5 transition-colors focus-within:border-[var(--color-main)] focus-within:ring-2 focus-within:ring-[var(--color-main)] focus-within:ring-offset-2">
         <Search
           className="h-4 w-4 shrink-0 text-[var(--card-text-muted)]"
           aria-hidden
@@ -85,7 +85,7 @@ export default function ExploreHeader({
         />
       </div>
 
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2 w-[98%] mx-auto items-center">
         <span className="sr-only">Time</span>
         {TIME_OPTIONS.map(({ value, label }) => (
           <button
