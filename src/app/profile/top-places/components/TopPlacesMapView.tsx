@@ -116,13 +116,15 @@ function buildGeoJSON(
     const lat = p.latitude;
     const lng = p.longitude;
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
+    const latNum = lat as number;
+    const lngNum = lng as number;
     const imageUrl =
       p.imageUrl && String(p.imageUrl).trim() ? p.imageUrl.trim() : "";
     const category = (p.category ?? "Others").toString();
     const sentiment = p.userSentiment;
     features.push({
       type: "Feature",
-      geometry: { type: "Point", coordinates: [lng, lat] },
+      geometry: { type: "Point", coordinates: [lngNum, latNum] },
       properties: {
         id: p.id,
         name: p.title || "Unnamed place",
