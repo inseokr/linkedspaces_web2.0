@@ -173,10 +173,11 @@ function filterPlacesWithinRadius(
 ): TopPlaceCardModel[] {
   const include = includePlaceId && places.find((p) => p.id === includePlaceId);
   const filtered = places.filter((p) => {
-    if (!Number.isFinite(p.latitude) || !Number.isFinite(p.longitude))
-      return false;
+    const lat = p.latitude;
+    const lng = p.longitude;
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return false;
     return (
-      distanceKm(centerLat, centerLng, p.latitude, p.longitude) <= radiusKm
+      distanceKm(centerLat, centerLng, lat as number, lng as number) <= radiusKm
     );
   });
   if (include && !filtered.some((p) => p.id === include.id)) {
@@ -604,7 +605,7 @@ export default function TopPlacesMapView({
           : withCoords[0]
         : null;
       const initialCenter: [number, number] = initialPlace
-        ? [initialPlace.longitude, initialPlace.latitude]
+        ? [initialPlace.longitude as number, initialPlace.latitude as number]
         : DEFAULT_CENTER;
       const initialZoom = initialPlace ? FIT_MAX_ZOOM : DEFAULT_ZOOM;
       map = new mapboxgl.Map({
