@@ -760,13 +760,14 @@ export default function PhotoMap({
                 }
                 // Fallback: fit all places if first has no coords
                 const bounds = new mapboxgl.LngLatBounds();
-                geoJsonRef.current!.features.forEach(
-                  (f: GeoJSON.Feature<GeoJSON.Point>) => {
-                    const coords = f.geometry?.coordinates;
-                    if (coords && coords.length >= 2)
-                      bounds.extend([coords[0], coords[1]]);
-                  },
-                );
+                geoJsonRef.current!.features.forEach((f) => {
+                  const coords =
+                    f.geometry?.type === "Point"
+                      ? (f.geometry as GeoJSON.Point).coordinates
+                      : undefined;
+                  if (coords && coords.length >= 2)
+                    bounds.extend([coords[0], coords[1]]);
+                });
                 map.fitBounds(bounds, {
                   padding: 60,
                   maxZoom: 12,
@@ -887,6 +888,17 @@ export default function PhotoMap({
                 popup.on("open", () => {
                   const el = popup.getElement();
                   if (fromHover && el) {
+                    const onMarkerMouseLeave = () => {
+                      hoverCloseTimeoutRef.current = setTimeout(() => {
+                        if (markerPopupRef.current) {
+                          try {
+                            markerPopupRef.current.remove();
+                          } catch {}
+                          markerPopupRef.current = null;
+                        }
+                        hoverCloseTimeoutRef.current = null;
+                      }, 300);
+                    };
                     el.addEventListener("mouseenter", () => {
                       if (hoverCloseTimeoutRef.current) {
                         clearTimeout(hoverCloseTimeoutRef.current);
