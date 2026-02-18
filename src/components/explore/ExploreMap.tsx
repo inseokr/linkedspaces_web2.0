@@ -116,7 +116,7 @@ export default function ExploreMap({
 }: ExploreMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
-  const mapboxglRef = useRef<typeof import("mapbox-gl") | null>(null);
+  const mapboxglRef = useRef<any>(null);
   const filteredPlacesRef = useRef<MockPlace[]>([]);
   const onPlaceClickRef = useRef<((place: MockPlace) => void) | undefined>(
     onPlaceClick,
