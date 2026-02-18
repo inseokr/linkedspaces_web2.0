@@ -109,7 +109,7 @@ export default function DashboardOverview({ data }: Props) {
               stroke="#9ca3af"
             />
             <Tooltip
-              formatter={(value: number) => [formatNum(value), ""]}
+              formatter={(value) => [formatNum(value as number), ""]}
               labelFormatter={(label) => `Date: ${label}`}
             />
             <Legend />

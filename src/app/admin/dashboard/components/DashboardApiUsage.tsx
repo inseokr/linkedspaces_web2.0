@@ -73,7 +73,7 @@ export default function DashboardApiUsage({ data }: Props) {
                 width={135}
               />
               <Tooltip
-                formatter={(value: number) => [formatCalls(value), "Calls"]}
+                formatter={(value) => [formatCalls(value as number), "Calls"]}
               />
               <Bar
                 dataKey="calls"

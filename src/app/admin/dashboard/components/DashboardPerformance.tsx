@@ -126,7 +126,7 @@ export default function DashboardPerformance({ data }: Props) {
             <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
             <XAxis dataKey="name" tick={{ fontSize: 11 }} />
             <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} />
-            <Tooltip formatter={(value: number) => [`${value}%`, "Accuracy"]} />
+            <Tooltip formatter={(value) => [`${value}%`, "Accuracy"]} />
             <Bar dataKey="value" radius={[4, 4, 0, 0]}>
               {poiChartData.map((entry, i) => (
                 <Cell key={i} fill={entry.fill} />
