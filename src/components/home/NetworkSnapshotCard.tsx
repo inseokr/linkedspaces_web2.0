@@ -44,12 +44,29 @@ export interface NetworkSnapshotCardProps {
   isLoading?: boolean;
 }
 
+interface NetworkStats {
+  spotlightUsername: string | null;
+  spotlightCount: number;
+  topLocation: string | null;
+  topLocationCount: number;
+  newestRecap: MockRecapBlog | null;
+  totalSaves: number;
+  totalBlogs: number;
+  uniqueCount: number;
+  placesSavedThisMonth: number;
+  blogsThisMonth: number;
+  totalLikes: number;
+  topPosterThisMonth: { username: string; count: number } | null;
+  trendingPlacesThisMonth: { name: string; count: number }[];
+  popularBlogsThisMonth: MockRecapBlog[];
+}
+
 export default function NetworkSnapshotCard({
   feedPosts,
   recapBlogs,
   isLoading,
 }: NetworkSnapshotCardProps) {
-  const stats = useMemo(() => {
+  const stats = useMemo<NetworkStats>(() => {
     const byUsername = new Map<string, number>();
     const locationCount = new Map<string, number>();
     const uniquePlaces = new Set<string>();
@@ -182,7 +199,7 @@ export default function NetworkSnapshotCard({
   }
 
   const hasThisMonth =
-    (stats.topPosterThisMonth && stats.topPosterThisMonth.count > 0) ||
+    (stats.topPosterThisMonth?.count ?? 0) > 0 ||
     stats.trendingPlacesThisMonth.length > 0 ||
     stats.popularBlogsThisMonth.length > 0;
   const hasAny = hasThisMonth;
