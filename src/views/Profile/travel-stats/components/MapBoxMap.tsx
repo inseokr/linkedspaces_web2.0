@@ -257,6 +257,7 @@ export default function MapboxMap({
   const syncMarkersRef = useRef<() => void>(() => {});
   const syncActiveMarkerStylesRef = useRef<() => void>(() => {});
   const syncHighlightLayersRef = useRef<() => void>(() => {});
+  const syncMarkersPendingRef = useRef(false); // guard against duplicate once("idle",...) stacking
 
   // "한 번이라도 entry로 포커스를 준 적 있는지"
   const hasEverFocusedToEntryRef = useRef(false);
@@ -379,6 +380,11 @@ export default function MapboxMap({
         zoom: nextZoom,
         duration: 650,
       });
+
+      // With globe projection, DOM marker CSS transforms can become stale after
+      // a flyTo animation. Force Mapbox to re-project all marker positions once
+      // the camera settles so they don't remain invisible until the user pans.
+      map.once("moveend", () => map.triggerRepaint());
 
       lastFocusedLatLngRef.current = { lat, lng, zoom: nextZoom };
       hasEverFocusedToEntryRef.current = true;
@@ -534,7 +540,26 @@ export default function MapboxMap({
     if (!mapboxgl) return;
 
     if (!map.isStyleLoaded()) {
-      map.once("idle", () => syncMarkersRef.current());
+      if (!syncMarkersPendingRef.current) {
+        syncMarkersPendingRef.current = true;
+        map.once("idle", () => {
+          syncMarkersPendingRef.current = false;
+          syncMarkersRef.current();
+        });
+      }
+      return;
+    }
+
+    // If a camera animation is currently running, defer until it settles so
+    // markers are not created with stale mid-animation transforms.
+    if (map.isMoving()) {
+      if (!syncMarkersPendingRef.current) {
+        syncMarkersPendingRef.current = true;
+        map.once("moveend", () => {
+          syncMarkersPendingRef.current = false;
+          syncMarkersRef.current();
+        });
+      }
       return;
     }
 

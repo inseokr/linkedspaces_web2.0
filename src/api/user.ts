@@ -260,6 +260,14 @@ export type UpdatePlaceVisitHistoryStoryRequest = {
   photoIndexType: "filtered" | "all";
 };
 
+export type UpdatePlaceInfoRequest = {
+  placeKey: string;
+  placeName: string;
+  coordinate: { latitude: number; longitude: number };
+  categories?: string[];
+  externalUrl?: string;
+};
+
 type SimpleResult = { result: "OK" | "FAIL"; reason?: string };
 
 export async function updatePlaceVisitHistoryStory(
@@ -293,5 +301,33 @@ export async function updatePlaceVisitHistoryStory(
 
   if (!res || res.result !== "OK") {
     throw new Error(res?.reason || "Failed to update story");
+  }
+}
+
+export async function updatePlaceInfo(body: UpdatePlaceInfoRequest) {
+  const token =
+    typeof window !== "undefined"
+      ? (() => {
+          try {
+            const t = window.localStorage.getItem("token");
+            if (t) return t;
+          } catch {
+            // ignore and try sessionStorage
+          }
+          try {
+            return window.sessionStorage.getItem("token") ?? undefined;
+          } catch {
+            return undefined;
+          }
+        })()
+      : undefined;
+  const res = await apiFetch<SimpleResult>(`/placeVisitHistory/update-info`, {
+    method: "POST",
+    body,
+    token,
+  });
+
+  if (!res || res.result !== "OK") {
+    throw new Error(res?.reason || "Failed to update place info");
   }
 }

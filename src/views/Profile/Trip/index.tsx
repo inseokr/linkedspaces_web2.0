@@ -30,7 +30,10 @@ import { RecapBlogDaySection } from "@/views/Profile/Trip/component/RecapBlogPla
 
 import MapboxMap, {
   type MarkerData,
+  type PoiInfo,
 } from "@/views/Profile/travel-stats/components/MapBoxMap";
+import PoiUpdatePopup from "@/views/Profile/Trip/component/PoiUpdatePopup";
+import { updatePlaceInfo } from "@/api/user";
 
 import { mapTripRecapToPageModel } from "@/views/Profile/Trip/utils/mapTripRecap";
 import BottomSheet from "@/components/ui/BottomSheet";
@@ -247,6 +250,13 @@ function OwnerTripRecapView({ userId, tripId }: TripRecapViewProps) {
     string | null
   >(null);
 
+  /** POI click popup */
+  const [pendingPoi, setPendingPoi] = useState<{
+    poi: PoiInfo;
+    targetEntryId: string;
+  } | null>(null);
+  const [poiSaving, setPoiSaving] = useState(false);
+
   /** 1) Fetch */
   const fetchRecap = useCallback(async () => {
     if (!userId || !tripId) return;
@@ -380,6 +390,22 @@ function OwnerTripRecapView({ userId, tripId }: TripRecapViewProps) {
     if (!activeDayId) return [];
     return allMarkers.filter((m) => entryIdToDayId.get(m.id) === activeDayId);
   }, [allMarkers, entryIdToDayId, activeDayId]);
+
+  /** Active entry + abstract check */
+  const activeEntry = useMemo(() => {
+    if (!activeEntryId || !effectiveModel) return null;
+    return (
+      effectiveModel.days
+        .flatMap((d) => d.entries)
+        .find((e) => e.id === activeEntryId) ?? null
+    );
+  }, [activeEntryId, effectiveModel]);
+
+  // A place is "abstract" when it has no linked POI yet (no externalUrl)
+  const isActiveEntryAbstract = useMemo(
+    () => !activeEntry?.externalUrl,
+    [activeEntry],
+  );
 
   /** helpers: scroll & focus */
   const scrollToDay = (dayId: string) => {
@@ -703,6 +729,75 @@ function OwnerTripRecapView({ userId, tripId }: TripRecapViewProps) {
     }
   };
 
+  /** POI confirm: update local state + call API */
+  const handlePoiConfirm = useCallback(async () => {
+    if (!pendingPoi || !recapData) return;
+    const { poi, targetEntryId } = pendingPoi;
+
+    // Parse entry id "dayIndex-placeIndex" (both 0-based array indices after -1)
+    const [dayPart, placePart] = targetEntryId.split("-");
+    const dayArrayIdx = Number(dayPart) - 1; // dayIndex is 1-based
+    const placeArrayIdx = Number(placePart);
+    if (
+      !Number.isFinite(dayArrayIdx) ||
+      !Number.isFinite(placeArrayIdx) ||
+      dayArrayIdx < 0 ||
+      placeArrayIdx < 0
+    )
+      return;
+
+    const targetDay = recapData.days[dayArrayIdx];
+    if (!targetDay) return;
+    const targetPlace = targetDay.places[placeArrayIdx];
+    if (!targetPlace) return;
+
+    const placeKey = targetPlace.digitizedTime || targetEntryId;
+    const mapsUrl = (() => {
+      const query = encodeURIComponent(`${poi.name} ${poi.lat},${poi.lng}`);
+      return `https://www.google.com/maps/search/?api=1&query=${query}`;
+    })();
+
+    // 1) Optimistic local update
+    setRecapData((prev) => {
+      if (!prev) return prev;
+      const nextDays = prev.days.map((day, di) => {
+        if (di !== dayArrayIdx) return day;
+        return {
+          ...day,
+          places: day.places.map((place, pi) => {
+            if (pi !== placeArrayIdx) return place;
+            return {
+              ...place,
+              placeName: poi.name,
+              coordinate: { latitude: poi.lat, longitude: poi.lng },
+              categories: poi.category ? [poi.category] : place.categories,
+              externalUrl: mapsUrl,
+            };
+          }),
+        };
+      });
+      return { ...prev, days: nextDays };
+    });
+
+    setPendingPoi(null);
+
+    // 2) Persist to backend
+    setPoiSaving(true);
+    try {
+      await updatePlaceInfo({
+        placeKey,
+        placeName: poi.name,
+        coordinate: { latitude: poi.lat, longitude: poi.lng },
+        categories: poi.category ? [poi.category] : undefined,
+        externalUrl: mapsUrl,
+      });
+    } catch (err) {
+      console.error("[POI update] failed", err);
+    } finally {
+      setPoiSaving(false);
+    }
+  }, [pendingPoi, recapData]);
+
   /** 13) marker click: focus + jump to day */
   const focusByMarkerId = (markerId: string) => {
     activeEntryIdRef.current = markerId;
@@ -875,7 +970,7 @@ function OwnerTripRecapView({ userId, tripId }: TripRecapViewProps) {
           >
             <div
               ref={mapContainerRef}
-              className="w-full overflow-hidden rounded-2xl border border-black/10"
+              className="relative w-full overflow-hidden rounded-2xl border border-black/10"
               style={{ height: isLg ? PANEL_HEIGHT : "45dvh" }}
             >
               <MapboxMap
@@ -885,7 +980,9 @@ function OwnerTripRecapView({ userId, tripId }: TripRecapViewProps) {
                 focusLatLng={focusLatLng}
                 onPlaceMarkerClick={focusByMarkerId}
                 onPoiClick={(poi) => {
-                  console.log("[POI clicked]", poi);
+                  const entryId = activeEntryIdRef.current;
+                  if (!entryId) return;
+                  setPendingPoi({ poi, targetEntryId: entryId });
                 }}
                 overlayTopRight={
                   <div className="rounded-full bg-white/70 backdrop-blur-md border border-white/50 px-2 py-2 shadow-sm">
@@ -898,6 +995,20 @@ function OwnerTripRecapView({ userId, tripId }: TripRecapViewProps) {
                   </div>
                 }
               />
+
+              {/* Hint: shown when the active place hasn't been linked to a POI yet */}
+              {isActiveEntryAbstract && (
+                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 pointer-events-none whitespace-nowrap">
+                  <div className="flex items-center gap-2.5 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 px-4 py-2.5 shadow-lg shadow-blue-500/40 text-[13px] font-semibold text-white">
+                    {/* Pulsing live dot */}
+                    <span className="relative flex h-2.5 w-2.5 flex-shrink-0">
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-60" />
+                      <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-white" />
+                    </span>
+                    Tap a nearby place on the map to refine this location
+                  </div>
+                </div>
+              )}
             </div>
           </section>
         </div>
@@ -917,6 +1028,23 @@ function OwnerTripRecapView({ userId, tripId }: TripRecapViewProps) {
           ) : null}
         </BottomSheet>
       )}
+
+      {/* POI update confirmation popup */}
+      {pendingPoi &&
+        (() => {
+          const targetEntry = effectiveModel?.days
+            .flatMap((d) => d.entries)
+            .find((e) => e.id === pendingPoi.targetEntryId);
+          return (
+            <PoiUpdatePopup
+              poi={pendingPoi.poi}
+              targetPlaceName={targetEntry?.placeName ?? "this place"}
+              saving={poiSaving}
+              onConfirm={handlePoiConfirm}
+              onCancel={() => setPendingPoi(null)}
+            />
+          );
+        })()}
     </div>
   );
 }
