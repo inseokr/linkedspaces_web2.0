@@ -106,6 +106,10 @@ interface PlaceFeatureProps {
   category: string;
   categoryPinId: string;
   sentiment?: "positive" | "neutral" | "negative";
+  /** Mapbox cluster features only */
+  cluster_id?: number;
+  /** For sorting cluster representative (pick most recent) */
+  visitedTime?: string;
 }
 
 function buildGeoJSON(
@@ -133,6 +137,7 @@ function buildGeoJSON(
         category,
         categoryPinId: getCategoryPinImageId(category, sentiment),
         sentiment: sentiment ?? undefined,
+        visitedTime: p.visitedTime ?? undefined,
       },
     });
   }
