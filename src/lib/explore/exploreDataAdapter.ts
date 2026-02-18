@@ -38,22 +38,18 @@ function isCurrentUser(
   return String(username).trim().toLowerCase() === current;
 }
 
+type ItemWithOwner = {
+  friendName?: string;
+  authorName?: string;
+  username?: string;
+};
+
 /** Filter array by excluding current user's content when EXCLUDE_CURRENT_USER_IN_EXPLORE is true. */
-function excludeMe<
-  T extends {
-    friendId?: string;
-    friendName?: string;
-    authorId?: string;
-    authorName?: string;
-    username?: string;
-  },
->(items: T[], currentUsername: string | null): T[] {
+function excludeMe<T>(items: T[], currentUsername: string | null): T[] {
   if (!EXCLUDE_CURRENT_USER_IN_EXPLORE || !currentUsername) return items;
   return items.filter((item) => {
-    const name =
-      item.friendName ??
-      item.authorName ??
-      (item as { username?: string }).username;
+    const owner = item as ItemWithOwner;
+    const name = owner.friendName ?? owner.authorName ?? owner.username;
     return !isCurrentUser(name ?? undefined, currentUsername);
   });
 }
