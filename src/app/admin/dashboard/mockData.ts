@@ -55,7 +55,7 @@ export function getMockOverviewMetrics(): OverviewMetrics {
     activeUsersCurrentPeriod: latest.wau,
     newSignupsCurrent: 412,
     newSignupsPrevious: 358,
-    userGrowthRatePercent: 358 ? ((412 - 358) / 358) * 100 : 0,
+    userGrowthRatePercent: ((412 - 358) / 358) * 100,
     retentionRatePercent: Math.round(retentionRate * 10) / 10,
     stickinessRatio: Math.round(stickiness * 100) / 100,
     churnRatePercent: 2.4,
@@ -165,6 +165,7 @@ const MOCK_RECENT_ACTIVITY: UserActivityMetrics["recentActivity"] = [
     username: "foodie_sam",
     type: "comment",
     placeName: "Joe's Pizza",
+    hasVoiceMemo: false,
     timestamp: new Date(Date.now() - 32 * 60 * 1000).toISOString(),
   },
   {
@@ -183,6 +184,7 @@ const MOCK_RECENT_ACTIVITY: UserActivityMetrics["recentActivity"] = [
     userId: "u1",
     username: "travel_jane",
     type: "blog_created",
+    hasVoiceMemo: false,
     timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
   },
   {
