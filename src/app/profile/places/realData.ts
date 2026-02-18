@@ -4,7 +4,7 @@
  * Sort by visitedTime newest first. Map to PlaceWithSavedAt and derive year/country/category filters.
  */
 
-import type { User } from "@/api/user";
+import type { User, PlaceVisitHistoryItem } from "@/api/user";
 import { assetUrl } from "@/api/assets";
 import type {
   PlaceWithSavedAt,
@@ -522,7 +522,7 @@ function flattenToViewAllShape(user: User): PlaceWithSavedAt[] {
       history.length,
     );
     const allNames = history
-      .filter((e): e is PlaceVisitHistoryEntry => !!e && typeof e === "object")
+      .filter((e): e is PlaceVisitHistoryItem => !!e && typeof e === "object")
       .map(
         (e) => (e.placeName ?? e.city ?? e.country ?? "").trim() || "(no name)",
       );
