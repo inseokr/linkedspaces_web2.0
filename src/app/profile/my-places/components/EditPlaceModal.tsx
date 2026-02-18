@@ -138,7 +138,7 @@ export default function EditPlaceModal({
       <div
         className="absolute inset-0 bg-black/70"
         aria-hidden
-        onClick={onClose}
+        onClick={() => onClose()}
       />
 
       {/* Panel - dark grey, rounded */}
@@ -157,7 +157,7 @@ export default function EditPlaceModal({
           )}
           <button
             type="button"
-            onClick={onClose}
+            onClick={() => onClose()}
             className="flex h-10 w-10 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-gray-700 hover:text-white focus:outline-none focus:ring-2 focus:ring-white/50"
             aria-label="Close"
           >
