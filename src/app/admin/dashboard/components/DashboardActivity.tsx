@@ -107,9 +107,7 @@ export default function DashboardActivity({ data }: Props) {
                   tick={{ fontSize: 11 }}
                   width={95}
                 />
-                <Tooltip
-                  formatter={(value: number) => [`${value}%`, "Completion"]}
-                />
+                <Tooltip formatter={(value) => [`${value}%`, "Completion"]} />
                 <Bar
                   dataKey="pct"
                   fill="#3b82f6"
