@@ -18,6 +18,14 @@ import { createRoot } from "react-dom/client";
 import { MAPBOX_STYLE_URL } from "@/app/profile/mapbox-linkedspaces-style";
 import CircleTripMarker from "@/views/Profile/recap-blogs/components/CircleTripMarker";
 
+export type PoiInfo = {
+  name: string;
+  category?: string;
+  maki?: string;
+  lat: number;
+  lng: number;
+};
+
 export type MarkerData = {
   id: string;
   lat: number;
@@ -73,6 +81,9 @@ type Props = {
 
   /** When true, use lightweight DOM-only place markers (no React roots). Reduces memory and improves performance. */
   useSimpleMarkers?: boolean;
+
+  /** Fired when the user clicks a built-in Mapbox POI label on the map. */
+  onPoiClick?: (poi: PoiInfo) => void;
 };
 
 function PlaceMarker({
@@ -216,6 +227,7 @@ export default function MapboxMap({
   containerResizeKey,
   showPlacePath = true,
   useSimpleMarkers = false,
+  onPoiClick,
 }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<MapboxMapType | null>(null);
@@ -240,14 +252,20 @@ export default function MapboxMap({
     useRef<Props["defaultFocusZoom"]>(defaultFocusZoom);
   const onMarkerClickRef = useRef(onMarkerClick);
   const onPlaceMarkerClickRef = useRef(onPlaceMarkerClick);
+  const onPoiClickRef = useRef(onPoiClick);
 
   const syncMarkersRef = useRef<() => void>(() => {});
   const syncActiveMarkerStylesRef = useRef<() => void>(() => {});
   const syncHighlightLayersRef = useRef<() => void>(() => {});
 
-  // “한 번이라도 entry로 포커스를 준 적 있는지”
+  // "한 번이라도 entry로 포커스를 준 적 있는지"
   const hasEverFocusedToEntryRef = useRef(false);
   const lastUserInteractionAtRef = useRef<number>(0);
+  const lastFocusedLatLngRef = useRef<{
+    lat: number;
+    lng: number;
+    zoom: number;
+  } | null>(null);
 
   const [isMounted, setIsMounted] = useState(false);
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
@@ -304,6 +322,10 @@ export default function MapboxMap({
   }, [onPlaceMarkerClick]);
 
   useEffect(() => {
+    onPoiClickRef.current = onPoiClick;
+  }, [onPoiClick]);
+
+  useEffect(() => {
     showPlacePathRef.current = showPlacePath;
   }, [showPlacePath]);
 
@@ -341,20 +363,24 @@ export default function MapboxMap({
     const map = mapRef.current;
     if (!map) return;
 
+    const last = lastFocusedLatLngRef.current;
+    const isSameLocation =
+      last !== null &&
+      Math.abs(last.lat - lat) < 1e-6 &&
+      Math.abs(last.lng - lng) < 1e-6;
+
+    const nextZoom = isSameLocation && last.zoom === 18 ? 10 : 18;
+
     const runFocus = () => {
       map.stop();
 
-      const dLat = 0.02;
-      const dLng = 0.02;
+      map.flyTo({
+        center: [lng, lat],
+        zoom: nextZoom,
+        duration: 650,
+      });
 
-      map.fitBounds(
-        [
-          [lng - dLng, lat - dLat],
-          [lng + dLng, lat + dLat],
-        ],
-        { padding: 60, duration: 650, maxZoom: 12 },
-      );
-
+      lastFocusedLatLngRef.current = { lat, lng, zoom: nextZoom };
       hasEverFocusedToEntryRef.current = true;
     };
 
@@ -430,7 +456,8 @@ export default function MapboxMap({
   const clearMarkers = useCallback(() => {
     markerHandlesRef.current.forEach((h) => {
       h.marker.remove();
-      if (typeof h.unmount === "function") h.unmount();
+      // Defer React root unmount to avoid "unmount during render" race condition
+      if (typeof h.unmount === "function") setTimeout(h.unmount, 0);
       h.el.remove();
     });
     markerHandlesRef.current = [];
@@ -527,6 +554,11 @@ export default function MapboxMap({
         const handleClick = (e: MouseEvent) => {
           e.stopPropagation();
           onPlaceMarkerClickRef.current?.(m.id);
+          // Zoom in to POI level on marker click
+          const map = mapRef.current;
+          if (map) {
+            map.flyTo({ center: [m.lng, m.lat], zoom: 15, duration: 650 });
+          }
         };
         el.addEventListener("click", handleClick);
 
@@ -893,6 +925,28 @@ export default function MapboxMap({
         map.setProjection("globe");
         map.setFog({});
 
+        // Built-in POI click handler
+        map.on("click", "poi-label", (e: any) => {
+          if (!onPoiClickRef.current || !e.features?.length) return;
+          const f = e.features[0];
+          const coords = f.geometry?.coordinates;
+          const props = f.properties ?? {};
+          onPoiClickRef.current({
+            name: props.name ?? props.name_en ?? "",
+            category: props.category_en ?? props.type ?? undefined,
+            maki: props.maki ?? undefined,
+            lat: coords?.[1] ?? e.lngLat.lat,
+            lng: coords?.[0] ?? e.lngLat.lng,
+          });
+        });
+
+        map.on("mouseenter", "poi-label", () => {
+          map.getCanvas().style.cursor = "pointer";
+        });
+        map.on("mouseleave", "poi-label", () => {
+          map.getCanvas().style.cursor = "";
+        });
+
         // 최신 함수로
         syncHighlightLayersRef.current();
         syncMarkersRef.current();
@@ -1006,13 +1060,23 @@ export default function MapboxMap({
     if (mapRef.current?.isStyleLoaded()) syncHighlightLayersRef.current();
   }, [countryStats, worldview]);
 
-  //핵심: lat/lng 들어올 때는 cleanup 없이 “카메라만 이동”
+  //핵심: lat/lng 들어올 때는 cleanup 없이 "카메라만 이동"
+  // Debounce so rapid scrolling doesn't cause jarring map movement.
   useEffect(() => {
     if (!mapRef.current) return;
 
     if (focusLatLng) {
-      focusOnLatLng(focusLatLng.lat, focusLatLng.lng);
-      return;
+      // On the very first focus (initial load), move immediately.
+      if (!hasEverFocusedToEntryRef.current) {
+        focusOnLatLng(focusLatLng.lat, focusLatLng.lng);
+        return;
+      }
+
+      // Otherwise debounce — wait for scrolling to settle.
+      const timer = setTimeout(() => {
+        focusOnLatLng(focusLatLng.lat, focusLatLng.lng);
+      }, 1500);
+      return () => clearTimeout(timer);
     }
 
     // focusLatLng가 없고, 아직 entry 포커스 한 번도 없으면: 첫 entry or country
