@@ -82,10 +82,8 @@ function inferSentiment(text: string): "positive" | "neutral" | "negative" {
 function getCaptionForViewAll(entry: PlaceVisitHistoryEntry): string {
   const placeStory = typeof entry.story === "string" ? entry.story.trim() : "";
   if (placeStory) return placeStory;
-  const placeCaption =
-    typeof (entry as { caption?: string }).caption === "string"
-      ? (entry as { caption?: string }).caption.trim()
-      : "";
+  const caption = (entry as { caption?: string }).caption;
+  const placeCaption = typeof caption === "string" ? caption.trim() : "";
   if (placeCaption) return placeCaption;
   const list = Array.isArray(entry.photoList) ? entry.photoList : [];
   const first = list[0] as { story?: string; caption?: string } | undefined;
