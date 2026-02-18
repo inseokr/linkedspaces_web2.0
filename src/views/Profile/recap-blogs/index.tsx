@@ -31,6 +31,7 @@ import MapboxMap, {
   type MarkerData,
 } from "@/views/Profile/travel-stats/components/MapBoxMap";
 import RecapBlogColumn from "@/views/Profile/recap-blogs/section/RecapBlogColumn";
+import ScrollToTopButton from "@/components/ui/ScrollToTopButton";
 
 type Mode = "recap" | "allBlogs";
 type View = "grid" | "map";
@@ -430,6 +431,11 @@ export default function ProfileRecapBlogsView() {
                 )}
               </div>
             </div>
+            <ScrollToTopButton
+              scrollContainerRef={mapListScrollRef}
+              scrollTargetReady={view === "map"}
+              showAfterPx={400}
+            />
           </aside>
 
           {/* Right: map */}

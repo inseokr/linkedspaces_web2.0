@@ -14,6 +14,8 @@ const MENU_ITEMS = [
     label: "My Places",
     href: "/profile/my-places",
     iconSrc: "/icons/map.svg",
+    /** Also highlight when on View All Places */
+    activePaths: ["/profile/my-places", "/profile/places"],
   },
   {
     key: "top-places",
@@ -38,17 +40,28 @@ const MENU_ITEMS = [
 interface SidebarProps {
   isOpen: boolean;
   onToggle: () => void;
+  /** When true, hide sidebar off-screen (e.g. full screen map). */
+  forceHidden?: boolean;
 }
 
-export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
+export default function Sidebar({
+  isOpen,
+  onToggle,
+  forceHidden = false,
+}: SidebarProps) {
   return (
     <aside
-      className={`fixed left-0 top-[45px] z-40 h-[calc(100dvh-77px)] w-80 bg-white transition-transform duration-300 ease-in-out ${
-        isOpen ? "translate-x-0" : "-translate-x-full"
+      className={`fixed left-0 top-[77px] z-40 h-[calc(100dvh-77px)] w-80 bg-white transition-transform duration-300 ease-in-out ${
+        forceHidden
+          ? "-translate-x-full invisible pointer-events-none"
+          : isOpen
+            ? "translate-x-0"
+            : "-translate-x-full"
       }`}
+      aria-hidden={forceHidden}
     >
-      <div className="flex h-full flex-col overflow-hidden">
-        <div className="shrink-0 mt-[13px]">
+      <div className="flex h-full flex-col overflow-hidden pt-0">
+        <div className="shrink-0">
           {/* Pass the sidebar state down to the profile section */}
           <ProfileSectionContainer isOpen={isOpen} onToggle={onToggle} />
         </div>

@@ -224,3 +224,11 @@ body {
     Arial,
     sans-serif;
 }
+
+/* Mapbox photo preview card: remove outer frame so only the inner white card is visible */
+.my-map-marker-popup .mapboxgl-popup-content,
+.top-places-marker-popup .mapboxgl-popup-content {
+  background: transparent !important;
+  padding: 0 !important;
+  box-shadow: none !important;
+}

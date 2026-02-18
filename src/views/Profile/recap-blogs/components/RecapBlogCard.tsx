@@ -138,8 +138,8 @@ export default function AllBlogCard({
           </div>
         </div>
 
-        {/* 제목 */}
-        <h3 className="mt-2 line-clamp-2 text-[13px] font-medium text-black/90">
+        {/* 제목 — under card; min-w-0 so text doesn't overflow into adjacent cards */}
+        <h3 className="mt-2 min-w-0 max-w-full break-words line-clamp-2 text-[13px] font-medium text-black/90">
           {item.title}
         </h3>
       </Link>

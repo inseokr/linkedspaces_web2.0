@@ -12,18 +12,24 @@ type MenuItem = {
   icon?: ReactNode;
   iconSrc?: string;
   disabled?: boolean;
+  /** When set, item is active if pathname matches any of these (or starts with any + "/"). */
+  activePaths?: string[];
 };
 
 export default function MenuSection({ items = [] }: { items?: MenuItem[] }) {
   const pathname = usePathname();
-  const isActive = (href: string) =>
-    pathname === href || pathname.startsWith(href + "/");
+  const isActive = (item: MenuItem) => {
+    const paths = item.activePaths ?? [item.href];
+    return paths.some(
+      (p) => pathname === p || pathname.startsWith(p + "/"),
+    );
+  };
 
   return (
     <nav className="p-3">
       <ul className="space-y-1">
         {items.map((item) => {
-          const active = isActive(item.href);
+          const active = isActive(item);
 
           return (
             <li key={item.key}>

@@ -28,11 +28,9 @@ export default function AllCountriesSection({ items, className = "" }: Props) {
 
   return (
     <section className={`space-y-4 ${className}`}>
-      <h2 className="ml-12 font-[Inter] text-[18px] font-semibold leading-[28px] tracking-[-0.5px] text-[#7C7C7C]">
-        All Countries
-      </h2>
+      <h2 className="text-lg font-semibold text-gray-900">All Countries</h2>
 
-      <div className="space-y-4">
+      <div className="space-y-4 w-full">
         {sortedCountries.map((c) => (
           <CountryAccordionUI
             key={`${c.country}-${c.countryCode ?? ""}`}
@@ -41,7 +39,7 @@ export default function AllCountriesSection({ items, className = "" }: Props) {
             citiesCount={c.citiesCount}
             placesCount={c.placesCount}
             cities={c.cities} // IMPORTANT: pass ALL cities, do not slice here
-            className="ml-12 w-[85%]"
+            className="w-full"
             defaultExpanded={false} // default: show top 3 cities
           />
         ))}

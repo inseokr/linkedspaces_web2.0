@@ -1,8 +1,9 @@
 "use client";
 
 import Sidebar from "@/views/Profile/sidebar/Sidebar";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import Image from "next/image";
+import ScrollToTopButton from "@/components/ui/ScrollToTopButton";
 import { useParams, usePathname } from "next/navigation";
 
 import {
@@ -13,7 +14,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { apiFetch } from "@/api/client";
 
 function ProfileLayoutInner({ children }: { children: React.ReactNode }) {
-  const { layoutMode } = useLayoutMode();
+  const { layoutMode, fullScreenMapActive } = useLayoutMode();
 
   // --- (추가) 현재 라우트가 Trip Recap인지 판별 ---
   const pathname = usePathname();
@@ -111,23 +112,36 @@ function ProfileLayoutInner({ children }: { children: React.ReactNode }) {
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const SIDEBAR_WIDTH = "320px";
+  const mainScrollRef = useRef<HTMLElement>(null);
+
+  const sidebarVisible = !hideSidebar && !fullScreenMapActive;
+
+  // On route change, scroll to top so the page header is not hidden under the main site header.
+  useEffect(() => {
+    if (mainScrollRef.current) {
+      mainScrollRef.current.scrollTo(0, 0);
+    } else {
+      window.scrollTo(0, 0);
+    }
+  }, [pathname]);
 
   useEffect(() => {
     document.documentElement.style.setProperty(
       "--sidebar-offset",
-      hideSidebar ? "0px" : isSidebarOpen ? SIDEBAR_WIDTH : "0px",
+      !sidebarVisible ? "0px" : isSidebarOpen ? SIDEBAR_WIDTH : "0px",
     );
 
     return () => {
       document.documentElement.style.removeProperty("--sidebar-offset");
     };
-  }, [isSidebarOpen, hideSidebar]);
+  }, [isSidebarOpen, sidebarVisible]);
 
-  // 사이드바를 안 띄우고 싶을 때
+  // 사이드바를 안 띄우고 싶을 때 (document/window scroll). fullScreenMapActive uses same tree but hides sidebar via CSS.
   if (hideSidebar) {
     return (
       <main className="min-h-screen w-full bg-white">
         <div className="w-full min-h-full flex flex-col">{children}</div>
+        <ScrollToTopButton />
       </main>
     );
   }
@@ -137,9 +151,10 @@ function ProfileLayoutInner({ children }: { children: React.ReactNode }) {
       <Sidebar
         isOpen={isSidebarOpen}
         onToggle={() => setIsSidebarOpen(!isSidebarOpen)}
+        forceHidden={fullScreenMapActive}
       />
 
-      {!isSidebarOpen && (
+      {sidebarVisible && !isSidebarOpen && (
         <button
           onClick={() => setIsSidebarOpen(true)}
           className="fixed left-0 top-[135px] z-[60] flex items-center justify-center bg-white rounded-r-md border border-l-0 border-gray-200 shadow-md w-10 h-10 transition-all duration-300 ease-in-out hover:bg-gray-50"
@@ -155,11 +170,19 @@ function ProfileLayoutInner({ children }: { children: React.ReactNode }) {
       )}
 
       <main
-        className="flex-1 h-full overflow-y-auto transition-all duration-300 ease-in-out bg-white"
-        style={{ paddingLeft: isSidebarOpen ? SIDEBAR_WIDTH : "0px" }}
+        ref={mainScrollRef}
+        className="flex-1 h-full overflow-y-auto transition-all duration-300 ease-in-out bg-white min-w-0"
+        style={{
+          paddingLeft: fullScreenMapActive
+            ? "0px"
+            : isSidebarOpen
+              ? SIDEBAR_WIDTH
+              : "0px",
+        }}
       >
         <div className="w-full min-h-full flex flex-col">{children}</div>
       </main>
+      <ScrollToTopButton scrollContainerRef={mainScrollRef} showAfterPx={400} />
     </div>
   );
 }

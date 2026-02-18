@@ -53,13 +53,13 @@ export default function ProfileSection({
     <div
       className={cn(
         "relative", // Parent anchor for the button
-        "pl-5 pt-9 pb-6 pr-4",
+        "pl-5 pt-[9px] pb-6 pr-4",
         "rounded-[30px]",
         "bg-[var(--color-bg)]",
         className,
       )}
     >
-      {/* Profile Header Row */}
+      {/* Profile Header Row — aligned with page section titles (e.g. Latest Activity) via pt-[15px] = 24px total from sidebar top */}
       <div className="pt-[15px] flex items-center justify-between gap-4">
         {/* Left: Profile Info */}
         <div className="flex items-center gap-4 min-w-0">

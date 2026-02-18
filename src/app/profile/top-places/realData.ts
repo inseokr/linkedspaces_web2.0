@@ -1,0 +1,301 @@
+/**
+ * Top Places: real data from getCachedUser().placeVisitHistory.
+ * Filters: status !== "hidden", primaryPlace === true (or undefined).
+ * Ranking: placeScore > 0 else visitedCount else photoList.length; sort desc, assign #1, #2, ...
+ */
+
+import type { User } from "@/api/user";
+import { assetUrl } from "@/api/assets";
+import type { PlaceVisitHistoryEntry, TopPlaceCardModel } from "./types";
+import type { CountryWithCount } from "./mockData";
+
+const PLACEHOLDER_IMAGE = "https://picsum.photos/400/600?random=placeholder";
+
+/** Safe number for ranking (placeScore, visitedCount, or photo count) */
+function getNumber(value: unknown): number {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  return 0;
+}
+
+/**
+ * Compute "Top Score" for ranking.
+ * Primary: placeScore if available and > 0.
+ * Fallback: visitedCount (more visits = higher).
+ * Optional fallback: photoList length.
+ */
+export function computeTopScore(entry: PlaceVisitHistoryEntry): number {
+  const score = getNumber((entry as PlaceVisitHistoryEntry).placeScore);
+  if (score > 0) return score;
+  const visits = getNumber((entry as PlaceVisitHistoryEntry).visitedCount);
+  if (visits > 0) return visits;
+  const list = entry.photoList;
+  return Array.isArray(list) ? list.length : 0;
+}
+
+/**
+ * Sort entries by Top Score descending and assign rank 1, 2, 3...
+ */
+export function sortAndRankPlaces(
+  entries: PlaceVisitHistoryEntry[],
+): Array<{ entry: PlaceVisitHistoryEntry; rank: number }> {
+  const withScore = entries.map((entry) => ({
+    entry,
+    score: computeTopScore(entry),
+  }));
+  withScore.sort((a, b) => b.score - a.score);
+  return withScore.map(({ entry }, i) => ({ entry, rank: i + 1 }));
+}
+
+/**
+ * Map a single placeVisitHistory entry + rank to TopPlaceCardModel.
+ */
+export function mapPlaceVisitHistoryToTopPlacesModel(
+  entry: PlaceVisitHistoryEntry,
+  rank: number,
+  index: number,
+): TopPlaceCardModel {
+  const placeName = entry.placeName?.trim() || "Unnamed place";
+  const country = entry.country?.trim() || "";
+  const countryCode =
+    (entry.countryCode?.trim() || "").toUpperCase() ||
+    country.slice(0, 2).toUpperCase();
+  const city = entry.city?.trim() || "";
+  const photoList = entry.photoList ?? [];
+  const withUri = photoList.filter(
+    (p) => p?.uri && !String(p.uri).startsWith("file://"),
+  );
+  const firstPhoto = withUri[0] ?? photoList.find((p) => p?.uri);
+  const imageUrl = firstPhoto?.uri
+    ? assetUrl(firstPhoto.uri)
+    : PLACEHOLDER_IMAGE;
+  let photoListUris = withUri.map((p) => assetUrl(p!.uri));
+  type EntryExt = {
+    photoUris?: string[];
+    additionalPhotoUris?: string[];
+    story?: string;
+    caption?: string;
+  };
+  const entryExt = entry as EntryExt;
+  const extraUris = entryExt.photoUris ?? entryExt.additionalPhotoUris;
+  if (Array.isArray(extraUris) && extraUris.length > 0) {
+    const existing = new Set(photoListUris);
+    for (const u of extraUris) {
+      const s = typeof u === "string" ? u.trim() : "";
+      if (s && !existing.has(s)) {
+        existing.add(s);
+        photoListUris.push(s);
+      }
+    }
+  }
+
+  const categories = entry.categories ?? [];
+  const category = categories[0]?.trim() || "Others";
+
+  const entryWithLikes = entry as PlaceVisitHistoryEntry & {
+    likes?: number;
+    likeCount?: number;
+    likesCount?: number;
+  };
+  const likesCount = getNumber(
+    entryWithLikes.likes ??
+      entryWithLikes.likeCount ??
+      entryWithLikes.likesCount,
+  );
+
+  const placeStory =
+    typeof entryExt.story === "string" ? entryExt.story.trim() : "";
+  const placeCaption =
+    typeof entryExt.caption === "string" ? entryExt.caption.trim() : "";
+  const getPhotoCaption = (p: unknown): string => {
+    const q = p as { story?: string; caption?: string } | undefined;
+    if (!q) return "";
+    const s = typeof q.story === "string" ? q.story.trim() : "";
+    const c = typeof q.caption === "string" ? q.caption.trim() : "";
+    return s || c || "";
+  };
+  const primaryCaption =
+    placeStory || placeCaption || getPhotoCaption(photoList[0]) || "";
+  let caption: string | undefined = primaryCaption || undefined;
+  let captionFromOtherPhoto = false;
+  if (!caption && photoList.length > 1) {
+    for (let i = 1; i < photoList.length; i++) {
+      const next = getPhotoCaption(photoList[i]);
+      if (next) {
+        caption = next;
+        captionFromOtherPhoto = true;
+        break;
+      }
+    }
+  }
+
+  const coord = entry.coordinate;
+  const latitude =
+    coord && Number.isFinite(coord.latitude) ? coord.latitude : undefined;
+  const longitude =
+    coord && Number.isFinite(coord.longitude) ? coord.longitude : undefined;
+
+  const entrySentiment = (
+    entry as PlaceVisitHistoryEntry & {
+      sentiment?: "positive" | "neutral" | "negative";
+    }
+  ).sentiment;
+
+  return {
+    id: entry._id ?? `place-${index}-${rank}`,
+    title: placeName,
+    country,
+    countryCode,
+    city,
+    category,
+    imageUrl,
+    photosCount: Math.max(photoList.length, photoListUris.length),
+    visitsCount: getNumber((entry as PlaceVisitHistoryEntry).visitedCount),
+    likesCount,
+    rank,
+    photoListUris: photoListUris.length > 0 ? photoListUris : undefined,
+    visitedTime: entry.visitedTime ?? entry.visitedTimeDigitized,
+    caption,
+    ...(captionFromOtherPhoto ? { captionFromOtherPhoto: true } : {}),
+    latitude,
+    longitude,
+    ...(entrySentiment ? { userSentiment: entrySentiment } : {}),
+  };
+}
+
+/**
+ * Derive country filter pills from visible places: unique countries with counts.
+ * id = countryCode or fallback slug from country name.
+ * "All" count = total places (so the number is correct).
+ */
+export function deriveCountryFilterCounts(
+  places: TopPlaceCardModel[],
+): CountryWithCount[] {
+  const all: CountryWithCount[] = [
+    { id: "all", name: "All", count: places.length },
+  ];
+  const byId = new Map<string, { name: string; count: number }>();
+
+  for (const p of places) {
+    const id = getCountryFilterId(p);
+    const name = p.country || "Unknown";
+    const prev = byId.get(id);
+    if (prev) prev.count += 1;
+    else byId.set(id, { name, count: 1 });
+  }
+
+  const sorted = [...byId.entries()].sort((a, b) => b[1].count - a[1].count);
+  sorted.forEach(([id, { name, count }]) => all.push({ id, name, count }));
+  return all;
+}
+
+/**
+ * Derive category filter pills from visible places: unique categories with counts.
+ * "Others" is ordered between "Cafe" and "shopping" (inserted after "cafe").
+ */
+export function deriveCategoryFilterCounts(
+  places: TopPlaceCardModel[],
+): Array<{ id: string; name: string; count: number }> {
+  const byName = new Map<string, number>();
+  for (const p of places) {
+    let name = p.category || "Others";
+    if (name.toLowerCase() === "all") name = "Others";
+    byName.set(name, (byName.get(name) ?? 0) + 1);
+  }
+  const list = [...byName.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .map(([name, count]) => ({ id: name, name, count }));
+  const others = list.find((c) => c.id === "Others" || c.name === "Others");
+  const rest = list.filter((c) => c.id !== "Others" && c.name !== "Others");
+  if (!others) return list;
+  const cafeIndex = rest.findIndex((c) => c.name.toLowerCase() === "cafe");
+  if (cafeIndex >= 0) {
+    return [
+      ...rest.slice(0, cafeIndex + 1),
+      others,
+      ...rest.slice(cafeIndex + 1),
+    ];
+  }
+  return [...rest, others];
+}
+
+/** Country filter id for a place (used when filtering by country). */
+export function getCountryFilterId(place: TopPlaceCardModel): string {
+  return place.countryCode || place.country.replace(/\s+/g, "-") || "unknown";
+}
+
+const ALL_CITIES_LABEL = "All cities";
+
+/**
+ * Derive city list for a selected country: "All cities" first, then city names
+ * sorted by activity (place count) descending. Empty/missing city strings are ignored.
+ * Use for the City filter row that appears when a country is selected.
+ */
+export function getCitiesForCountry(
+  places: TopPlaceCardModel[],
+  countryId: string,
+): string[] {
+  const inCountry = places.filter((p) => getCountryFilterId(p) === countryId);
+  const byCity = new Map<string, number>();
+  for (const p of inCountry) {
+    const city = (p.city ?? "").trim();
+    if (!city) continue;
+    byCity.set(city, (byCity.get(city) ?? 0) + 1);
+  }
+  const sorted = [...byCity.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .map(([name]) => name);
+  return [ALL_CITIES_LABEL, ...sorted];
+}
+
+export { ALL_CITIES_LABEL };
+
+/**
+ * Filter places by country and optional city. Use with other filters (category, sort).
+ * - selectedCountry "All" or empty: no country/city filter.
+ * - selectedCity "All cities": filter by country only.
+ * - selectedCity specific: filter by country and city.
+ */
+export function getFilteredPlaces(
+  places: TopPlaceCardModel[],
+  selectedCountry: string | null,
+  selectedCity: string,
+  getCountryId: (p: TopPlaceCardModel) => string = getCountryFilterId,
+): TopPlaceCardModel[] {
+  const isAllCountries = !selectedCountry || selectedCountry === "all";
+  if (isAllCountries) return places;
+  let result = places.filter((p) => getCountryId(p) === selectedCountry);
+  if (selectedCity && selectedCity !== ALL_CITIES_LABEL) {
+    result = result.filter((p) => (p.city ?? "").trim() === selectedCity);
+  }
+  return result;
+}
+
+/**
+ * Filter placeVisitHistory: exclude hidden, use primary place when applicable.
+ * Assume viewer is owner so privacy passes.
+ */
+function filterVisibleEntries(
+  history: Array<PlaceVisitHistoryEntry | undefined>,
+): PlaceVisitHistoryEntry[] {
+  return history.filter((e): e is PlaceVisitHistoryEntry => {
+    if (!e || typeof e !== "object") return false;
+    if (e.status === "hidden") return false;
+    if (e.primaryPlace === false) return false;
+    return true;
+  }) as PlaceVisitHistoryEntry[];
+}
+
+/**
+ * Build ranked Top Places from user.placeVisitHistory.
+ * Returns empty array if no user or no history.
+ */
+export function getTopPlacesFromUser(user: User | null): TopPlaceCardModel[] {
+  const raw = user?.placeVisitHistory ?? [];
+  const entries = filterVisibleEntries(
+    raw as Array<PlaceVisitHistoryEntry | undefined>,
+  );
+  const ranked = sortAndRankPlaces(entries);
+  return ranked.map(({ entry, rank }, i) =>
+    mapPlaceVisitHistoryToTopPlacesModel(entry, rank, i),
+  );
+}

@@ -884,6 +884,9 @@ function OwnerTripRecapView({ userId, tripId }: TripRecapViewProps) {
                 activePlaceMarkerId={activeEntryId ?? undefined}
                 focusLatLng={focusLatLng}
                 onPlaceMarkerClick={focusByMarkerId}
+                onPoiClick={(poi) => {
+                  console.log("[POI clicked]", poi);
+                }}
                 overlayTopRight={
                   <div className="rounded-full bg-white/70 backdrop-blur-md border border-white/50 px-2 py-2 shadow-sm">
                     <RecapDayTabs

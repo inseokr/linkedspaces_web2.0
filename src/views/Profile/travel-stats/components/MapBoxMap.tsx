@@ -15,7 +15,16 @@ import {
   type ReactNode,
 } from "react";
 import { createRoot } from "react-dom/client";
+import { MAPBOX_STYLE_URL } from "@/app/profile/mapbox-linkedspaces-style";
 import CircleTripMarker from "@/views/Profile/recap-blogs/components/CircleTripMarker";
+
+export type PoiInfo = {
+  name: string;
+  category?: string;
+  maki?: string;
+  lat: number;
+  lng: number;
+};
 
 export type MarkerData = {
   id: string;
@@ -40,6 +49,9 @@ type Props = {
   countryStats?: CountryStat[];
   worldview?: string;
 
+  /** When focusing on a country (e.g. initial view), use this zoom so the map doesn't zoom in too much and other countries stay visible. Ignored when focusing on markers/lat-lng. */
+  defaultFocusZoom?: number;
+
   focusLatLng?: { lat: number; lng: number };
 
   mode?: "place";
@@ -63,6 +75,15 @@ type Props = {
    * container target changes.
    */
   containerResizeKey?: string | number;
+
+  /** When false, do not draw the orange dashed route line between place markers. Default true. */
+  showPlacePath?: boolean;
+
+  /** When true, use lightweight DOM-only place markers (no React roots). Reduces memory and improves performance. */
+  useSimpleMarkers?: boolean;
+
+  /** Fired when the user clicks a built-in Mapbox POI label on the map. */
+  onPoiClick?: (poi: PoiInfo) => void;
 };
 
 function PlaceMarker({
@@ -188,6 +209,7 @@ export default function MapboxMap({
   countryCode,
   countryStats = [],
   worldview = "US",
+  defaultFocusZoom,
 
   mode,
   focusLatLng,
@@ -203,6 +225,9 @@ export default function MapboxMap({
   overlayTopLeft,
   overlayTopRight,
   containerResizeKey,
+  showPlacePath = true,
+  useSimpleMarkers = false,
+  onPoiClick,
 }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<MapboxMapType | null>(null);
@@ -215,22 +240,32 @@ export default function MapboxMap({
   const markersRef = useRef(markers);
   const placeMarkersRef = useRef(placeMarkers);
   const modeRef = useRef(mode);
+  const showPlacePathRef = useRef(showPlacePath);
+  const useSimpleMarkersRef = useRef(useSimpleMarkers);
   const activeMarkerIdRef = useRef<Props["activeMarkerId"]>(activeMarkerId);
   const activePlaceMarkerIdRef =
     useRef<Props["activePlaceMarkerId"]>(activePlaceMarkerId);
 
   const focusLatLngRef = useRef<Props["focusLatLng"]>(focusLatLng);
   const countryCodeRef = useRef<Props["countryCode"]>(countryCode);
+  const defaultFocusZoomRef =
+    useRef<Props["defaultFocusZoom"]>(defaultFocusZoom);
   const onMarkerClickRef = useRef(onMarkerClick);
   const onPlaceMarkerClickRef = useRef(onPlaceMarkerClick);
+  const onPoiClickRef = useRef(onPoiClick);
 
   const syncMarkersRef = useRef<() => void>(() => {});
   const syncActiveMarkerStylesRef = useRef<() => void>(() => {});
   const syncHighlightLayersRef = useRef<() => void>(() => {});
 
-  // “한 번이라도 entry로 포커스를 준 적 있는지”
+  // "한 번이라도 entry로 포커스를 준 적 있는지"
   const hasEverFocusedToEntryRef = useRef(false);
   const lastUserInteractionAtRef = useRef<number>(0);
+  const lastFocusedLatLngRef = useRef<{
+    lat: number;
+    lng: number;
+    zoom: number;
+  } | null>(null);
 
   const [isMounted, setIsMounted] = useState(false);
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
@@ -275,12 +310,28 @@ export default function MapboxMap({
   }, [countryCode]);
 
   useEffect(() => {
+    defaultFocusZoomRef.current = defaultFocusZoom;
+  }, [defaultFocusZoom]);
+
+  useEffect(() => {
     onMarkerClickRef.current = onMarkerClick;
   }, [onMarkerClick]);
 
   useEffect(() => {
     onPlaceMarkerClickRef.current = onPlaceMarkerClick;
   }, [onPlaceMarkerClick]);
+
+  useEffect(() => {
+    onPoiClickRef.current = onPoiClick;
+  }, [onPoiClick]);
+
+  useEffect(() => {
+    showPlacePathRef.current = showPlacePath;
+  }, [showPlacePath]);
+
+  useEffect(() => {
+    useSimpleMarkersRef.current = useSimpleMarkers;
+  }, [useSimpleMarkers]);
 
   const fallbackCenterByIso2: Record<string, [number, number]> = useMemo(
     () => ({
@@ -312,20 +363,24 @@ export default function MapboxMap({
     const map = mapRef.current;
     if (!map) return;
 
+    const last = lastFocusedLatLngRef.current;
+    const isSameLocation =
+      last !== null &&
+      Math.abs(last.lat - lat) < 1e-6 &&
+      Math.abs(last.lng - lng) < 1e-6;
+
+    const nextZoom = isSameLocation && last.zoom === 18 ? 10 : 18;
+
     const runFocus = () => {
       map.stop();
 
-      const dLat = 0.02;
-      const dLng = 0.02;
+      map.flyTo({
+        center: [lng, lat],
+        zoom: nextZoom,
+        duration: 650,
+      });
 
-      map.fitBounds(
-        [
-          [lng - dLng, lat - dLat],
-          [lng + dLng, lat + dLat],
-        ],
-        { padding: 60, duration: 650, maxZoom: 12 },
-      );
-
+      lastFocusedLatLngRef.current = { lat, lng, zoom: nextZoom };
       hasEverFocusedToEntryRef.current = true;
     };
 
@@ -401,7 +456,8 @@ export default function MapboxMap({
   const clearMarkers = useCallback(() => {
     markerHandlesRef.current.forEach((h) => {
       h.marker.remove();
-      setTimeout(() => h.unmount(), 0);
+      // Defer React root unmount to avoid "unmount during render" race condition
+      if (typeof h.unmount === "function") setTimeout(h.unmount, 0);
       h.el.remove();
     });
     markerHandlesRef.current = [];
@@ -419,6 +475,10 @@ export default function MapboxMap({
   const syncPlacePath = useCallback(() => {
     const map = mapRef.current;
     if (!map || !map.isStyleLoaded()) return;
+    if (!showPlacePathRef.current) {
+      clearPlacePath();
+      return;
+    }
 
     const coords = placeMarkersRef.current
       .filter((m) => Number.isFinite(m.lng) && Number.isFinite(m.lat))
@@ -483,6 +543,8 @@ export default function MapboxMap({
     const isPlaceMode = modeRef.current === "place";
 
     if (isPlaceMode) {
+      const useSimple = useSimpleMarkersRef.current;
+      const simpleSize = 48;
       placeMarkersRef.current.forEach((m) => {
         if (!Number.isFinite(m.lat) || !Number.isFinite(m.lng)) return;
 
@@ -492,8 +554,54 @@ export default function MapboxMap({
         const handleClick = (e: MouseEvent) => {
           e.stopPropagation();
           onPlaceMarkerClickRef.current?.(m.id);
+          // Zoom in to POI level on marker click
+          const map = mapRef.current;
+          if (map) {
+            map.flyTo({ center: [m.lng, m.lat], zoom: 15, duration: 650 });
+          }
         };
         el.addEventListener("click", handleClick);
+
+        if (useSimple) {
+          el.style.width = `${simpleSize}px`;
+          el.style.height = `${simpleSize}px`;
+          el.style.position = "relative";
+          el.style.borderRadius = "9999px";
+          el.style.overflow = "hidden";
+          el.style.border = "2px solid rgba(255,255,255,0.9)";
+          el.style.boxShadow = "0 8px 20px rgba(0,0,0,0.18)";
+          el.style.background = "rgba(0,0,0,0.05)";
+          const img = document.createElement("img");
+          img.src = m.imageUrl;
+          img.alt = "";
+          img.style.width = "100%";
+          img.style.height = "100%";
+          img.style.objectFit = "cover";
+          img.style.display = "block";
+          el.appendChild(img);
+
+          const isActiveAtCreate = m.id === activePlaceMarkerIdRef.current;
+          el.style.zIndex = isActiveAtCreate ? "10" : "0";
+          if (isActiveAtCreate) {
+            el.style.border = "3px solid rgba(249, 115, 22, 0.98)";
+            el.style.boxShadow =
+              "0 8px 20px rgba(0,0,0,0.18), 0 0 0 8px rgba(249, 115, 22, 0.32)";
+            el.style.transform = "scale(1.03)";
+          }
+
+          const marker = new mapboxgl.Marker({ element: el, anchor: "center" })
+            .setLngLat([m.lng, m.lat])
+            .addTo(map);
+
+          markerHandlesRef.current.push({
+            id: m.id,
+            kind: "place",
+            marker,
+            el,
+            simple: true,
+          });
+          return;
+        }
 
         const root = createRoot(el);
         const render = (isActive: boolean) => {
@@ -581,15 +689,27 @@ export default function MapboxMap({
     const activeTripId = activeMarkerIdRef.current;
 
     markerHandlesRef.current.forEach((h) => {
-      if (h?.kind === "place" && typeof h?.render === "function") {
+      if (h?.kind === "place") {
         const isActive = h.id === activePlaceId;
-        h.render(isActive);
-
-        // Ensure highlighted marker is visually on top
-        if (h?.el) {
+        if (h?.simple && h?.el) {
           h.el.style.zIndex = isActive ? "10" : "0";
+          h.el.style.border = isActive
+            ? "3px solid rgba(249, 115, 22, 0.98)"
+            : "2px solid rgba(255,255,255,0.9)";
+          h.el.style.boxShadow = isActive
+            ? "0 8px 20px rgba(0,0,0,0.18), 0 0 0 8px rgba(249, 115, 22, 0.32)"
+            : "0 8px 20px rgba(0,0,0,0.18)";
+          h.el.style.transform = isActive ? "scale(1.03)" : "scale(1)";
           if (isActive && h.el.parentElement) {
             h.el.parentElement.appendChild(h.el);
+          }
+        } else if (typeof h?.render === "function") {
+          h.render(isActive);
+          if (h?.el) {
+            h.el.style.zIndex = isActive ? "10" : "0";
+            if (isActive && h.el.parentElement) {
+              h.el.parentElement.appendChild(h.el);
+            }
           }
         }
       }
@@ -678,6 +798,9 @@ export default function MapboxMap({
       const map = mapRef.current;
       if (!map) return;
 
+      const useWiderZoom = defaultFocusZoomRef.current;
+      const targetZoom = useWiderZoom ?? 4;
+
       const runFocus = () => {
         try {
           const features = map.querySourceFeatures("countries", {
@@ -707,13 +830,24 @@ export default function MapboxMap({
             features.forEach((f) => walk((f.geometry as any).coordinates));
 
             map.stop();
-            map.fitBounds(
-              [
-                [minX, minY],
-                [maxX, maxY],
-              ],
-              { padding: 60, duration: 650, maxZoom: 5 },
-            );
+            // When defaultFocusZoom is set (e.g. Travel Stats), center on country at that zoom so other countries stay visible.
+            if (useWiderZoom != null) {
+              const centerLng = (minX + maxX) / 2;
+              const centerLat = (minY + maxY) / 2;
+              map.easeTo({
+                center: [centerLng, centerLat],
+                zoom: useWiderZoom,
+                duration: 650,
+              });
+            } else {
+              map.fitBounds(
+                [
+                  [minX, minY],
+                  [maxX, maxY],
+                ],
+                { padding: 60, duration: 650, maxZoom: 5 },
+              );
+            }
             return;
           }
         } catch {}
@@ -723,7 +857,7 @@ export default function MapboxMap({
           center: fallbackCenterByIso2[iso2.toUpperCase()] || [
             -98.5795, 39.8283,
           ],
-          zoom: 4,
+          zoom: targetZoom,
           duration: 650,
         });
       };
@@ -770,10 +904,12 @@ export default function MapboxMap({
       try {
         map = new mapboxgl.Map({
           container: containerRef.current!,
-          style: "mapbox://styles/mapbox/streets-v12",
+          style: MAPBOX_STYLE_URL,
           center: [-98.5795, 39.8283], // 초기값(미국)이어도 OK: 이후 카메라 effect가 자연스럽게 이동시킴
           zoom: 1,
           renderWorldCopies: false,
+          antialias: false,
+          preserveDrawingBuffer: false,
         });
       } catch (e) {
         console.error("Failed to initialize WebGL for the map:", e);
@@ -788,6 +924,28 @@ export default function MapboxMap({
       map.on("load", () => {
         map.setProjection("globe");
         map.setFog({});
+
+        // Built-in POI click handler
+        map.on("click", "poi-label", (e: any) => {
+          if (!onPoiClickRef.current || !e.features?.length) return;
+          const f = e.features[0];
+          const coords = f.geometry?.coordinates;
+          const props = f.properties ?? {};
+          onPoiClickRef.current({
+            name: props.name ?? props.name_en ?? "",
+            category: props.category_en ?? props.type ?? undefined,
+            maki: props.maki ?? undefined,
+            lat: coords?.[1] ?? e.lngLat.lat,
+            lng: coords?.[0] ?? e.lngLat.lng,
+          });
+        });
+
+        map.on("mouseenter", "poi-label", () => {
+          map.getCanvas().style.cursor = "pointer";
+        });
+        map.on("mouseleave", "poi-label", () => {
+          map.getCanvas().style.cursor = "";
+        });
 
         // 최신 함수로
         syncHighlightLayersRef.current();
@@ -823,7 +981,18 @@ export default function MapboxMap({
       map.on("rotatestart", markUserInteraction);
       map.on("pitchstart", markUserInteraction);
 
-      ro = new ResizeObserver(() => map.resize());
+      let resizeScheduled = false;
+      const throttledResize = () => {
+        if (resizeScheduled) return;
+        resizeScheduled = true;
+        requestAnimationFrame(() => {
+          resizeScheduled = false;
+          try {
+            map.resize();
+          } catch {}
+        });
+      };
+      ro = new ResizeObserver(throttledResize);
       ro.observe(containerRef.current!);
     })();
 
@@ -891,13 +1060,23 @@ export default function MapboxMap({
     if (mapRef.current?.isStyleLoaded()) syncHighlightLayersRef.current();
   }, [countryStats, worldview]);
 
-  //핵심: lat/lng 들어올 때는 cleanup 없이 “카메라만 이동”
+  //핵심: lat/lng 들어올 때는 cleanup 없이 "카메라만 이동"
+  // Debounce so rapid scrolling doesn't cause jarring map movement.
   useEffect(() => {
     if (!mapRef.current) return;
 
     if (focusLatLng) {
-      focusOnLatLng(focusLatLng.lat, focusLatLng.lng);
-      return;
+      // On the very first focus (initial load), move immediately.
+      if (!hasEverFocusedToEntryRef.current) {
+        focusOnLatLng(focusLatLng.lat, focusLatLng.lng);
+        return;
+      }
+
+      // Otherwise debounce — wait for scrolling to settle.
+      const timer = setTimeout(() => {
+        focusOnLatLng(focusLatLng.lat, focusLatLng.lng);
+      }, 1500);
+      return () => clearTimeout(timer);
     }
 
     // focusLatLng가 없고, 아직 entry 포커스 한 번도 없으면: 첫 entry or country
