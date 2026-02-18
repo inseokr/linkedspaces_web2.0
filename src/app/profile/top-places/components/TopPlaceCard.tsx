@@ -34,6 +34,7 @@ export default function TopPlaceCard({
   displayLikes,
   isBookmarked,
   isLiked,
+  onBookmarkToggle,
   onLikeToggle,
   onPlaceClick,
 }: TopPlaceCardProps) {
