@@ -382,6 +382,7 @@ function OwnerTripRecapView({ userId, tripId }: TripRecapViewProps) {
         imageUrl: e.photos?.[0] ?? "/images/avatar.png",
         visitIndex: idx + 1,
         visitTimeText: e.timeRangeText ?? "",
+        externalUrl: e.externalUrl,
       })),
     );
   }, [effectiveModel, baseCenter, recapData?.trip?.startingYear]);
@@ -859,7 +860,7 @@ function OwnerTripRecapView({ userId, tripId }: TripRecapViewProps) {
         (e as any).stopImmediatePropagation?.();
       }
 
-      root.scrollTop += delta;
+      root.scrollTop += delta * 0.6;
     };
 
     const opts: AddEventListenerOptions = { passive: false, capture: true };

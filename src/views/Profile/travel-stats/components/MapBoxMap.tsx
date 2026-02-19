@@ -37,6 +37,7 @@ export type MarkerData = {
   dateLabel?: string; // e.g. "Nov 2024" (recap-blog list marker)
   visitIndex?: number; // 1-based order within active day
   visitTimeText?: string; // e.g. "9:30 AM" or "9:30–10:10 AM"
+  externalUrl?: string; // when present, place is a concrete POI (not abstract)
 };
 
 export interface CountryStat {
@@ -203,6 +204,67 @@ function PlaceMarker({
 
 const PLACE_PATH_SOURCE_ID = "place-path-src";
 const PLACE_PATH_LAYER_ID = "place-path-layer";
+
+/** ~8–10 m in degrees — nudge markers off the POI so the label stays visible but still close to the route */
+const POI_NUDGE_DEG = 0.0001;
+
+/**
+ * Compute display position and pixel offset for each place marker so that (1) markers
+ * are nudged away from the exact POI so the POI label remains visible, and (2) when
+ * multiple markers share the same location they are spread in a circle to avoid overlap.
+ */
+function computePlaceMarkerLayout(
+  placeMarkers: MarkerData[],
+  markerSizePx: number,
+): Map<string, { lngLat: [number, number]; offset: [number, number] }> {
+  const key = (lat: number, lng: number) =>
+    `${lat.toFixed(5)},${lng.toFixed(5)}`;
+  const groups = new Map<
+    string,
+    { baseLat: number; baseLng: number; ids: string[] }
+  >();
+  for (const m of placeMarkers) {
+    if (!Number.isFinite(m.lat) || !Number.isFinite(m.lng)) continue;
+    const k = key(m.lat, m.lng);
+    const g = groups.get(k);
+    if (g) g.ids.push(m.id);
+    else groups.set(k, { baseLat: m.lat, baseLng: m.lng, ids: [m.id] });
+  }
+
+  const result = new Map<
+    string,
+    { lngLat: [number, number]; offset: [number, number] }
+  >();
+  const radiusPx = markerSizePx / 2 + 24;
+
+  for (const g of groups.values()) {
+    const displayLng = g.baseLng + POI_NUDGE_DEG;
+    const displayLat = g.baseLat + POI_NUDGE_DEG;
+    const n = g.ids.length;
+
+    if (n === 1) {
+      result.set(g.ids[0], {
+        lngLat: [displayLng, displayLat],
+        offset: [0, 0],
+      });
+      continue;
+    }
+
+    const step = (2 * Math.PI) / n;
+    const start = -Math.PI / 2;
+    g.ids.forEach((id, i) => {
+      const a = start + i * step;
+      result.set(id, {
+        lngLat: [displayLng, displayLat],
+        offset: [
+          Math.round(radiusPx * Math.cos(a)),
+          Math.round(radiusPx * Math.sin(a)),
+        ],
+      });
+    });
+  }
+  return result;
+}
 
 export default function MapboxMap({
   countryCode,
@@ -524,7 +586,7 @@ export default function MapboxMap({
         layout: { "line-join": "round", "line-cap": "round" },
         paint: {
           "line-color": "#F97316",
-          "line-width": 6,
+          "line-width": 2,
           "line-opacity": 0.9,
           "line-dasharray": [2, 2],
         },
@@ -569,8 +631,16 @@ export default function MapboxMap({
     if (isPlaceMode) {
       const useSimple = useSimpleMarkersRef.current;
       const simpleSize = 48;
+      const markerSizePx = useSimple ? simpleSize : 72;
+      const layout = computePlaceMarkerLayout(
+        placeMarkersRef.current,
+        markerSizePx,
+      );
+
       placeMarkersRef.current.forEach((m) => {
         if (!Number.isFinite(m.lat) || !Number.isFinite(m.lng)) return;
+        const pos = layout.get(m.id);
+        if (!pos) return;
 
         const el = document.createElement("div");
         el.style.cursor = "pointer";
@@ -578,7 +648,7 @@ export default function MapboxMap({
         const handleClick = (e: MouseEvent) => {
           e.stopPropagation();
           onPlaceMarkerClickRef.current?.(m.id);
-          // Zoom in to POI level on marker click
+          // Zoom in to POI level on marker click (use actual POI coords)
           const map = mapRef.current;
           if (map) {
             map.flyTo({ center: [m.lng, m.lat], zoom: 15, duration: 650 });
@@ -613,8 +683,12 @@ export default function MapboxMap({
             el.style.transform = "scale(1.03)";
           }
 
-          const marker = new mapboxgl.Marker({ element: el, anchor: "center" })
-            .setLngLat([m.lng, m.lat])
+          const marker = new mapboxgl.Marker({
+            element: el,
+            anchor: "center",
+            offset: pos.offset,
+          })
+            .setLngLat(pos.lngLat)
             .addTo(map);
 
           markerHandlesRef.current.push({
@@ -635,7 +709,7 @@ export default function MapboxMap({
               size={72}
               isActive={isActive}
               visitIndex={m.visitIndex}
-              visitTimeText={m.visitTimeText}
+              visitTimeText={m.externalUrl ? m.label : undefined}
             />,
           );
         };
@@ -644,8 +718,12 @@ export default function MapboxMap({
         render(isActiveAtCreate);
         el.style.zIndex = isActiveAtCreate ? "10" : "0";
 
-        const marker = new mapboxgl.Marker({ element: el, anchor: "center" })
-          .setLngLat([m.lng, m.lat])
+        const marker = new mapboxgl.Marker({
+          element: el,
+          anchor: "center",
+          offset: pos.offset,
+        })
+          .setLngLat(pos.lngLat)
           .addTo(map);
 
         markerHandlesRef.current.push({
