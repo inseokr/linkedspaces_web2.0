@@ -737,6 +737,11 @@ export default function MapboxMap({
       });
 
       syncPlacePath();
+      // Globe projection can leave DOM marker transforms stale after camera
+      // movement. Force a repaint now and again on the next frame so all
+      // marker positions are re-projected correctly.
+      map.triggerRepaint();
+      requestAnimationFrame(() => map.triggerRepaint());
       return;
     }
 
@@ -780,6 +785,8 @@ export default function MapboxMap({
         unmount: () => root.unmount(),
       });
     });
+    map.triggerRepaint();
+    requestAnimationFrame(() => map.triggerRepaint());
   }, [clearMarkers, syncPlacePath]);
 
   useEffect(() => {
