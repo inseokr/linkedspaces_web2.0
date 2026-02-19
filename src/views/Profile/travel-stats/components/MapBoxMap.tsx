@@ -6,6 +6,7 @@
 "use client";
 
 import type { GeoJSONSource, Map as MapboxMapType } from "mapbox-gl";
+import Image from "next/image";
 import {
   useCallback,
   useEffect,
@@ -114,6 +115,7 @@ function PlaceMarker({
     <div style={{ width: size, height: size, position: "relative" }}>
       <div
         style={{
+          position: "relative",
           width: size,
           height: size,
           borderRadius: 9999,
@@ -128,15 +130,12 @@ function PlaceMarker({
             "transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease",
         }}
       >
-        <img
+        <Image
           src={imageUrl}
           alt=""
-          style={{
-            width: "100%",
-            height: "100%",
-            objectFit: "cover",
-            display: "block",
-          }}
+          fill
+          sizes={`${size ?? 80}px`}
+          style={{ objectFit: "cover" }}
         />
       </div>
 
@@ -812,7 +811,7 @@ export default function MapboxMap({
         "country-label",
       );
     }
-  }, [countryStats, worldview]);
+  }, [countryStats]);
 
   useEffect(() => {
     syncHighlightLayersRef.current = syncHighlightLayers;
@@ -966,6 +965,7 @@ export default function MapboxMap({
         });
 
         map.on("mouseenter", "poi-label", () => {
+          if (!onPoiClickRef.current) return;
           map.getCanvas().style.cursor = "pointer";
         });
         map.on("mouseleave", "poi-label", () => {

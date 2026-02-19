@@ -1,0 +1,80 @@
+/* BlogGo section – scoped CSS variables to avoid clashing with main app */
+.bloggo-root {
+  --bloggo-bg: #ffffff;
+  --bloggo-bg-card: #f5f5f7;
+  --bloggo-bg-card-hover: #ebebef;
+  --bloggo-bg-secondary: #f5f5f7;
+  --bloggo-border: #e0e0e8;
+  --bloggo-text-primary: #0a0a0f;
+  --bloggo-text-secondary: #3a3a5a;
+  --bloggo-text-muted: #7a7a9a;
+  --bloggo-accent: #0284c7;
+  --bloggo-accent-light: #0ea5e9;
+  --bloggo-accent-glow: rgba(14, 165, 233, 0.15);
+}
+
+.bloggo-root {
+  background-color: var(--bloggo-bg);
+  color: var(--bloggo-text-primary);
+  min-height: 100%;
+}
+
+.bloggo-root .gradient-text {
+  background: linear-gradient(135deg, #38bdf8 0%, #0ea5e9 50%, #2563eb 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Prose styles for blog content */
+.bloggo-root .prose-bloggo {
+  color: var(--bloggo-text-secondary);
+  line-height: 1.8;
+}
+
+.bloggo-root .prose-bloggo h2 {
+  color: var(--bloggo-text-primary);
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-top: 2.5rem;
+  margin-bottom: 1rem;
+}
+
+.bloggo-root .prose-bloggo h3 {
+  color: var(--bloggo-text-primary);
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-top: 2rem;
+  margin-bottom: 0.75rem;
+}
+
+.bloggo-root .prose-bloggo p {
+  margin-bottom: 1.25rem;
+}
+
+.bloggo-root .prose-bloggo ul {
+  list-style: disc;
+  padding-left: 1.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.bloggo-root .prose-bloggo li {
+  margin-bottom: 0.5rem;
+}
+
+.bloggo-root .prose-bloggo blockquote {
+  border-left: 3px solid var(--bloggo-accent);
+  padding-left: 1rem;
+  color: var(--bloggo-text-muted);
+  font-style: italic;
+  margin: 1.5rem 0;
+}
+
+.bloggo-root .prose-bloggo code {
+  background: var(--bloggo-bg-card);
+  border: 1px solid var(--bloggo-border);
+  border-radius: 4px;
+  padding: 0.125rem 0.375rem;
+  font-size: 0.875em;
+  color: var(--bloggo-accent-light);
+}

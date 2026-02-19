@@ -41,6 +41,7 @@ export default function RootLayout({
   const pathname = usePathname();
 
   const isAuthPage = pathname === "/sign-in";
+  const isBloggo = pathname?.startsWith("/bloggo") ?? false;
   const forceLightTheme =
     pathname === "/privacy" ||
     pathname === "/contact" ||
@@ -48,6 +49,7 @@ export default function RootLayout({
     pathname === "/home" ||
     pathname === "/explore" ||
     pathname === "/profile" ||
+    isBloggo ||
     (pathname?.startsWith("/profile/") ?? false);
 
   return (
@@ -63,15 +65,20 @@ export default function RootLayout({
           <UserLocationProvider>
             <FriendsNetworkProvider>
               {!isAuthPage &&
+                !isBloggo &&
                 (isAuthenticated ? (
                   <AfterLoginHeader />
                 ) : (
                   <BerforeLoginHeader />
                 ))}
 
-              <main className="flex-1">{children}</main>
+              {isBloggo ? (
+                <div className="flex-1">{children}</div>
+              ) : (
+                <main className="flex-1">{children}</main>
+              )}
 
-              {!isAuthenticated && <Footer />}
+              {!isAuthenticated && !isBloggo && <Footer />}
             </FriendsNetworkProvider>
           </UserLocationProvider>
         </LayoutModeProvider>
