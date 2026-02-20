@@ -1,6 +1,7 @@
 // components/layout/Footer.tsx
 import Link from "next/link";
 import Image from "next/image";
+import "./footer_theme.css";
 
 import instagramIcon from "@/assets/icons/instagram.svg";
 import linkedinIcon from "@/assets/icons/linkedin.svg";
@@ -8,13 +9,13 @@ import linkedinIcon from "@/assets/icons/linkedin.svg";
 export function Footer() {
   return (
     <footer
-      className="w-full border-t border-[var(--header-border)] bg-[var(--header-bg)]"
+      className="footer-root w-full border-t border-[var(--bloggo-border)] bg-[var(--bloggo-bg-card)]/50 mt-24"
       style={{
         marginLeft: "var(--sidebar-offset, 0px)",
         width: "calc(100% - var(--sidebar-offset, 0px))",
       }}
     >
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12">
           {/* Brand Column */}
           <div className="col-span-2 md:col-span-1 flex flex-col gap-4">
@@ -27,11 +28,11 @@ export function Footer() {
                   className="object-contain"
                 />
               </div>
-              <span className="text-xl font-bold text-[var(--header-text)]">
+              <span className="text-xl font-bold gradient-text">
                 LinkedSpaces
               </span>
             </Link>
-            <p className="text-sm text-[var(--header-text-muted)] leading-relaxed max-w-xs">
+            <p className="text-sm text-[var(--bloggo-text-muted)] leading-relaxed max-w-xs">
               Connect with your friends, share your spaces, and explore the
               world together.
             </p>
@@ -69,14 +70,14 @@ export function Footer() {
 
           {/* Links Columns */}
           <div className="flex flex-col gap-4">
-            <h3 className="text-xs font-semibold uppercase tracking-widest text-[var(--header-text-muted)]">
+            <h3 className="text-xs font-semibold uppercase tracking-widest text-[var(--bloggo-text-muted)]">
               PRODUCT
             </h3>
             <ul className="flex flex-col gap-3">
               <li>
                 <Link
                   href="/#our-story"
-                  className="text-sm text-[var(--header-text)] hover:text-[var(--color-main)] transition-colors"
+                  className="text-sm text-[var(--bloggo-text-secondary)] hover:text-[var(--bloggo-text-primary)] transition-colors"
                 >
                   Our Story
                 </Link>
@@ -84,7 +85,7 @@ export function Footer() {
               <li>
                 <Link
                   href="/learn-more"
-                  className="text-sm text-[var(--header-text)] hover:text-[var(--color-main)] transition-colors"
+                  className="text-sm text-[var(--bloggo-text-secondary)] hover:text-[var(--bloggo-text-primary)] transition-colors"
                 >
                   Learn More
                 </Link>
@@ -93,14 +94,14 @@ export function Footer() {
           </div>
 
           <div className="flex flex-col gap-4">
-            <h3 className="text-xs font-semibold uppercase tracking-widest text-[var(--header-text-muted)]">
+            <h3 className="text-xs font-semibold uppercase tracking-widest text-[var(--bloggo-text-muted)]">
               Company
             </h3>
             <ul className="flex flex-col gap-3">
               <li>
                 <Link
                   href="/contact"
-                  className="text-sm text-[var(--header-text)] hover:text-[var(--color-main)] transition-colors"
+                  className="text-sm text-[var(--bloggo-text-secondary)] hover:text-[var(--bloggo-text-primary)] transition-colors"
                 >
                   Contact
                 </Link>
@@ -108,7 +109,7 @@ export function Footer() {
               <li>
                 <Link
                   href="/beta-sign-up"
-                  className="text-sm text-[var(--header-text)] hover:text-[var(--color-main)] transition-colors"
+                  className="text-sm text-[var(--bloggo-text-secondary)] hover:text-[var(--bloggo-text-primary)] transition-colors"
                 >
                   Beta Sign Up
                 </Link>
@@ -117,14 +118,14 @@ export function Footer() {
           </div>
 
           <div className="flex flex-col gap-4">
-            <h3 className="text-xs font-semibold uppercase tracking-widest text-[var(--header-text-muted)]">
+            <h3 className="text-xs font-semibold uppercase tracking-widest text-[var(--bloggo-text-muted)]">
               Legal
             </h3>
             <ul className="flex flex-col gap-3">
               <li>
                 <Link
                   href="/privacy"
-                  className="text-sm text-[var(--header-text)] hover:text-[var(--color-main)] transition-colors"
+                  className="text-sm text-[var(--bloggo-text-secondary)] hover:text-[var(--bloggo-text-primary)] transition-colors"
                 >
                   Privacy Policy
                 </Link>
@@ -132,7 +133,7 @@ export function Footer() {
               <li>
                 <Link
                   href="/terms"
-                  className="text-sm text-[var(--header-text)] hover:text-[var(--color-main)] transition-colors"
+                  className="text-sm text-[var(--bloggo-text-secondary)] hover:text-[var(--bloggo-text-primary)] transition-colors"
                 >
                   Terms of Service
                 </Link>
@@ -141,8 +142,8 @@ export function Footer() {
           </div>
         </div>
 
-        <div className="pt-8 border-t border-[var(--header-border)] flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-sm text-[var(--header-text-muted)]">
+        <div className="pt-8 border-t border-[var(--bloggo-border)] flex flex-col sm:flex-row items-center justify-between gap-4">
+          <p className="text-xs text-[var(--bloggo-text-muted)]">
             © {new Date().getFullYear()} LinkedSpaces. All rights reserved.
           </p>
         </div>
