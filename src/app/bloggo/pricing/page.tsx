@@ -15,72 +15,48 @@ const plans = [
     name: "Starter",
     price: "Free",
     period: "",
-    description: "Perfect for getting started and sharing your ideas.",
+    monthlyPrice: "Free",
+    yearlyPrice: "Free",
+    description: "Perfect for getting started and sharing your travel blogs.",
     badge: null as string | null,
     badgeVariant: "default" as const,
     features: [
-      "1 blog",
-      "Up to 10 posts/month",
+      "5 blog uploads",
+      "Unlimited blogs on phone",
       "BlogGo subdomain",
       "Basic analytics",
       "Community support",
-      "5 GB storage",
     ],
     cta: "Get Started Free",
     ctaVariant: "secondary" as const,
     href: `${BASE}/editor/my-first-post`,
-    minSubs: 0,
-    maxSubs: 1000,
   },
   {
     name: "Pro",
-    price: "$12",
+    price: "$3.99",
     period: "/month",
-    description: "For serious writers who want to grow their audience.",
+    monthlyPrice: "$3.99",
+    yearlyPrice: "$19.99",
+    description: "For serious bloggers who want to share their adventures!",
     badge: "Most Popular",
     badgeVariant: "violet" as const,
     features: [
       "Unlimited blogs",
       "Unlimited posts",
-      "Custom domain",
-      "Advanced analytics",
       "Newsletter (up to 1,000 subscribers)",
+      "Web blog editing",
+      "BlogGo subdomain",
       "Priority support",
-      "50 GB storage",
       "Remove BlogGo branding",
     ],
     cta: "Start Pro Trial",
     ctaVariant: "primary" as const,
     href: `${BASE}/editor/my-first-post`,
-    minSubs: 1001,
-    maxSubs: 10000,
-  },
-  {
-    name: "Team",
-    price: "$49",
-    period: "/month",
-    description: "For teams and publications with multiple authors.",
-    badge: null,
-    badgeVariant: "default" as const,
-    features: [
-      "Everything in Pro",
-      "Up to 10 team members",
-      "Collaborative editing",
-      "Unlimited newsletter subscribers",
-      "REST API access",
-      "Webhooks",
-      "Dedicated support",
-      "500 GB storage",
-    ],
-    cta: "Contact Sales",
-    ctaVariant: "secondary" as const,
-    href: `${BASE}/support`,
-    minSubs: 10001,
-    maxSubs: Infinity,
   },
 ];
 
 const faqs = [
+  // ... (faqs remain the same)
   {
     q: "Can I change plans later?",
     a: "Yes, you can upgrade or downgrade your plan at any time. Changes take effect immediately and we'll prorate any billing differences.",
@@ -100,10 +76,8 @@ const faqs = [
 ];
 
 export default function PricingPage() {
-  const [subscribers, setSubscribers] = useState(500);
-
-  const recommendedPlan = plans.find(
-    (p) => subscribers >= p.minSubs && subscribers <= p.maxSubs,
+  const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">(
+    "monthly",
   );
 
   return (
@@ -121,123 +95,69 @@ export default function PricingPage() {
         </Container>
       </section>
 
-      <section className="py-12 bg-[var(--bloggo-bg-card)]/50 border-b border-[var(--bloggo-border)]">
-        <Container size="sm" className="flex flex-col gap-8">
-          <div className="text-center space-y-2">
-            <h2 className="text-2xl font-bold text-[var(--bloggo-text-primary)]">
-              Estimate Your Cost
-            </h2>
-            <p className="text-[var(--bloggo-text-secondary)]">
-              Drag slider to set your audience size
-            </p>
-          </div>
-
-          <div className="p-8 bg-[var(--bloggo-bg)] rounded-3xl border border-[var(--bloggo-border)] shadow-xl shadow-black/5">
-            <div className="flex flex-col gap-8">
-              <div className="flex justify-between items-end">
-                <label
-                  htmlFor="subs-slider"
-                  className="text-sm font-semibold text-[var(--bloggo-text-secondary)] uppercase tracking-wider"
-                >
-                  Subscribers
-                </label>
-                <span className="text-4xl font-black text-sky-600 tabular-nums">
-                  {subscribers.toLocaleString()}
-                </span>
-              </div>
-
-              <input
-                id="subs-slider"
-                type="range"
-                min="0"
-                max="20000"
-                step="100"
-                value={subscribers}
-                onChange={(e) => setSubscribers(Number(e.target.value))}
-                className="w-full h-2 bg-[var(--bloggo-border)] rounded-lg appearance-none cursor-pointer accent-sky-600 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2"
-              />
-
-              <div className="flex justify-between text-xs text-[var(--bloggo-text-muted)] font-medium">
-                <span>0</span>
-                <span>5k</span>
-                <span>10k</span>
-                <span>15k</span>
-                <span>20k+</span>
-              </div>
-
-              <div className="mt-4 pt-6 border-t border-[var(--bloggo-border)] flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-[var(--bloggo-text-secondary)]">
-                    Recommended Plan
-                  </p>
-                  <p className="text-xl font-bold text-[var(--bloggo-text-primary)]">
-                    {recommendedPlan?.name}
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm text-[var(--bloggo-text-secondary)]">
-                    Estimated Cost
-                  </p>
-                  <div className="flex items-baseline gap-1 justify-end">
-                    <span className="text-3xl font-black text-[var(--bloggo-text-primary)]">
-                      {recommendedPlan?.price}
-                    </span>
-                    {recommendedPlan?.period && (
-                      <span className="text-sm text-[var(--bloggo-text-muted)]">
-                        {recommendedPlan.period}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
+      <section className="py-20">
+        <Container className="max-w-4xl">
+          <div className="flex justify-start mb-8">
+            <div className="inline-flex items-center gap-2 p-1 bg-[var(--bloggo-bg-card)] rounded-xl border border-[var(--bloggo-border)]">
+              <button
+                onClick={() => setBillingCycle("monthly")}
+                className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${
+                  billingCycle === "monthly"
+                    ? "bg-[var(--bloggo-bg)] text-[var(--bloggo-text-primary)] shadow-sm"
+                    : "text-[var(--bloggo-text-muted)] hover:text-[var(--bloggo-text-secondary)]"
+                }`}
+              >
+                Monthly
+              </button>
+              <button
+                onClick={() => setBillingCycle("yearly")}
+                className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${
+                  billingCycle === "yearly"
+                    ? "bg-[var(--bloggo-bg)] text-[var(--bloggo-text-primary)] shadow-sm"
+                    : "text-[var(--bloggo-text-muted)] hover:text-[var(--bloggo-text-secondary)]"
+                }`}
+              >
+                Yearly
+              </button>
             </div>
           </div>
-        </Container>
-      </section>
 
-      <section className="py-20">
-        <Container>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
             {plans.map((plan) => {
-              const isRecommended = recommendedPlan?.name === plan.name;
+              const isPro = plan.name === "Pro";
+              const currentPrice =
+                billingCycle === "monthly"
+                  ? plan.monthlyPrice
+                  : plan.yearlyPrice;
+              const currentPeriod =
+                plan.name === "Starter"
+                  ? ""
+                  : billingCycle === "monthly"
+                    ? "/month"
+                    : "/year";
+
               return (
                 <Card
                   key={plan.name}
                   padding="lg"
                   className={[
                     "flex flex-col gap-6 relative transition-all duration-300",
-                    isRecommended
+                    isPro
                       ? "border-sky-500 shadow-xl shadow-sky-500/10 scale-105 z-10 ring-4 ring-sky-500/10"
-                      : plan.badge
-                        ? "border-sky-500/30 shadow-lg"
-                        : "border-[var(--bloggo-border)]",
+                      : "border-[var(--bloggo-border)]",
                   ].join(" ")}
                 >
-                  {isRecommended && (
-                    <div className="absolute -top-4 inset-x-0 flex justify-center">
-                      <Badge variant="violet" className="shadow-lg">
-                        Recommended for You
-                      </Badge>
-                    </div>
-                  )}
-
-                  {!isRecommended && plan.badge && (
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                      <Badge variant={plan.badgeVariant}>{plan.badge}</Badge>
-                    </div>
-                  )}
-
                   <div className="flex flex-col gap-2 mt-2">
                     <h2 className="text-lg font-semibold text-[var(--bloggo-text-primary)]">
                       {plan.name}
                     </h2>
                     <div className="flex items-baseline gap-1">
                       <span className="text-4xl font-black text-[var(--bloggo-text-primary)]">
-                        {plan.price}
+                        {currentPrice}
                       </span>
-                      {plan.period && (
+                      {currentPeriod && (
                         <span className="text-[var(--bloggo-text-muted)]">
-                          {plan.period}
+                          {currentPeriod}
                         </span>
                       )}
                     </div>
@@ -248,7 +168,7 @@ export default function PricingPage() {
 
                   <Link href={plan.href} className="block">
                     <Button
-                      variant={isRecommended ? "primary" : plan.ctaVariant}
+                      variant={isPro ? "primary" : plan.ctaVariant}
                       className="w-full"
                     >
                       {plan.cta}
@@ -262,7 +182,7 @@ export default function PricingPage() {
                         className="flex items-start gap-2.5 text-sm text-[var(--bloggo-text-secondary)]"
                       >
                         <svg
-                          className={`w-4 h-4 flex-shrink-0 mt-0.5 ${isRecommended ? "text-sky-500" : "text-emerald-500"}`}
+                          className={`w-4 h-4 flex-shrink-0 mt-0.5 ${isPro ? "text-sky-500" : "text-emerald-500"}`}
                           fill="none"
                           viewBox="0 0 24 24"
                           stroke="currentColor"
