@@ -1,0 +1,21 @@
+/* Scoped CSS variables for Hero section to match Bloggo home page */
+.hero-root {
+  --bloggo-bg: #ffffff;
+  --bloggo-bg-card: #f5f5f7;
+  --bloggo-bg-card-hover: #ebebef;
+  --bloggo-bg-secondary: #f5f5f7;
+  --bloggo-border: #e0e0e8;
+  --bloggo-text-primary: #0a0a0f;
+  --bloggo-text-secondary: #3a3a5a;
+  --bloggo-text-muted: #7a7a9a;
+  --bloggo-accent: #0284c7;
+  --bloggo-accent-light: #0ea5e9;
+  --bloggo-accent-glow: rgba(14, 165, 233, 0.15);
+}
+
+.hero-root .gradient-text {
+  background: linear-gradient(135deg, #38bdf8 0%, #0ea5e9 50%, #2563eb 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
