@@ -1,9 +1,8 @@
-"use client";
-
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import UserMenu from "@/components/layout/UserMenu";
+import "./header_theme.css";
 
 import { useLayoutMode } from "@/components/layout/LayoutModeContext";
 
@@ -30,10 +29,13 @@ export function AfterLoginHeader() {
   };
 
   return (
-    <header className="sticky top-0 z-[100] w-full border-b border-[var(--header-border)] bg-[var(--header-bg)] backdrop-blur supports-[backdrop-filter]:bg-[var(--header-bg)] shadow-[var(--header-shadow)]">
-      <div className="mx-auto h-[77px] flex items-center pl-4 pr-4 sm:pl-6 sm:pr-6 lg:pl-10 lg:pr-10 gap-4 sm:gap-6">
-        <Link href="/home" className="flex items-center gap-2 shrink-0">
-          <div className="relative w-14 h-14">
+    <header className="header-root sticky top-0 z-[100] w-full border-b border-[var(--bloggo-border)] bg-[var(--bloggo-bg)]/80 backdrop-blur-xl">
+      <div className="mx-auto h-16 flex items-center px-4 sm:px-6 lg:px-8 gap-6">
+        <Link
+          href="/home"
+          className="flex items-center gap-2 shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 rounded-lg"
+        >
+          <div className="relative w-8 h-8">
             <Image
               src="/images/LS_blue.png"
               alt="LinkedSpaces Logo"
@@ -43,13 +45,11 @@ export function AfterLoginHeader() {
               priority
             />
           </div>
-          <span className="text-[28px] sm:text-[32px] font-bold tracking-tight text-[var(--header-text)]">
-            LinkedSpaces
-          </span>
+          <span className="text-xl font-bold gradient-text">LinkedSpaces</span>
         </Link>
 
-        <div className="ml-auto flex items-center gap-2 sm:gap-4 shrink-0">
-          <nav className="flex items-center gap-1 sm:gap-2" aria-label="Main">
+        <div className="ml-auto flex items-center gap-4 shrink-0">
+          <nav className="hidden md:flex items-center gap-1" aria-label="Main">
             {NAV_TABS.map(({ label, href }) => {
               const active = isActive(href);
               return (
@@ -57,12 +57,12 @@ export function AfterLoginHeader() {
                   key={href}
                   href={href}
                   className={`
-                    rounded-lg px-3 py-2 text-sm font-medium transition-colors
-                    focus:outline-none focus:ring-2 focus:ring-[var(--color-main)] focus:ring-offset-1
+                    px-4 py-2 rounded-lg text-sm font-medium transition-colors
+                    focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500
                     ${
                       active
-                        ? "bg-[var(--color-main)]/12 text-[var(--color-main)] underline decoration-2 underline-offset-2"
-                        : "text-[var(--header-text-muted)] hover:bg-black/5 hover:text-[var(--header-text)]"
+                        ? "text-[var(--bloggo-text-primary)] bg-black/5"
+                        : "text-[var(--bloggo-text-secondary)] hover:text-[var(--bloggo-text-primary)] hover:bg-black/5"
                     }
                   `}
                   aria-current={active ? "page" : undefined}

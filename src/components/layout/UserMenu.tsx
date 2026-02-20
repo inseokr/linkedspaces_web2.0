@@ -114,14 +114,13 @@ export default function UserMenu({ displayName, avatarSrc, className }: Props) {
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
         className={cn(
-          "user-pill",
-          "inline-flex items-center gap-2 rounded-full",
-          "pl-2 pr-3 py-1.5",
-          "shadow-sm transition",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--user-pill-focus)]",
+          "inline-flex items-center gap-2 rounded-xl",
+          "pl-1.5 pr-3 py-1.5",
+          "bg-black/5 hover:bg-black/10 transition-colors",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500",
         )}
       >
-        <span className="relative h-7 w-7 overflow-hidden rounded-full bg-white/10">
+        <span className="relative h-7 w-7 overflow-hidden rounded-lg bg-white/10 ring-1 ring-black/5">
           <Image
             src={imgSrc}
             alt="Profile"
@@ -132,10 +131,7 @@ export default function UserMenu({ displayName, avatarSrc, className }: Props) {
           />
         </span>
 
-        <span
-          className="text-[14px] font-semibold leading-none"
-          style={{ color: "var(--user-pill-text)" }}
-        >
+        <span className="text-sm font-medium text-[var(--bloggo-text-primary)]">
           {resolvedName}
         </span>
 
