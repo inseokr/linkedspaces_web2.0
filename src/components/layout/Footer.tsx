@@ -9,7 +9,7 @@ import linkedinIcon from "@/assets/icons/linkedin.svg";
 export function Footer() {
   return (
     <footer
-      className="footer-root w-full border-t border-[var(--bloggo-border)] bg-[var(--bloggo-bg-card)]/50 mt-24"
+      className="footer-root w-full border-t border-[var(--bloggo-border)] bg-[var(--bloggo-bg-card)] mt-24"
       style={{
         marginLeft: "var(--sidebar-offset, 0px)",
         width: "calc(100% - var(--sidebar-offset, 0px))",

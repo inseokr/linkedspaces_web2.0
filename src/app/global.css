@@ -19,11 +19,11 @@
   --input-border: rgba(0, 0, 0, 0.32);
 
   /* Header surface tokens (light mode) */
-  --header-bg: rgba(255, 255, 255, 0.86);
+  --header-bg: #ffffff;
   --header-border: rgba(0, 0, 0, 0.08);
   --header-shadow: 0 1px 0 rgba(0, 0, 0, 0.02), 0 12px 30px rgba(0, 0, 0, 0.08);
-  --header-text: rgba(0, 0, 0, 0.92);
-  --header-text-muted: rgba(0, 0, 0, 0.68);
+  --header-text: #000000;
+  --header-text-muted: rgba(0, 0, 0, 0.6);
   --header-menu-rgb: 255 255 255;
   --header-menu-bg: rgba(255, 255, 255, 0.68);
   --header-menu-border: rgba(0, 0, 0, 0.08);
@@ -105,11 +105,11 @@ html.theme-light {
   --input-border: rgba(0, 0, 0, 0.32);
 
   /* Header surface tokens (light mode) */
-  --header-bg: rgba(255, 255, 255, 0.86);
+  --header-bg: #ffffff;
   --header-border: rgba(0, 0, 0, 0.08);
   --header-shadow: 0 1px 0 rgba(0, 0, 0, 0.02), 0 12px 30px rgba(0, 0, 0, 0.08);
-  --header-text: rgba(0, 0, 0, 0.92);
-  --header-text-muted: rgba(0, 0, 0, 0.68);
+  --header-text: #000000;
+  --header-text-muted: rgba(0, 0, 0, 0.6);
   --header-menu-rgb: 255 255 255;
   --header-menu-bg: rgba(255, 255, 255, 0.68);
   --header-menu-border: rgba(0, 0, 0, 0.08);
@@ -181,17 +181,22 @@ html.theme-dark {
   border: 1px solid var(--user-pill-border);
   backdrop-filter: blur(12px);
 }
+
 .user-pill:hover {
   background: var(--user-pill-bg-hover);
 }
 
 @layer utilities {
   .scrollbar-hide {
-    -ms-overflow-style: none; /* IE/Edge */
-    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none;
+    /* IE/Edge */
+    scrollbar-width: none;
+    /* Firefox */
   }
+
   .scrollbar-hide::-webkit-scrollbar {
-    display: none; /* Chrome/Safari */
+    display: none;
+    /* Chrome/Safari */
   }
 }
 

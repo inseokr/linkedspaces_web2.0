@@ -35,7 +35,7 @@ export default function BetaSignupSection() {
       {/* Outer container: center + max width similar to design */}
       <div className="mx-auto w-full max-w-[980px] px-6">
         {/* Card */}
-        <div className="rounded-[20px] bg-[var(--card-bg)] p-6 shadow-card border border-[var(--card-border)] text-[var(--card-text)]">
+        <div className="rounded-[32px] bg-white/85 backdrop-blur-xl p-8 sm:p-12 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.1)] border border-white/20 text-gray-900 transition-all duration-300 hover:shadow-[0_48px_80px_-20px_rgba(0,0,0,0.15)]">
           <form
             ref={formRef}
             noValidate
@@ -48,7 +48,7 @@ export default function BetaSignupSection() {
             </h2>
 
             {/* Description */}
-            <p className="text-lg font-normal leading-[27px] text-[var(--card-text-muted)]">
+            <p className="text-xl font-medium leading-relaxed text-gray-600/90 max-w-2xl">
               We&apos;re almost ready... are you? Say goodbye to “Where was that
               again?” and hello to never forgetting a memory with LinkedSpaces!
               Start saving moments before they fade away.
@@ -74,10 +74,8 @@ export default function BetaSignupSection() {
                   inputMode="email"
                   required
                   aria-invalid={!!emailError}
-                  className={`h-[40px] w-full border bg-[var(--input-bg)] px-[8px] py-[2px] text-[var(--card-text)] placeholder:text-[var(--card-text-muted)] outline-none leading-[24px] focus:border-[var(--color-main)] ${
-                    emailError
-                      ? "border-red-500"
-                      : "border-[var(--input-border)]"
+                  className={`h-12 w-full rounded-xl border bg-white/50 px-4 py-2 text-gray-900 placeholder:text-gray-400 outline-none transition-all focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 ${
+                    emailError ? "border-red-500" : "border-gray-200"
                   }`}
                 />
 
@@ -100,13 +98,13 @@ export default function BetaSignupSection() {
                   onChange={(e) => setFirstName(e.target.value)}
                   type="text"
                   placeholder="Optional"
-                  className="h-[40px] w-full border border-[var(--input-border)] bg-[var(--input-bg)] px-[8px] py-[2px] text-base text-[var(--card-text)] placeholder:text-[var(--card-text-muted)] outline-none leading-[24px] focus:border-[var(--color-main)]"
+                  className="h-12 w-full rounded-xl border border-gray-200 bg-white/50 px-4 py-2 text-base text-gray-900 placeholder:text-gray-400 outline-none transition-all focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
                 />
               </label>
             </div>
 
             {/* Helper text */}
-            <div className="flex flex-col gap-7 text-[18px] leading-[21.6px] text-[var(--card-text-muted)]">
+            <div className="flex flex-col gap-7 text-[18px] leading-[21.6px] text-gray-500/80">
               <p>
                 You will be able to invite one friend to access these premium
                 services!
