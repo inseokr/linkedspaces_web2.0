@@ -30,33 +30,31 @@ export function AfterLoginHeader() {
 
   return (
     <header className="header-root sticky top-0 z-[100] w-full border-b border-[var(--bloggo-border)] bg-[var(--bloggo-bg)]/80 backdrop-blur-xl">
-      <div className="mx-auto h-16 flex items-center px-4 sm:px-6 lg:px-8 gap-6">
-        <Link
-          href="/home"
-          className="flex items-center gap-2 shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 rounded-lg"
-        >
-          <div className="relative w-8 h-8">
-            <Image
-              src="/images/LS_blue.png"
-              alt="LinkedSpaces Logo"
-              fill
-              className="object-contain"
-              unoptimized={true}
-              priority
-            />
-          </div>
-          <span className="text-xl font-bold gradient-text">LinkedSpaces</span>
-        </Link>
+      <div className="mx-auto max-w-7xl h-16 flex items-center px-4 sm:px-6 lg:px-8 relative">
+        {/* Left Side: Branding */}
+        <div className="flex-shrink-0">
+          <Link
+            href="/home"
+            className="flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 rounded-lg"
+          >
+            <span className="text-xl font-bold gradient-text">
+              LinkedSpaces
+            </span>
+          </Link>
+        </div>
 
-        <div className="ml-auto flex items-center gap-4 shrink-0">
-          <nav className="hidden md:flex items-center gap-1" aria-label="Main">
-            {NAV_TABS.map(({ label, href }) => {
-              const active = isActive(href);
-              return (
-                <Link
-                  key={href}
-                  href={href}
-                  className={`
+        {/* Center Side: Navigation */}
+        <nav
+          className="absolute left-1/2 -translate-x-1/2 hidden md:flex items-center gap-1"
+          aria-label="Main"
+        >
+          {NAV_TABS.map(({ label, href }) => {
+            const active = isActive(href);
+            return (
+              <Link
+                key={href}
+                href={href}
+                className={`
                     px-4 py-2 rounded-lg text-sm font-medium transition-colors
                     focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500
                     ${
@@ -65,13 +63,16 @@ export function AfterLoginHeader() {
                         : "text-[var(--bloggo-text-secondary)] hover:text-[var(--bloggo-text-primary)] hover:bg-black/5"
                     }
                   `}
-                  aria-current={active ? "page" : undefined}
-                >
-                  {label}
-                </Link>
-              );
-            })}
-          </nav>
+                aria-current={active ? "page" : undefined}
+              >
+                {label}
+              </Link>
+            );
+          })}
+        </nav>
+
+        {/* Right Side: User Menu */}
+        <div className="ml-auto flex items-center gap-4 shrink-0">
           <UserMenu />
         </div>
       </div>

@@ -141,7 +141,7 @@ export default function UserMenu({ displayName, avatarSrc, className }: Props) {
       {/* Overlay */}
       {open && (
         <div
-          className="fixed left-0 right-0 bottom-0 top-[77px] z-[95]"
+          className="fixed left-0 right-0 bottom-0 top-16 z-[95]"
           style={{ backgroundColor: "var(--user-menu-overlay)" }}
           onClick={() => setOpen(false)}
           aria-hidden="true"
@@ -153,7 +153,7 @@ export default function UserMenu({ displayName, avatarSrc, className }: Props) {
         id={menuId}
         role="menu"
         className={cn(
-          "fixed right-6 lg:right-10 top-[77px] z-[99]",
+          "fixed right-6 lg:right-10 top-16 z-[99]",
           open
             ? "pointer-events-auto opacity-100 translate-y-0"
             : "pointer-events-none opacity-0 -translate-y-1",
