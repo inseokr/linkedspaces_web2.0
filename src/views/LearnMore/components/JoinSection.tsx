@@ -4,11 +4,11 @@ import Image from "next/image";
 export default function JoinFutureSection() {
   return (
     <section className="w-full bg-white">
-      <div className="mx-auto px-6 py-16">
+      <div className="mx-auto max-w-7xl px-6 py-16">
         {/* Title */}
 
         {/* Content */}
-        <div className="flex mt-12 items-start gap-12 ">
+        <div className="flex mt-12 items-start justify-center gap-12">
           {/* Left: Phone image */}
           <Tilt className="rounded-2xl">
             {/* Phone / GIF */}

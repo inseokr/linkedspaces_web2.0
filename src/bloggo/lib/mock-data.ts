@@ -11,6 +11,12 @@ export interface BlogPost {
   tags: string[];
   sections: Section[];
   gallery: GalleryImage[];
+  coordinate: {
+    lat: number;
+    lng: number;
+    label: string;
+  };
+  places: BlogPlace[];
 }
 
 export interface Author {
@@ -35,6 +41,14 @@ export interface GalleryImage {
   caption: string;
 }
 
+export interface BlogPlace {
+  id: string;
+  name: string;
+  description: string;
+  coordinate: { lat: number; lng: number };
+  photos: string[];
+}
+
 export const demoAuthor: Author = {
   username: "demo",
   name: "Alex Rivera",
@@ -55,6 +69,11 @@ export const mockBlogs: BlogPost[] = [
     publishedAt: "2026-02-10",
     readingTime: 8,
     tags: ["Next.js", "React", "TypeScript", "Web Dev"],
+    coordinate: {
+      lat: 37.7749,
+      lng: -122.4194,
+      label: "San Francisco, CA",
+    },
     sections: [
       {
         type: "paragraph",
@@ -128,6 +147,46 @@ export const mockBlogs: BlogPost[] = [
         caption: "Modern data fetching with async/await",
       },
     ],
+    places: [
+      {
+        id: "sf-ferry-building",
+        name: "Ferry Building Marketplace",
+        description:
+          "Started the morning at the iconic Ferry Building along the Embarcadero. Grabbed an artisan coffee and walked through the local vendor stalls — the perfect spot to kick off a day of coding and exploring.",
+        coordinate: { lat: 37.7955, lng: -122.3937 },
+        photos: [
+          "https://picsum.photos/seed/sf-ferry/800/500",
+          "https://picsum.photos/seed/sf-ferry2/800/500",
+        ],
+      },
+      {
+        id: "sf-salesforce-park",
+        name: "Salesforce Transit Center Rooftop Park",
+        description:
+          "Took a break at the rooftop park above the Salesforce Transit Center. The elevated green space in the middle of downtown is an incredible place to sit with a laptop and prototype new ideas.",
+        coordinate: { lat: 37.7897, lng: -122.3972 },
+        photos: ["https://picsum.photos/seed/sf-salesforce/800/500"],
+      },
+      {
+        id: "sf-golden-gate",
+        name: "Golden Gate Viewpoint",
+        description:
+          "No trip to San Francisco is complete without seeing the Golden Gate Bridge. Watched the fog roll in from Battery Spencer — the kind of moment that reminds you why the Bay Area inspires so many builders.",
+        coordinate: { lat: 37.8324, lng: -122.4795 },
+        photos: [
+          "https://picsum.photos/seed/sf-gg/800/500",
+          "https://picsum.photos/seed/sf-gg2/800/500",
+        ],
+      },
+      {
+        id: "sf-dolores-park",
+        name: "Mission Dolores Park",
+        description:
+          "Afternoon wind-down at Dolores Park with stunning city views. The vibrant energy of the Mission neighborhood is infectious — street art, taquerias, and sunshine.",
+        coordinate: { lat: 37.7596, lng: -122.4269 },
+        photos: ["https://picsum.photos/seed/sf-dolores/800/500"],
+      },
+    ],
   },
   {
     slug: "design-systems-that-scale",
@@ -139,6 +198,11 @@ export const mockBlogs: BlogPost[] = [
     publishedAt: "2026-02-03",
     readingTime: 6,
     tags: ["Design Systems", "CSS", "UI/UX", "Components"],
+    coordinate: {
+      lat: 40.7128,
+      lng: -74.006,
+      label: "New York, NY",
+    },
     sections: [
       {
         type: "paragraph",
@@ -181,6 +245,46 @@ export const mockBlogs: BlogPost[] = [
         caption: "A well-organized component library",
       },
     ],
+    places: [
+      {
+        id: "ny-highline",
+        name: "The High Line",
+        description:
+          "Walked the elevated park built on a historic rail line through Chelsea. The integration of architecture, nature, and public art along the High Line is a masterclass in design systems thinking — consistent patterns, flexible expression.",
+        coordinate: { lat: 40.748, lng: -74.0048 },
+        photos: [
+          "https://picsum.photos/seed/ny-highline/800/500",
+          "https://picsum.photos/seed/ny-highline2/800/500",
+        ],
+      },
+      {
+        id: "ny-chelsea-market",
+        name: "Chelsea Market",
+        description:
+          "Stopped at Chelsea Market to refuel. The converted factory space is a great example of adaptive reuse — just like good design tokens, the bones stay the same while the surface expression evolves.",
+        coordinate: { lat: 40.7425, lng: -74.0061 },
+        photos: ["https://picsum.photos/seed/ny-chelsea/800/500"],
+      },
+      {
+        id: "ny-brooklyn-bridge",
+        name: "Brooklyn Bridge",
+        description:
+          "Crossed the Brooklyn Bridge at sunset. The engineering marvel from 1883 still stands — proof that building for durability matters, whether it's infrastructure or component libraries.",
+        coordinate: { lat: 40.7061, lng: -73.9969 },
+        photos: [
+          "https://picsum.photos/seed/ny-bridge/800/500",
+          "https://picsum.photos/seed/ny-bridge2/800/500",
+        ],
+      },
+      {
+        id: "ny-dumbo",
+        name: "DUMBO Waterfront",
+        description:
+          "Ended the day at the DUMBO waterfront with views of the Manhattan skyline. The neighborhood's blend of old warehouses and tech startups captures the spirit of building modern systems on proven foundations.",
+        coordinate: { lat: 40.7033, lng: -73.9894 },
+        photos: ["https://picsum.photos/seed/ny-dumbo/800/500"],
+      },
+    ],
   },
   {
     slug: "typescript-tips-for-react-devs",
@@ -192,6 +296,11 @@ export const mockBlogs: BlogPost[] = [
     publishedAt: "2026-01-27",
     readingTime: 7,
     tags: ["TypeScript", "React", "Tips", "Developer Tools"],
+    coordinate: {
+      lat: 51.5074,
+      lng: -0.1278,
+      label: "London, UK",
+    },
     sections: [
       {
         type: "paragraph",
@@ -233,6 +342,38 @@ export const mockBlogs: BlogPost[] = [
         caption: "Type-safe React components",
       },
     ],
+    places: [
+      {
+        id: "lon-british-museum",
+        name: "British Museum",
+        description:
+          "Explored the British Museum's vast halls. The way the museum organizes millions of artifacts into navigable galleries mirrors the challenge of typing a large codebase — structure brings clarity.",
+        coordinate: { lat: 51.5194, lng: -0.127 },
+        photos: [
+          "https://picsum.photos/seed/lon-museum/800/500",
+          "https://picsum.photos/seed/lon-museum2/800/500",
+        ],
+      },
+      {
+        id: "lon-south-bank",
+        name: "South Bank & Tate Modern",
+        description:
+          "Strolled along the South Bank past the Tate Modern. London's cultural corridor along the Thames is the perfect backdrop for thinking about how types shape creative expression in code.",
+        coordinate: { lat: 51.5076, lng: -0.0994 },
+        photos: ["https://picsum.photos/seed/lon-tate/800/500"],
+      },
+      {
+        id: "lon-shoreditch",
+        name: "Shoreditch Tech Hub",
+        description:
+          "Visited the Shoreditch tech scene — co-working spaces, street art, and indie coffee shops. The neighborhood buzzes with the same energy you feel when a perfectly typed API clicks into place.",
+        coordinate: { lat: 51.5235, lng: -0.0773 },
+        photos: [
+          "https://picsum.photos/seed/lon-shoreditch/800/500",
+          "https://picsum.photos/seed/lon-shoreditch2/800/500",
+        ],
+      },
+    ],
   },
   {
     slug: "the-art-of-readable-code",
@@ -244,6 +385,11 @@ export const mockBlogs: BlogPost[] = [
     publishedAt: "2026-01-15",
     readingTime: 5,
     tags: ["Best Practices", "Clean Code", "Engineering"],
+    coordinate: {
+      lat: 35.6762,
+      lng: 139.6503,
+      label: "Tokyo, Japan",
+    },
     sections: [
       {
         type: "paragraph",
@@ -277,6 +423,46 @@ export const mockBlogs: BlogPost[] = [
         caption: "Code reviews improve readability",
       },
     ],
+    places: [
+      {
+        id: "tok-shibuya",
+        name: "Shibuya Crossing",
+        description:
+          "Stood at the world's busiest pedestrian crossing. Shibuya's organized chaos is like a well-written codebase — thousands of moving pieces, yet everyone knows exactly where to go.",
+        coordinate: { lat: 35.6595, lng: 139.7004 },
+        photos: [
+          "https://picsum.photos/seed/tok-shibuya/800/500",
+          "https://picsum.photos/seed/tok-shibuya2/800/500",
+        ],
+      },
+      {
+        id: "tok-meiji-shrine",
+        name: "Meiji Shrine",
+        description:
+          "Found peace in the forested grounds of Meiji Shrine. The deliberate simplicity of the shrine's design philosophy aligns perfectly with writing readable code — remove everything that isn't essential.",
+        coordinate: { lat: 35.6764, lng: 139.6993 },
+        photos: ["https://picsum.photos/seed/tok-meiji/800/500"],
+      },
+      {
+        id: "tok-akihabara",
+        name: "Akihabara Electric Town",
+        description:
+          "Dove into Akihabara's multi-story electronics shops and retro game arcades. The district is a reminder that technology should spark joy — and so should the code we write.",
+        coordinate: { lat: 35.6984, lng: 139.7731 },
+        photos: [
+          "https://picsum.photos/seed/tok-akiba/800/500",
+          "https://picsum.photos/seed/tok-akiba2/800/500",
+        ],
+      },
+      {
+        id: "tok-teamlab",
+        name: "teamLab Borderless",
+        description:
+          "Immersed in the digital art world of teamLab Borderless. The way their installations flow seamlessly between rooms is the ultimate metaphor for readable, flowing code.",
+        coordinate: { lat: 35.6256, lng: 139.7838 },
+        photos: ["https://picsum.photos/seed/tok-teamlab/800/500"],
+      },
+    ],
   },
   {
     slug: "web-performance-in-2026",
@@ -288,6 +474,11 @@ export const mockBlogs: BlogPost[] = [
     publishedAt: "2026-01-08",
     readingTime: 9,
     tags: ["Performance", "Web Vitals", "Optimization", "UX"],
+    coordinate: {
+      lat: 37.5665,
+      lng: 126.978,
+      label: "Seoul, South Korea",
+    },
     sections: [
       {
         type: "paragraph",
@@ -332,6 +523,46 @@ export const mockBlogs: BlogPost[] = [
         src: "https://picsum.photos/seed/perf3/800/500",
         alt: "Performance improvement graph",
         caption: "Before and after optimization",
+      },
+    ],
+    places: [
+      {
+        id: "seo-gangnam",
+        name: "Gangnam Station Area",
+        description:
+          "Started in the heart of Gangnam's tech corridor. South Korea's internet speeds are legendary — testing web performance here sets the highest bar for what users expect.",
+        coordinate: { lat: 37.498, lng: 127.0276 },
+        photos: [
+          "https://picsum.photos/seed/seo-gangnam/800/500",
+          "https://picsum.photos/seed/seo-gangnam2/800/500",
+        ],
+      },
+      {
+        id: "seo-bukchon",
+        name: "Bukchon Hanok Village",
+        description:
+          "Wandered through the traditional hanok houses nestled between modern towers. The contrast between old and new is a reminder that performance optimization is about respecting constraints while pushing boundaries.",
+        coordinate: { lat: 37.5826, lng: 126.9831 },
+        photos: ["https://picsum.photos/seed/seo-bukchon/800/500"],
+      },
+      {
+        id: "seo-hongdae",
+        name: "Hongdae Street",
+        description:
+          "Explored Hongdae's vibrant street culture — live music, indie shops, and bustling cafes. The energy here is a perfect match for the fast-paced world of web performance where every millisecond counts.",
+        coordinate: { lat: 37.5563, lng: 126.9236 },
+        photos: [
+          "https://picsum.photos/seed/seo-hongdae/800/500",
+          "https://picsum.photos/seed/seo-hongdae2/800/500",
+        ],
+      },
+      {
+        id: "seo-namsan",
+        name: "N Seoul Tower",
+        description:
+          "Hiked up Namsan Mountain to N Seoul Tower for panoramic city views. From the top, the sprawling metropolis below is a visual metaphor for the scale at which performance truly matters.",
+        coordinate: { lat: 37.5512, lng: 126.9882 },
+        photos: ["https://picsum.photos/seed/seo-namsan/800/500"],
       },
     ],
   },

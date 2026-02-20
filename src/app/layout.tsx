@@ -43,12 +43,14 @@ export default function RootLayout({
   const isAuthPage = pathname === "/sign-in";
   const isBloggo = pathname?.startsWith("/bloggo") ?? false;
   const forceLightTheme =
+    pathname === "/" ||
     pathname === "/privacy" ||
     pathname === "/contact" ||
     pathname === "/terms" ||
     pathname === "/home" ||
     pathname === "/explore" ||
     pathname === "/profile" ||
+    pathname === "/learn-more" ||
     isBloggo ||
     (pathname?.startsWith("/profile/") ?? false);
 

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import Image from "next/image";
 
 const BASE = "/bloggo";
 
@@ -57,10 +58,10 @@ export default function BloggoHeader() {
               Demo Profile
             </Link>
             <Link
-              href={`${BASE}/editor/my-first-post`}
+              href="/login"
               className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium bg-sky-600 hover:bg-sky-500 text-white transition-all shadow-lg shadow-sky-900/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
             >
-              Start Writing
+              Sign In
             </Link>
           </div>
 
@@ -128,11 +129,11 @@ export default function BloggoHeader() {
                 Demo Profile
               </Link>
               <Link
-                href={`${BASE}/editor/my-first-post`}
+                href="/login"
                 onClick={() => setMobileOpen(false)}
                 className="px-4 py-2.5 rounded-xl text-sm font-medium bg-sky-600 hover:bg-sky-500 text-white text-center transition-all"
               >
-                Start Writing
+                Sign In
               </Link>
             </div>
           </nav>

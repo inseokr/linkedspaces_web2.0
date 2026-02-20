@@ -5,7 +5,7 @@ import JoinFutureSection from "./components/JoinSection";
 
 export default function LearnMoreView() {
   return (
-    <div>
+    <div className="bg-white min-h-screen">
       <TitleSection />
       <DescriptionSection />
       <JoinFutureSection />
