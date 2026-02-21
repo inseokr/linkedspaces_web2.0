@@ -58,7 +58,7 @@ export default function BloggoHeader() {
               Demo Profile
             </Link>
             <Link
-              href="/login"
+              href="/bloggo/sign-in"
               className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium bg-sky-600 hover:bg-sky-500 text-white transition-all shadow-lg shadow-sky-900/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
             >
               Sign In
@@ -129,7 +129,7 @@ export default function BloggoHeader() {
                 Demo Profile
               </Link>
               <Link
-                href="/login"
+                href="/bloggo/sign-in"
                 onClick={() => setMobileOpen(false)}
                 className="px-4 py-2.5 rounded-xl text-sm font-medium bg-sky-600 hover:bg-sky-500 text-white text-center transition-all"
               >
