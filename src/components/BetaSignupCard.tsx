@@ -31,7 +31,7 @@ export default function BetaSignupSection() {
   };
 
   return (
-    <section id="beta-sign-up" className="scroll-mt-28 w-full py-16">
+    <section id="beta-sign-up" className="scroll-mt-28 w-full py-4">
       {/* Outer container: center + max width similar to design */}
       <div className="mx-auto w-full max-w-[980px] px-6">
         {/* Card */}

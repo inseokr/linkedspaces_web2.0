@@ -17,15 +17,16 @@ const plans = [
     period: "",
     monthlyPrice: "Free",
     yearlyPrice: "Free",
-    description: "Perfect for getting started and sharing your travel blogs.",
+    description: "Create unlimited local blogs",
     badge: null as string | null,
     badgeVariant: "default" as const,
     features: [
-      "5 blog uploads",
-      "Unlimited blogs on phone",
-      "BlogGo subdomain",
-      "Basic analytics",
-      "Community support",
+      "Create unlimited local blogs",
+      "Publish up to 10 cloud blogs lifetime",
+      "Basic sharing (public link)",
+      "Web editor with full formatting control",
+      "Basic template",
+      "BlogGo watermark on public site",
     ],
     cta: "Get Started Free",
     ctaVariant: "secondary" as const,
@@ -37,19 +38,22 @@ const plans = [
     period: "/month",
     monthlyPrice: "$3.99",
     yearlyPrice: "$19.99",
-    description: "For serious bloggers who want to share their adventures!",
+    description: "Unlimited cloud blogs for serious travelers.",
     badge: "Most Popular",
     badgeVariant: "violet" as const,
     features: [
-      "Unlimited blogs",
-      "Unlimited posts",
-      "Newsletter (up to 1,000 subscribers)",
-      "Web blog editing",
-      "BlogGo subdomain",
+      "Unlimited cloud blogs",
+      "Remove BlogGo watermark",
+      "Advanced blog templates",
+      "Custom BlogGo subdomain",
+      "Web editor with full formatting control",
+      "Higher photo resolution uploads",
+      "Priority AI blog generation",
+      "Basic analytics (views & engagement)",
+      "Email newsletter up to 1,000 subscribers",
       "Priority support",
-      "Remove BlogGo branding",
     ],
-    cta: "Start Pro Trial",
+    cta: "Start Free Trial",
     ctaVariant: "primary" as const,
     href: `${BASE}/editor/my-first-post`,
   },
@@ -129,12 +133,7 @@ export default function PricingPage() {
                 billingCycle === "monthly"
                   ? plan.monthlyPrice
                   : plan.yearlyPrice;
-              const currentPeriod =
-                plan.name === "Starter"
-                  ? ""
-                  : billingCycle === "monthly"
-                    ? "/month"
-                    : "/year";
+              const currentPeriod = plan.period;
 
               return (
                 <Card

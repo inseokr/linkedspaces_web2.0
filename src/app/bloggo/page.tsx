@@ -9,7 +9,7 @@ const BASE = "/bloggo";
 
 const howItWorks = [
   {
-    step: "01",
+    step: "1",
     title: "Select Your Trip",
     description:
       "No digging through your camera roll. Your photos are already grouped by date and trip.",
@@ -17,7 +17,7 @@ const howItWorks = [
     icon: "📸",
   },
   {
-    step: "02",
+    step: "2",
     title: "We Organize by Place",
     description:
       "BlogGo detects real locations from your photo metadata and structures your trip into chapters by place.",
@@ -25,7 +25,7 @@ const howItWorks = [
     icon: "📍",
   },
   {
-    step: "03",
+    step: "3",
     title: "Your Recap Blog Is Built",
     description:
       "A structured, beautifully formatted recap is generated instantly. Edit, enrich, and share anywhere.",
@@ -81,6 +81,11 @@ export default function BloggoHomePage() {
             blog draft in seconds.
           </p>
           <div className="flex flex-wrap gap-4 justify-center mt-4">
+            <Link href={`${BASE}/profile/demo`}>
+              <Button size="lg" variant="secondary">
+                Demo Profile
+              </Button>
+            </Link>
             <Link href={`${BASE}/editor/new`}>
               <Button size="lg" variant="primary">
                 Try Today
@@ -98,11 +103,6 @@ export default function BloggoHomePage() {
                     d="M13 7l5 5m0 0l-5 5m5-5H6"
                   />
                 </svg>
-              </Button>
-            </Link>
-            <Link href={`${BASE}/profile/demo`}>
-              <Button size="lg" variant="secondary">
-                View Sample Recap
               </Button>
             </Link>
           </div>
@@ -132,7 +132,7 @@ export default function BloggoHomePage() {
                 padding="lg"
                 className="relative group hover:-translate-y-1 transition-transform duration-300"
               >
-                <div className="absolute top-6 right-6 text-4xl font-black text-black/5 select-none group-hover:text-violet-500/10 transition-colors">
+                <div className="absolute top-6 right-6 text-4xl font-black text-black/20 select-none group-hover:text-blue-600 transition-colors">
                   {step.step}
                 </div>
                 <div className="text-4xl mb-6" aria-hidden="true">

@@ -1,293 +1,534 @@
 "use client";
 
-import { useMemo, useState, useEffect, useRef } from "react";
-import { use } from "react";
-import Image from "next/image";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import Link from "next/link";
+import { use } from "react";
 import { notFound } from "next/navigation";
+
+import { getBlogBySlug } from "@/bloggo/lib/mock-data";
+
+// ── Reuse the exact same Trip-page components ─────────────────────────────────
+import RecapBlogHero from "@/views/Profile/Trip/component/RecapBlogTopImage";
+import { RecapBlogDaySection } from "@/views/Profile/Trip/component/RecapBlogPlace";
+import RecapDayTabs, {
+  type DayTab,
+} from "@/views/Profile/Trip/component/RecapDayTabs";
 import MapboxMap, {
   type MarkerData,
 } from "@/views/Profile/travel-stats/components/MapBoxMap";
-import { getBlogBySlug, type BlogPlace } from "@/bloggo/lib/mock-data";
-import Card from "@/bloggo/components/ui/Card";
-import Badge from "@/bloggo/components/ui/Badge";
+
+// ── Layout constants (mirrors OwnerTripRecapView / GuestRecapPage) ─────────────
+const TOPBAR_OFFSET_PX = 200;
+const PANEL_HEIGHT_OFFSET = 210;
+const PANEL_HEIGHT = `calc(100vh - ${PANEL_HEIGHT_OFFSET}px)`;
 
 interface Props {
   params: Promise<{ slug: string }>;
 }
 
+function useIsDesktopLg() {
+  const [isLg, setIsLg] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 1024px)");
+    const onChange = () => setIsLg(mq.matches);
+    onChange();
+    mq.addEventListener?.("change", onChange);
+    return () => mq.removeEventListener?.("change", onChange);
+  }, []);
+  return isLg;
+}
+
 export default function DemoBlogDetailView({ params }: Props) {
   const { slug } = use(params);
   const blog = getBlogBySlug(slug);
-
   if (!blog) notFound();
 
-  const listRef = useRef<HTMLDivElement>(null);
-  const placeRefs = useRef<Record<string, HTMLDivElement | null>>({});
-
-  const [activePlaceId, setActivePlaceId] = useState<string | undefined>(
-    blog.places[0]?.id,
+  // ── Build page model from mock data ────────────────────────────────────────
+  const hero = useMemo(
+    () => ({
+      coverImageUrl: blog.coverImage,
+      title: blog.title,
+      dateText: new Date(blog.publishedAt).toLocaleDateString("en-US", {
+        month: "long",
+        day: "numeric",
+        year: "numeric",
+      }),
+      locationText: blog.coordinate.label,
+      authorName: blog.author.name,
+      postedLabel: `@${blog.author.username}`,
+      avatarUrl: blog.author.avatar,
+    }),
+    [blog],
   );
-  const [focusLatLng, setFocusLatLng] = useState<
-    { lat: number; lng: number } | undefined
-  >(undefined);
 
-  // Build map markers from blog places
-  const markers: MarkerData[] = useMemo(() => {
-    return blog.places.map((place, idx) => ({
-      id: place.id,
-      lat: place.coordinate.lat,
-      lng: place.coordinate.lng,
-      year: new Date(blog.publishedAt).getFullYear(),
-      label: place.name,
-      imageUrl: place.photos[0] ?? blog.coverImage,
-      dateLabel: `Stop ${idx + 1}`,
-    }));
+  // Convert blog.places → RecapDay entries so we reuse RecapBlogDaySection
+  const days = useMemo(() => {
+    // Group places into days (2 places per day for the demo)
+    const PLACES_PER_DAY = 2;
+    const dayCount = Math.ceil(blog.places.length / PLACES_PER_DAY);
+
+    return Array.from({ length: dayCount }, (_, di) => {
+      const dayPlaces = blog.places.slice(
+        di * PLACES_PER_DAY,
+        di * PLACES_PER_DAY + PLACES_PER_DAY,
+      );
+      return {
+        dayIndex: di + 1,
+        title: dayPlaces.map((p) => p.name).join(" & "),
+        entries: dayPlaces.map((place, pi) => ({
+          id: `${di + 1}-${pi}`,
+          placeName: place.name,
+          timeRangeText: "",
+          categoryLabel: undefined as string | undefined,
+          liked: Math.random() > 0.4,
+          likeCount: Math.floor(Math.random() * 30) + 3,
+          commentCount: Math.floor(Math.random() * 8),
+          caption: place.description,
+          placeStory: place.description,
+          photos: place.photos.length > 0 ? place.photos : [blog.coverImage],
+          coordinate: {
+            latitude: place.coordinate.lat,
+            longitude: place.coordinate.lng,
+          },
+        })),
+      };
+    });
   }, [blog]);
 
-  // Scroll to a specific place card
-  const scrollToPlace = (placeId: string) => {
-    const el = placeRefs.current[placeId];
-    if (el && listRef.current) {
-      const listTop = listRef.current.getBoundingClientRect().top;
-      const elTop = el.getBoundingClientRect().top;
-      const offset = elTop - listTop + listRef.current.scrollTop - 20;
-      listRef.current.scrollTo({ top: offset, behavior: "smooth" });
-    }
-  };
+  const dayTabs: DayTab[] = useMemo(
+    () =>
+      days.map((d) => ({
+        id: `day-${d.dayIndex}`,
+        label: `Day ${d.dayIndex}`,
+      })),
+    [days],
+  );
 
-  // Handle clicking a place card
-  const handlePlaceClick = (placeId: string) => {
-    const place = blog.places.find((p) => p.id === placeId);
-    if (place) {
-      setFocusLatLng({
+  // All markers — one per place
+  const allMarkers = useMemo<MarkerData[]>(() => {
+    return blog.places.map((place, idx) => {
+      const dayIndex = Math.floor(idx / 2) + 1;
+      const posIdx = idx % 2;
+      return {
+        id: `${dayIndex}-${posIdx}`,
         lat: place.coordinate.lat,
         lng: place.coordinate.lng,
-      });
-      setActivePlaceId(placeId);
-    }
-  };
+        year: new Date(blog.publishedAt).getFullYear(),
+        label: place.name,
+        imageUrl: place.photos[0] ?? blog.coverImage,
+        visitIndex: idx + 1,
+      };
+    });
+  }, [blog]);
 
-  // Handle marker click on map
-  const handleMarkerClick = (markerId: string) => {
-    scrollToPlace(markerId);
-    handlePlaceClick(markerId);
-  };
+  // Entry id → day id map
+  const entryIdToDayId = useMemo(() => {
+    const map = new Map<string, string>();
+    days.forEach((d) => {
+      const dayId = `day-${d.dayIndex}`;
+      d.entries.forEach((e) => map.set(e.id, dayId));
+    });
+    return map;
+  }, [days]);
 
-  // Scroll spy: update active place based on scroll position
+  // ── State ─────────────────────────────────────────────────────────────────
+  const [activeDayId, setActiveDayId] = useState<string>(
+    dayTabs[0]?.id ?? "day-1",
+  );
+  const activeDayIdRef = useRef(activeDayId);
   useEffect(() => {
-    const list = listRef.current;
-    if (!list) return;
+    activeDayIdRef.current = activeDayId;
+  }, [activeDayId]);
 
-    const handleScroll = () => {
-      const listRect = list.getBoundingClientRect();
-      const triggerY = listRect.top + listRect.height / 3;
+  const [focusLatLng, setFocusLatLng] = useState<
+    { lat: number; lng: number } | undefined
+  >();
+  const [userInteracted, setUserInteracted] = useState(false);
+  const [activeEntryId, setActiveEntryId] = useState<string | null>(null);
+  const activeEntryIdRef = useRef<string | null>(null);
+  const focusTimerRef = useRef<number | null>(null);
+  const isProgrammaticScrollRef = useRef(false);
 
-      let bestId = activePlaceId;
-      let minDist = Infinity;
+  // ── Refs ──────────────────────────────────────────────────────────────────
+  const leftScrollRef = useRef<HTMLDivElement | null>(null);
+  const daySectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const entryRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const mapStickyRef = useRef<HTMLElement | null>(null);
+  const isLg = useIsDesktopLg();
 
-      Object.entries(placeRefs.current).forEach(([id, el]) => {
-        if (!el) return;
-        const rect = el.getBoundingClientRect();
-        const dist = Math.abs(rect.top - triggerY);
-        if (dist < minDist && dist < listRect.height) {
-          minDist = dist;
-          bestId = id;
-        }
-      });
+  // Initial focus on first marker — defer setState to avoid synchronous
+  // setState-in-effect lint error (react-hooks/set-state-in-effect)
+  useEffect(() => {
+    if (focusLatLng) return;
+    if (!allMarkers.length) return;
+    const first = allMarkers[0];
+    activeEntryIdRef.current = first.id;
+    const timer = setTimeout(() => {
+      setActiveEntryId(first.id);
+      setFocusLatLng({ lat: first.lat, lng: first.lng });
+    }, 0);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allMarkers.length]);
 
-      if (bestId && bestId !== activePlaceId) {
-        setActivePlaceId(bestId);
-        const place = blog.places.find((p) => p.id === bestId);
-        if (place) {
-          setFocusLatLng({
-            lat: place.coordinate.lat,
-            lng: place.coordinate.lng,
-          });
-        }
+  // Mark user interaction
+  useEffect(() => {
+    const mark = () => setUserInteracted(true);
+    window.addEventListener("pointerdown", mark, { once: true });
+    window.addEventListener("keydown", mark, { once: true });
+    window.addEventListener("wheel", mark, { once: true, passive: true });
+    return () => {
+      window.removeEventListener("pointerdown", mark);
+      window.removeEventListener("keydown", mark);
+      window.removeEventListener("wheel", mark);
+    };
+  }, []);
+
+  // Reset scroll on mount
+  useLayoutEffect(() => {
+    const root = leftScrollRef.current;
+    if (!root) return;
+    if (userInteracted) return;
+    root.style.scrollBehavior = "auto";
+    root.scrollTop = 0;
+    let raf = 0;
+    const start = performance.now();
+    const pump = () => {
+      if (userInteracted || isProgrammaticScrollRef.current) return;
+      if (root.scrollTop !== 0) root.scrollTop = 0;
+      if (performance.now() - start < 1200) raf = requestAnimationFrame(pump);
+    };
+    raf = requestAnimationFrame(pump);
+    return () => cancelAnimationFrame(raf);
+  }, [userInteracted]);
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
+  const focusToEntryId = useCallback(
+    (entryId: string) => {
+      const m = allMarkers.find((x) => x.id === entryId);
+      if (!m) return;
+      setFocusLatLng({ lat: m.lat, lng: m.lng });
+    },
+    [allMarkers],
+  );
+
+  const getClosestEntryToCenter = useCallback(() => {
+    const root = leftScrollRef.current;
+    if (!root) return null;
+    const rootRect = root.getBoundingClientRect();
+    const centerY = rootRect.top + rootRect.height * 0.6;
+    let bestId: string | null = null;
+    let bestDist = Infinity;
+    for (const [id, el] of Object.entries(entryRefs.current)) {
+      if (!el) continue;
+      const r = el.getBoundingClientRect();
+      const dist = Math.abs(r.top + r.height / 2 - centerY);
+      if (dist < bestDist) {
+        bestDist = dist;
+        bestId = id;
       }
+    }
+    return bestId;
+  }, []);
+
+  const scheduleFocusToEntry = useCallback(
+    (entryId: string) => {
+      if (focusTimerRef.current) window.clearTimeout(focusTimerRef.current);
+      focusTimerRef.current = window.setTimeout(() => {
+        if (activeEntryIdRef.current === entryId) return;
+        activeEntryIdRef.current = entryId;
+        setActiveEntryId(entryId);
+        focusToEntryId(entryId);
+        const dayId = entryIdToDayId.get(entryId);
+        if (dayId && dayId !== activeDayIdRef.current) setActiveDayId(dayId);
+      }, 120);
+    },
+    [focusToEntryId, entryIdToDayId],
+  );
+
+  const scrollToDay = useCallback((dayId: string) => {
+    const root = leftScrollRef.current;
+    const el = daySectionRefs.current[dayId];
+    if (!root || !el) return;
+    isProgrammaticScrollRef.current = true;
+    const rootRect = root.getBoundingClientRect();
+    const elRect = el.getBoundingClientRect();
+    root.scrollTo({
+      top: elRect.top - rootRect.top + root.scrollTop - 12,
+      behavior: "smooth",
+    });
+    window.setTimeout(() => {
+      isProgrammaticScrollRef.current = false;
+    }, 650);
+  }, []);
+
+  const scrollToEntry = useCallback((entryId: string) => {
+    const root = leftScrollRef.current;
+    const el = entryRefs.current[entryId];
+    if (!root || !el) return;
+    isProgrammaticScrollRef.current = true;
+    const rootRect = root.getBoundingClientRect();
+    const elRect = el.getBoundingClientRect();
+    const targetTop = elRect.top - rootRect.top + root.scrollTop - 12;
+    const maxTop = root.scrollHeight - root.clientHeight;
+    root.scrollTo({
+      top: Math.min(Math.max(0, targetTop), Math.max(0, maxTop)),
+      behavior: "smooth",
+    });
+    window.setTimeout(() => {
+      isProgrammaticScrollRef.current = false;
+    }, 650);
+  }, []);
+
+  // ── Scroll spy ────────────────────────────────────────────────────────────
+  useEffect(() => {
+    const root = leftScrollRef.current;
+    if (!root || !dayTabs.length) return;
+
+    const computeActive = () => {
+      if (isProgrammaticScrollRef.current) return;
+      const rootRect = root.getBoundingClientRect();
+      const triggerY = rootRect.top + 16;
+      let chosen: string | null = null;
+      for (const t of dayTabs) {
+        const el = daySectionRefs.current[t.id];
+        if (!el) continue;
+        if (el.getBoundingClientRect().top <= triggerY) chosen = t.id;
+        else break;
+      }
+      if (!chosen) {
+        const first = dayTabs[0]?.id;
+        if (first && first !== activeDayIdRef.current) setActiveDayId(first);
+      } else if (chosen !== activeDayIdRef.current) {
+        setActiveDayId(chosen);
+      }
+      const closestEntryId = getClosestEntryToCenter();
+      if (closestEntryId) scheduleFocusToEntry(closestEntryId);
     };
 
-    let timeout: NodeJS.Timeout;
-    const debouncedScroll = () => {
-      clearTimeout(timeout);
-      timeout = setTimeout(handleScroll, 100);
+    let ticking = false;
+    const onScroll = () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        ticking = false;
+        computeActive();
+      });
     };
 
-    list.addEventListener("scroll", debouncedScroll, { passive: true });
-    return () => list.removeEventListener("scroll", debouncedScroll);
-  }, [activePlaceId]);
+    const ro = new ResizeObserver(() => computeActive());
+    ro.observe(root);
+    requestAnimationFrame(computeActive);
+    setTimeout(computeActive, 150);
+    setTimeout(computeActive, 600);
+    root.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", computeActive);
+    return () => {
+      ro.disconnect();
+      root.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", computeActive);
+      if (focusTimerRef.current) window.clearTimeout(focusTimerRef.current);
+    };
+  }, [dayTabs, allMarkers, getClosestEntryToCenter, scheduleFocusToEntry]);
 
+  // Wheel hijack (map area → left panel scroll) — same as GuestRecapPage
+  useLayoutEffect(() => {
+    const root = leftScrollRef.current;
+    if (!root) return;
+
+    const canScrollLeftPanel = (dy: number) => {
+      const max = root.scrollHeight - root.clientHeight;
+      if (max <= 0) return false;
+      if (dy > 0 && root.scrollTop >= max - 1) return false;
+      if (dy < 0 && root.scrollTop <= 0) return false;
+      return true;
+    };
+
+    const onWheel = (e: WheelEvent) => {
+      if (!userInteracted || isProgrammaticScrollRef.current || e.ctrlKey)
+        return;
+      const mapEl = mapStickyRef.current;
+      if (!mapEl) return;
+      const rect = mapEl.getBoundingClientRect();
+      if (rect.top > TOPBAR_OFFSET_PX + 1) return;
+      if (!canScrollLeftPanel(e.deltaY)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      root.scrollTop += e.deltaY;
+    };
+
+    const opts: AddEventListenerOptions = { passive: false, capture: true };
+    window.addEventListener("wheel", onWheel, opts);
+    document.addEventListener("wheel", onWheel, opts);
+    return () => {
+      window.removeEventListener("wheel", onWheel, opts);
+      document.removeEventListener("wheel", onWheel, opts);
+    };
+  }, [userInteracted]);
+
+  // ── Day tab click ─────────────────────────────────────────────────────────
+  const handleDayChange = useCallback(
+    (dayId: string) => {
+      setActiveDayId(dayId);
+      scrollToDay(dayId);
+      const dayIndex = Number(dayId.replace("day-", ""));
+      const firstEntry = days.find((d) => d.dayIndex === dayIndex)
+        ?.entries?.[0];
+      if (firstEntry) {
+        activeEntryIdRef.current = firstEntry.id;
+        setActiveEntryId(firstEntry.id);
+        focusToEntryId(firstEntry.id);
+      }
+    },
+    [days, scrollToDay, focusToEntryId],
+  );
+
+  // ── Marker click ──────────────────────────────────────────────────────────
+  const onMarkerClick = useCallback(
+    (markerId: string) => {
+      activeEntryIdRef.current = markerId;
+      setActiveEntryId(markerId);
+      focusToEntryId(markerId);
+      const dayId = entryIdToDayId.get(markerId);
+      if (dayId) setActiveDayId(dayId);
+      scrollToEntry(markerId);
+    },
+    [focusToEntryId, entryIdToDayId, scrollToEntry],
+  );
+
+  // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className="flex flex-col lg:flex-row h-[calc(100vh-64px)] overflow-hidden bg-[var(--bloggo-bg)]">
-      {/* Left Panel: Blog Header + Place Cards */}
-      <aside className="w-full lg:w-[520px] flex-shrink-0 flex flex-col border-r border-[var(--bloggo-border)] bg-gray-50/50">
-        {/* Sticky blog header */}
-        <div className="p-6 border-b border-[var(--bloggo-border)] bg-white z-10 shadow-sm">
-          <Link
-            href="/bloggo/profile/demo"
-            className="text-sm text-sky-600 hover:text-sky-500 transition-colors mb-3 inline-flex items-center gap-1"
-          >
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
+    <div className="min-h-screen bg-white">
+      {/* Back link bar */}
+      <div className="sticky top-0 z-30 border-b border-black/10 bg-white/95 backdrop-blur-md">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="flex h-12 items-center gap-4">
+            <Link
+              href="/bloggo/profile/demo"
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-sky-600 hover:text-sky-500 transition-colors"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M15 19l-7-7 7-7"
-              />
-            </svg>
-            Back to profile
-          </Link>
-
-          {/* Cover image */}
-          <div className="relative w-full h-36 rounded-xl overflow-hidden mb-4">
-            <Image
-              src={blog.coverImage}
-              alt={blog.title}
-              fill
-              className="object-cover"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
-            <div className="absolute bottom-3 left-3 right-3">
-              <h1 className="text-lg font-bold text-white leading-tight">
-                {blog.title}
-              </h1>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 text-sm text-[var(--bloggo-text-muted)]">
-            <span>{blog.coordinate.label}</span>
-            <span>&middot;</span>
-            <span>{blog.readingTime} min read</span>
-            <span>&middot;</span>
-            <span>
-              {blog.places.length} place
-              {blog.places.length !== 1 ? "s" : ""}
-            </span>
-          </div>
-          <div className="flex flex-wrap gap-1.5 mt-3">
-            {blog.tags.map((tag) => (
-              <Badge key={tag} variant="violet">
-                {tag}
-              </Badge>
-            ))}
-          </div>
-        </div>
-
-        {/* Scrollable place cards */}
-        <div
-          ref={listRef}
-          className="flex-1 overflow-y-auto p-4 space-y-6 scroll-smooth"
-        >
-          {blog.places.map((place, idx) => (
-            <div
-              key={place.id}
-              ref={(el) => {
-                placeRefs.current[place.id] = el;
-              }}
-              onClick={() => handlePlaceClick(place.id)}
-              className="cursor-pointer"
-            >
-              <Card
-                padding="none"
-                className={`overflow-hidden transition-all duration-300 ${
-                  activePlaceId === place.id
-                    ? "ring-2 ring-sky-500 ring-offset-2 shadow-lg"
-                    : "hover:shadow-md hover:border-sky-500/30"
-                }`}
+              <svg
+                className="h-4 w-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
               >
-                {/* Place cover photo */}
-                {place.photos.length > 0 && (
-                  <div className="relative w-full h-48">
-                    <Image
-                      src={place.photos[0]}
-                      alt={place.name}
-                      fill
-                      className="object-cover"
-                    />
-                    <div className="absolute top-3 left-3">
-                      <span className="inline-flex items-center gap-1 rounded-full bg-white/80 backdrop-blur-sm px-2.5 py-1 text-xs font-semibold text-black/70">
-                        {idx + 1} of {blog.places.length}
-                      </span>
-                    </div>
-                  </div>
-                )}
-
-                {/* Place content */}
-                <div className="p-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <svg
-                      className="w-5 h-5 text-sky-500 flex-shrink-0"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                      />
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                      />
-                    </svg>
-                    <h3 className="text-lg font-semibold text-[var(--bloggo-text-primary)]">
-                      {place.name}
-                    </h3>
-                  </div>
-                  <p className="text-sm text-[var(--bloggo-text-secondary)] leading-relaxed">
-                    {place.description}
-                  </p>
-
-                  {/* Photo thumbnails if more than 1 photo */}
-                  {place.photos.length > 1 && (
-                    <div className="flex gap-2 mt-3 overflow-x-auto">
-                      {place.photos.slice(1).map((photo, i) => (
-                        <div
-                          key={i}
-                          className="relative w-16 h-16 flex-shrink-0 rounded-lg overflow-hidden border border-[var(--bloggo-border)]"
-                        >
-                          <Image
-                            src={photo}
-                            alt=""
-                            fill
-                            className="object-cover"
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </Card>
-            </div>
-          ))}
-
-          <div className="h-24 flex items-center justify-center text-[var(--bloggo-text-muted)] text-sm">
-            End of places
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15 19l-7-7 7-7"
+                />
+              </svg>
+              Back to profile
+            </Link>
           </div>
         </div>
-      </aside>
+      </div>
 
-      {/* Right Panel: Map */}
-      <main className="flex-1 relative bg-gray-100 hidden lg:block">
-        <MapboxMap
-          countryCode="US"
-          worldview="US"
-          focusLatLng={focusLatLng}
-          markers={markers}
-          activeMarkerId={activePlaceId}
-          onMarkerClick={handleMarkerClick}
-        />
-      </main>
+      <div className="p-3 sm:p-4">
+        {/* Hero */}
+        <RecapBlogHero {...hero} />
+
+        {/* Mobile day tabs */}
+        {!isLg && (
+          <div className="sticky top-12 z-20 mt-3 overflow-x-auto rounded-2xl border border-black/10 bg-white/95 p-3 shadow-sm backdrop-blur-md">
+            <RecapDayTabs
+              tabs={dayTabs}
+              activeId={activeDayId}
+              onChange={(id) => handleDayChange(id)}
+            />
+          </div>
+        )}
+      </div>
+
+      {/* Body: left scroll + right sticky map */}
+      <div className="flex flex-col gap-4 p-3 sm:p-4 lg:flex-row lg:items-start">
+        {/* Left: scrollable day/place list */}
+        <section
+          className="min-w-0 flex-1 lg:sticky lg:self-start"
+          style={{ top: TOPBAR_OFFSET_PX }}
+        >
+          <div
+            ref={leftScrollRef}
+            className="w-full overflow-y-auto overscroll-contain touch-pan-y rounded-2xl"
+            style={{
+              height: isLg ? PANEL_HEIGHT : "auto",
+              maxHeight: isLg ? undefined : "none",
+              scrollBehavior: "auto",
+              overflowAnchor: "none",
+            }}
+          >
+            <div className="space-y-12 p-4">
+              {days.map((d) => {
+                const id = `day-${d.dayIndex}`;
+                return (
+                  <div
+                    key={id}
+                    data-day-id={id}
+                    ref={(el) => {
+                      daySectionRefs.current[id] = el;
+                    }}
+                    style={{ scrollMarginTop: 12 }}
+                  >
+                    <RecapBlogDaySection
+                      dayIndex={d.dayIndex}
+                      title={d.title}
+                      entries={d.entries as any}
+                      onEntryMount={(entryId, el) => {
+                        entryRefs.current[entryId] = el;
+                      }}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
+        {/* Right: sticky map */}
+        <section
+          ref={(el) => {
+            mapStickyRef.current = el;
+          }}
+          className="min-w-0 flex-1 hidden lg:block lg:sticky lg:self-start"
+          style={{ top: TOPBAR_OFFSET_PX }}
+        >
+          {/* Map container — position:relative so day tabs can overlay */}
+          <div
+            className="relative w-full overflow-hidden rounded-2xl border border-black/10"
+            style={{ height: PANEL_HEIGHT }}
+          >
+            <MapboxMap
+              mode="place"
+              focusLatLng={focusLatLng}
+              placeMarkers={allMarkers}
+              onPlaceMarkerClick={onMarkerClick}
+              activePlaceMarkerId={activeEntryId ?? undefined}
+              useSimpleMarkers
+            />
+
+            {/* Day tabs — absolute overlay, top-right corner of the map */}
+            <div className="pointer-events-auto absolute right-3 top-3 z-10">
+              <div className="rounded-2xl border border-black/10 bg-white/90 p-2 shadow-lg backdrop-blur-md">
+                <RecapDayTabs
+                  tabs={dayTabs}
+                  activeId={activeDayId}
+                  onChange={(id) => handleDayChange(id)}
+                  size="sm"
+                />
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
     </div>
   );
 }

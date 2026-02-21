@@ -17,7 +17,7 @@ export default function BetaSignUpView() {
       </div>
 
       {/* Content */}
-      <div className="relative mt-47 z-10 flex items-center justify-center px-4">
+      <div className="relative mt-16 z-10 flex items-center justify-center px-4">
         <div className="w-full ">
           <BetaSignUpSection />
         </div>
