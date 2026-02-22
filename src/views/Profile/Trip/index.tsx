@@ -43,6 +43,7 @@ interface TripRecapViewProps {
   userId: string;
   tripId: string;
   basePath?: string;
+  brand?: "linkedspaces" | "bloggo";
 }
 
 import GuestRecapPage from "./GuestModeIndex";
@@ -82,6 +83,7 @@ export default function TripRecapView({
   userId,
   tripId,
   basePath,
+  brand,
 }: TripRecapViewProps) {
   const { isLoading: authLoading, isAuthenticated } = useAuth();
 
@@ -178,10 +180,22 @@ export default function TripRecapView({
   if (!isOwner) return <GuestTripRecapShell userId={userId} tripId={tripId} />;
 
   // 소유자만 아래 오너 뷰 렌더
-  return <OwnerTripRecapView userId={userId} tripId={tripId} />;
+  return (
+    <OwnerTripRecapView
+      userId={userId}
+      tripId={tripId}
+      basePath={basePath}
+      brand={brand}
+    />
+  );
 }
 
-function OwnerTripRecapView({ userId, tripId, basePath }: TripRecapViewProps) {
+function OwnerTripRecapView({
+  userId,
+  tripId,
+  basePath,
+  brand,
+}: TripRecapViewProps) {
   const router = useRouter();
   const isLg = useIsDesktopLg();
 
@@ -913,6 +927,7 @@ function OwnerTripRecapView({ userId, tripId, basePath }: TripRecapViewProps) {
         onEditBlog={() =>
           router.push(`${basePath || "/trip"}/${userId}/${tripId}/edit`)
         }
+        brand={brand}
         className="sticky top-0 z-50 border-b border-black/10"
       />
 

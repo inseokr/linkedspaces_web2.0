@@ -112,14 +112,24 @@ export default function RecapBlogTopBar({
     >
       <div className="w-full px-6 py-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          {/* Left: Title */}
+          {/* Left: Go Back (bloggo) or Title (linkedspaces) */}
           <div className="min-w-0 flex items-center gap-3">
-            <h1 className="min-w-0 truncate text-[16px] sm:text-[18px] font-semibold text-black/70">
-              {title}
-            </h1>
+            {brand === "bloggo" && onGoBack ? (
+              <button
+                type="button"
+                onClick={onGoBack}
+                className={secondaryButtonClass}
+              >
+                ← Go Back
+              </button>
+            ) : (
+              <h1 className="min-w-0 truncate text-[16px] sm:text-[18px] font-semibold text-black/70">
+                {title}
+              </h1>
+            )}
           </div>
 
-          {/* Right: Go Back + Actions (Edit / Share) */}
+          {/* Right: Actions (Edit / Share / Go Back for linkedspaces) */}
           <div className="flex items-center gap-2">
             {mode === "edit" ? (
               <>
@@ -190,7 +200,8 @@ export default function RecapBlogTopBar({
                   Share
                 </button>
 
-                {onGoBack && (
+                {/* Go Back only on the right for non-bloggo brands */}
+                {onGoBack && brand !== "bloggo" && (
                   <button
                     type="button"
                     onClick={onGoBack}

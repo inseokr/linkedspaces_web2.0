@@ -490,7 +490,7 @@ export default function ProfilePage() {
                 ? assetUrl(u.profile_picture)
                 : undefined,
               countryCode: trip.countryCode,
-              countryName: trip.country,
+              countryName: trip.countryName || trip.country,
               coordinate: trip.coordinate
                 ? {
                     lat:
@@ -592,7 +592,8 @@ export default function ProfilePage() {
     const map = new Map<string, CountrySummary>();
     for (const blog of filteredBlogs) {
       const countryCode = blog.countryCode || "UNKNOWN";
-      const countryName = blog.countryName || "Other Destinations";
+      const countryName =
+        blog.countryName || blog.countryCode || "Other Destinations";
 
       const src = blog.createdAt || blog.tripDateRangeText || "";
       const match = src.match(/\b(20\d{2}|19\d{2})\b/);

@@ -7,6 +7,11 @@ type PageProps = {
 export default async function Page({ params }: PageProps) {
   const { username, id } = await params;
   return (
-    <TripRecapView userId={username} tripId={id} basePath="/bloggo/trip" />
+    <TripRecapView
+      userId={username}
+      tripId={id}
+      basePath="/bloggo/trip"
+      brand="bloggo"
+    />
   );
 }
