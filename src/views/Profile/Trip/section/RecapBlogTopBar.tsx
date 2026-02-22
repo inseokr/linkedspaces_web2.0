@@ -1,11 +1,12 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import RecapDayTabs, {
   type DayTab,
 } from "@/views/Profile/Trip/component/RecapDayTabs";
 import Image from "next/image";
 import updateIcon from "@/assets/icons/update.svg";
+import { Check } from "lucide-react";
 
 type Props = {
   title?: string;
@@ -50,6 +51,8 @@ export default function RecapBlogTopBar({
   brand = "linkedspaces",
   className = "",
 }: Props) {
+  const [showToast, setShowToast] = useState(false);
+
   const secondaryButtonClass =
     "h-9 rounded-full px-4 text-sm font-semibold leading-none tracking-[-0.01em] whitespace-nowrap " +
     "border border-black/15 text-black/70 " +
@@ -93,7 +96,8 @@ export default function RecapBlogTopBar({
     try {
       if (window.navigator.clipboard?.writeText) {
         await window.navigator.clipboard.writeText(url);
-        alert("Link copied!");
+        setShowToast(true);
+        setTimeout(() => setShowToast(false), 3000);
         return;
       }
     } catch (err) {
@@ -110,10 +114,20 @@ export default function RecapBlogTopBar({
     <header
       className={[
         "sticky top-[0px] z-50", // 필요에 맞게 px 조정
-        "w-full bg-white/85 backdrop-blur border-b border-black/10",
+        "w-full bg-white/85 backdrop-blur border-b border-black/10 relative",
         className,
       ].join(" ")}
     >
+      {/* Toast Notification */}
+      <div
+        className={[
+          "absolute left-1/2 top-4 -translate-x-1/2 flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-sm font-medium text-white shadow-2xl transition-all duration-300 pointer-events-none z-50",
+          showToast ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-4",
+        ].join(" ")}
+      >
+        <Check className="h-4 w-4 text-emerald-400" />
+        Blog link copied to share!
+      </div>
       <div className="w-full px-6 py-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           {/* Left: Go Back (bloggo) or Title (linkedspaces) */}

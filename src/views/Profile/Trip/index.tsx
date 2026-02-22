@@ -66,7 +66,7 @@ function useIsDesktopLg() {
   return isLg;
 }
 
-function GuestTripRecapShell({ userId, tripId }: TripRecapViewProps) {
+function GuestTripRecapShell({ userId, tripId, brand }: TripRecapViewProps) {
   const { setLayoutMode } = useLayoutMode();
 
   useEffect(() => {
@@ -74,7 +74,7 @@ function GuestTripRecapShell({ userId, tripId }: TripRecapViewProps) {
     return () => setLayoutMode("profile");
   }, [setLayoutMode]);
 
-  return <GuestRecapPage userId={userId} tripId={tripId} />;
+  return <GuestRecapPage userId={userId} tripId={tripId} brand={brand} />;
 }
 
 import { getCachedUser } from "@/api/user";
@@ -177,7 +177,10 @@ export default function TripRecapView({
     return <div className="p-6">Loading…</div>;
 
   // 소유자 불일치도 게스트
-  if (!isOwner) return <GuestTripRecapShell userId={userId} tripId={tripId} />;
+  if (!isOwner)
+    return (
+      <GuestTripRecapShell userId={userId} tripId={tripId} brand={brand} />
+    );
 
   // 소유자만 아래 오너 뷰 렌더
   return (

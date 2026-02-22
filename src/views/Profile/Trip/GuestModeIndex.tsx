@@ -27,8 +27,10 @@ import MapboxMap, {
 import SignInHeroCard from "./component/GuestSignInHeroCard";
 
 import SignInModal from "./component/GuestSignInModal";
+import BloggoSignInModal from "./component/BloggoSignInModal";
 import DownloadVideoModal from "./component/GuestDownloadVideoModal";
-import { isLoginSuccess, loginWithJwt } from "@/api/auth";
+import { isLoginSuccess, loginWithJwt, loginWithGoogle } from "@/api/auth";
+import { assertBloggoUser } from "@/lib/bloggo";
 import { setCachedUser } from "@/api/user";
 import { notifyAuthChanged } from "@/hooks/useAuth";
 
@@ -719,6 +721,7 @@ import BottomSheet from "@/components/ui/BottomSheet";
 type Props = {
   userId: string;
   tripId: string;
+  brand?: "linkedspaces" | "bloggo";
 };
 
 // 모바일 감지 훅 (그대로)
@@ -736,7 +739,7 @@ function useIsDesktopLg() {
   return isLg;
 }
 
-export default function GuestRecapPage({ userId, tripId }: Props) {
+export default function GuestRecapPage({ userId, tripId, brand }: Props) {
   const router = useRouter();
   const isLg = useIsDesktopLg();
 
@@ -1524,15 +1527,31 @@ export default function GuestRecapPage({ userId, tripId }: Props) {
   // ===== render (기존 UI 그대로) =====
   return (
     <div className="min-h-screen bg-white">
-      <RecapLoginBar
-        onSignIn={() => setIsSignInOpen(true)}
-        className={[
-          "transition-[opacity,transform] duration-200 will-change-transform",
-          hideLoginBar
-            ? "opacity-0 -translate-y-full pointer-events-none"
-            : "opacity-100 translate-y-0",
-        ].join(" ")}
-      />
+      {brand === "bloggo" ? (
+        <div className="sticky top-0 z-[150] w-full bg-white/85 backdrop-blur-md border-b border-black/10">
+          <div className="flex h-[74px] items-center justify-between px-6">
+            <div className="font-bold text-xl tracking-tight text-sky-600">
+              Bloggo
+            </div>
+            <button
+              onClick={() => setIsSignInOpen(true)}
+              className="h-9 rounded-full bg-sky-600 px-5 text-sm font-semibold text-white shadow-sm hover:bg-sky-700 transition"
+            >
+              Sign In
+            </button>
+          </div>
+        </div>
+      ) : (
+        <RecapLoginBar
+          onSignIn={() => setIsSignInOpen(true)}
+          className={[
+            "transition-[opacity,transform] duration-200 will-change-transform",
+            hideLoginBar
+              ? "opacity-0 -translate-y-full pointer-events-none"
+              : "opacity-100 translate-y-0",
+          ].join(" ")}
+        />
+      )}
       {/* push content below the fixed login bar */}
       <div style={{ height: LOGIN_BAR_HEIGHT_PX }} />
 
@@ -1720,53 +1739,110 @@ export default function GuestRecapPage({ userId, tripId }: Props) {
         </>
       )}
 
-      <div className="px-3 pb-10 pt-10">
-        <div className="mx-auto w-[95%]">
-          <SignInHeroCard
-            title={"Save your moments\non LinkedSpaces."}
-            subtitle={"We turn your photos into travel\nrecap blogs"}
-            primaryLabel="Sign in"
-            secondaryLabel="Download app"
-            onPrimaryClick={() => setIsSignInOpen(true)}
-            onSecondaryClick={() => setIsDownloadOpen(true)}
-            backgroundSrc="/images/sign-in-bg2.png"
+      {brand !== "bloggo" ? (
+        <>
+          {/* Temporarily hidden CTA
+          <div className="px-3 pb-10 pt-10">
+            <div className="mx-auto w-[95%]">
+              <SignInHeroCard
+                title={"Save your moments\non LinkedSpaces."}
+                subtitle={"We turn your photos into travel\nrecap blogs"}
+                primaryLabel="Sign in"
+                secondaryLabel="Download app"
+                onPrimaryClick={() => setIsSignInOpen(true)}
+                onSecondaryClick={() => setIsDownloadOpen(true)}
+                backgroundSrc="/images/sign-in-bg2.png"
+              />
+            </div>
+          </div>
+          */}
+
+          <SignInModal
+            open={isSignInOpen}
+            onClose={closeSignIn}
+            onGoogleSignIn={() => router.push("/sign-in")}
+            onLogin={async ({ username, password, remember }) => {
+              try {
+                const data = await loginWithJwt(username, password);
+                if (isLoginSuccess(data)) {
+                  persistTokenBestEffort(data.token, remember);
+                  setCachedUser(data.user);
+                  notifyAuthChanged();
+                  closeSignIn();
+                  // Ensure TripRecapView recomputes owner/guest shell.
+                  router.refresh();
+                  return;
+                }
+                alert("check username or password.");
+              } catch (e) {
+                console.error("[login] jwt failed", e);
+                alert("Failed to log in. Please try again.");
+              }
+            }}
+            onForgotPassword={() => router.push("/sign-in")}
+            onCreateAccount={() => router.push("/sign-in")}
           />
-        </div>
-      </div>
 
-      <SignInModal
-        open={isSignInOpen}
-        onClose={closeSignIn}
-        onGoogleSignIn={() => router.push("/sign-in")}
-        onLogin={async ({ username, password, remember }) => {
-          try {
-            const data = await loginWithJwt(username, password);
-            if (isLoginSuccess(data)) {
-              persistTokenBestEffort(data.token, remember);
-              setCachedUser(data.user);
-              notifyAuthChanged();
-              closeSignIn();
-              // Ensure TripRecapView recomputes owner/guest shell.
-              router.refresh();
-              return;
+          <DownloadVideoModal
+            open={isDownloadOpen}
+            onClose={closeDownload}
+            title="Join to LinkedSpaces!"
+            videoSrc="/videos/download.mp4"
+            loop
+          />
+        </>
+      ) : (
+        <BloggoSignInModal
+          open={isSignInOpen}
+          onClose={closeSignIn}
+          onGoogleSignIn={async (credential) => {
+            try {
+              const data = await loginWithGoogle(credential);
+              if (isLoginSuccess(data)) {
+                const result = assertBloggoUser(data.user);
+                if (!result.ok) {
+                  alert(result.message);
+                  return;
+                }
+                persistTokenBestEffort(data.token, false);
+                setCachedUser(data.user as any);
+                notifyAuthChanged();
+                closeSignIn();
+                router.refresh();
+                return;
+              }
+              alert("Failed to log in with Google.");
+            } catch (e) {
+              console.error("[bloggo-login] google failed", e);
+              alert("Failed to log in. Please try again.");
             }
-            alert("check username or password.");
-          } catch (e) {
-            console.error("[login] jwt failed", e);
-            alert("Failed to log in. Please try again.");
-          }
-        }}
-        onForgotPassword={() => router.push("/sign-in")}
-        onCreateAccount={() => router.push("/sign-in")}
-      />
-
-      <DownloadVideoModal
-        open={isDownloadOpen}
-        onClose={closeDownload}
-        title="Join to LinkedSpaces!"
-        videoSrc="/videos/download.mp4"
-        loop
-      />
+          }}
+          onLogin={async ({ username, password, remember }) => {
+            try {
+              const data = await loginWithJwt(username, password);
+              if (isLoginSuccess(data)) {
+                const result = assertBloggoUser(data.user);
+                if (!result.ok) {
+                  alert(result.message);
+                  return;
+                }
+                persistTokenBestEffort(data.token, remember);
+                setCachedUser(data.user as any);
+                notifyAuthChanged();
+                closeSignIn();
+                router.refresh();
+                return;
+              }
+              alert("Incorrect username or password.");
+            } catch (e) {
+              console.error("[bloggo-login] jwt failed", e);
+              alert("Failed to log in. Please try again.");
+            }
+          }}
+          onForgotPassword={() => router.push("/forgot-password")}
+          onCreateAccount={() => setIsDownloadOpen(true)}
+        />
+      )}
     </div>
   );
 }
