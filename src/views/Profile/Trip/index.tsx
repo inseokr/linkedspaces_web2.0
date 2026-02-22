@@ -920,6 +920,18 @@ function OwnerTripRecapView({
     <div className="min-h-screen bg-white">
       <RecapBlogTopBar
         title="Recap Blog"
+        shareUrl={(() => {
+          if (typeof window === "undefined") return undefined;
+          let titlePart = tripId;
+          if (recapData?.trip?.title) {
+            const placeCount = recapData.days.reduce(
+              (acc, day) => acc + (day.places?.length || 0),
+              0,
+            );
+            titlePart = `${tripId} ${recapData.trip.title} – My Recap Blog (${placeCount} places)`;
+          }
+          return `${window.location.origin}/bloggo/trip/${userId}/${encodeURIComponent(titlePart)}`;
+        })()}
         dayTabs={dayTabs}
         activeDayId={activeDayId}
         onDayChange={(id) => handleDayChange(id, true)}

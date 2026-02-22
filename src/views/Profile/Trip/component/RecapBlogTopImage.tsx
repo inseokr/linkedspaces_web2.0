@@ -67,14 +67,17 @@ export function AuthorBadge({
 export function TripMeta({
   dateText,
   locationText,
+  placesCount,
   tone = "onDark",
 }: {
   dateText: string; // e.g. "Dec 15–20, 2024"
   locationText: string; // e.g. "San Francisco"
+  placesCount?: number;
   tone?: Tone;
 }) {
   const hasLocation = Boolean(locationText?.trim());
   const hasDate = Boolean(dateText?.trim());
+  const hasPlaces = typeof placesCount === "number" && placesCount > 0;
   const isOnDark = tone === "onDark";
 
   return (
@@ -99,6 +102,25 @@ export function TripMeta({
             ].join(" ")}
           >
             {dateText}
+          </span>
+        </div>
+      )}
+
+      {hasPlaces && (
+        <div className="inline-flex items-center gap-2">
+          <span
+            className={[
+              "inline-block h-2 w-2 rounded-full",
+              isOnDark ? "bg-white/80" : "bg-black/35",
+            ].join(" ")}
+          />
+          <span
+            className={[
+              "text-sm font-medium",
+              isOnDark ? "" : "text-black/70",
+            ].join(" ")}
+          >
+            {placesCount} Place{placesCount === 1 ? "" : "s"}
           </span>
         </div>
       )}
@@ -132,6 +154,7 @@ export function RecapBlogHeader({
   authorName,
   postedLabel,
   avatarUrl,
+  placesCount,
   tone = "onLight",
 }: {
   title: string;
@@ -140,6 +163,7 @@ export function RecapBlogHeader({
   authorName: string;
   postedLabel: string;
   avatarUrl?: string;
+  placesCount?: number;
   tone?: Tone;
 }) {
   const isOnDark = tone === "onDark";
@@ -184,12 +208,18 @@ export function RecapBlogHeader({
 
         {/* Mobile: since date is shown next to profile, show meta without the date to avoid duplication */}
         <div className="sm:hidden">
-          <TripMeta dateText="" locationText={locationText} tone={tone} />
+          <TripMeta
+            dateText=""
+            locationText={locationText}
+            placesCount={placesCount}
+            tone={tone}
+          />
         </div>
         <div className="hidden sm:block">
           <TripMeta
             dateText={dateText}
             locationText={locationText}
+            placesCount={placesCount}
             tone={tone}
           />
         </div>
@@ -263,6 +293,7 @@ export default function RecapBlogHero({
   authorName,
   postedLabel,
   avatarUrl,
+  placesCount,
 }: {
   coverImageUrl: string;
   title: string;
@@ -271,6 +302,7 @@ export default function RecapBlogHero({
   authorName: string;
   postedLabel: string;
   avatarUrl?: string;
+  placesCount?: number;
 }) {
   return (
     <>
@@ -284,6 +316,7 @@ export default function RecapBlogHero({
             authorName={authorName}
             postedLabel={postedLabel}
             avatarUrl={avatarUrl}
+            placesCount={placesCount}
             tone="onLight"
           />
         </div>
@@ -312,6 +345,7 @@ export default function RecapBlogHero({
             <TripMeta
               dateText={dateText}
               locationText={locationText}
+              placesCount={placesCount}
               tone="onDark"
             />
           </div>

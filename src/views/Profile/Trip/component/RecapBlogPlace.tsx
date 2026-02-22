@@ -75,6 +75,7 @@ export type RecapBlogPageData = {
     authorName: string;
     postedLabel: string;
     avatarUrl?: string;
+    placesCount?: number;
   };
   days: RecapDay[];
 };

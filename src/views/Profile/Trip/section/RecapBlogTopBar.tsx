@@ -10,6 +10,7 @@ import updateIcon from "@/assets/icons/update.svg";
 type Props = {
   title?: string;
   onGoBack?: () => void;
+  shareUrl?: string;
 
   // optional day tabs (mainly for edit flows)
   dayTabs?: DayTab[];
@@ -34,6 +35,7 @@ type Props = {
 export default function RecapBlogTopBar({
   title = "Recap Blog",
   onGoBack,
+  shareUrl,
   dayTabs,
   activeDayId,
   onDayChange,
@@ -86,20 +88,22 @@ export default function RecapBlogTopBar({
     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/10";
 
   const handleShare = async () => {
-    const url = window.location.href;
+    const url = shareUrl || window.location.href;
 
-    if (typeof window.navigator.share === "function") {
-      await window.navigator.share({ title, url });
-      return;
+    try {
+      if (window.navigator.clipboard?.writeText) {
+        await window.navigator.clipboard.writeText(url);
+        alert("Link copied!");
+        return;
+      }
+    } catch (err) {
+      console.error("Error sharing:", err);
+      // Fallback for abort or error
     }
 
-    if (window.navigator.clipboard?.writeText) {
-      await window.navigator.clipboard.writeText(url);
-      console.log("Link copied:", url);
-      return;
+    if (!window.navigator.clipboard) {
+      window.prompt("Copy this link:", url);
     }
-
-    window.prompt("Copy this link:", url);
   };
 
   return (

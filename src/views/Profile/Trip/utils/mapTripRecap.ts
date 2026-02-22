@@ -22,6 +22,7 @@ export type RecapHeroModel = {
   postedLabel: string;
   avatarUrl?: string;
   startingYear?: number;
+  placesCount?: number;
 };
 
 export type RecapPageModel = {
@@ -41,7 +42,6 @@ export function mapTripRecapToPageModel(
   const trip = recapData.trip;
 
   const title = trip.title?.trim() || "Trip Recap";
-  const dateText = buildDateText(trip);
 
   const authorName = trip.userName || "User";
 
@@ -74,6 +74,9 @@ export function mapTripRecapToPageModel(
     ),
   );
 
+  const placesCount = days.reduce((acc, d) => acc + d.entries.length, 0);
+  const dateText = buildDateText(trip, days);
+
   return {
     hero: {
       coverImageUrl,
@@ -84,15 +87,24 @@ export function mapTripRecapToPageModel(
       postedLabel: "",
       avatarUrl,
       startingYear: trip.startingYear ? Number(trip.startingYear) : undefined,
+      placesCount,
     },
     days,
     markers,
   };
 }
 
-function buildDateText(trip: TripRecapResponse["trip"]) {
+function buildDateText(trip: TripRecapResponse["trip"], days: RecapDay[]) {
+  let startTime = trip.startTimeString;
+  let endTime = trip.endTimeString;
+
+  if (!startTime && !endTime && days.length > 0) {
+    startTime = days[0].title;
+    endTime = days[days.length - 1].title;
+  }
+
   const base =
-    formatTripDateRangeLabel(trip.startTimeString, trip.endTimeString, {
+    formatTripDateRangeLabel(startTime, endTime, {
       includeYear: true,
     }) || "";
 
