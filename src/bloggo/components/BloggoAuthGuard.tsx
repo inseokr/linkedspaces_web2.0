@@ -3,7 +3,7 @@
 /**
  * BloggoAuthGuard
  *
- * Wraps any BlogGo page that requires authentication.
+ * Wraps any Bloggo page that requires authentication.
  * - If not authenticated → redirects to /bloggo/sign-in
  * - If authenticated but userType !== "bloggo" → redirects to /bloggo/sign-in
  * - While resolving auth state → renders nothing (avoids flash of protected content)

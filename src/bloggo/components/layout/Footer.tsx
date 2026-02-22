@@ -43,10 +43,10 @@ export default function BloggoFooter() {
               href={BASE}
               className="flex items-center gap-2 font-bold text-xl w-fit"
             >
-              <span className="gradient-text">BlogGo</span>
+              <span className="gradient-text">Bloggo</span>
             </Link>
             <p className="text-sm text-[var(--bloggo-text-muted)] leading-relaxed max-w-xs">
-              BlogGo is the fastest way to turn photos into blogs. Turn your
+              Bloggo is the fastest way to turn photos into blogs. Turn your
               camera roll into a blog draft in seconds.
             </p>
             <p className="text-xs text-[var(--bloggo-text-muted)]">
@@ -83,7 +83,7 @@ export default function BloggoFooter() {
 
         <div className="mt-12 pt-8 border-t border-[var(--bloggo-border)] flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-xs text-[var(--bloggo-text-muted)]">
-            © {new Date().getFullYear()} BlogGo. All rights reserved.
+            © {new Date().getFullYear()} Bloggo. All rights reserved.
           </p>
           <div className="flex items-center gap-4">
             <Link

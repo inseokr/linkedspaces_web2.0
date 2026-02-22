@@ -1,5 +1,5 @@
 /**
- * BlogGo sign-in layout — hides the global BloggoHeader for this route only.
+ * Bloggo sign-in layout — hides the global BloggoHeader for this route only.
  */
 export default function BloggoSignInLayout({
   children,

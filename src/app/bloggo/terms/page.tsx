@@ -4,7 +4,7 @@ import Badge from "@/bloggo/components/ui/Badge";
 
 export const metadata: Metadata = {
   title: "Terms of Service",
-  description: "BlogGo Terms of Service — the rules for using our platform.",
+  description: "Bloggo Terms of Service — the rules for using our platform.",
 };
 
 const LAST_UPDATED = "February 1, 2026";
@@ -21,7 +21,7 @@ export default function TermsPage() {
           Last updated: {LAST_UPDATED}
         </p>
         <p className="text-[var(--bloggo-text-secondary)] leading-relaxed">
-          Please read these Terms of Service carefully before using BlogGo. By
+          Please read these Terms of Service carefully before using Bloggo. By
           accessing or using our service, you agree to be bound by these terms.
         </p>
       </div>
@@ -29,14 +29,14 @@ export default function TermsPage() {
       <div className="prose-bloggo flex flex-col gap-2">
         <h2>1. Acceptance of Terms</h2>
         <p>
-          By creating an account or using BlogGo, you agree to these Terms of
+          By creating an account or using Bloggo, you agree to these Terms of
           Service and our Privacy Policy. If you do not agree, please do not use
           our service.
         </p>
 
         <h2>2. Description of Service</h2>
         <p>
-          BlogGo provides a blogging platform that allows users to create,
+          Bloggo provides a blogging platform that allows users to create,
           publish, and share written content. We reserve the right to modify,
           suspend, or discontinue any aspect of the service at any time.
         </p>
@@ -49,7 +49,7 @@ export default function TermsPage() {
           your account.
         </p>
         <ul>
-          <li>You must be at least 13 years old to use BlogGo</li>
+          <li>You must be at least 13 years old to use Bloggo</li>
           <li>You may not create more than one account per person</li>
           <li>You must provide accurate and complete information</li>
           <li>You are responsible for all content posted from your account</li>
@@ -57,7 +57,7 @@ export default function TermsPage() {
 
         <h2>4. Content Policy</h2>
         <p>
-          You retain ownership of the content you create on BlogGo. By posting
+          You retain ownership of the content you create on Bloggo. By posting
           content, you grant us a non-exclusive, worldwide license to display,
           distribute, and promote your content on our platform.
         </p>
@@ -72,8 +72,8 @@ export default function TermsPage() {
 
         <h2>5. Intellectual Property</h2>
         <p>
-          BlogGo and its original content, features, and functionality are owned
-          by BlogGo and are protected by international copyright, trademark, and
+          Bloggo and its original content, features, and functionality are owned
+          by Bloggo and are protected by international copyright, trademark, and
           other intellectual property laws.
         </p>
 
@@ -93,14 +93,14 @@ export default function TermsPage() {
 
         <h2>8. Disclaimer of Warranties</h2>
         <p>
-          BlogGo is provided &quot;as is&quot; without warranties of any kind.
+          Bloggo is provided &quot;as is&quot; without warranties of any kind.
           We do not warrant that the service will be uninterrupted, error-free,
           or free of viruses or other harmful components.
         </p>
 
         <h2>9. Limitation of Liability</h2>
         <p>
-          To the maximum extent permitted by law, BlogGo shall not be liable for
+          To the maximum extent permitted by law, Bloggo shall not be liable for
           any indirect, incidental, special, consequential, or punitive damages
           resulting from your use of or inability to use the service.
         </p>

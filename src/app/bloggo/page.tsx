@@ -20,7 +20,7 @@ const howItWorks = [
     step: "2",
     title: "We Organize by Place",
     description:
-      "BlogGo detects real locations from your photo metadata and structures your trip into chapters by place.",
+      "Bloggo detects real locations from your photo metadata and structures your trip into chapters by place.",
     microCopy: 'From "IMG_4821" to "Blue Bottle Coffee, San Francisco."',
     icon: "📍",
   },
@@ -77,7 +77,7 @@ export default function BloggoHomePage() {
             <span className="gradient-text">Blogs. Fast.</span>
           </h1>
           <p className="text-lg sm:text-xl text-[var(--bloggo-text-secondary)] max-w-2xl leading-relaxed">
-            BlogGo eliminates blank page anxiety. Turn your camera roll into a
+            Bloggo eliminates blank page anxiety. Turn your camera roll into a
             blog draft in seconds.
           </p>
           <div className="flex flex-wrap gap-4 justify-center mt-4">

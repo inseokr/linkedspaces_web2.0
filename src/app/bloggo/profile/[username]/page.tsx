@@ -368,7 +368,7 @@ function EmptyBlogs({ isOwnProfile }: { isOwnProfile: boolean }) {
       </p>
       <p className="text-[var(--bloggo-text-muted)] text-sm max-w-xs">
         {isOwnProfile
-          ? "Upload your first recap blog from the BlogGo app to have it appear here."
+          ? "Upload your first recap blog from the Bloggo app to have it appear here."
           : "This user hasn't published any recap blogs yet."}
       </p>
     </div>
@@ -736,14 +736,14 @@ export default function ProfilePage() {
             Profile not found
           </h1>
           <p className="text-[var(--bloggo-text-secondary)] leading-relaxed mb-8">
-            We couldn&apos;t find a BlogGo profile for{" "}
+            We couldn&apos;t find a Bloggo profile for{" "}
             <strong>@{username}</strong>. Make sure the link is correct.
           </p>
           <Link
             href="/bloggo"
             className="inline-block mt-2 px-6 py-3 rounded-xl bg-[var(--bloggo-accent)] text-white font-semibold text-sm hover:opacity-90 transition-opacity"
           >
-            ← Back to BlogGo
+            ← Back to Bloggo
           </Link>
         </div>
       </div>
@@ -766,7 +766,7 @@ export default function ProfilePage() {
             href="/bloggo"
             className="inline-block mt-2 px-6 py-3 rounded-xl bg-[var(--bloggo-accent)] text-white font-semibold text-sm hover:opacity-90 transition-opacity"
           >
-            ← Back to BlogGo
+            ← Back to Bloggo
           </Link>
         </div>
       </div>

@@ -11,7 +11,7 @@ const BASE = "/bloggo";
 export const metadata: Metadata = {
   title: "Features",
   description:
-    "Explore BlogGo's powerful features for writers and developers — rich editor, analytics, custom domains, and more.",
+    "Explore Bloggo's powerful features for writers and developers — rich editor, analytics, custom domains, and more.",
 };
 
 const featureGroups = [
@@ -36,7 +36,7 @@ const featureGroups = [
         icon: "💾",
         title: "Auto-Save",
         description:
-          "Never lose your work. BlogGo auto-saves your drafts every few seconds, with full version history.",
+          "Never lose your work. Bloggo auto-saves your drafts every few seconds, with full version history.",
       },
       {
         icon: "📋",
@@ -67,7 +67,7 @@ const featureGroups = [
         icon: "🔔",
         title: "Newsletter",
         description:
-          "Turn readers into subscribers. Send beautiful email newsletters directly from your BlogGo dashboard.",
+          "Turn readers into subscribers. Send beautiful email newsletters directly from your Bloggo dashboard.",
       },
       {
         icon: "🔍",
@@ -121,7 +121,7 @@ export default function FeaturesPage() {
             <span className="gradient-text">write and grow</span>
           </h1>
           <p className="text-lg text-[var(--bloggo-text-secondary)] max-w-2xl">
-            BlogGo packs a professional-grade feature set into a beautifully
+            Bloggo packs a professional-grade feature set into a beautifully
             simple interface. No bloat, no confusion — just powerful tools that
             get out of your way.
           </p>
@@ -180,7 +180,7 @@ export default function FeaturesPage() {
             Ready to get started?
           </h2>
           <p className="text-[var(--bloggo-text-secondary)]">
-            Try BlogGo free — no credit card required.
+            Try Bloggo free — no credit card required.
           </p>
           <div className="flex gap-3">
             <Link href={`${BASE}/editor/my-first-post`}>

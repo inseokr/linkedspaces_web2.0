@@ -1,14 +1,14 @@
 // src/lib/bloggo.ts
-// BlogGo-specific helpers shared across pages and components.
+// Bloggo-specific helpers shared across pages and components.
 
 export type BloggoUserAssertResult =
   | { ok: true }
   | { ok: false; message: string };
 
 /**
- * Enforces the BlogGo product boundary.
+ * Enforces the Bloggo product boundary.
  *
- * Returns `{ ok: true }` when the user is a BlogGo account.
+ * Returns `{ ok: true }` when the user is a Bloggo account.
  * Returns `{ ok: false, message }` for LinkedSpaces accounts or when the user
  * is not authenticated. The caller is responsible for clearing auth state
  * and/or showing the message when ok is false.

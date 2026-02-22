@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import DemoBlogDetailView from "./DemoBlogDetailView";
 
 export const metadata: Metadata = {
-  title: "Blog Post - BlogGo",
+  title: "Blog Post - Bloggo",
   description: "Interactive blog post with map view.",
 };
 

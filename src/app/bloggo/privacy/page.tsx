@@ -5,7 +5,7 @@ import Badge from "@/bloggo/components/ui/Badge";
 export const metadata: Metadata = {
   title: "Privacy Policy",
   description:
-    "BlogGo Privacy Policy — how we collect, use, and protect your data.",
+    "Bloggo Privacy Policy — how we collect, use, and protect your data.",
 };
 
 const LAST_UPDATED = "February 1, 2026";
@@ -22,7 +22,7 @@ export default function BloggoPrivacyPage() {
           Last updated: {LAST_UPDATED}
         </p>
         <p className="text-[var(--bloggo-text-secondary)] leading-relaxed">
-          At BlogGo, we take your privacy seriously. This policy explains what
+          At Bloggo, we take your privacy seriously. This policy explains what
           data we collect, how we use it, and your rights regarding your
           personal information.
         </p>
@@ -39,7 +39,7 @@ export default function BloggoPrivacyPage() {
         <p>
           We also collect usage data automatically, including your IP address,
           browser type, pages visited, and time spent on the platform. This
-          helps us improve BlogGo and diagnose technical issues.
+          helps us improve Bloggo and diagnose technical issues.
         </p>
 
         <h2>2. How We Use Your Information</h2>
@@ -105,7 +105,7 @@ export default function BloggoPrivacyPage() {
 
         <h2>8. Children&apos;s Privacy</h2>
         <p>
-          BlogGo is not directed to children under 13. We do not knowingly
+          Bloggo is not directed to children under 13. We do not knowingly
           collect personal information from children under 13. If you become
           aware that a child has provided us with personal information, please
           contact us immediately.

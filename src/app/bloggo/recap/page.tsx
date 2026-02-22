@@ -27,12 +27,12 @@ function BlogUnavailable({
     "no-id": {
       emoji: "🔗",
       title: "Invalid link",
-      body: "This link is missing a blog ID. Make sure you're using the full link shared from the BlogGo app.",
+      body: "This link is missing a blog ID. Make sure you're using the full link shared from the Bloggo app.",
     },
     "no-username": {
       emoji: "🔗",
       title: "Invalid link",
-      body: "This link is missing the author username. Make sure you're using the full link shared from the BlogGo app.",
+      body: "This link is missing the author username. Make sure you're using the full link shared from the Bloggo app.",
     },
   };
 
@@ -55,7 +55,7 @@ function BlogUnavailable({
             Create your own recap blogs
           </p>
           <p className="font-semibold text-[var(--bloggo-text-primary)] mb-4">
-            BlogGo — Turn your travels into beautiful stories
+            Bloggo — Turn your travels into beautiful stories
           </p>
           <a
             href="https://apps.apple.com/app/bloggo"
@@ -79,7 +79,7 @@ function BlogUnavailable({
           href="/bloggo"
           className="inline-block mt-6 text-sm text-[var(--bloggo-text-muted)] hover:text-[var(--bloggo-text-secondary)] transition-colors underline underline-offset-2"
         >
-          ← Back to BlogGo
+          ← Back to Bloggo
         </Link>
       </div>
     </div>

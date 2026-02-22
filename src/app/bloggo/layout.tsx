@@ -4,14 +4,14 @@ import BloggoFooter from "@/bloggo/components/layout/Footer";
 
 export const metadata = {
   title: {
-    default: "BlogGo – The fastest way to turn photos into blogs",
-    template: "%s | BlogGo",
+    default: "Bloggo – The fastest way to turn photos into blogs",
+    template: "%s | Bloggo",
   },
-  description: "BlogGo is the fastest way to turn photos into blogs.",
+  description: "Bloggo is the fastest way to turn photos into blogs.",
   keywords: ["blogging", "writing", "developer blog", "content creation"],
   openGraph: {
     type: "website",
-    siteName: "BlogGo",
+    siteName: "Bloggo",
   },
 };
 

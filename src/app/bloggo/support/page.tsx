@@ -40,7 +40,7 @@ const faqItems = [
     id: "images",
     question: "What image formats are supported?",
     answer:
-      "BlogGo supports JPEG, PNG, WebP, GIF, and SVG. Images are automatically optimized and served via CDN. Maximum file size is 10 MB per image.",
+      "Bloggo supports JPEG, PNG, WebP, GIF, and SVG. Images are automatically optimized and served via CDN. Maximum file size is 10 MB per image.",
   },
 ];
 
@@ -100,10 +100,10 @@ export default function SupportPage() {
       <section className="py-16 bg-[var(--bloggo-bg-secondary)]/30 border-b border-[var(--bloggo-border)]">
         <Container className="flex flex-col items-center text-center gap-4">
           <h2 className="text-2xl font-bold text-[var(--bloggo-text-primary)]">
-            About BlogGo
+            About Bloggo
           </h2>
           <p className="text-[var(--bloggo-text-secondary)] max-w-2xl leading-relaxed">
-            BlogGo helps you save places you&apos;ve visited by turning photos
+            Bloggo helps you save places you&apos;ve visited by turning photos
             into meaningful travel memories.
           </p>
         </Container>

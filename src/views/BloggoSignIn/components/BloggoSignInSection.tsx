@@ -51,7 +51,7 @@ export default function BloggoSignInSection() {
   /**
    * After a successful authentication response:
    *  1. Store the token temporarily so we can check userType.
-   *  2. assert the user is a BlogGo account.
+   *  2. assert the user is a Bloggo account.
    *  3a. OK → cache user, notify, redirect to their profile.
    *  3b. Fail → clear the token, show an inline error (no redirect).
    */
@@ -68,7 +68,7 @@ export default function BloggoSignInSection() {
       return;
     }
 
-    // Persist token and cache user only for BlogGo accounts
+    // Persist token and cache user only for Bloggo accounts
     persistTokenBestEffort(token);
     // user.userType is "bloggo" here; user is the full User object from login
     setCachedUser(user as Parameters<typeof setCachedUser>[0]);
@@ -137,7 +137,7 @@ export default function BloggoSignInSection() {
         <div className="flex items-center justify-center px-6 py-10">
           <div className="w-full max-w-[420px]">
             <h1 className="text-center text-[44px] font-semibold tracking-tight text-black">
-              BlogGo
+              Bloggo
             </h1>
 
             <GoogleOAuthProvider clientId="365835568807-9s56gicbdaj9vkn3kkbkvs2crt8k764e.apps.googleusercontent.com">
@@ -222,7 +222,7 @@ export default function BloggoSignInSection() {
             </div>
 
             <div className="mt-6 text-[12px] text-black/70">
-              <div className="font-medium">New to BlogGo?</div>
+              <div className="font-medium">New to Bloggo?</div>
 
               <button
                 type="button"
@@ -240,7 +240,7 @@ export default function BloggoSignInSection() {
       <VideoGuideModal
         open={openGuide}
         onClose={() => setOpenGuide(false)}
-        title="Join BlogGo!"
+        title="Join Bloggo!"
         videoSrc="/videos/download.mp4"
       />
     </section>
