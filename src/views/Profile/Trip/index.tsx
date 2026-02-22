@@ -42,6 +42,7 @@ import { RecapBlogEntryCard } from "@/views/Profile/Trip/component/RecapBlogPlac
 interface TripRecapViewProps {
   userId: string;
   tripId: string;
+  basePath?: string;
 }
 
 import GuestRecapPage from "./GuestModeIndex";
@@ -77,7 +78,11 @@ function GuestTripRecapShell({ userId, tripId }: TripRecapViewProps) {
 
 import { getCachedUser } from "@/api/user";
 
-export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
+export default function TripRecapView({
+  userId,
+  tripId,
+  basePath,
+}: TripRecapViewProps) {
   const { isLoading: authLoading, isAuthenticated } = useAuth();
 
   const [viewerId, setViewerId] = useState<string | null>(null);
@@ -176,7 +181,7 @@ export default function TripRecapView({ userId, tripId }: TripRecapViewProps) {
   return <OwnerTripRecapView userId={userId} tripId={tripId} />;
 }
 
-function OwnerTripRecapView({ userId, tripId }: TripRecapViewProps) {
+function OwnerTripRecapView({ userId, tripId, basePath }: TripRecapViewProps) {
   const router = useRouter();
   const isLg = useIsDesktopLg();
 
@@ -905,7 +910,9 @@ function OwnerTripRecapView({ userId, tripId }: TripRecapViewProps) {
         activeDayId={activeDayId}
         onDayChange={(id) => handleDayChange(id, true)}
         onGoBack={() => window.history.back()}
-        onEditBlog={() => router.push(`/trip/${userId}/${tripId}/edit`)}
+        onEditBlog={() =>
+          router.push(`${basePath || "/trip"}/${userId}/${tripId}/edit`)
+        }
         className="sticky top-0 z-50 border-b border-black/10"
       />
 

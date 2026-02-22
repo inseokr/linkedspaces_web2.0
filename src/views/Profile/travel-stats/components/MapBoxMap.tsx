@@ -18,6 +18,7 @@ import {
 import { createRoot } from "react-dom/client";
 import { MAPBOX_STYLE_URL } from "@/app/profile/mapbox-linkedspaces-style";
 import CircleTripMarker from "@/views/Profile/recap-blogs/components/CircleTripMarker";
+import { normalizeImageSrc } from "@/utils/normalizeImageSrc";
 
 export type PoiInfo = {
   name: string;
@@ -132,9 +133,10 @@ function PlaceMarker({
         }}
       >
         <Image
-          src={imageUrl}
+          src={normalizeImageSrc(imageUrl).src}
           alt=""
           fill
+          unoptimized={normalizeImageSrc(imageUrl).unoptimized}
           sizes={`${size ?? 80}px`}
           style={{ objectFit: "cover" }}
         />
@@ -665,8 +667,9 @@ export default function MapboxMap({
           el.style.border = "2px solid rgba(255,255,255,0.9)";
           el.style.boxShadow = "0 8px 20px rgba(0,0,0,0.18)";
           el.style.background = "rgba(0,0,0,0.05)";
+          const { src: simpleSrc } = normalizeImageSrc(m.imageUrl);
           const img = document.createElement("img");
-          img.src = m.imageUrl;
+          img.src = simpleSrc;
           img.alt = "";
           img.style.width = "100%";
           img.style.height = "100%";

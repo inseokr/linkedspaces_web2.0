@@ -123,6 +123,8 @@ export type User = {
   _id: string;
   username: string;
   profile_picture?: string;
+  /** "bloggo" | "linkedspaces" — set by backend at signup, present on login response */
+  userType?: "linkedspaces" | "bloggo";
   countriesVisited: CountryVisited[];
   citiesVisited: CityVisited[];
 
@@ -190,15 +192,18 @@ function safeRemoveStorageItem(key: string) {
 function toSlimCachedUser(user: User): User {
   // Keep only what most UI needs (sidebar/menu/stats/badges/recap list, home friends, home location for map).
   // This is used as a fallback when the full user object exceeds storage quota.
+  // NOTE: userType MUST be preserved so BloggoAuthGuard can still gate on it.
   return {
     _id: user._id,
     username: user.username,
     profile_picture: user.profile_picture,
+    userType: user.userType,
     countriesVisited: user.countriesVisited ?? [],
     citiesVisited: user.citiesVisited ?? [],
     badgeProgress: user.badgeProgress,
     friends: user.friends ?? [],
     trips: user.trips ?? [],
+    placeVisitHistory: user.placeVisitHistory ?? [],
     homeLocation: user.homeLocation,
   };
 }

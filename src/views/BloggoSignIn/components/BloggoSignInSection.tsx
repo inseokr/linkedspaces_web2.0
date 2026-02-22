@@ -8,13 +8,17 @@ import { useRouter } from "next/navigation";
 import { notifyAuthChanged } from "@/hooks/useAuth";
 import { loginWithGoogle, loginWithJwt, isLoginSuccess } from "@/api/auth";
 import { setCachedUser } from "@/api/user";
+import { assertBloggoUser } from "@/lib/bloggo";
 
 export default function BloggoSignInSection() {
   const [openGuide, setOpenGuide] = useState(false);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
+  // ── Token storage (localStorage → sessionStorage fallback) ──────────────────
   const persistTokenBestEffort = (token: string) => {
     try {
       window.localStorage.setItem("token", token);
@@ -29,8 +33,61 @@ export default function BloggoSignInSection() {
     }
   };
 
-  // Google login
-  const handleGoogleLogin = async (response: any) => {
+  // ── Clear token (local logout without redirect) ──────────────────────────────
+  const clearTokenLocally = () => {
+    try {
+      window.localStorage.removeItem("token");
+    } catch {
+      // ignore
+    }
+    try {
+      window.sessionStorage.removeItem("token");
+    } catch {
+      // ignore
+    }
+  };
+
+  // ── Shared post-login check ───────────────────────────────────────────────────
+  /**
+   * After a successful authentication response:
+   *  1. Store the token temporarily so we can check userType.
+   *  2. assert the user is a BlogGo account.
+   *  3a. OK → cache user, notify, redirect to their profile.
+   *  3b. Fail → clear the token, show an inline error (no redirect).
+   */
+  const handleAuthSuccess = (
+    token: string,
+    user: Parameters<typeof assertBloggoUser>[0],
+  ) => {
+    const result = assertBloggoUser(user);
+
+    if (!result.ok) {
+      // Block — do not persist token or cache user
+      clearTokenLocally();
+      setError(result.message);
+      return;
+    }
+
+    // Persist token and cache user only for BlogGo accounts
+    persistTokenBestEffort(token);
+    // user.userType is "bloggo" here; user is the full User object from login
+    setCachedUser(user as Parameters<typeof setCachedUser>[0]);
+    notifyAuthChanged();
+
+    const dest =
+      user && "username" in user && user.username
+        ? `/bloggo/profile/${(user as { username: string }).username}`
+        : "/bloggo";
+    router.push(dest);
+  };
+
+  // ── Google login ─────────────────────────────────────────────────────────────
+  const handleGoogleLogin = async (response: {
+    credential?: string;
+    tokenId?: string;
+  }) => {
+    setError(null);
+    setIsLoading(true);
     try {
       const idToken = response.credential || response.tokenId;
       if (!idToken) return;
@@ -38,36 +95,40 @@ export default function BloggoSignInSection() {
       const data = await loginWithGoogle(idToken);
 
       if (isLoginSuccess(data)) {
-        persistTokenBestEffort(data.token);
-        setCachedUser(data.user);
-        notifyAuthChanged();
-        router.push("/bloggo/profile/demo");
+        handleAuthSuccess(data.token, data.user);
       } else {
-        alert("Failed to log in with Google.");
+        setError("Failed to log in with Google.");
       }
     } catch (e) {
-      console.error("[login] google failed", e);
-      alert("Failed to log in. Please try again.");
+      console.error("[bloggo-login] google failed", e);
+      setError("Failed to log in. Please try again.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  // JWT login button handler
+  // ── JWT login ─────────────────────────────────────────────────────────────────
   const handleLogin = async () => {
+    setError(null);
+    setIsLoading(true);
     try {
       const data = await loginWithJwt(username, password);
 
       if (isLoginSuccess(data)) {
-        persistTokenBestEffort(data.token);
-        setCachedUser(data.user);
-        notifyAuthChanged();
-        router.push("/bloggo/profile/demo");
+        handleAuthSuccess(data.token, data.user);
       } else {
-        alert("check username or password.");
+        setError("Incorrect username or password.");
       }
     } catch (e) {
-      console.error("[login] jwt failed", e);
-      alert("Failed to log in. Please try again.");
+      console.error("[bloggo-login] jwt failed", e);
+      setError("Failed to log in. Please try again.");
+    } finally {
+      setIsLoading(false);
     }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") handleLogin();
   };
 
   return (
@@ -104,6 +165,7 @@ export default function BloggoSignInSection() {
                 autoComplete="username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
+                onKeyDown={handleKeyDown}
                 className={[
                   "w-full h-[46px]",
                   "rounded-[10px] border border-black/25",
@@ -118,8 +180,19 @@ export default function BloggoSignInSection() {
                 autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                onKeyDown={handleKeyDown}
                 className="w-full rounded-2xl border border-black/25 px-5 py-3 text-[14px] placeholder:text-black/50 outline-none focus:border-black/50"
               />
+
+              {/* Inline error message */}
+              {error && (
+                <p
+                  role="alert"
+                  className="text-[13px] text-red-600 leading-snug rounded-lg bg-red-50 border border-red-200 px-4 py-3"
+                >
+                  {error}
+                </p>
+              )}
 
               <label className="flex items-center gap-3 pt-1 text-[14px] text-black/80">
                 <input
@@ -132,9 +205,10 @@ export default function BloggoSignInSection() {
               <button
                 type="button"
                 onClick={handleLogin}
-                className="mt-2 w-full rounded-xl bg-[#4A69FF] py-3 text-[14px] font-semibold text-white hover:opacity-90 active:opacity-80 transition"
+                disabled={isLoading}
+                className="mt-2 w-full rounded-xl bg-[#4A69FF] py-3 text-[14px] font-semibold text-white hover:opacity-90 active:opacity-80 transition disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Log in
+                {isLoading ? "Signing in…" : "Log in"}
               </button>
             </div>
 

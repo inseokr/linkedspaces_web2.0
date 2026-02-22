@@ -4,8 +4,8 @@ import type { CountryRecapItem } from "@/views/Profile/recap-blogs/components/Co
 import type { AllBlogCardItem } from "@/views/Profile/recap-blogs/components/RecapBlogCard";
 import { formatTripDateRangeLabel } from "@/utils/formatTripDate";
 
-const DEFAULT_BLOG_COVER = "/images/recap/kr.png";
-const DEFAULT_RECAP_COVER = "/images/recap/kr.png";
+export const DEFAULT_BLOG_COVER = "/images/recap/kr.png";
+export const DEFAULT_RECAP_COVER = "/images/recap/kr.png";
 
 function toSlug(title: string): string {
   return String(title ?? "")
@@ -167,7 +167,7 @@ function tripSortKey(t: Trip): number {
   return 0;
 }
 
-function resolveTripCoverUrl(
+export function resolveTripCoverUrl(
   trip: Trip,
   placeVisitHistory?: Array<PlaceVisitHistoryItem | undefined>,
   fallback = DEFAULT_BLOG_COVER,

@@ -1,3 +1,6 @@
+"use client";
+
+import { usePathname } from "next/navigation";
 import Link from "next/link";
 
 const BASE = "/bloggo";
@@ -23,6 +26,14 @@ const footerLinks = {
 };
 
 export default function BloggoFooter() {
+  const pathname = usePathname();
+  if (
+    pathname === "/bloggo/recap" ||
+    pathname.startsWith("/bloggo/profile/") ||
+    pathname.startsWith("/bloggo/trip/")
+  )
+    return null;
+
   return (
     <footer className="border-t border-[var(--bloggo-border)] bg-[var(--bloggo-bg-card)]/50 mt-24">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16">

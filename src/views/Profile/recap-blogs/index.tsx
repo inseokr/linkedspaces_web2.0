@@ -205,8 +205,8 @@ export default function ProfileRecapBlogsView() {
     // clear country and switch to grid view
     router.push("/profile/recap-blog");
   };
-  // user cache
-  const user = useMemo(() => getCachedUser(), []);
+  const [user] = useState<any | null>(() => getCachedUser());
+
   const username = user?.username;
   const placeVisitHistory = useMemo(
     () => user?.placeVisitHistory ?? [],
@@ -371,21 +371,50 @@ export default function ProfileRecapBlogsView() {
     else router.push(`/trip/${blogKey}`);
   };
 
-  const headerAction =
-    mode === "recap" && view === "grid" ? (
-      <ViewAllBlogsButton onClick={() => setMode("allBlogs")}>
-        View All Blogs
-      </ViewAllBlogsButton>
-    ) : (
-      <ViewAllBlogsButton
-        onClick={() => {
-          if (view === "map") backToGrid();
-          else setMode("recap");
-        }}
-      >
-        Go Back
-      </ViewAllBlogsButton>
-    );
+  const headerAction = (
+    <div className="flex items-center gap-3">
+      {/* Grid / Map Toggle */}
+      <div className="flex items-center rounded-xl bg-gray-100 p-0.5">
+        <button
+          onClick={backToGrid}
+          className={[
+            "px-3 py-1.5 text-[13px] font-semibold transition-all rounded-lg",
+            view === "grid"
+              ? "bg-white text-black shadow-sm"
+              : "text-gray-500 hover:text-black",
+          ].join(" ")}
+        >
+          Grid
+        </button>
+        <button
+          onClick={() => router.push("/profile/recap-blog?view=map")}
+          className={[
+            "px-3 py-1.5 text-[13px] font-semibold transition-all rounded-lg",
+            view === "map"
+              ? "bg-white text-black shadow-sm"
+              : "text-gray-500 hover:text-black",
+          ].join(" ")}
+        >
+          Map
+        </button>
+      </div>
+
+      {mode === "recap" && view === "grid" ? (
+        <ViewAllBlogsButton onClick={() => setMode("allBlogs")}>
+          View All Blogs
+        </ViewAllBlogsButton>
+      ) : (
+        <ViewAllBlogsButton
+          onClick={() => {
+            if (view === "map") backToGrid();
+            else setMode("recap");
+          }}
+        >
+          Go Back
+        </ViewAllBlogsButton>
+      )}
+    </div>
+  );
 
   const renderGridOrMap = () => {
     // map view

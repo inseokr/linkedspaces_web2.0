@@ -54,13 +54,7 @@ export default function UserMenu({ displayName, avatarSrc, className }: Props) {
   const menuId = useId();
   const rootRef = useRef<HTMLDivElement | null>(null);
   const [open, setOpen] = useState(false);
-  const [user, setUser] = useState<User | null>(() => {
-    try {
-      return getCachedUser();
-    } catch {
-      return null;
-    }
-  });
+  const [user, setUser] = useState<User | null>(() => getCachedUser());
   const [hasImgError, setHasImgError] = useState(false);
 
   useEffect(() => {

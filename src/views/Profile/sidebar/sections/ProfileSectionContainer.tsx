@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useMemo } from "react";
 import ProfileSection from "./ProfileSection";
 import type { SidebarProfileData } from "@/views/Profile/sidebar/types";
 import { getCachedUser } from "@/api/user";
@@ -19,9 +20,9 @@ export default function ProfileSectionContainer({
   onToggle,
   className,
 }: Props) {
-  const user = getCachedUser();
+  const [user] = useState<any | null>(() => getCachedUser());
 
-  const vm = mapUserToTravelStatsVM(user);
+  const vm = useMemo(() => mapUserToTravelStatsVM(user), [user]);
   const name = user?.username ?? "User";
   const handle = user?.username ?? "";
   const avatarSrc = assetUrl(user?.profile_picture);

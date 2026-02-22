@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import React from "react";
+import { normalizeImageSrc } from "@/utils/normalizeImageSrc";
 
 type Props = {
   label: string;
@@ -75,8 +76,9 @@ export default function CircleTripMarker({
           }}
         >
           <Image
-            src={imageUrl}
+            src={normalizeImageSrc(imageUrl).src}
             alt={String(label)}
+            unoptimized={normalizeImageSrc(imageUrl).unoptimized}
             fill
             className="object-cover"
             sizes={`${size}px`}

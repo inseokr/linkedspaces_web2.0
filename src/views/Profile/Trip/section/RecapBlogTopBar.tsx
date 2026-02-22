@@ -26,6 +26,7 @@ type Props = {
   onDiscardLocal?: () => void;
   discardDisabled?: boolean;
   mode?: "view" | "edit";
+  brand?: "linkedspaces" | "bloggo";
 
   className?: string;
 };
@@ -44,6 +45,7 @@ export default function RecapBlogTopBar({
   updateDisabled = false,
   onDiscardLocal,
   discardDisabled = false,
+  brand = "linkedspaces",
   className = "",
 }: Props) {
   const secondaryButtonClass =
@@ -53,9 +55,11 @@ export default function RecapBlogTopBar({
     "inline-flex items-center justify-center gap-2 " +
     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/20";
 
+  const primaryColor = brand === "bloggo" ? "#0284c7" : "#FF6A00";
+
   const primaryButtonClass =
     "h-9 rounded-full px-4 text-sm font-semibold leading-none tracking-[-0.01em] whitespace-nowrap " +
-    "bg-[#FF6A00] text-white " +
+    "text-white " +
     "hover:opacity-90 active:scale-[0.99] transition " +
     "inline-flex items-center justify-center gap-2 " +
     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/20";
@@ -146,6 +150,9 @@ export default function RecapBlogTopBar({
                   type="button"
                   onClick={updateDisabled ? undefined : onUpdate}
                   disabled={updateDisabled}
+                  style={{
+                    backgroundColor: updateDisabled ? undefined : primaryColor,
+                  }}
                   className={
                     updateDisabled
                       ? disabledPrimaryButtonClass

@@ -9,11 +9,11 @@
  */
 
 export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL ??
+  process.env.NEXT_PUBLIC_API_BASE_URL ||
   "https://pocketverse.herokuapp.com/LS_API";
 
 export const API_ORIGIN =
-  process.env.NEXT_PUBLIC_API_ORIGIN ?? "https://pocketverse.herokuapp.com";
+  process.env.NEXT_PUBLIC_API_ORIGIN || "https://pocketverse.herokuapp.com";
 
 export type ApiError = {
   status: number;
