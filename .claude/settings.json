@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git -C /Users/inseo/Documents/GitHub/linkedspaces_web2.0/linkedspaces_web2.0 log --all --oneline)"
+    ]
+  }
+}
