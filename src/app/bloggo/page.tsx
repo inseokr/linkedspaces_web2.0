@@ -4,6 +4,7 @@ import Button from "@/bloggo/components/ui/Button";
 import Card from "@/bloggo/components/ui/Card";
 import Badge from "@/bloggo/components/ui/Badge";
 import SectionHeader from "@/bloggo/components/ui/SectionHeader";
+import BloggoHomeRedirect from "@/bloggo/components/BloggoHomeRedirect";
 
 const BASE = "/bloggo";
 
@@ -69,6 +70,7 @@ const smartFeatures = [
 export default function BloggoHomePage() {
   return (
     <>
+      <BloggoHomeRedirect />
       <section className="relative pt-32 pb-24 overflow-hidden">
         <Container className="flex flex-col items-center text-center gap-8">
           <Badge variant="violet">🚀 Photo-First Blogging</Badge>

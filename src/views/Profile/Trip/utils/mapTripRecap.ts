@@ -98,19 +98,18 @@ function buildDateText(trip: TripRecapResponse["trip"], days: RecapDay[]) {
   let startTime = trip.startTimeString;
   let endTime = trip.endTimeString;
 
-  if (!startTime && !endTime && days.length > 0) {
-    startTime = days[0].title;
-    endTime = days[days.length - 1].title;
-  }
-
   const base =
     formatTripDateRangeLabel(startTime, endTime, {
       includeYear: true,
     }) || "";
 
-  // Some API payloads omit the year in start/end strings (e.g. "Sep 21").
-  // If so, append the trip's startingYear so the hero caption always shows a year.
+  // The user requested to remove the "1 day, 2026" and just show trip dates.
+  // The 'formatTripDateRangeLabel' generates the trip dates properly.
+  // We don't need to append the isolated year if the start/end time is missing
+  // or just returns empty string except we might still be returning a year somehow.
+  // Let's just return the formatted date range directly.
   const hasYear = /\b\d{4}\b/.test(base);
+
   if (hasYear) return base;
 
   const y = Number((trip as any)?.startingYear);

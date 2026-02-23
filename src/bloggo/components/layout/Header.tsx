@@ -73,11 +73,17 @@ export default function BloggoHeader() {
     };
   }, []);
 
+  const user = getCachedUser();
+  const isPro = user?.tier === "Pro";
+
   // Hide header while viewing a recap blog; it reappears when the user navigates back.
-  if (pathname === "/bloggo/recap" || pathname.startsWith("/bloggo/trip/"))
+  // We only hide it for Pro users. Free tier users get the header (with branding/login CTA).
+  if (
+    (pathname === "/bloggo/recap" || pathname.startsWith("/bloggo/trip/")) &&
+    isPro
+  )
     return null;
 
-  const user = getCachedUser();
   const isBloggoUser = isAuthenticated && assertBloggoUser(user).ok;
   const showUserMenu = !isLoading && isBloggoUser;
 
@@ -128,28 +134,6 @@ export default function BloggoHeader() {
           >
             <span className="gradient-text">Bloggo</span>
           </Link>
-
-          <nav
-            aria-label="Main navigation"
-            className="hidden md:flex items-center gap-1"
-          >
-            {navLinks.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={[
-                  "px-4 py-2 rounded-lg text-sm font-medium transition-colors",
-                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500",
-                  pathname === link.href
-                    ? "text-[var(--bloggo-text-primary)] bg-black/5"
-                    : "text-[var(--bloggo-text-secondary)] hover:text-[var(--bloggo-text-primary)] hover:bg-black/5",
-                ].join(" ")}
-                aria-current={pathname === link.href ? "page" : undefined}
-              >
-                {link.label}
-              </Link>
-            ))}
-          </nav>
 
           <div className="hidden md:flex items-center gap-3">
             {!isBloggoUser && (
@@ -246,6 +230,29 @@ export default function BloggoHeader() {
                         >
                           My Profile
                         </button>
+
+                        {/* Additional Nav Links in Menu */}
+                        {navLinks.map((link) => (
+                          <Link
+                            key={link.href}
+                            href={link.href}
+                            onClick={() => setMenuOpen(false)}
+                            className="block rounded-xl px-3 py-2.5 text-[15px] font-semibold w-full text-left transition"
+                            style={{
+                              color: "#111827",
+                            }}
+                            onMouseEnter={(e) =>
+                              (e.currentTarget.style.backgroundColor =
+                                "var(--user-menu-item-hover)")
+                            }
+                            onMouseLeave={(e) =>
+                              (e.currentTarget.style.backgroundColor =
+                                "transparent")
+                            }
+                          >
+                            {link.label}
+                          </Link>
+                        ))}
                       </div>
 
                       <div
@@ -258,7 +265,7 @@ export default function BloggoHeader() {
                         role="menuitem"
                         onClick={() => {
                           setMenuOpen(false);
-                          logout();
+                          logout(BASE);
                         }}
                         className="mt-3 w-full rounded-xl px-3 py-2.5 text-center text-[15px] font-semibold transition"
                         style={{ color: "var(--user-menu-danger)" }}
@@ -371,7 +378,7 @@ export default function BloggoHeader() {
                   <button
                     onClick={() => {
                       setMobileOpen(false);
-                      logout();
+                      logout(BASE);
                     }}
                     className="px-4 py-2.5 rounded-xl text-sm font-medium text-rose-600 hover:bg-black/5 text-center transition-all"
                   >

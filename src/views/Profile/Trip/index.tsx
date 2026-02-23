@@ -70,8 +70,14 @@ function GuestTripRecapShell({ userId, tripId, brand }: TripRecapViewProps) {
   const { setLayoutMode } = useLayoutMode();
 
   useEffect(() => {
-    setLayoutMode("bare");
-    return () => setLayoutMode("profile");
+    const user = getCachedUser();
+    const isPro = user?.tier === "Pro";
+
+    if (isPro) {
+      setLayoutMode("bare");
+      return () => setLayoutMode("profile");
+    }
+    // If not Pro, we don't force "bare" mode, allowing the header to show.
   }, [setLayoutMode]);
 
   return <GuestRecapPage userId={userId} tripId={tripId} brand={brand} />;

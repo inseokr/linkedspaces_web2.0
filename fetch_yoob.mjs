@@ -11,8 +11,10 @@ async function run() {
         fs.writeFileSync('yoob_profile.json', JSON.stringify(data, null, 2));
         console.log("Saved to yoob_profile.json");
         console.log("Total blogs:", data.blogs?.length);
-        if (data.blogs && data.blogs.length > 0) {
-            console.log("Sample blog:", data.blogs[0]);
+        if (data.blogs) {
+            data.blogs.forEach(b => {
+                console.log(`Title: ${b.title}, Key: ${b.blogKey}, Status: ${b.status}`);
+            });
         }
     } catch (err) {
         console.error(err);

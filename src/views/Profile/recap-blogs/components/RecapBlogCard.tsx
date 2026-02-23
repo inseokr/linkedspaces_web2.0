@@ -142,6 +142,11 @@ export default function AllBlogCard({
         <h3 className="mt-2 min-w-0 max-w-full break-words line-clamp-2 text-[13px] font-medium text-black/90">
           {item.title}
         </h3>
+        {!!dateWithoutYear && (
+          <p className="mt-0.5 text-[12px] text-[#8B949E] line-clamp-1">
+            {dateWithoutYear}
+          </p>
+        )}
       </Link>
     </article>
   );

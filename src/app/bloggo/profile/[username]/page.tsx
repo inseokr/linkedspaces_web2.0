@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef, useMemo } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { MapPin } from "lucide-react";
 import { assetUrl } from "@/api/assets";
@@ -20,6 +20,7 @@ interface CountrySummary {
   coverImage: string | undefined;
   years: number[];
   latestDate: string;
+  blogCount: number;
 }
 
 interface BlogEntry {
@@ -121,18 +122,29 @@ function CountryRecapCard({
   item: CountrySummary;
   onSelect: (countryCode: string) => void;
 }) {
-  const uniqYears = Array.from(new Set(item.years)).sort((a, b) => b - a);
-  const yearDisplay =
-    uniqYears.length <= 3
-      ? uniqYears.join(", ")
-      : `${uniqYears.slice(0, 2).join(" · ")} · +${uniqYears.length - 2}`;
+  const latestDate = new Date(item.latestDate);
+  const monthNames = [
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
+  ];
+  const lastVisitedText = `Last visited ${monthNames[latestDate.getMonth()]} ${latestDate.getFullYear()}`;
 
   return (
     <button
       type="button"
       onClick={() => onSelect(item.countryCode)}
       className={[
-        "group relative block w-full max-w-[500px] overflow-hidden rounded-3xl",
+        "group relative block w-full overflow-hidden rounded-3xl",
         "border border-black/5 shadow-sm text-left",
         "focus:outline-none focus:ring-2 focus:ring-sky-400/40",
         "transition-transform duration-200 hover:scale-[1.01]",
@@ -170,6 +182,18 @@ function CountryRecapCard({
           </div>
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-black/10 to-transparent" />
+
+        {/* Blog count badge */}
+        <div className="absolute left-5 top-5">
+          <div className="flex items-center gap-1.5 rounded-full bg-black/40 px-3 py-1.5 backdrop-blur-md border border-white/20">
+            <span className="text-[13px] font-bold text-white leading-none">
+              {item.blogCount}
+            </span>
+            <span className="text-[11px] font-medium text-white/80 leading-none">
+              {item.blogCount === 1 ? "blog" : "blogs"}
+            </span>
+          </div>
+        </div>
       </div>
 
       <div className="absolute inset-0 flex items-end justify-center pb-6 text-center">
@@ -186,7 +210,7 @@ function CountryRecapCard({
                 "shadow-[0_10px_24px_rgba(0,0,0,0.25)] backdrop-blur-sm",
               ].join(" ")}
             >
-              {yearDisplay}
+              {lastVisitedText}
             </div>
           </div>
         </div>
@@ -284,15 +308,10 @@ function BlogListCard({
               <div className="absolute left-3 top-3 z-10 w-[80%]">
                 <div
                   className="inline-flex w-fit items-center gap-1.5 rounded-full bg-black/55 px-2 py-0.5 text-[12px] text-white backdrop-blur whitespace-nowrap pointer-events-none"
-                  title={dateLabel}
+                  title={yearText}
                 >
-                  {!!yearText && (
-                    <span className="shrink-0 rounded-full bg-white/15 px-1.5 py-0.5 font-extrabold leading-none">
-                      {yearText}
-                    </span>
-                  )}
-                  <span className="min-w-0">
-                    {dateWithoutYear || dateLabel}
+                  <span className="shrink-0 font-extrabold leading-none">
+                    {yearText}
                   </span>
                 </div>
               </div>
@@ -304,6 +323,12 @@ function BlogListCard({
         <h3 className="mt-2 min-w-0 max-w-full break-words line-clamp-2 text-[13px] font-medium text-black/90">
           {blog.title}
         </h3>
+        {/* Date below title */}
+        {dateLabel && (
+          <p className="mt-0.5 text-[12px] text-black/60">
+            {dateWithoutYear || dateLabel}
+          </p>
+        )}
       </Link>
     </div>
   );
@@ -395,7 +420,7 @@ function ResponsiveGrid<T>({
     <div
       style={{
         display: "grid",
-        gridTemplateColumns: `repeat(auto-fill, minmax(${minCardWidth}px, ${maxCardWidth}px))`,
+        gridTemplateColumns: `repeat(auto-fit, minmax(${minCardWidth}px, 1fr))`,
         gap: "24px",
         justifyContent: "center",
       }}
@@ -411,6 +436,7 @@ function ResponsiveGrid<T>({
 
 export default function ProfilePage() {
   const params = useParams();
+  const router = useRouter();
   const username = (params?.username as string) ?? "";
 
   const [profile, setProfile] = useState<ProfileData | null>(null);
@@ -463,45 +489,92 @@ export default function ProfilePage() {
           if (u?.username === username) {
             let userTrips = Array.isArray(u.trips) ? u.trips : [];
 
-            // Clean up test blogs for the yoob account (Hide early tests 0-6)
-            if (username === "yoob") {
-              const testKeys = [0, 1, 2, 3, 4, 5, 6];
-              userTrips = userTrips.filter(
-                (t: any) => !testKeys.includes(Number(t.blogKey)),
-              );
+            // Clean up ghost blogs for the yoob account (stale cache from early tests)
+            if (username.toLowerCase() === "yoob") {
+              // De-dupe by blogKey first to prevent ghost duplicates
+              const uniqueTrips = new Map();
+              userTrips.forEach((t: any) => {
+                if (t.blogKey != null) {
+                  uniqueTrips.set(String(t.blogKey), t);
+                }
+              });
+              userTrips = Array.from(uniqueTrips.values());
+
+              userTrips = userTrips.filter((t: any) => {
+                // Specifically exclude ghost blogs (stale cache from early tests)
+                // These were identified as keys 0 through 8.
+                if (t.blogKey != null) {
+                  const key = Number(t.blogKey);
+                  if (key >= 0 && key <= 8) return false;
+                }
+                // Specifically exclude "Carmel" blogs for yoob (unwanted duplicates)
+                const title = (t.title || "").toLowerCase();
+                if (title.includes("carmel")) return false;
+
+                return true;
+              });
             }
 
-            // Only cloud uploaded blogs have a valid blogKey
-            userTrips = userTrips.filter((t: any) => t.blogKey != null);
+            // Only cloud uploaded blogs have a valid blogKey, and they shouldn't be hidden/deleted
+            userTrips = userTrips.filter(
+              (t: any) =>
+                t.blogKey != null &&
+                t.privacyControl?.level !== "hidden" &&
+                t.status !== "deleted" &&
+                t.status !== "hidden", // Defense against different status names
+            );
 
-            const mappedBlogs: BlogEntry[] = userTrips.map((trip: any) => ({
-              blogKey: String(trip.blogKey ?? trip._id ?? ""),
-              title: trip.title || "Untitled Recap",
-              coverPhotoUrl: resolveTripCoverUrl(
-                trip,
-                u.placeVisitHistory,
-                undefined,
-              ),
-              tripDateRangeText: trip.startingYear
-                ? String(trip.startingYear)
-                : undefined,
-              authorName: u.username,
-              authorProfileImageUrl: u.profile_picture
-                ? assetUrl(u.profile_picture)
-                : undefined,
-              countryCode: trip.countryCode,
-              countryName: trip.countryName || trip.country,
-              coordinate: trip.coordinate
-                ? {
-                    lat:
-                      (trip.coordinate as any).lat ??
-                      (trip.coordinate as any).latitude,
-                    lng:
-                      (trip.coordinate as any).lng ??
-                      (trip.coordinate as any).longitude,
-                  }
-                : undefined,
-            }));
+            const mappedBlogs: BlogEntry[] = userTrips.map((trip: any) => {
+              let inferredCountryCode = trip.countryCode;
+              let inferredCountryName = trip.countryName || trip.country;
+
+              const lat = trip.coordinate
+                ? ((trip.coordinate as any).lat ??
+                  (trip.coordinate as any).latitude)
+                : undefined;
+              const lng = trip.coordinate
+                ? ((trip.coordinate as any).lng ??
+                  (trip.coordinate as any).longitude)
+                : undefined;
+
+              if (!inferredCountryName && lat != null && lng != null) {
+                // Rough bounding box for the contiguous United States
+                if (lat >= 24 && lat <= 49 && lng >= -125 && lng <= -66) {
+                  inferredCountryName = "United States";
+                  inferredCountryCode = "US";
+                } else if (
+                  lat >= 33 &&
+                  lat <= 38.6 &&
+                  lng >= 124.5 &&
+                  lng <= 132
+                ) {
+                  // Rough bounding box for South Korea
+                  inferredCountryName = "South Korea";
+                  inferredCountryCode = "KR";
+                }
+              }
+
+              return {
+                blogKey: String(trip.blogKey ?? trip._id ?? ""),
+                title: trip.title || "Untitled Recap",
+                coverPhotoUrl: resolveTripCoverUrl(
+                  trip,
+                  u.placeVisitHistory,
+                  undefined,
+                ),
+                tripDateRangeText: trip.startingYear
+                  ? String(trip.startingYear)
+                  : undefined,
+                authorName: u.username,
+                authorProfileImageUrl: u.profile_picture
+                  ? assetUrl(u.profile_picture)
+                  : undefined,
+                countryCode: inferredCountryCode,
+                countryName: inferredCountryName,
+                coordinate:
+                  lat != null && lng != null ? { lat, lng } : undefined,
+              };
+            });
 
             setProfile({
               username: u.username,
@@ -535,19 +608,79 @@ export default function ProfilePage() {
         // Defensively filter blogs per user account in case the backend returns everything
         // and only keep blogs correctly assigned to this profile, and skip any completely corrupted entries.
         if (data.blogs && Array.isArray(data.blogs)) {
-          data.blogs = data.blogs.filter((b) => {
-            // Require a valid blog key (indicates it's safely uploaded to cloud)
-            if (b.blogKey == null) return false;
-            // If authorName is provided by the backend, ensure it matches the profile we are viewing
-            if (b.authorName && b.authorName !== username) return false;
-
-            // Clean up test blogs for the yoob account (Hide early tests 0-6)
-            if (username === "yoob") {
-              const testKeys = ["0", "1", "2", "3", "4", "5", "6"];
-              if (testKeys.includes(String(b.blogKey))) return false;
+          // De-dupe by blogKey first to prevent ghost duplicates
+          const uniqueBlogs = new Map();
+          data.blogs.forEach((b: any) => {
+            if (b.blogKey != null) {
+              uniqueBlogs.set(String(b.blogKey), b);
             }
-            return true;
           });
+          const blogsToProcess = Array.from(uniqueBlogs.values());
+
+          data.blogs = blogsToProcess
+            .filter((b: any) => {
+              // Require a valid blog key (indicates it's safely uploaded to cloud)
+              if (b.blogKey == null) return false;
+              // Ignore deleted or hidden blogs
+              if (
+                b.privacyControl?.level === "hidden" ||
+                b.status === "deleted"
+              )
+                return false;
+              // If authorName is provided by the backend, ensure it matches the profile we are viewing
+              if (b.authorName && b.authorName !== username) return false;
+
+              // Clean up ghost blogs for the yoob account (stale cache from early tests)
+              if (username.toLowerCase() === "yoob") {
+                // Specifically exclude ghost blogs (stale cache from early tests)
+                // These were identified as keys 0 through 8.
+                if (b.blogKey != null) {
+                  const key = Number(b.blogKey);
+                  if (key >= 0 && key <= 8) return false;
+                }
+                // Specifically exclude "Carmel" blogs for yoob (unwanted duplicates)
+                const title = (b.title || "").toLowerCase();
+                if (title.includes("carmel")) return false;
+              }
+              return true;
+            })
+            .map((b: any) => {
+              let inferredCountryCode = b.countryCode;
+              let inferredCountryName = b.countryName || b.country;
+
+              const lat = b.coordinate
+                ? ((b.coordinate as any).lat ?? (b.coordinate as any).latitude)
+                : undefined;
+              const lng = b.coordinate
+                ? ((b.coordinate as any).lng ?? (b.coordinate as any).longitude)
+                : undefined;
+
+              if (!inferredCountryName && lat != null && lng != null) {
+                // Rough bounding box for the contiguous United States
+                if (lat >= 24 && lat <= 49 && lng >= -125 && lng <= -66) {
+                  inferredCountryName = "United States";
+                  inferredCountryCode = "US";
+                } else if (
+                  lat >= 33 &&
+                  lat <= 38.6 &&
+                  lng >= 124.5 &&
+                  lng <= 132
+                ) {
+                  // Rough bounding box for South Korea
+                  inferredCountryName = "South Korea";
+                  inferredCountryCode = "KR";
+                }
+              }
+
+              return {
+                ...b,
+                countryCode: inferredCountryCode,
+                countryName: inferredCountryName,
+                // Ensure coordinate is properly structured
+                coordinate:
+                  lat != null && lng != null ? { lat, lng } : undefined,
+              };
+            });
         }
 
         setProfile(data);
@@ -587,13 +720,43 @@ export default function ProfilePage() {
     });
   }, [profile, selectedYear]);
 
+  // ── Hide empty years based on selected country ─────────────────────────────
+  const visibleYears = useMemo(() => {
+    if (!profile) return [];
+    // If no country selected, show all available unique years from all blogs
+    if (!selectedCountry) return availableYears;
+
+    const set = new Set<number>();
+    for (const b of profile.blogs) {
+      const name = b.countryName || b.countryCode || "Other Destinations";
+      const code = b.countryCode || name;
+      if (code === selectedCountry) {
+        const src = b.createdAt || b.tripDateRangeText || "";
+        const match = src.match(/\b(20\d{2}|19\d{2})\b/);
+        if (match) set.add(Number(match[0]));
+      }
+    }
+    return Array.from(set).sort((a, b) => b - a);
+  }, [profile, selectedCountry, availableYears]);
+
+  // ── Reset selectedYear if it's no longer visible ───────────────────────────
+  useEffect(() => {
+    if (
+      selectedYear !== "ALL" &&
+      !visibleYears.includes(selectedYear as number)
+    ) {
+      const timer = setTimeout(() => setSelectedYear("ALL"), 0);
+      return () => clearTimeout(timer);
+    }
+  }, [selectedYear, visibleYears]);
+
   // ── Country summaries (recap grid) ─────────────────────────────────────────
   const countrySummaries = useMemo(() => {
     const map = new Map<string, CountrySummary>();
     for (const blog of filteredBlogs) {
-      const countryCode = blog.countryCode || "UNKNOWN";
       const countryName =
         blog.countryName || blog.countryCode || "Other Destinations";
+      const countryCode = blog.countryCode || countryName;
 
       const src = blog.createdAt || blog.tripDateRangeText || "";
       const match = src.match(/\b(20\d{2}|19\d{2})\b/);
@@ -603,6 +766,7 @@ export default function ProfilePage() {
 
       const existing = map.get(countryCode);
       if (existing) {
+        existing.blogCount += 1;
         if (!existing.years.includes(year)) existing.years.push(year);
         if (dateStr > existing.latestDate) {
           existing.latestDate = dateStr;
@@ -615,6 +779,7 @@ export default function ProfilePage() {
           coverImage: blog.coverPhotoUrl,
           years: [year],
           latestDate: dateStr,
+          blogCount: 1,
         });
       }
     }
@@ -626,9 +791,11 @@ export default function ProfilePage() {
   // ── Blogs for the selected country (map view left list) ────────────────────
   const countryBlogs = useMemo(() => {
     if (!selectedCountry) return [];
-    return filteredBlogs.filter(
-      (b) => (b.countryCode || "UNKNOWN") === selectedCountry,
-    );
+    return filteredBlogs.filter((b) => {
+      const name = b.countryName || b.countryCode || "Other Destinations";
+      const code = b.countryCode || name;
+      return code === selectedCountry;
+    });
   }, [filteredBlogs, selectedCountry]);
 
   // ── Map markers from countryBlogs ──────────────────────────────────────────
@@ -712,7 +879,11 @@ export default function ProfilePage() {
   };
 
   const headerAction =
-    mode === "recap" ? null : (
+    mode === "recap" ? (
+      <ViewAllBlogsButton onClick={() => router.push("/bloggo")}>
+        Go Back
+      </ViewAllBlogsButton>
+    ) : (
       <ViewAllBlogsButton onClick={handleGoBack}>Go Back</ViewAllBlogsButton>
     );
 
@@ -785,38 +956,42 @@ export default function ProfilePage() {
       <div className="sticky top-0 z-50 border-b border-black/10 bg-white/95 shadow-[0_8px_24px_rgba(0,0,0,0.08)] backdrop-blur-md">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-5">
           <div className="flex items-center justify-between gap-6">
-            {/* Left: avatar + name */}
+            {/* Left: profile info (recap mode) or header action (map mode) */}
             <div className="flex items-center gap-4">
-              {profile.profileImageUrl && !imgError ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={profile.profileImageUrl}
-                  alt={displayName}
-                  className="w-11 h-11 rounded-full object-cover flex-shrink-0 border-2 border-sky-500/30"
-                  onError={() => setImgError(true)}
-                />
+              {mode === "recap" ? (
+                <>
+                  {profile.profileImageUrl && !imgError ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={profile.profileImageUrl}
+                      alt={displayName}
+                      className="w-11 h-11 rounded-full object-cover flex-shrink-0 border-2 border-sky-500/30"
+                      onError={() => setImgError(true)}
+                    />
+                  ) : (
+                    <div className="w-11 h-11 rounded-full flex-shrink-0 bg-gradient-to-br from-sky-400 to-blue-600 flex items-center justify-center text-white text-base font-bold">
+                      {initials}
+                    </div>
+                  )}
+                  <div className="space-y-0.5">
+                    <h1 className="font-[Inter] text-[20px] font-bold leading-[28px] tracking-[-0.4px] text-black">
+                      Recap Blog
+                    </h1>
+                    <p className="font-[Inter] text-[13px] font-normal leading-[18px] tracking-[-0.3px] text-[#8B949E]">
+                      {profile.bio || `@${profile.username}`}
+                    </p>
+                  </div>
+                </>
               ) : (
-                <div className="w-11 h-11 rounded-full flex-shrink-0 bg-gradient-to-br from-sky-400 to-blue-600 flex items-center justify-center text-white text-base font-bold">
-                  {initials}
-                </div>
+                headerAction
               )}
-              <div className="space-y-0.5">
-                <h1 className="font-[Inter] text-[20px] font-bold leading-[28px] tracking-[-0.4px] text-black">
-                  Recap Blog
-                </h1>
-                <p className="font-[Inter] text-[13px] font-normal leading-[18px] tracking-[-0.3px] text-[#8B949E]">
-                  {profile.bio || `@${profile.username}`}
-                </p>
-              </div>
             </div>
 
-            {/* Right: year tabs and optional back button */}
             <div className="flex flex-col items-end gap-3">
-              {headerAction}
-              {availableYears.length > 1 && mode === "recap" && (
+              {visibleYears.length > 0 && (
                 <RecapYearTabs
                   value={selectedYear}
-                  years={availableYears}
+                  years={visibleYears}
                   onChange={setSelectedYear}
                 />
               )}
@@ -846,8 +1021,8 @@ export default function ProfilePage() {
 
           <ResponsiveGrid<CountrySummary>
             items={countrySummaries}
-            minCardWidth={430}
-            maxCardWidth={500}
+            minCardWidth={440}
+            maxCardWidth={600}
             getKey={(it) => it.countryCode}
             renderItem={(it) => (
               <CountryRecapCard item={it} onSelect={handleCountrySelect} />
@@ -906,15 +1081,7 @@ export default function ProfilePage() {
                 markers={mapMarkers}
                 onMarkerClick={scrollToBlog}
                 activeMarkerId={activeBlogId}
-                overlayTopRight={
-                  availableYears.length > 1 ? (
-                    <RecapYearTabs
-                      value={selectedYear}
-                      years={availableYears}
-                      onChange={setSelectedYear}
-                    />
-                  ) : undefined
-                }
+                overlayTopRight={undefined}
               />
             </div>
           </section>

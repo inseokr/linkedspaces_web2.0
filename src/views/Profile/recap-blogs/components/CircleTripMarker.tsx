@@ -51,6 +51,25 @@ export default function CircleTripMarker({
       style={{ cursor: onClick ? "pointer" : "default" }}
       aria-label={label}
     >
+      {/* Year/Month (Above) */}
+      {!!dateLabel && (
+        <div
+          className={[
+            "mb-1.5",
+            "inline-flex items-center justify-center",
+            "rounded-full",
+            "border border-black/10",
+            "bg-white/95 px-2.5 py-1",
+            "text-[10px] font-bold leading-none text-black/80",
+            "shadow-[0_4px_12px_rgba(0,0,0,0.12)]",
+            "backdrop-blur-sm",
+          ].join(" ")}
+          title={dateLabel}
+        >
+          {dateLabel}
+        </div>
+      )}
+
       {/* Circle image with ring */}
       <div className="relative" style={ringStyle}>
         {/* radiation rings */}
@@ -86,24 +105,18 @@ export default function CircleTripMarker({
         </div>
       </div>
 
-      {/* Year/Month */}
-      {!!dateLabel && (
-        <div
-          className={[
-            "mt-1",
-            "inline-flex items-center justify-center",
-            "rounded-full",
-            "border border-black/10",
-            "bg-white/90 px-2.5 py-1",
-            "text-[11px] font-semibold leading-none text-black/70",
-            "shadow-[0_10px_24px_rgba(0,0,0,0.16)]",
-            "backdrop-blur",
-          ].join(" ")}
-          title={dateLabel}
-        >
-          {dateLabel}
-        </div>
-      )}
+      {/* Trip Name (Below) */}
+      <div
+        className={[
+          "mt-1.5 max-w-[120px]",
+          "rounded-lg border border-black/5 bg-white/90 px-2 py-1",
+          "text-center text-[11px] font-bold leading-tight text-gray-900",
+          "shadow-[0_8px_20px_rgba(0,0,0,0.12)] backdrop-blur-sm",
+          "line-clamp-2 overflow-hidden",
+        ].join(" ")}
+      >
+        {label}
+      </div>
 
       {/* Smoother "radar" animation for active markers */}
       <style jsx>{`

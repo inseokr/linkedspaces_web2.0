@@ -58,7 +58,7 @@ export function useAuth() {
     return () => cancelAnimationFrame(raf);
   }, []);
 
-  const logout = () => {
+  const logout = (redirectTo: string = "/") => {
     // 1. Clear the token
     if (typeof window !== "undefined") {
       try {
@@ -80,7 +80,7 @@ export function useAuth() {
     notifyAuthChanged();
 
     // 4. Redirect to login or landing page
-    router.replace("/");
+    router.replace(redirectTo);
     router.refresh(); // Clear server-side cache
   };
 

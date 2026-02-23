@@ -138,6 +138,8 @@ export type User = {
   /** When backend provides a friends list (e.g. in /me or login), used for Home friends row */
   friends?: UserFriend[];
   trips?: Trip[];
+  /** User's subscription tier: "Starter" (Free) or "Pro" */
+  tier?: "Starter" | "Pro";
   /** User's neighborhood / home area from settings; used as default map center when geolocation is unavailable */
   homeLocation?: GeoCoordinate;
 };
@@ -205,6 +207,7 @@ function toSlimCachedUser(user: User): User {
     trips: user.trips ?? [],
     placeVisitHistory: user.placeVisitHistory ?? [],
     homeLocation: user.homeLocation,
+    tier: user.tier,
   };
 }
 
