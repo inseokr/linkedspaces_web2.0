@@ -530,7 +530,6 @@ export default function ProfilePage() {
             userTrips = userTrips.filter(
               (t: any) =>
                 t.blogKey != null &&
-                t.privacyControl?.level !== "hidden" &&
                 t.status !== "deleted" &&
                 t.status !== "hidden", // Defense against different status names
             );
@@ -627,31 +626,6 @@ export default function ProfilePage() {
             }
           });
           let blogsToProcess = Array.from(uniqueBlogs.values());
-
-          if (username.toLowerCase() === "yoob") {
-            const seen = new Set();
-            blogsToProcess = blogsToProcess.filter((b: any) => {
-              const title = (b.title || "").toLowerCase();
-              // User confirmed Busan and Carmel are ghosts
-              if (title.includes("carmel") || title.includes("busan"))
-                return false;
-
-              // Allow topaz, gyeonggi-do, and daegu
-              if (
-                !(
-                  title.includes("topaz") ||
-                  title.includes("gyeonggi-do") ||
-                  title.includes("daegu")
-                )
-              )
-                return false;
-
-              // De-duplicate by exact title to hide identical-title ghosts
-              if (seen.has(title)) return false;
-              seen.add(title);
-              return true;
-            });
-          }
 
           data.blogs = blogsToProcess
             .filter((b: any) => {
