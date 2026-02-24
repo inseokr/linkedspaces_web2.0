@@ -3,7 +3,9 @@ import { transformToAllBlogItems } from "./src/views/Profile/recap-blogs/utils/t
 // Mock missing data fields as seen in API (e.g. no endTimestamp, just startTimeString)
 const trips = [
   {
-    blogKey: "11",
+    blogKey: 11,
+    status: "saved",
+    privacyControl: { level: "public", allowedUserList: [] },
     country: "South Korea",
     countryCode: "kr",
     startTimeString: "July 18",
