@@ -5,7 +5,9 @@ import fs from "fs";
 // Since I can't intercept it directly, I'll mock what could be missing
 const trips = [
   {
-    blogKey: "11",
+    blogKey: 11,
+    status: "saved",
+    privacyControl: { level: "public", allowedUserList: [] },
     country: "South Korea",
     countryCode: "kr",
     startTimeString: "2025-07-18",
