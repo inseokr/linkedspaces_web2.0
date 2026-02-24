@@ -1,11 +1,4 @@
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  useWindowDimensions,
-} from "react-native";
-import { Link } from "expo-router";
+import Link from "next/link";
 
 interface SectionHeaderProps {
   title: string;
@@ -14,41 +7,19 @@ interface SectionHeaderProps {
 }
 
 export function SectionHeader({ title, href, linkTitle }: SectionHeaderProps) {
-  const { width } = useWindowDimensions();
-  const isWeb = width > 768;
-
   return (
-    <View style={styles.container}>
-      <Text style={[styles.title, isWeb && styles.titleWeb]}>{title}</Text>
+    <div className="flex flex-row items-center justify-between mb-4">
+      <h2 className="text-xl font-bold text-[#1a1a1a] md:text-[28px]">
+        {title}
+      </h2>
       {href && (
-        <Link href={href as any} asChild>
-          <TouchableOpacity>
-            <Text style={styles.link}>{linkTitle || "View All"}</Text>
-          </TouchableOpacity>
+        <Link
+          href={href}
+          className="text-sm font-semibold text-[#007AFF] hover:underline"
+        >
+          {linkTitle || "View All"}
         </Link>
       )}
-    </View>
+    </div>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#1a1a1a",
-  },
-  titleWeb: {
-    fontSize: 28,
-  },
-  link: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#007AFF",
-  },
-});
