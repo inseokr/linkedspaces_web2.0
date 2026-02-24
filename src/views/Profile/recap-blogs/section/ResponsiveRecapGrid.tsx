@@ -26,23 +26,44 @@ export default function ResponsiveRecapGrid<T>({
   items,
   className = "",
   minCardWidth = 320,
-  maxCardWidth, // optional
+  maxCardWidth,
   gapClassName = "gap-6",
   renderItem,
   getKey,
 }: Props<T>) {
-  // const maxPart = maxCardWidth ? `${maxCardWidth}px` : "1fr";
+  const isSingle = items.length === 1;
 
   const min = toCssSize(minCardWidth, "320px");
-  const max =
-    maxCardWidth !== undefined ? toCssSize(maxCardWidth, "1fr") : "1fr";
+  const max = toCssSize(maxCardWidth, "1fr");
+
+  const containerStyle: React.CSSProperties = {
+    display: "grid",
+    gridTemplateColumns: isSingle
+      ? `minmax(${min}, ${max})`
+      : `repeat(auto-fit, minmax(${min}, 1fr))`,
+    justifyContent: "center",
+  };
+
+  // Enforce 2 columns for multiples by capping the width or using a specific class
+  // However, simpler is to just use repeat(auto-fit, minmax(max(300px, 45%), 1fr))
+  // to practically force 2 columns on desktop while allowing wrap on mobile.
+  if (!isSingle) {
+    containerStyle.gridTemplateColumns =
+      "repeat(auto-fit, minmax(min(100%, 400px), 1fr))";
+    // To ensure it fills the width, we can use 1fr.
+    // If there are exactly 2 items, and container is wide, they will grow.
+  }
+
+  if (isSingle && maxCardWidth !== undefined) {
+    containerStyle.maxWidth =
+      typeof maxCardWidth === "number" ? `${maxCardWidth}px` : maxCardWidth;
+    containerStyle.margin = "0 auto";
+  }
 
   return (
     <div
       className={["grid", gapClassName, className].join(" ")}
-      style={{
-        gridTemplateColumns: `repeat(auto-fit, minmax(${min}, ${max}))`,
-      }}
+      style={containerStyle}
     >
       {items.map((item, index) => (
         <React.Fragment key={getKey ? getKey(item, index) : index}>

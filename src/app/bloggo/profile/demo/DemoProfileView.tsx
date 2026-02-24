@@ -271,9 +271,14 @@ function ResponsiveGrid<T>({
     <div
       style={{
         display: "grid",
-        gridTemplateColumns: `repeat(auto-fill, minmax(${minCardWidth}px, ${maxCardWidth}px))`,
+        gridTemplateColumns:
+          items.length === 1
+            ? "minmax(300px, 600px)"
+            : "repeat(auto-fit, minmax(min(100%, 400px), 1fr))",
         gap: "24px",
         justifyContent: "center",
+        maxWidth: items.length === 1 ? "600px" : "none",
+        margin: "0 auto",
       }}
     >
       {items.map((item) => (

@@ -16,6 +16,7 @@ export type PlaceDraft = {
   photos: string[];
   captions: string[];
   coordinate?: { latitude: number; longitude: number };
+  status?: "saved" | "hidden" | "deleted" | string;
 };
 
 export type DayDraft = {

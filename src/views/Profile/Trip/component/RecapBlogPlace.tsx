@@ -89,6 +89,8 @@ type Props = {
   mode?: Mode;
 
   onPlaceStoryChange?: (entryId: string, next: string) => void;
+  onPlaceNameChange?: (entryId: string, next: string) => void;
+  onTogglePlaceHide?: (entryId: string) => void;
   onCaptionChange?: (entryId: string, photoIndex: number, next: string) => void;
   onRemovePhoto?: (entryId: string, photoIndex: number) => void;
 
@@ -109,6 +111,8 @@ export function RecapBlogDaySection({
   entries,
   mode = "view",
   onPlaceStoryChange,
+  onPlaceNameChange,
+  onTogglePlaceHide,
   onCaptionChange,
   onRemovePhoto,
   onEntryMount,
@@ -142,6 +146,8 @@ export function RecapBlogDaySection({
               onToggleExpanded={() => toggleExpanded(entry.id)}
               mode={mode}
               onPlaceStoryChange={onPlaceStoryChange}
+              onPlaceNameChange={onPlaceNameChange}
+              onTogglePlaceHide={onTogglePlaceHide}
               onCaptionChange={onCaptionChange}
               onRemovePhoto={onRemovePhoto}
             />
@@ -188,6 +194,8 @@ function RecapPlaceBlock({
   onToggleExpanded,
   mode,
   onPlaceStoryChange,
+  onPlaceNameChange,
+  onTogglePlaceHide,
   onCaptionChange,
   onRemovePhoto,
   photoLayout = "default",
@@ -197,6 +205,8 @@ function RecapPlaceBlock({
   onToggleExpanded: () => void;
   mode: Mode;
   onPlaceStoryChange?: (entryId: string, next: string) => void;
+  onPlaceNameChange?: (entryId: string, next: string) => void;
+  onTogglePlaceHide?: (entryId: string) => void;
   onCaptionChange?: (entryId: string, photoIndex: number, next: string) => void;
   onRemovePhoto?: (entryId: string, photoIndex: number) => void;
   photoLayout?: "default" | "sheet";
@@ -207,29 +217,41 @@ function RecapPlaceBlock({
 
   return (
     <div className="space-y-4">
-      {/* 장소/태그는 카드 외부 (시간은 사진 위로 오버레이) */}
+      {/* Header: Place Name and Time/Category/Actions */}
       <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <div className="flex items-center gap-3">
-            <MapPin className="h-7 w-7 text-[#B84A2F]" />
-            <div className="min-w-0">
-              <div className="truncate text-[24px] font-extrabold text-black underline underline-offset-4">
-                {entry.placeName}
-              </div>
-              {/* If no photos exist, keep time visible here as fallback */}
-              {(!entry.photos || entry.photos.length === 0) &&
-                !!entry.timeRangeText?.trim() && (
-                  <div className="mt-1 text-[16px] font-medium text-black/70">
-                    {entry.timeRangeText}
-                  </div>
-                )}
+            <MapPin className="h-7 w-7 text-[#B84A2F] shrink-0" />
+            <div className="min-w-0 flex-1">
+              {mode === "edit" ? (
+                <input
+                  type="text"
+                  value={entry.placeName}
+                  onChange={(e) =>
+                    onPlaceNameChange?.(entry.id, e.target.value)
+                  }
+                  placeholder="Enter place name"
+                  className="w-full bg-transparent text-[24px] font-extrabold text-black underline underline-offset-4 focus:outline-none focus:ring-2 focus:ring-sky-500/20 rounded-lg p-1"
+                />
+              ) : (
+                <div className="truncate text-[24px] font-extrabold text-black underline underline-offset-4">
+                  {entry.placeName}
+                </div>
+              )}
             </div>
           </div>
+          {/* If no photos exist, keep time visible here as fallback */}
+          {(!entry.photos || entry.photos.length === 0) &&
+            !!entry.timeRangeText?.trim() && (
+              <div className="mt-1 ml-10 text-[16px] font-medium text-black/70">
+                {entry.timeRangeText}
+              </div>
+            )}
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 shrink-0">
           {entry.categoryLabel && (
-            <span className="rounded-full bg-black/5 px-3 py-1 text-[14px] font-semibold text-black/60">
+            <span className="hidden sm:inline-block rounded-full bg-black/5 px-3 py-1 text-[14px] font-semibold text-black/60">
               {entry.categoryLabel}
             </span>
           )}
@@ -245,9 +267,27 @@ function RecapPlaceBlock({
           >
             <ThumbsUp className="h-6 w-6" />
           </button>
+
+          {mode === "edit" && (
+            <button
+              type="button"
+              onClick={() => onTogglePlaceHide?.(entry.id)}
+              className={[
+                "inline-flex h-11 px-4 items-center justify-center rounded-full text-sm font-bold transition-colors",
+                (entry as any).status === "hidden"
+                  ? "bg-amber-100 text-amber-700 hover:bg-amber-200"
+                  : "bg-red-50 text-red-600 hover:bg-red-100",
+              ].join(" ")}
+            >
+              {(entry as any).status === "hidden"
+                ? "Unhide Place"
+                : "Hide Place"}
+            </button>
+          )}
         </div>
       </div>
 
+      {/* Place Story Section */}
       {mode === "edit" ? (
         <div className="w-full max-w-[920px] 2xl:max-w-[1100px]">
           <TextRow
@@ -276,7 +316,7 @@ function RecapPlaceBlock({
                   onClick={() => setPlaceStoryExpanded((v) => !v)}
                   className="mt-3 text-[16px] font-extrabold text-black hover:opacity-80"
                 >
-                  {placeStoryExpanded ? "See Less" : "See More"}
+                  {expanded ? "See Less" : "See More"}
                 </button>
               )}
             </div>
@@ -284,6 +324,7 @@ function RecapPlaceBlock({
         )
       )}
 
+      {/* Photo Section */}
       {mode === "edit" ? (
         <RecapPhotoEditList entry={entry} onCaptionChange={onCaptionChange} />
       ) : (

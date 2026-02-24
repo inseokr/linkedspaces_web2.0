@@ -15,7 +15,11 @@ import type { DayTab } from "@/views/Profile/Trip/component/RecapDayTabs";
 
 import type { RecapEditDraft, PlaceDraft } from "./types/editTypes";
 import { draftFromPageModel } from "./utils/editMappers";
-import { updatePlaceVisitHistoryStory } from "@/api/user";
+import {
+  updatePlaceVisitHistoryStory,
+  updatePlaceInfo,
+  updatePlaceStatus,
+} from "@/api/user";
 
 import ImageFieldEditor from "./components/ImageFieldEditor";
 import TextRow from "./components/TextRow";
@@ -51,6 +55,10 @@ export default function BloggoRecapEditView({
   );
   // Baseline place stories keyed by placeKey -> story.
   const baselinePlaceStoriesRef = useRef<Map<string, string> | null>(null);
+  const baselinePlaceMetaRef = useRef<Map<
+    string,
+    { name: string; status: string }
+  > | null>(null);
   const baselineInitializedRef = useRef(false);
   const baselineDraftFingerprintRef = useRef<string | null>(null);
   const baselineTitleRef = useRef<string | null>(null);
@@ -79,6 +87,7 @@ export default function BloggoRecapEditView({
           placeStory: p.placeStory ?? "",
           // Include these too, in case they become editable later.
           placeName: p.placeName,
+          status: p.status ?? "saved",
           timeRangeText: p.timeRangeText ?? "",
           categoryLabel: p.categoryLabel ?? "",
         })),
@@ -128,6 +137,21 @@ export default function BloggoRecapEditView({
       }
     }
     return placeToStory;
+  };
+
+  const buildBaselinePlaceMeta = (d: RecapEditDraft) => {
+    const metaMap = new Map<string, { name: string; status: string }>();
+    for (const day of d.days ?? []) {
+      for (const place of day.places ?? []) {
+        const placeKey = place.placeKey;
+        if (!placeKey) continue;
+        metaMap.set(placeKey, {
+          name: place.placeName,
+          status: place.status ?? "saved",
+        });
+      }
+    }
+    return metaMap;
   };
 
   /** 1) Fetch */
@@ -181,6 +205,7 @@ export default function BloggoRecapEditView({
     if (baselineInitializedRef.current) return;
     baselineCaptionsRef.current = buildBaselineCaptions(draft);
     baselinePlaceStoriesRef.current = buildBaselinePlaceStories(draft);
+    baselinePlaceMetaRef.current = buildBaselinePlaceMeta(draft);
     baselineDraftFingerprintRef.current = draftFingerprint(draft);
     baselineTitleRef.current = draft.recapTitle;
     baselineInitializedRef.current = true;
@@ -229,6 +254,11 @@ export default function BloggoRecapEditView({
     }> = [];
     const placeStoryUpdates: Array<{ placeKey: string; storyText: string }> =
       [];
+    const placeMetaUpdates: Array<{
+      placeKey: string;
+      name?: string;
+      status?: string;
+    }> = [];
 
     for (const day of draft.days ?? []) {
       for (const place of day.places ?? []) {
@@ -264,6 +294,23 @@ export default function BloggoRecapEditView({
             updates.push({ placeKey, photoIndex: i, storyText: nextCaption });
           }
         }
+
+        const prevMeta = (baselinePlaceMetaRef.current ?? new Map()).get(
+          placeKey,
+        );
+        const nextName = place.placeName;
+        const nextStatus = place.status ?? "saved";
+
+        if (
+          prevMeta &&
+          (nextName !== prevMeta.name || nextStatus !== prevMeta.status)
+        ) {
+          placeMetaUpdates.push({
+            placeKey,
+            name: nextName !== prevMeta.name ? nextName : undefined,
+            status: nextStatus !== prevMeta.status ? nextStatus : undefined,
+          });
+        }
       }
     }
 
@@ -271,7 +318,7 @@ export default function BloggoRecapEditView({
     setError(null);
     try {
       const tasks: Array<{
-        kind: "title" | "caption" | "placeStory";
+        kind: "title" | "caption" | "placeStory" | "placeMeta" | "placeStatus";
         promise: Promise<any>;
       }> = [];
 
@@ -304,6 +351,35 @@ export default function BloggoRecapEditView({
             photoIndexType: "filtered",
           }),
         });
+      }
+
+      for (const u of placeMetaUpdates) {
+        if (u.name) {
+          tasks.push({
+            kind: "placeMeta",
+            promise: updatePlaceInfo({
+              placeKey: u.placeKey,
+              placeName: u.name,
+              // Backend might require existing coords if not changed, but we only send what's needed or
+              // we can pull them from the draft.
+              coordinate: draft.days
+                .flatMap((d) => d.places)
+                .find((p) => p.placeKey === u.placeKey)?.coordinate ?? {
+                latitude: 0,
+                longitude: 0,
+              },
+            }),
+          });
+        }
+        if (u.status) {
+          tasks.push({
+            kind: "placeStatus",
+            promise: updatePlaceStatus({
+              placeKey: u.placeKey,
+              status: u.status,
+            }),
+          });
+        }
       }
 
       const results = await Promise.allSettled(tasks.map((t) => t.promise));
@@ -352,6 +428,7 @@ export default function BloggoRecapEditView({
       // Refresh baseline with the saved captions so repeated "Update" doesn't resend.
       baselineCaptionsRef.current = buildBaselineCaptions(draft);
       baselinePlaceStoriesRef.current = buildBaselinePlaceStories(draft);
+      baselinePlaceMetaRef.current = buildBaselinePlaceMeta(draft);
       baselineDraftFingerprintRef.current = draftFingerprint(draft);
       baselineTitleRef.current = draft.recapTitle;
 
@@ -441,6 +518,20 @@ export default function BloggoRecapEditView({
   const onPlaceStoryChange = (dayId: string, placeId: string, next: string) => {
     updatePlaceInDay(dayId, placeId, (p) => {
       return { ...p, placeStory: next };
+    });
+  };
+
+  const onPlaceNameChange = (dayId: string, placeId: string, next: string) => {
+    updatePlaceInDay(dayId, placeId, (p) => {
+      return { ...p, placeName: next };
+    });
+  };
+
+  const onTogglePlaceHide = (dayId: string, placeId: string) => {
+    updatePlaceInDay(dayId, placeId, (p) => {
+      const current = p.status ?? "saved";
+      const next = current === "hidden" ? "saved" : "hidden";
+      return { ...p, status: next };
     });
   };
 
@@ -650,10 +741,15 @@ export default function BloggoRecapEditView({
                   captions: p.captions ?? [],
                   caption: p.caption ?? "",
                   coordinate: p.coordinate,
+                  status: p.status,
                 }))}
                 onPlaceStoryChange={(entryId, next) =>
                   onPlaceStoryChange(d.id, entryId, next)
                 }
+                onPlaceNameChange={(pid, next) =>
+                  onPlaceNameChange(d.id, pid, next)
+                }
+                onTogglePlaceHide={(pid) => onTogglePlaceHide(d.id, pid)}
                 onCaptionChange={(entryId, photoIndex, next) =>
                   onCaptionChange(d.id, entryId, photoIndex, next)
                 }

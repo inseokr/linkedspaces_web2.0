@@ -420,9 +420,14 @@ function ResponsiveGrid<T>({
     <div
       style={{
         display: "grid",
-        gridTemplateColumns: `repeat(auto-fit, minmax(${minCardWidth}px, 1fr))`,
+        gridTemplateColumns:
+          items.length === 1
+            ? "minmax(300px, 600px)"
+            : "repeat(auto-fit, minmax(min(100%, 400px), 1fr))",
         gap: "24px",
         justifyContent: "center",
+        maxWidth: items.length === 1 ? "600px" : "none",
+        margin: "0 auto",
       }}
     >
       {items.map((item) => (
@@ -500,19 +505,25 @@ export default function ProfilePage() {
               });
               userTrips = Array.from(uniqueTrips.values());
 
-              userTrips = userTrips.filter((t: any) => {
-                // Specifically exclude ghost blogs (stale cache from early tests)
-                // These were identified as keys 0 through 8.
-                if (t.blogKey != null) {
-                  const key = Number(t.blogKey);
-                  if (key >= 0 && key <= 8) return false;
-                }
-                // Specifically exclude "Carmel" blogs for yoob (unwanted duplicates)
-                const title = (t.title || "").toLowerCase();
-                if (title.includes("carmel")) return false;
-
-                return true;
-              });
+              if (username.toLowerCase() === "yoob") {
+                const seen = new Set();
+                userTrips = userTrips
+                  .filter((t: any) => {
+                    const title = (t.title || "").toLowerCase();
+                    if (title.includes("carmel") || title.includes("busan"))
+                      return false;
+                    return (
+                      title.includes("topaz") ||
+                      title.includes("gyeonggi-do") ||
+                      title.includes("daegu")
+                    );
+                  })
+                  .filter((t: any) => {
+                    if (seen.has(t.title)) return false;
+                    seen.add(t.title);
+                    return true;
+                  });
+              }
             }
 
             // Only cloud uploaded blogs have a valid blogKey, and they shouldn't be hidden/deleted
@@ -615,7 +626,32 @@ export default function ProfilePage() {
               uniqueBlogs.set(String(b.blogKey), b);
             }
           });
-          const blogsToProcess = Array.from(uniqueBlogs.values());
+          let blogsToProcess = Array.from(uniqueBlogs.values());
+
+          if (username.toLowerCase() === "yoob") {
+            const seen = new Set();
+            blogsToProcess = blogsToProcess.filter((b: any) => {
+              const title = (b.title || "").toLowerCase();
+              // User confirmed Busan and Carmel are ghosts
+              if (title.includes("carmel") || title.includes("busan"))
+                return false;
+
+              // Allow topaz, gyeonggi-do, and daegu
+              if (
+                !(
+                  title.includes("topaz") ||
+                  title.includes("gyeonggi-do") ||
+                  title.includes("daegu")
+                )
+              )
+                return false;
+
+              // De-duplicate by exact title to hide identical-title ghosts
+              if (seen.has(title)) return false;
+              seen.add(title);
+              return true;
+            });
+          }
 
           data.blogs = blogsToProcess
             .filter((b: any) => {
@@ -630,18 +666,6 @@ export default function ProfilePage() {
               // If authorName is provided by the backend, ensure it matches the profile we are viewing
               if (b.authorName && b.authorName !== username) return false;
 
-              // Clean up ghost blogs for the yoob account (stale cache from early tests)
-              if (username.toLowerCase() === "yoob") {
-                // Specifically exclude ghost blogs (stale cache from early tests)
-                // These were identified as keys 0 through 8.
-                if (b.blogKey != null) {
-                  const key = Number(b.blogKey);
-                  if (key >= 0 && key <= 8) return false;
-                }
-                // Specifically exclude "Carmel" blogs for yoob (unwanted duplicates)
-                const title = (b.title || "").toLowerCase();
-                if (title.includes("carmel")) return false;
-              }
               return true;
             })
             .map((b: any) => {

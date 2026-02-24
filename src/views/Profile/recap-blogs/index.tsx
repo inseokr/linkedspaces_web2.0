@@ -495,10 +495,8 @@ export default function ProfileRecapBlogsView() {
       return (
         <ResponsiveRecapGrid<CountryRecapItem>
           items={recapItems}
-          minCardWidth={430}
-          maxCardWidth={500} // 이걸 줘야 왼쪽 정렬 가능
-          // minCardWidth="clamp(300px, 25vw, 450px)"
-          // maxCardWidth="clamp(450px, 30vw, 600px)"
+          minCardWidth={300}
+          maxCardWidth={600}
           getKey={(it) => it.id}
           renderItem={(it) => (
             <CountryRecapCard
