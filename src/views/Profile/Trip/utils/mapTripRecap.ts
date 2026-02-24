@@ -134,6 +134,8 @@ function mapPlaceToEntry(p: TripRecapPlace, fallbackId: string): RecapEntry {
   const id = fallbackId; // trip-recap place에는 id/_id가 보장되지 않아서 안전하게 fallback 사용
   const placeKey = p.digitizedTime || fallbackId;
 
+  console.log("mapPlaceToEntry:", p);
+
   const placeName = p.placeName || "Place";
   const externalUrl =
     typeof p.externalUrl === "string" ? p.externalUrl.trim() : "";
@@ -159,7 +161,18 @@ function mapPlaceToEntry(p: TripRecapPlace, fallbackId: string): RecapEntry {
 
   const timeRangeText = (() => {
     const dt = p.digitizedTime ?? "";
-    if (!dt) return "";
+    if (!dt) {
+      if (
+        typeof process !== "undefined" &&
+        process.env.NODE_ENV !== "production"
+      ) {
+        console.warn(
+          "[trip-recap] Place missing digitizedTime (timestamp will not show). API: GET /ls-beta-test/trip-recap/:userName/:blogKey → response.days[].places[].digitizedTime. Place:",
+          { placeName: p.placeName, fallbackId },
+        );
+      }
+      return "";
+    }
     const parts = dt.split(" ");
     const hhmm = parts[1]?.slice(0, 5) ?? "";
     return formatTimeLabel(hhmm);

@@ -543,6 +543,16 @@ function RecapPhotoCard({
                 {entry.timeRangeText}
               </div>
             )}
+            {/* Place name over photo (reference: other blog page shows time + place over image) */}
+            {!!entry.placeName?.trim() && (
+              <div
+                className="absolute bottom-4 left-4 right-4 flex items-center gap-1.5 rounded-full bg-black/45 px-3 py-1.5 text-[14px] font-bold text-white backdrop-blur max-w-[85%]"
+                title={entry.placeName}
+              >
+                <MapPin className="h-4 w-4 shrink-0 opacity-90" />
+                <span className="min-w-0 truncate">{entry.placeName}</span>
+              </div>
+            )}
           </button>
         </div>
 

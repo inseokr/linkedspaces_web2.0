@@ -494,44 +494,11 @@ export default function ProfilePage() {
           if (u?.username === username) {
             let userTrips = Array.isArray(u.trips) ? u.trips : [];
 
-            // Clean up ghost blogs for the yoob account (stale cache from early tests)
-            if (username.toLowerCase() === "yoob") {
-              // De-dupe by blogKey first to prevent ghost duplicates
-              const uniqueTrips = new Map();
-              userTrips.forEach((t: any) => {
-                if (t.blogKey != null) {
-                  uniqueTrips.set(String(t.blogKey), t);
-                }
-              });
-              userTrips = Array.from(uniqueTrips.values());
-
-              if (username.toLowerCase() === "yoob") {
-                const seen = new Set();
-                userTrips = userTrips
-                  .filter((t: any) => {
-                    const title = (t.title || "").toLowerCase();
-                    if (title.includes("carmel") || title.includes("busan"))
-                      return false;
-                    return (
-                      title.includes("topaz") ||
-                      title.includes("gyeonggi-do") ||
-                      title.includes("daegu")
-                    );
-                  })
-                  .filter((t: any) => {
-                    if (seen.has(t.title)) return false;
-                    seen.add(t.title);
-                    return true;
-                  });
-              }
-            }
+            console.log("userTrips", userTrips.length);
 
             // Only cloud uploaded blogs have a valid blogKey, and they shouldn't be hidden/deleted
             userTrips = userTrips.filter(
-              (t: any) =>
-                t.blogKey != null &&
-                t.status !== "deleted" &&
-                t.status !== "hidden", // Defense against different status names
+              (t: any) => t.blogKey != null && t.status !== "deleted",
             );
 
             const mappedBlogs: BlogEntry[] = userTrips.map((trip: any) => {
@@ -586,6 +553,8 @@ export default function ProfilePage() {
               };
             });
 
+            console.log("mappedBlogs", mappedBlogs.length);
+
             setProfile({
               username: u.username,
               displayName: u.username,
@@ -607,6 +576,10 @@ export default function ProfilePage() {
 
     const fetchProfile = async () => {
       try {
+        tryLocalFallback("not-found");
+        return;
+        console.log("fetchProfile", username);
+
         const data = await apiFetch<ProfileData>(
           `/bloggo/profile?username=${encodeURIComponent(username)}`,
         );
