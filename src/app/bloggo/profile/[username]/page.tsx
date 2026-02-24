@@ -240,6 +240,13 @@ function BlogListCard({
 
   const locationLabel = blog.coordinate?.label || blog.countryName || "";
 
+  console.warn(
+    "Rendering BlogListCard for blogKey:",
+    blog.blogKey,
+    "isActive:",
+    isActive,
+  );
+
   return (
     <div data-recap-blog-id={blog.blogKey} className="w-full">
       <Link
@@ -494,45 +501,13 @@ export default function ProfilePage() {
           if (u?.username === username) {
             let userTrips = Array.isArray(u.trips) ? u.trips : [];
 
-            // Clean up ghost blogs for the yoob account (stale cache from early tests)
-            if (username.toLowerCase() === "yoob") {
-              // De-dupe by blogKey first to prevent ghost duplicates
-              const uniqueTrips = new Map();
-              userTrips.forEach((t: any) => {
-                if (t.blogKey != null) {
-                  uniqueTrips.set(String(t.blogKey), t);
-                }
-              });
-              userTrips = Array.from(uniqueTrips.values());
-
-              if (username.toLowerCase() === "yoob") {
-                const seen = new Set();
-                userTrips = userTrips
-                  .filter((t: any) => {
-                    const title = (t.title || "").toLowerCase();
-                    if (title.includes("carmel") || title.includes("busan"))
-                      return false;
-                    return (
-                      title.includes("topaz") ||
-                      title.includes("gyeonggi-do") ||
-                      title.includes("daegu")
-                    );
-                  })
-                  .filter((t: any) => {
-                    if (seen.has(t.title)) return false;
-                    seen.add(t.title);
-                    return true;
-                  });
-              }
-            }
-
             // Only cloud uploaded blogs have a valid blogKey, and they shouldn't be hidden/deleted
             userTrips = userTrips.filter(
-              (t: any) =>
-                t.blogKey != null &&
-                t.privacyControl?.level !== "hidden" &&
-                t.status !== "deleted" &&
-                t.status !== "hidden", // Defense against different status names
+              (t: any) => t.blogKey != null && t.status !== "deleted",
+            );
+            console.warn(
+              `userTrips for local fallback (${userTrips.length}):`,
+              userTrips,
             );
 
             const mappedBlogs: BlogEntry[] = userTrips.map((trip: any) => {
@@ -607,115 +582,8 @@ export default function ProfilePage() {
     };
 
     const fetchProfile = async () => {
-      try {
-        const data = await apiFetch<ProfileData>(
-          `/bloggo/profile?username=${encodeURIComponent(username)}`,
-        );
-        if (!data) {
-          tryLocalFallback("not-found");
-          return;
-        }
-
-        // Defensively filter blogs per user account in case the backend returns everything
-        // and only keep blogs correctly assigned to this profile, and skip any completely corrupted entries.
-        if (data.blogs && Array.isArray(data.blogs)) {
-          // De-dupe by blogKey first to prevent ghost duplicates
-          const uniqueBlogs = new Map();
-          data.blogs.forEach((b: any) => {
-            if (b.blogKey != null) {
-              uniqueBlogs.set(String(b.blogKey), b);
-            }
-          });
-          let blogsToProcess = Array.from(uniqueBlogs.values());
-
-          if (username.toLowerCase() === "yoob") {
-            const seen = new Set();
-            blogsToProcess = blogsToProcess.filter((b: any) => {
-              const title = (b.title || "").toLowerCase();
-              // User confirmed Busan and Carmel are ghosts
-              if (title.includes("carmel") || title.includes("busan"))
-                return false;
-
-              // Allow topaz, gyeonggi-do, and daegu
-              if (
-                !(
-                  title.includes("topaz") ||
-                  title.includes("gyeonggi-do") ||
-                  title.includes("daegu")
-                )
-              )
-                return false;
-
-              // De-duplicate by exact title to hide identical-title ghosts
-              if (seen.has(title)) return false;
-              seen.add(title);
-              return true;
-            });
-          }
-
-          data.blogs = blogsToProcess
-            .filter((b: any) => {
-              // Require a valid blog key (indicates it's safely uploaded to cloud)
-              if (b.blogKey == null) return false;
-              // Ignore deleted or hidden blogs
-              if (
-                b.privacyControl?.level === "hidden" ||
-                b.status === "deleted"
-              )
-                return false;
-              // If authorName is provided by the backend, ensure it matches the profile we are viewing
-              if (b.authorName && b.authorName !== username) return false;
-
-              return true;
-            })
-            .map((b: any) => {
-              let inferredCountryCode = b.countryCode;
-              let inferredCountryName = b.countryName || b.country;
-
-              const lat = b.coordinate
-                ? ((b.coordinate as any).lat ?? (b.coordinate as any).latitude)
-                : undefined;
-              const lng = b.coordinate
-                ? ((b.coordinate as any).lng ?? (b.coordinate as any).longitude)
-                : undefined;
-
-              if (!inferredCountryName && lat != null && lng != null) {
-                // Rough bounding box for the contiguous United States
-                if (lat >= 24 && lat <= 49 && lng >= -125 && lng <= -66) {
-                  inferredCountryName = "United States";
-                  inferredCountryCode = "US";
-                } else if (
-                  lat >= 33 &&
-                  lat <= 38.6 &&
-                  lng >= 124.5 &&
-                  lng <= 132
-                ) {
-                  // Rough bounding box for South Korea
-                  inferredCountryName = "South Korea";
-                  inferredCountryCode = "KR";
-                }
-              }
-
-              return {
-                ...b,
-                countryCode: inferredCountryCode,
-                countryName: inferredCountryName,
-                // Ensure coordinate is properly structured
-                coordinate:
-                  lat != null && lng != null ? { lat, lng } : undefined,
-              };
-            });
-        }
-
-        setProfile(data);
-        setStatus("ok");
-      } catch (err: any) {
-        if (err?.status === 404) {
-          tryLocalFallback("not-found");
-        } else {
-          tryLocalFallback("error");
-        }
-      }
+      // <note> we should fetch it through
+      tryLocalFallback("not-found");
     };
 
     fetchProfile();
@@ -736,6 +604,8 @@ export default function ProfilePage() {
   // ── Filter blogs by year ────────────────────────────────────────────────────
   const filteredBlogs = useMemo(() => {
     if (!profile) return [];
+
+    console.warn("Filtering blogs:", profile.blogs);
     if (selectedYear === "ALL") return profile.blogs;
     return profile.blogs.filter((b) => {
       const src = b.createdAt || b.tripDateRangeText || "";
