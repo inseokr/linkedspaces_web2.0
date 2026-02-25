@@ -6,10 +6,7 @@ import Link from "next/link";
 const BASE = "/bloggo";
 
 const footerLinks = {
-  Product: [
-    { href: `${BASE}/features`, label: "Features" },
-    { href: `${BASE}/pricing`, label: "Pricing" },
-  ],
+  Product: [{ href: `${BASE}/features`, label: "Features" }],
   Company: [
     { href: `${BASE}/support`, label: "Support" },
     { href: `${BASE}/privacy`, label: "Privacy Policy" },
