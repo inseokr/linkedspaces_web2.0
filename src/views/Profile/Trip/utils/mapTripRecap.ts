@@ -50,8 +50,13 @@ export function mapTripRecapToPageModel(
     ? normalizeImageSrc(trip.profilePicture).src
     : undefined;
 
-  //  cover: trip에 coverPhotoUri 없음 → days/places/photoList에서 첫 사진으로 fallback
-  const coverImageUrl = pickCoverFromRecap(recapData) ?? "/images/hero/us.jpg";
+  //  cover: trip.coverPhotoUri 우선 (trip card와 동일), 없으면 days/places/photoList에서 첫 사진으로 fallback
+  const explicitCover =
+    typeof trip.coverPhotoUri === "string" && trip.coverPhotoUri.trim()
+      ? normalizeImageSrc(trip.coverPhotoUri.trim()).src
+      : undefined;
+  const coverImageUrl =
+    explicitCover ?? pickCoverFromRecap(recapData) ?? "/images/hero/us.jpg";
 
   const locationText = "";
 
@@ -144,16 +149,20 @@ function mapPlaceToEntry(p: TripRecapPlace, fallbackId: string): RecapEntry {
   const selectedPhoto =
     photoList.find((x: any) => x?.selected) ?? photoList[0] ?? null;
 
-  const captions = photoList.map((x: any) =>
+  //  photos: selected only (fallback to all if none selected). normalizeImageSrc로 /public 제거 + host 붙인 "최종 src"만 넘김
+  const selectedPhotoList = photoList.filter((x: any) => x?.selected);
+  const displayPhotoList =
+    selectedPhotoList.length > 0 ? selectedPhotoList : photoList;
+  const photos = displayPhotoList
+    .map((x: any) => (x?.uri ? normalizeImageSrc(x.uri).src : ""))
+    .filter(Boolean);
+
+  // captions aligned with display photo list so captions[i] matches photos[i]
+  const captions = displayPhotoList.map((x: any) =>
     typeof x?.story === "string" ? x.story : "",
   );
   // NOTE: caption is per-photo (photoIndex 0 fallback). Place story is stored separately.
   const caption = selectedPhoto?.story ?? captions[0] ?? "";
-
-  //  photos: normalizeImageSrc로 /public 제거 + host 붙인 "최종 src"만 넘김
-  const photos = photoList
-    .map((x: any) => (x?.uri ? normalizeImageSrc(x.uri).src : ""))
-    .filter(Boolean);
 
   const categoryLabel = p.categories?.[0] || undefined;
 

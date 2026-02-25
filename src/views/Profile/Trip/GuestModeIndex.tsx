@@ -29,6 +29,8 @@ import SignInHeroCard from "./component/GuestSignInHeroCard";
 import SignInModal from "./component/GuestSignInModal";
 import BloggoSignInModal from "./component/BloggoSignInModal";
 import DownloadVideoModal from "./component/GuestDownloadVideoModal";
+import { getFriendsTrips } from "@/api/lsHomeApi";
+import { resolveTripCoverUrl } from "@/views/Profile/recap-blogs/utils/tripDataTransform";
 import { isLoginSuccess, loginWithJwt, loginWithGoogle } from "@/api/auth";
 import { assertBloggoUser } from "@/lib/bloggo";
 import { setCachedUser } from "@/api/user";
@@ -927,6 +929,32 @@ export default function GuestRecapPage({ userId, tripId, brand }: Props) {
     } as RecapBlogPageData;
   }, [recapData]);
 
+  // When recap API doesn't return coverPhotoUri, fetch trip list (same source as trip card) for cover
+  const [tripCoverOverride, setTripCoverOverride] = useState<string | null>(
+    null,
+  );
+  useEffect(() => {
+    if (!recapData || !userId || !tripId) return;
+    if (
+      typeof recapData.trip?.coverPhotoUri === "string" &&
+      recapData.trip.coverPhotoUri.trim()
+    ) {
+      setTripCoverOverride(null);
+      return;
+    }
+    let cancelled = false;
+    getFriendsTrips(userId).then((res) => {
+      if (cancelled || !res.success || !Array.isArray(res.data)) return;
+      const trip = res.data.find((t) => String(t?.blogKey) === String(tripId));
+      if (!trip) return;
+      const cover = resolveTripCoverUrl(trip, undefined, undefined);
+      if (cover) setTripCoverOverride(cover);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [recapData, userId, tripId]);
+
   // ===== 탭 =====
   const dayTabs: DayTab[] = useMemo(() => {
     if (!effectiveModel) return [];
@@ -1556,7 +1584,10 @@ export default function GuestRecapPage({ userId, tripId, brand }: Props) {
       <div style={{ height: LOGIN_BAR_HEIGHT_PX }} />
 
       <div className="p-3">
-        <RecapBlogHero {...effectiveModel.hero} />
+        <RecapBlogHero
+          {...effectiveModel.hero}
+          coverImageUrl={tripCoverOverride ?? effectiveModel.hero.coverImageUrl}
+        />
       </div>
 
       {/* Mobile: sticky day tabs (now below the header, not on the cover image) */}
