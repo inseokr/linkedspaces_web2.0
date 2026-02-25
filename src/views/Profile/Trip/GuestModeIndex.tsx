@@ -713,7 +713,7 @@ import { notifyAuthChanged } from "@/hooks/useAuth";
 // import SignInModal from "./component/SignInModal";         // 네 파일 기준 경로로 맞춰
 // import DownloadVideoModal from "./component/DownloadVideoModal"; // 네 파일 기준 경로로 맞춰
 
-import type { TripRecapResponse } from "@/api/trips";
+import type { Trip, TripRecapResponse } from "@/api/trips";
 
 import { apiFetch } from "@/api/client";
 
@@ -947,7 +947,7 @@ export default function GuestRecapPage({ userId, tripId, brand }: Props) {
       if (cancelled || !res.success || !Array.isArray(res.data)) return;
       const trip = res.data.find((t) => String(t?.blogKey) === String(tripId));
       if (!trip) return;
-      const cover = resolveTripCoverUrl(trip, undefined, undefined);
+      const cover = resolveTripCoverUrl(trip as Trip, undefined, undefined);
       if (cover) setTripCoverOverride(cover);
     });
     return () => {
