@@ -136,8 +136,13 @@ export default function BloggoSignInSection() {
       <div className="relative z-10">
         <div className="flex items-center justify-center px-6 py-10">
           <div className="w-full max-w-[420px]">
-            <h1 className="text-center text-[44px] font-semibold tracking-tight text-black">
-              Bloggo
+            <h1 className="text-center">
+              <Link
+                href="/bloggo"
+                className="text-[44px] font-semibold tracking-tight text-black hover:opacity-80 transition-opacity"
+              >
+                Bloggo
+              </Link>
             </h1>
 
             <GoogleOAuthProvider clientId="365835568807-9s56gicbdaj9vkn3kkbkvs2crt8k764e.apps.googleusercontent.com">

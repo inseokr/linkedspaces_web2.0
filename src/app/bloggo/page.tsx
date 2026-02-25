@@ -11,59 +11,45 @@ const BASE = "/bloggo";
 const howItWorks = [
   {
     step: "1",
-    title: "Select Your Trip",
+    title: "Memories are meant to last.",
     description:
-      "No digging through your camera roll. Your photos are already grouped by date and trip.",
+      "Photos shouldn’t sit scattered in your camera roll, forgotten. We group them by place and turn scattered photos into a clear, organized draft.",
     microCopy: "Just choose the adventure you want to turn into a blog.",
     icon: "📸",
   },
   {
     step: "2",
-    title: "We Organize by Place",
+    title: "You shouldn’t start from nothing.",
     description:
-      "Bloggo detects real locations from your photo metadata and structures your trip into chapters by place.",
+      "Your photos become a structured blog draft in seconds, so you never start from scratch.",
     microCopy: 'From "IMG_4821" to "Blue Bottle Coffee, San Francisco."',
     icon: "📍",
   },
   {
     step: "3",
-    title: "Your Recap Blog Is Built",
+    title: "You already lived the story.",
     description:
-      "A structured, beautifully formatted recap is generated instantly. Edit, enrich, and share anywhere.",
+      "Now you can write it without the friction. You can focus on adding your voice, your perspective, and the details that make it yours.",
     microCopy: "Never from scratch again.",
     icon: "✨",
   },
 ];
 
-const smartFeatures = [
+const privateByDefaultFeatures = [
   {
-    title: "Smart Photo Picker",
-    description:
-      "Intelligently selects your best shots, filtering out duplicates and blurs.",
-    icon: "🖼️",
+    title: "Unlimited on your phone.",
+    description: "Create and edit as many blogs as you want.",
+    icon: "📱",
   },
   {
-    title: "Automatic Place Detection",
-    description:
-      "Uses GPS metadata to identify exactly where each memory happened.",
-    icon: "🗺️",
+    title: "Write faster on desktop.",
+    description: "Upload up to five blogs to edit on your computer.",
+    icon: "💻",
   },
   {
-    title: "Instant Blog Structure",
-    description:
-      "Creates a narrative arc for your trip, organized by location and time.",
-    icon: "🏗️",
-  },
-  {
-    title: "Edit & Enrich",
-    description:
-      "Add your voice, captions, and details to make the story yours.",
-    icon: "✍️",
-  },
-  {
-    title: "Share Anywhere",
-    description: "Available to view on any platform",
-    icon: "🚀",
+    title: "You decide what gets shared.",
+    description: "Nothing is published unless you choose.",
+    icon: "🔒",
   },
 ];
 
@@ -88,7 +74,7 @@ export default function BloggoHomePage() {
                 Demo Profile
               </Button>
             </Link>
-            <Link href={`${BASE}/editor/new`}>
+            <Link href={`${BASE}/sign-in`}>
               <Button size="lg" variant="primary">
                 Try Today
                 <svg
@@ -143,12 +129,9 @@ export default function BloggoHomePage() {
                 <h3 className="text-xl font-bold text-[var(--bloggo-text-primary)] mb-3">
                   {step.title}
                 </h3>
-                <p className="text-[var(--bloggo-text-secondary)] leading-relaxed mb-4">
+                <p className="text-[var(--bloggo-text-secondary)] leading-relaxed">
                   {step.description}
                 </p>
-                <div className="text-sm font-medium text-violet-600/80 bg-violet-50/50 p-3 rounded-lg border border-violet-100/50">
-                  {step.microCopy}
-                </div>
               </Card>
             ))}
           </div>
@@ -158,12 +141,12 @@ export default function BloggoHomePage() {
       <section className="py-24 border-t border-[var(--bloggo-border)]">
         <Container className="flex flex-col gap-16">
           <SectionHeader
-            eyebrow="Smart Features"
-            title="The Power of AI-Organized Memories"
-            subtitle="We handle the heavy lifting of organization and formatting."
+            eyebrow="Privacy First"
+            title="Private by default"
+            subtitle="Your blogs are stored locally on your device. No account required."
           />
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {smartFeatures.map((feature) => (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {privateByDefaultFeatures.map((feature) => (
               <Card
                 key={feature.title}
                 padding="lg"
@@ -205,28 +188,17 @@ export default function BloggoHomePage() {
                 Ready to relive your trips?
               </h2>
               <p className="text-lg text-[var(--bloggo-text-secondary)] max-w-lg">
-                Stop letting your photos sit in your camera roll. Turn them into
-                stories you can share forever.
+                Download the app and start building your drafts today.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 w-full justify-center mt-2">
-                <Link href={`${BASE}/editor/new`}>
-                  <Button
-                    size="lg"
-                    variant="primary"
-                    className="w-full sm:w-auto px-8"
-                  >
-                    Start Building Now
-                  </Button>
-                </Link>
-                <Link href={`${BASE}/profile/demo`}>
-                  <Button
-                    size="lg"
-                    variant="secondary"
-                    className="w-full sm:w-auto"
-                  >
-                    See What&apos;s Possible
-                  </Button>
-                </Link>
+                <Button
+                  size="lg"
+                  variant="primary"
+                  className="w-full sm:w-auto px-8 opacity-50 cursor-not-allowed"
+                  disabled
+                >
+                  Start Building Now
+                </Button>
               </div>
             </div>
           </Card>
