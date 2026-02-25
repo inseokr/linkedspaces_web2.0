@@ -9,7 +9,7 @@ import Input from "@/bloggo/components/ui/Input";
 import Button from "@/bloggo/components/ui/Button";
 import Accordion from "@/bloggo/components/ui/Accordion";
 
-const SUPPORT_EMAIL = "contactbloggo@linkedspaces.com";
+const SUPPORT_EMAIL = "bloggo@linkedspaces.com";
 
 const faqItems = [
   {

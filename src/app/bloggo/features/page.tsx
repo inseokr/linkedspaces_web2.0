@@ -14,99 +14,35 @@ export const metadata: Metadata = {
     "Explore Bloggo's powerful features for writers and developers — rich editor, analytics, custom domains, and more.",
 };
 
-const featureGroups = [
+const smartFeatures = [
   {
-    group: "Writing Experience",
-    badge: "Editor",
-    badgeVariant: "violet" as const,
-    features: [
-      {
-        icon: "✍️",
-        title: "Rich Text Editor",
-        description:
-          "A distraction-free editor with markdown support, code blocks with syntax highlighting, and inline image uploads.",
-      },
-      {
-        icon: "🖼️",
-        title: "Image Galleries",
-        description:
-          "Add beautiful image galleries to your posts with a built-in lightbox viewer. Drag to reorder, click to zoom.",
-      },
-      {
-        icon: "💾",
-        title: "Auto-Save",
-        description:
-          "Never lose your work. Bloggo auto-saves your drafts every few seconds, with full version history.",
-      },
-      {
-        icon: "📋",
-        title: "Templates",
-        description:
-          "Start from a curated library of post templates — tutorials, case studies, opinion pieces, and more.",
-      },
-    ],
+    title: "Smart Photo Picker",
+    description:
+      "Intelligently selects your best shots, filtering out duplicates and blurs.",
+    icon: "🖼️",
   },
   {
-    group: "Publishing & Growth",
-    badge: "Platform",
-    badgeVariant: "green" as const,
-    features: [
-      {
-        icon: "🌍",
-        title: "Custom Domains",
-        description:
-          "Connect your own domain and make your blog truly yours. SSL included, zero configuration.",
-      },
-      {
-        icon: "📊",
-        title: "Analytics Dashboard",
-        description:
-          "Understand your audience with privacy-friendly analytics. See views, reads, and top posts at a glance.",
-      },
-      {
-        icon: "🔔",
-        title: "Newsletter",
-        description:
-          "Turn readers into subscribers. Send beautiful email newsletters directly from your Bloggo dashboard.",
-      },
-      {
-        icon: "🔍",
-        title: "SEO Tools",
-        description:
-          "Built-in SEO optimization with meta tags, Open Graph images, sitemaps, and structured data.",
-      },
-    ],
+    title: "Automatic Place Detection",
+    description:
+      "Uses GPS metadata to identify exactly where each memory happened.",
+    icon: "🗺️",
   },
   {
-    group: "Developer Features",
-    badge: "Dev",
-    badgeVariant: "blue" as const,
-    features: [
-      {
-        icon: "🔌",
-        title: "REST API",
-        description:
-          "Full REST API access to your blog data. Build custom integrations, mobile apps, or automate publishing.",
-      },
-      {
-        icon: "🪝",
-        title: "Webhooks",
-        description:
-          "Trigger webhooks on publish, comment, or subscriber events. Integrate with any service.",
-      },
-      {
-        icon: "📦",
-        title: "Import / Export",
-        description:
-          "Import from Medium, Substack, Ghost, or WordPress. Export your data anytime in standard formats.",
-      },
-      {
-        icon: "🎨",
-        title: "Theme API",
-        description:
-          "Build custom themes with our component API. Full control over your blog's look and feel.",
-      },
-    ],
+    title: "Instant Blog Structure",
+    description:
+      "Creates a narrative arc for your trip, organized by location and time.",
+    icon: "🏗️",
+  },
+  {
+    title: "Edit & Enrich",
+    description:
+      "Add your voice, captions, and details to make the story yours.",
+    icon: "✍️",
+  },
+  {
+    title: "Share Anywhere",
+    description: "Available to view on any platform",
+    icon: "🚀",
   },
 ];
 
@@ -117,59 +53,45 @@ export default function FeaturesPage() {
         <Container className="flex flex-col items-center text-center gap-6">
           <Badge variant="violet">Features</Badge>
           <h1 className="text-5xl sm:text-6xl font-black leading-tight max-w-3xl">
-            Everything you need to{" "}
-            <span className="gradient-text">write and grow</span>
+            The tools that turn{" "}
+            <span className="gradient-text">photos into blogs</span>
           </h1>
           <p className="text-lg text-[var(--bloggo-text-secondary)] max-w-2xl">
-            Bloggo packs a professional-grade feature set into a beautifully
-            simple interface. No bloat, no confusion — just powerful tools that
-            get out of your way.
+            Bloggo does the heavy lifting, so you can focus on writing.
           </p>
-          <Link href={`${BASE}/pricing`}>
-            <Button size="lg" variant="primary">
-              See Pricing
-            </Button>
-          </Link>
         </Container>
       </section>
 
-      {featureGroups.map((group) => (
-        <section
-          key={group.group}
-          className="py-20 border-b border-[var(--bloggo-border)]"
-        >
-          <Container className="flex flex-col gap-12">
-            <SectionHeader
-              eyebrow={group.badge}
-              title={group.group}
-              align="left"
-            />
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-              {group.features.map((feat) => (
-                <Card
-                  key={feat.title}
-                  hover
-                  padding="md"
-                  className="flex flex-col gap-3"
-                >
-                  <div
-                    className="text-2xl w-10 h-10 flex items-center justify-center rounded-xl bg-black/5"
-                    aria-hidden="true"
-                  >
-                    {feat.icon}
-                  </div>
-                  <h3 className="font-semibold text-[var(--bloggo-text-primary)]">
-                    {feat.title}
+      <section className="py-20 border-b border-[var(--bloggo-border)]">
+        <Container className="flex flex-col gap-12">
+          <SectionHeader
+            eyebrow="Smart Features"
+            title="The Power of AI-Organized Memories"
+            subtitle="We handle the heavy lifting of organization and formatting."
+          />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {smartFeatures.map((feature) => (
+              <Card
+                key={feature.title}
+                padding="lg"
+                className="flex flex-col gap-4 border-transparent hover:border-[var(--bloggo-border)] transition-colors"
+              >
+                <div className="w-12 h-12 rounded-xl bg-violet-500/10 flex items-center justify-center text-2xl">
+                  {feature.icon}
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-[var(--bloggo-text-primary)] mb-2">
+                    {feature.title}
                   </h3>
-                  <p className="text-sm text-[var(--bloggo-text-secondary)] leading-relaxed">
-                    {feat.description}
+                  <p className="text-sm text-[var(--bloggo-text-secondary)]">
+                    {feature.description}
                   </p>
-                </Card>
-              ))}
-            </div>
-          </Container>
-        </section>
-      ))}
+                </div>
+              </Card>
+            ))}
+          </div>
+        </Container>
+      </section>
 
       <section className="py-20">
         <Container
@@ -180,14 +102,14 @@ export default function FeaturesPage() {
             Ready to get started?
           </h2>
           <p className="text-[var(--bloggo-text-secondary)]">
-            Try Bloggo free — no credit card required.
+            Try Bloggo today.
           </p>
           <div className="flex gap-3">
-            <Link href={`${BASE}/editor/my-first-post`}>
-              <Button variant="primary">Start Writing Free</Button>
+            <Link href={`${BASE}/profile/demo`}>
+              <Button variant="secondary">Demo Profile</Button>
             </Link>
-            <Link href={`${BASE}/pricing`}>
-              <Button variant="secondary">View Plans</Button>
+            <Link href={`${BASE}/sign-in`}>
+              <Button variant="primary">Sign In</Button>
             </Link>
           </div>
         </Container>

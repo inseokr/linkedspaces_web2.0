@@ -3,10 +3,12 @@
 import { useMemo, useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   mockBlogs,
+  demoAuthor,
   type BlogPost,
-  type CountrySummary,
+  type CountrySummary as BaseCountrySummary,
 } from "@/bloggo/lib/mock-data";
 import MapboxMap, {
   type MarkerData,
@@ -16,6 +18,10 @@ import { MapPin, Eye } from "lucide-react";
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Mode = "recap" | "mapView";
 type RecapYearValue = "ALL" | number;
+
+interface CountrySummary extends BaseCountrySummary {
+  blogCount: number;
+}
 
 // ─── Year Tabs ────────────────────────────────────────────────────────────────
 function RecapYearTabs({
@@ -96,25 +102,35 @@ function CountryRecapCard({
   item: CountrySummary;
   onSelect: (countryCode: string) => void;
 }) {
-  const uniqYears = Array.from(new Set(item.years)).sort((a, b) => b - a);
-  const yearDisplay =
-    uniqYears.length <= 3
-      ? uniqYears.join(", ")
-      : `${uniqYears.slice(0, 2).join(" · ")} · +${uniqYears.length - 2}`;
+  const latestDate = new Date(item.latestDate);
+  const monthNames = [
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
+  ];
+  const lastVisitedText = `Last visited ${monthNames[latestDate.getMonth()]} ${latestDate.getFullYear()}`;
 
   return (
     <button
       type="button"
       onClick={() => onSelect(item.countryCode)}
       className={[
-        "group relative block w-full max-w-[500px] overflow-hidden rounded-3xl",
+        "group relative block w-full overflow-hidden rounded-3xl",
         "border border-black/5 shadow-sm text-left",
-        "focus:outline-none focus:ring-2 focus:ring-blue-400/40",
+        "focus:outline-none focus:ring-2 focus:ring-sky-400/40",
         "transition-transform duration-200 hover:scale-[1.01]",
       ].join(" ")}
     >
-      {/* Image */}
-      <div className="relative aspect-[5/4] w-full">
+      <div className="relative aspect-[5/4] w-full bg-slate-100">
         <Image
           src={item.coverImage}
           alt={item.countryName}
@@ -124,9 +140,20 @@ function CountryRecapCard({
           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-black/10 to-transparent" />
+
+        {/* Blog count badge */}
+        <div className="absolute left-5 top-5">
+          <div className="flex items-center gap-1.5 rounded-full bg-black/40 px-3 py-1.5 backdrop-blur-md border border-white/20">
+            <span className="text-[13px] font-bold text-white leading-none">
+              {item.blogCount}
+            </span>
+            <span className="text-[11px] font-medium text-white/80 leading-none">
+              {item.blogCount === 1 ? "blog" : "blogs"}
+            </span>
+          </div>
+        </div>
       </div>
 
-      {/* Text overlay */}
       <div className="absolute inset-0 flex items-end justify-center pb-6 text-center">
         <div className="px-4">
           <div className="text-[24px] font-semibold tracking-[-0.4px] text-white drop-shadow">
@@ -141,7 +168,7 @@ function CountryRecapCard({
                 "shadow-[0_10px_24px_rgba(0,0,0,0.25)] backdrop-blur-sm",
               ].join(" ")}
             >
-              {yearDisplay}
+              {lastVisitedText}
             </div>
           </div>
         </div>
@@ -188,7 +215,7 @@ function BlogListCard({
           ].join(" ")}
         >
           {/* Image */}
-          <div className="relative aspect-[16/9] w-full">
+          <div className="relative aspect-[16/9] w-full bg-slate-100">
             <Image
               src={blog.coverImage}
               alt={blog.title}
@@ -199,19 +226,6 @@ function BlogListCard({
             />
             <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/55 via-black/10 to-transparent" />
 
-            {/* Eye icon top-right */}
-            <button
-              type="button"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-              }}
-              className="absolute right-3 top-3 z-10 inline-flex h-8 w-8 items-center justify-center rounded-full bg-black/55 text-white backdrop-blur transition hover:bg-black/65"
-              aria-label="Toggle visibility"
-            >
-              <Eye className="h-4 w-4" />
-            </button>
-
             {/* Location pill bottom-left */}
             <div className="absolute bottom-3 left-3 z-10">
               <div className="inline-flex items-center gap-1.5 rounded-full bg-black/55 px-2.5 py-1 text-[12px] text-white backdrop-blur">
@@ -221,25 +235,33 @@ function BlogListCard({
             </div>
 
             {/* Date pill top-left */}
-            <div className="absolute left-3 top-3 z-10 w-[80%]">
-              <div
-                className="inline-flex w-fit items-center gap-1.5 rounded-full bg-black/55 px-2 py-0.5 text-[12px] text-white backdrop-blur whitespace-nowrap pointer-events-none"
-                title={dateLabel}
-              >
-                {!!yearText && (
-                  <span className="shrink-0 rounded-full bg-white/15 px-1.5 py-0.5 font-extrabold leading-none">
-                    {yearText}
-                  </span>
-                )}
-                <span className="min-w-0">{dateWithoutYear}</span>
+            {dateLabel && (
+              <div className="absolute left-3 top-3 z-10 w-[80%]">
+                <div
+                  className="inline-flex w-fit items-center gap-1.5 rounded-full bg-black/55 px-2 py-0.5 text-[12px] text-white backdrop-blur whitespace-nowrap pointer-events-none"
+                  title={dateLabel}
+                >
+                  {!!yearText && (
+                    <span className="shrink-0 font-extrabold leading-none">
+                      {yearText}
+                    </span>
+                  )}
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
+
         {/* Title below card */}
         <h3 className="mt-2 min-w-0 max-w-full break-words line-clamp-2 text-[13px] font-medium text-black/90">
           {blog.title}
         </h3>
+        {/* Date below title */}
+        {dateLabel && (
+          <p className="mt-0.5 text-[12px] text-black/60">
+            {dateWithoutYear || dateLabel}
+          </p>
+        )}
       </Link>
     </div>
   );
@@ -297,6 +319,7 @@ export default function DemoProfileView() {
     undefined,
   );
 
+  const router = useRouter();
   const mapListScrollRef = useRef<HTMLDivElement | null>(null);
 
   // ── Derive available years ──────────────────────────────────────────────────
@@ -324,12 +347,14 @@ export default function DemoProfileView() {
         coverImage: string;
         years: number[];
         latestDate: string;
+        blogCount: number;
       }
     >();
     for (const blog of blogsFilteredByYear) {
       const year = new Date(blog.publishedAt).getFullYear();
       const existing = map.get(blog.countryCode);
       if (existing) {
+        existing.blogCount += 1;
         if (!existing.years.includes(year)) existing.years.push(year);
         if (blog.publishedAt > existing.latestDate) {
           existing.latestDate = blog.publishedAt;
@@ -342,6 +367,7 @@ export default function DemoProfileView() {
           coverImage: blog.coverImage,
           years: [year],
           latestDate: blog.publishedAt,
+          blogCount: 1,
         });
       }
     }
@@ -415,17 +441,9 @@ export default function DemoProfileView() {
     };
   }, [mode, countryBlogs.length]);
 
-  // ── Scroll to blog when marker is clicked on map ──────────────────────────
-  const scrollToBlog = (slug: string) => {
-    setActiveBlogSlug(slug);
-    const root = mapListScrollRef.current;
-    if (!root) return;
-    const el = root.querySelector<HTMLElement>(
-      `[data-recap-blog-id="${slug}"]`,
-    );
-    if (el) {
-      root.scrollTo({ top: el.offsetTop - 20, behavior: "smooth" });
-    }
+  // ── Navigate to blog when marker is clicked on map ───────────────────────
+  const navigateToBlog = (slug: string) => {
+    router.push(`/bloggo/profile/demo/blog/${slug}`);
   };
 
   const handleCountrySelect = (countryCode: string) => {
@@ -458,18 +476,39 @@ export default function DemoProfileView() {
     <div className="flex flex-col" style={{ minHeight: "calc(100vh - 64px)" }}>
       {/* ── Sticky Header ───────────────────────────────────────────────────── */}
       <div className="sticky top-0 z-50 border-b border-black/10 bg-white/95 shadow-[0_8px_24px_rgba(0,0,0,0.08)] backdrop-blur-md">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-start justify-between gap-6">
-            <div className="space-y-1">
-              <h1 className="font-[Inter] text-[24px] font-bold leading-[32px] tracking-[-0.5px] text-black">
-                Recap Blog
-              </h1>
-              <p className="ml-2 font-[Inter] text-[14px] font-normal leading-[20px] tracking-[-0.5px] text-[#8B949E]">
-                Building memories around the world
-              </p>
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-5">
+          <div className="flex items-center justify-between gap-6">
+            <div className="flex items-center gap-4">
+              {mode === "recap" ? (
+                <>
+                  <Image
+                    src={demoAuthor.avatar}
+                    alt={demoAuthor.name}
+                    width={44}
+                    height={44}
+                    className="rounded-full object-cover flex-shrink-0 border-2 border-sky-500/30"
+                  />
+                  <div className="space-y-0.5">
+                    <h1 className="font-[Inter] text-[20px] font-bold leading-[28px] tracking-[-0.4px] text-black">
+                      Recap Blog
+                    </h1>
+                    <p className="font-[Inter] text-[13px] font-normal leading-[18px] tracking-[-0.3px] text-[#8B949E]">
+                      @{demoAuthor.username}
+                    </p>
+                  </div>
+                </>
+              ) : (
+                headerAction
+              )}
             </div>
 
-            <div className="flex flex-col items-end gap-3">{headerAction}</div>
+            <div className="flex flex-col items-end gap-3">
+              <RecapYearTabs
+                value={selectedYear}
+                years={availableYears}
+                onChange={setSelectedYear}
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -478,10 +517,21 @@ export default function DemoProfileView() {
       {mode === "recap" ? (
         /* ── Recap grid ──────────────────────────────────────────────────── */
         <div className="mx-auto max-w-7xl w-full px-4 sm:px-6 lg:px-8 py-8">
+          {/* Blog count badge */}
+          <div className="mb-6 flex items-center gap-3">
+            <h2 className="text-[15px] font-semibold text-black/80">
+              {selectedYear === "ALL" ? "All Recaps" : `${selectedYear} Recaps`}
+            </h2>
+            <span className="rounded-full bg-sky-100 px-2.5 py-0.5 text-[12px] font-semibold text-sky-700">
+              {blogsFilteredByYear.length}{" "}
+              {blogsFilteredByYear.length === 1 ? "blog" : "blogs"}
+            </span>
+          </div>
+
           <ResponsiveGrid<CountrySummary>
             items={countrySummaries}
-            minCardWidth={430}
-            maxCardWidth={500}
+            minCardWidth={440}
+            maxCardWidth={600}
             getKey={(it) => it.countryCode}
             renderItem={(it) => (
               <CountryRecapCard item={it} onSelect={handleCountrySelect} />
@@ -537,16 +587,9 @@ export default function DemoProfileView() {
               <MapboxMap
                 countryCode={selectedCountry ?? undefined}
                 markers={mapMarkers}
-                onMarkerClick={scrollToBlog}
+                onMarkerClick={navigateToBlog}
                 activeMarkerId={activeBlogSlug}
-                overlayTopRight={
-                  <RecapYearTabs
-                    value={selectedYear}
-                    years={availableYears}
-                    onChange={setSelectedYear}
-                    className="border border-black/10 shadow-[0_12px_26px_rgba(0,0,0,0.16)]"
-                  />
-                }
+                overlayTopRight={undefined}
               />
             </div>
           </section>

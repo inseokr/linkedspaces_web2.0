@@ -7,7 +7,7 @@ export const metadata: Metadata = {
   description: "Bloggo Terms of Service — the rules for using our platform.",
 };
 
-const LAST_UPDATED = "February 1, 2026";
+const LAST_UPDATED = "February 24, 2026";
 
 export default function TermsPage() {
   return (
@@ -36,9 +36,32 @@ export default function TermsPage() {
 
         <h2>2. Description of Service</h2>
         <p>
-          Bloggo provides a blogging platform that allows users to create,
-          publish, and share written content. We reserve the right to modify,
-          suspend, or discontinue any aspect of the service at any time.
+          Bloggo is a travel blogging platform that allows users to create,
+          edit, publish, and share blog posts from both the Bloggo iOS mobile
+          app and the Bloggo web platform. Our service includes:
+        </p>
+        <ul>
+          <li>
+            <strong>AI-powered blog generation</strong> — automatically create
+            blog posts from your travel photos using on-device or cloud-based AI
+          </li>
+          <li>
+            <strong>Cloud upload &amp; sync</strong> — upload and store your
+            locally created blogs to the cloud so they are accessible from any
+            device
+          </li>
+          <li>
+            <strong>Web blog editor</strong> — edit, format, and publish your
+            blog posts directly from a web browser at bloggo.linkedspaces.com
+          </li>
+          <li>
+            <strong>Public sharing</strong> — share your published blogs via a
+            unique public link
+          </li>
+        </ul>
+        <p>
+          We reserve the right to modify, suspend, or discontinue any aspect of
+          the service at any time.
         </p>
 
         <h2>3. User Accounts</h2>
@@ -55,70 +78,148 @@ export default function TermsPage() {
           <li>You are responsible for all content posted from your account</li>
         </ul>
 
-        <h2>4. Content Policy</h2>
+        <h2>4. Cloud Storage &amp; Uploads</h2>
+        <p>
+          Bloggo offers the ability to upload locally created blogs and their
+          associated photos to our cloud infrastructure. By using the cloud
+          upload feature, you acknowledge and agree that:
+        </p>
+        <ul>
+          <li>
+            Uploaded content (including blog text and photos) will be stored on
+            Bloggo&apos;s servers and may be accessible from any device where
+            you are signed in
+          </li>
+          <li>
+            You are solely responsible for ensuring you have the right to upload
+            any photos or content you submit
+          </li>
+          <li>
+            Free (Starter) plan users may upload up to 10 cloud blogs over the
+            lifetime of their account; you may remove or download existing cloud
+            blogs to free up capacity
+          </li>
+          <li>
+            Paid plan subscribers receive unlimited cloud blog storage as
+            described in the current pricing page
+          </li>
+          <li>
+            We may compress or optimize photos during the upload process;
+            higher-resolution uploads are available on paid plans
+          </li>
+          <li>
+            Bloggo is not responsible for data loss due to user-initiated
+            deletion, account termination for Terms violations, or unforeseen
+            technical failures, though we take reasonable precautions to protect
+            your data
+          </li>
+        </ul>
+
+        <h2>5. Web Blog Editor</h2>
+        <p>
+          The Bloggo web platform provides a full-featured blog editor
+          accessible at bloggo.linkedspaces.com. By using the web editor, you
+          agree that:
+        </p>
+        <ul>
+          <li>
+            Edits made in the web editor are saved to your cloud blog and will
+            be reflected across all platforms where your blog is published
+          </li>
+          <li>
+            You are responsible for all content you create or modify using the
+            web editor
+          </li>
+          <li>
+            The web editor is provided as-is and may be updated or modified at
+            any time; we will make reasonable efforts to preserve your content
+            during such updates
+          </li>
+          <li>
+            Auto-save functionality may be available; however, you should
+            manually save your work regularly to avoid data loss in the event of
+            a connectivity interruption
+          </li>
+        </ul>
+
+        <h2>6. Content Policy</h2>
         <p>
           You retain ownership of the content you create on Bloggo. By posting
-          content, you grant us a non-exclusive, worldwide license to display,
-          distribute, and promote your content on our platform.
+          content or uploading it to the cloud, you grant us a non-exclusive,
+          worldwide license to store, display, distribute, and promote your
+          content on our platform.
         </p>
-        <p>You agree not to post content that:</p>
+        <p>You agree not to post or upload content that:</p>
         <ul>
           <li>Is illegal, harmful, or violates others&apos; rights</li>
           <li>Contains spam, malware, or deceptive information</li>
-          <li>Infringes on intellectual property rights</li>
+          <li>Infringes on intellectual property or privacy rights</li>
           <li>Harasses, threatens, or intimidates others</li>
           <li>Contains adult content without proper age-gating</li>
+          <li>
+            Includes photos of individuals without their consent, especially
+            minors
+          </li>
         </ul>
 
-        <h2>5. Intellectual Property</h2>
+        <h2>7. Intellectual Property</h2>
         <p>
           Bloggo and its original content, features, and functionality are owned
           by Bloggo and are protected by international copyright, trademark, and
           other intellectual property laws.
         </p>
 
-        <h2>6. Subscription and Billing</h2>
+        <h2>8. Subscription and Billing</h2>
         <p>
           Paid plans are billed in advance on a monthly or annual basis. All
           fees are non-refundable except as required by law. We reserve the
           right to change pricing with 30 days notice.
         </p>
+        <p>
+          In-app purchases made through the Apple App Store or Google Play Store
+          are subject to the respective platform&apos;s refund and billing
+          policies in addition to these Terms.
+        </p>
 
-        <h2>7. Termination</h2>
+        <h2>9. Termination</h2>
         <p>
           We may terminate or suspend your account at our sole discretion,
           without notice, for conduct that we believe violates these Terms or is
-          harmful to other users, us, or third parties.
+          harmful to other users, us, or third parties. Upon termination, your
+          cloud-stored content may be deleted after a reasonable grace period.
         </p>
 
-        <h2>8. Disclaimer of Warranties</h2>
+        <h2>10. Disclaimer of Warranties</h2>
         <p>
           Bloggo is provided &quot;as is&quot; without warranties of any kind.
           We do not warrant that the service will be uninterrupted, error-free,
-          or free of viruses or other harmful components.
+          or free of viruses or other harmful components. Cloud storage
+          availability is subject to our infrastructure uptime and is not
+          guaranteed to be 100% available at all times.
         </p>
 
-        <h2>9. Limitation of Liability</h2>
+        <h2>11. Limitation of Liability</h2>
         <p>
           To the maximum extent permitted by law, Bloggo shall not be liable for
           any indirect, incidental, special, consequential, or punitive damages
-          resulting from your use of or inability to use the service.
+          resulting from your use of or inability to use the service, including
+          any loss of cloud-stored data.
         </p>
 
-        <h2>10. Governing Law</h2>
+        <h2>12. Governing Law</h2>
         <p>
           These Terms shall be governed by the laws of the State of California,
           without regard to its conflict of law provisions.
         </p>
 
-        <h2>11. Contact</h2>
+        <h2>13. Contact</h2>
         <p>
           For questions about these Terms, contact us at{" "}
           <a
-            href="mailto:contactbloggo@linkedspaces.com"
+            href="mailto:bloggo@linkedspaces.com"
             className="text-sky-400 hover:text-sky-300 transition-colors"
           >
-            contactbloggo@linkedspaces.com
+            bloggo@linkedspaces.com
           </a>{" "}
           or through our{" "}
           <a

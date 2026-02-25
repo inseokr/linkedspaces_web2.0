@@ -13,7 +13,6 @@ const BASE = "/bloggo";
 
 const navLinks = [
   { href: `${BASE}/features`, label: "Features" },
-  { href: `${BASE}/pricing`, label: "Pricing" },
   { href: `${BASE}/support`, label: "Support" },
 ];
 
@@ -124,22 +123,38 @@ export default function BloggoHeader() {
     <header className="sticky top-0 z-[100] border-b border-[var(--bloggo-border)] bg-[var(--bloggo-bg)]/80 backdrop-blur-xl">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
-          <Link
-            href={
-              isBloggoUser && user?.username
-                ? `${BASE}/profile/${user.username}`
-                : BASE
-            }
-            className="flex items-center gap-2 font-bold text-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 rounded-lg"
-          >
-            <span className="gradient-text">Bloggo</span>
-          </Link>
+          <div className="flex items-center gap-8">
+            <Link
+              href={
+                isBloggoUser && user?.username
+                  ? `${BASE}/profile/${user.username}`
+                  : BASE
+              }
+              className="flex items-center gap-2 font-bold text-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 rounded-lg"
+            >
+              <span className="gradient-text">Bloggo</span>
+            </Link>
+
+            {!isBloggoUser && (
+              <nav className="hidden md:flex items-center gap-6">
+                {navLinks.map((link) => (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className="text-sm font-semibold text-[var(--bloggo-text-secondary)] hover:text-[var(--bloggo-text-primary)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 rounded-lg px-2 py-1"
+                  >
+                    {link.label}
+                  </Link>
+                ))}
+              </nav>
+            )}
+          </div>
 
           <div className="hidden md:flex items-center gap-3">
             {!isBloggoUser && (
               <Link
                 href={`${BASE}/profile/demo`}
-                className="text-sm text-[var(--bloggo-text-secondary)] hover:text-[var(--bloggo-text-primary)] transition-colors px-3 py-2 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+                className="text-sm font-semibold text-[var(--bloggo-text-secondary)] hover:text-[var(--bloggo-text-primary)] transition-colors px-3 py-2 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
               >
                 Demo Profile
               </Link>
