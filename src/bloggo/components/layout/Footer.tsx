@@ -9,20 +9,13 @@ const footerLinks = {
   Product: [
     { href: `${BASE}/features`, label: "Features" },
     { href: `${BASE}/pricing`, label: "Pricing" },
-    { href: `${BASE}/editor/my-first-post`, label: "Editor Demo" },
   ],
   Company: [
     { href: `${BASE}/support`, label: "Support" },
     { href: `${BASE}/privacy`, label: "Privacy Policy" },
     { href: `${BASE}/terms`, label: "Terms of Service" },
   ],
-  Demo: [
-    { href: `${BASE}/profile/demo`, label: "Demo Profile" },
-    {
-      href: `${BASE}/profile/demo/blog/getting-started-with-nextjs-14`,
-      label: "Sample Post",
-    },
-  ],
+  Demo: [{ href: `${BASE}/profile/demo`, label: "Demo Profile" }],
 };
 
 export default function BloggoFooter() {
@@ -52,10 +45,10 @@ export default function BloggoFooter() {
             <p className="text-xs text-[var(--bloggo-text-muted)]">
               Support:{" "}
               <a
-                href="mailto:contactbloggo@linkedspaces.com"
+                href="mailto:bloggo@linkedspaces.com"
                 className="text-sky-400 hover:text-sky-300 transition-colors"
               >
-                contactbloggo@linkedspaces.com
+                bloggo@linkedspaces.com
               </a>
             </p>
           </div>
