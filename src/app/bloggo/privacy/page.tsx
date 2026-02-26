@@ -50,31 +50,30 @@ export default function BloggoPrivacyPage() {
         </p>
         <ul>
           <li>
-            <strong>Photos you upload</strong> are stored securely on our cloud
-            infrastructure and are used solely to display your blog posts and
-            generate AI-assisted travel blogs on your behalf
+            Photos you upload are stored securely on our cloud infrastructure
+            and are used solely to display your blog posts and generate
+            AI-assisted travel blogs on your behalf.
           </li>
           <li>
-            <strong>Photos are not shared</strong> with third parties for
-            advertising, training data sets, or any purpose other than operating
-            and improving the Bloggo service
+            Photos are not shared with third parties for advertising, training
+            data sets, or any purpose other than operating and improving the
+            Bloggo service.
           </li>
           <li>
-            <strong>AI blog generation</strong> may process your photos using
-            on-device or cloud-based AI models to identify scenes and generate
-            descriptive text; this processing is done solely to create your blog
-            content
+            AI blog generation may process your photos using on-device or
+            cloud-based AI models to identify scenes and generate descriptive
+            text; this processing is done solely to create your blog content.
           </li>
           <li>
-            <strong>EXIF metadata</strong> (such as GPS location embedded in
-            photo files) may be read by our service to enrich your blog with
-            location data if you choose to enable this feature; you can disable
-            location enrichment in your app settings
+            EXIF metadata (such as GPS location embedded in photo files) may be
+            read by our service to enrich your blog with location data if you
+            choose to enable this feature; you can disable location enrichment
+            in your app settings.
           </li>
           <li>
             You may delete your uploaded photos and blogs at any time from
             within the app or web editor; deletions are processed within 30 days
-            from our backup systems
+            from our backup systems.
           </li>
         </ul>
 
@@ -85,18 +84,16 @@ export default function BloggoPrivacyPage() {
         </p>
         <ul>
           <li>
-            <strong>Session data</strong> — authentication tokens to verify your
-            identity and keep you securely signed in
+            Session data: authentication tokens to verify your identity and keep
+            you securely signed in.
           </li>
           <li>
-            <strong>Edit history</strong> — changes you make to blog posts are
-            logged temporarily to support auto-save and conflict resolution
-            across devices
+            Edit history: changes you make to blog posts are logged temporarily
+            to support auto-save and conflict resolution across devices.
           </li>
           <li>
-            <strong>Browser &amp; device information</strong> — browser type,
-            operating system, and screen resolution to ensure the editor renders
-            correctly for you
+            Browser and device information: browser type, operating system, and
+            screen resolution to ensure the editor renders correctly for you.
           </li>
         </ul>
         <p>
@@ -108,19 +105,19 @@ export default function BloggoPrivacyPage() {
         <h2>4. How We Use Your Information</h2>
         <p>We use your information to:</p>
         <ul>
-          <li>Provide, maintain, and improve our services</li>
+          <li>Provide, maintain, and improve our services.</li>
           <li>
             Store and sync your blogs and photos across the iOS app and web
-            platform
+            platform.
           </li>
           <li>
-            Generate AI-powered blog posts from your uploaded travel photos
+            Generate AI-powered blog posts from your uploaded travel photos.
           </li>
-          <li>Process transactions and send related information</li>
-          <li>Send technical notices and support messages</li>
-          <li>Respond to your comments and questions</li>
-          <li>Monitor and analyze usage patterns to improve the platform</li>
-          <li>Detect and prevent fraudulent or illegal activity</li>
+          <li>Process transactions and send related information.</li>
+          <li>Send technical notices and support messages.</li>
+          <li>Respond to your comments and questions.</li>
+          <li>Monitor and analyze usage patterns to improve the platform.</li>
+          <li>Detect and prevent fraudulent or illegal activity.</li>
         </ul>
 
         <h2>5. Information Sharing</h2>
@@ -140,8 +137,8 @@ export default function BloggoPrivacyPage() {
         <p>
           We retain your personal information and cloud-stored content for as
           long as your account is active or as needed to provide services. You
-          may request deletion of your account and all associated data —
-          including uploaded photos and blog posts — at any time by contacting
+          may request deletion of your account and all associated data,
+          including uploaded photos and blog posts, at any time by contacting
           our support team. Data is removed from active systems promptly and
           from backups within 30 days.
         </p>
@@ -156,17 +153,7 @@ export default function BloggoPrivacyPage() {
           use a strong, unique password for your Bloggo account.
         </p>
 
-        <h2>8. Cookies &amp; Local Storage</h2>
-        <p>
-          We use cookies and similar tracking technologies to keep you signed in
-          across sessions and to track activity on our web platform. The web
-          blog editor may use browser local storage to preserve draft content
-          temporarily. You can instruct your browser to refuse all cookies or to
-          indicate when a cookie is being sent, though doing so may affect
-          certain features such as staying signed in.
-        </p>
-
-        <h2>9. Your Rights</h2>
+        <h2>8. Your Rights</h2>
         <p>
           Depending on your location, you may have the right to access, correct,
           export, or delete your personal data and uploaded content. You may
@@ -181,23 +168,15 @@ export default function BloggoPrivacyPage() {
           .
         </p>
 
-        <h2>10. Children&apos;s Privacy</h2>
-        <p>
-          Bloggo is not directed to children under 13. We do not knowingly
-          collect personal information or photos from children under 13. If you
-          become aware that a child has provided us with personal information,
-          please contact us immediately so we can delete it.
-        </p>
-
-        <h2>11. Changes to This Policy</h2>
+        <h2>9. Changes to This Policy</h2>
         <p>
           We may update this privacy policy from time to time. We will notify
           you of any material changes by posting the new policy on this page,
-          updating the &quot;Last updated&quot; date above, and, where
-          appropriate, sending a notification via email or within the app.
+          and, where appropriate, sending a notification via email or within the
+          app.
         </p>
 
-        <h2>12. Contact Us</h2>
+        <h2>10. Contact Us</h2>
         <p>
           If you have questions about this privacy policy, please contact us at{" "}
           <a
@@ -205,13 +184,6 @@ export default function BloggoPrivacyPage() {
             className="text-sky-400 hover:text-sky-300 transition-colors"
           >
             bloggo@linkedspaces.com
-          </a>{" "}
-          or through our{" "}
-          <a
-            href="/bloggo/support"
-            className="text-sky-400 hover:text-sky-300 transition-colors"
-          >
-            support page
           </a>
           .
         </p>
