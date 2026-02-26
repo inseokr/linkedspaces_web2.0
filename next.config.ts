@@ -17,12 +17,17 @@ const nextConfig: NextConfig = {
       return [];
     }
 
-    return [
-      {
-        source: "/trip/:path*",
-        destination: `${BLOG_ORIGIN}/trip/:path*`,
-      },
-    ];
+    // Only proxy /trip/* when no Next.js page matched (fallback). Share-token
+    // /trip/t/:token is handled by app route (legacy)/trip/t/[token], so it
+    // never hits fallback.
+    return {
+      fallback: [
+        {
+          source: "/trip/:path*",
+          destination: `${BLOG_ORIGIN}/trip/:path*`,
+        },
+      ],
+    };
   },
   images: {
     // 프로필 사진이 오는 외부 도메인 허용

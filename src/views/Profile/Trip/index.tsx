@@ -36,6 +36,7 @@ import PoiUpdatePopup from "@/views/Profile/Trip/component/PoiUpdatePopup";
 import { updatePlaceInfo } from "@/api/user";
 
 import { mapTripRecapToPageModel } from "@/views/Profile/Trip/utils/mapTripRecap";
+import { resolveTripCoverUrl } from "@/views/Profile/recap-blogs/utils/tripDataTransform";
 import BottomSheet from "@/components/ui/BottomSheet";
 import { RecapBlogEntryCard } from "@/views/Profile/Trip/component/RecapBlogPlace";
 
@@ -343,6 +344,29 @@ function OwnerTripRecapView({
       return pm;
     }, [recapData]);
 
+  /** When recap API doesn't return coverPhotoUri, use same source as trip card (cached user trips) */
+  const [tripCoverOverride, setTripCoverOverride] = useState<string | null>(
+    null,
+  );
+  useEffect(() => {
+    if (!recapData || !tripId) return;
+    if (
+      typeof recapData.trip?.coverPhotoUri === "string" &&
+      recapData.trip.coverPhotoUri.trim()
+    ) {
+      setTripCoverOverride(null);
+      return;
+    }
+    const user = getCachedUser();
+    const trips = Array.isArray(user?.trips) ? user.trips : [];
+    const trip = trips.find(
+      (t: any) => String(t?.blogKey ?? t?._id ?? "") === String(tripId),
+    );
+    if (!trip) return;
+    const cover = resolveTripCoverUrl(trip, user?.placeVisitHistory, undefined);
+    if (cover) setTripCoverOverride(cover);
+  }, [recapData, tripId]);
+
   /** 3) Base center */
   const baseCenter = useMemo(() => {
     const first = effectiveModel?.days?.[0]?.entries?.[0]?.coordinate;
@@ -367,8 +391,9 @@ function OwnerTripRecapView({
 
     return {
       ...effectiveModel.hero,
+      coverImageUrl: tripCoverOverride ?? effectiveModel.hero.coverImageUrl,
     };
-  }, [effectiveModel?.hero]);
+  }, [effectiveModel?.hero, tripCoverOverride]);
 
   /** 5) Ensure active day valid */
   useEffect(() => {

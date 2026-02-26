@@ -113,6 +113,8 @@ export type TripRecapResponse = {
 
     userName: string;
     profilePicture: string; // "/public/..."
+    /** User-selected cover photo (used by trip card and blog header) */
+    coverPhotoUri?: string;
   };
   days: TripRecapDay[];
 };
