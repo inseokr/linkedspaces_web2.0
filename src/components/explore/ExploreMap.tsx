@@ -22,6 +22,7 @@ import type { UserSentiment } from "@/app/profile/mapbox-category-pins";
 import OrangePlaceMarker from "@/app/profile/components/OrangePlaceMarker";
 import { getCachedUser } from "@/api/user";
 import { useCachedUserLocation } from "@/contexts/UserLocationContext";
+import WebGLHelpPopup from "@/components/ui/WebGLHelpPopup";
 
 const VALID_SENTIMENTS: UserSentiment[] = ["positive", "neutral", "negative"];
 
@@ -128,6 +129,7 @@ export default function ExploreMap({
   const { position: userLocation } = useCachedUserLocation();
   const [mapReady, setMapReady] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [showHelpPopup, setShowHelpPopup] = useState(false);
 
   const neighborhoodCenter = useMemo(() => getDefaultMapCenter(), []);
   const center = userLocation ?? neighborhoodCenter;
@@ -187,6 +189,7 @@ export default function ExploreMap({
       mapRef.current = map;
     } catch (e) {
       setLoadError(e instanceof Error ? e.message : "Failed to load the map.");
+      setShowHelpPopup(true);
     }
   }, []);
 
@@ -463,14 +466,10 @@ export default function ExploreMap({
       >
         <p className="font-medium text-amber-800">Map unavailable</p>
         <p className="text-sm text-amber-700">{loadError}</p>
-        <p className="text-xs text-amber-600">
-          Add{" "}
-          <code className="rounded bg-amber-100 px-1">
-            NEXT_PUBLIC_MAPBOX_TOKEN
-          </code>{" "}
-          to <code className="rounded bg-amber-100 px-1">.env.local</code> and
-          restart the dev server.
-        </p>
+        <WebGLHelpPopup
+          open={showHelpPopup}
+          onClose={() => setShowHelpPopup(false)}
+        />
       </div>
     );
   }

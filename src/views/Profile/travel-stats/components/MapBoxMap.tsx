@@ -19,6 +19,7 @@ import { createRoot } from "react-dom/client";
 import { MAPBOX_STYLE_URL } from "@/app/profile/mapbox-linkedspaces-style";
 import CircleTripMarker from "@/views/Profile/recap-blogs/components/CircleTripMarker";
 import { normalizeImageSrc } from "@/utils/normalizeImageSrc";
+import WebGLHelpPopup from "@/components/ui/WebGLHelpPopup";
 
 export type PoiInfo = {
   name: string;
@@ -340,6 +341,18 @@ export default function MapboxMap({
 
     return null;
   });
+  const [showHelpPopup, setShowHelpPopup] = useState(false);
+
+  // Auto-open the help popup when a WebGL error is detected
+  useEffect(() => {
+    if (
+      initError &&
+      initError !==
+        "Mapbox token is missing. Please set NEXT_PUBLIC_MAPBOX_TOKEN and refresh."
+    ) {
+      setShowHelpPopup(true);
+    }
+  }, [initError]);
   useEffect(() => {
     const raf = requestAnimationFrame(() => setIsMounted(true));
     return () => cancelAnimationFrame(raf);
@@ -997,21 +1010,10 @@ export default function MapboxMap({
 
       mapboxgl.accessToken = token;
 
-      // Best-effort WebGL support check (after Mapbox loads)
-      try {
-        const isSupported =
-          typeof mapboxgl.supported === "function"
-            ? mapboxgl.supported({ failIfMajorPerformanceCaveat: true } as any)
-            : true;
-        if (!isSupported) {
-          setInitError(
-            "Map can't be displayed because WebGL isn't supported or is disabled in this browser/device. Try Safari, or enable hardware acceleration / update graphics drivers.",
-          );
-          return;
-        }
-      } catch {
-        // ignore and attempt initialization
-      }
+      // Skip mapboxgl.supported() pre-check — it includes a shader-compile
+      // probe that Brave Shields blocks (fingerprinting protection) and that
+      // some Chrome GPU-blacklist configs also reject. Instead we attempt to
+      // create the map directly and diagnose failures in the catch block.
 
       try {
         map = new mapboxgl.Map({
@@ -1024,10 +1026,38 @@ export default function MapboxMap({
           preserveDrawingBuffer: false,
         });
       } catch (e) {
-        console.error("Failed to initialize WebGL for the map:", e);
-        setInitError(
-          "Failed to initialize WebGL for the map. This usually means WebGL is unavailable (GPU/driver/browser policy) or hardware acceleration is disabled. Try Safari or another browser, and check browser GPU settings.",
-        );
+        console.error("[MapBoxMap] init failed:", e);
+
+        // --- Diagnose why WebGL failed ---
+        let diagnosis = "";
+        try {
+          const c = document.createElement("canvas");
+          const gl2 = c.getContext("webgl2");
+          if (!gl2) {
+            const gl1 = c.getContext("webgl");
+            diagnosis = gl1
+              ? "WebGL 2 is unavailable (WebGL 1 works but Mapbox GL v3 requires WebGL 2)."
+              : "WebGL is completely disabled or unavailable in this browser.";
+          } else {
+            // Context exists but shader compilation was likely blocked
+            diagnosis =
+              "WebGL 2 context exists but the browser blocked shader compilation (privacy / fingerprinting protection).";
+          }
+        } catch {
+          diagnosis = "Could not query WebGL support.";
+        }
+
+        const isBrave =
+          typeof navigator !== "undefined" &&
+          typeof (navigator as any).brave?.isBrave === "function";
+
+        const browserTip = isBrave
+          ? "Brave's Shields fingerprinting protection blocks WebGL shader compilation that Mapbox needs. " +
+            'Click the Shields icon (lion) in the address bar and set "Block fingerprinting" to "Allow" for this site, then reload.'
+          : 'Enable "Use hardware acceleration" in your browser settings (Settings → System) and restart. ' +
+            "If the problem persists, visit chrome://gpu and verify WebGL2 shows as Hardware accelerated.";
+
+        setInitError(`${diagnosis} ${browserTip}`);
         return;
       }
 
@@ -1261,57 +1291,36 @@ export default function MapboxMap({
   if (initError) {
     return (
       <div style={{ position: "relative", width: "100%", height: "100%" }}>
+        {/* Placeholder background */}
         <div
           style={{
             width: "100%",
             height: "100%",
             background:
-              "radial-gradient(1200px 600px at 20% 0%, rgba(249,115,22,0.12), transparent 55%), linear-gradient(180deg, rgba(15,23,42,0.03), rgba(15,23,42,0.07))",
+              "radial-gradient(1200px 600px at 20% 0%, rgba(249,115,22,0.08), transparent 55%), linear-gradient(180deg, rgba(15,23,42,0.02), rgba(15,23,42,0.06))",
             border: "1px solid rgba(0,0,0,0.08)",
             borderRadius: 16,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            padding: 20,
           }}
         >
-          <div style={{ maxWidth: 520 }}>
-            <div
-              style={{
-                fontSize: 14,
-                fontWeight: 900,
-                letterSpacing: 0.2,
-                color: "rgba(0,0,0,0.85)",
-                marginBottom: 8,
-              }}
-            >
-              Map isn’t supported in this browser
-            </div>
-            <div
-              style={{
-                fontSize: 13,
-                lineHeight: "18px",
-                fontWeight: 700,
-                color: "rgba(0,0,0,0.65)",
-                marginBottom: 10,
-              }}
-            >
-              {initError}
-            </div>
-            <div
-              style={{
-                fontSize: 12,
-                lineHeight: "16px",
-                fontWeight: 700,
-                color: "rgba(0,0,0,0.55)",
-              }}
-            >
-              Quick checks: enable “Use hardware acceleration” in your browser
-              settings and restart. If you’re on a work laptop/VM/remote
-              desktop, GPU/WebGL may be restricted.
-            </div>
+          <div
+            style={{
+              textAlign: "center",
+              color: "rgba(0,0,0,0.35)",
+              fontSize: 14,
+              fontWeight: 600,
+            }}
+          >
+            Map unavailable
           </div>
         </div>
+
+        <WebGLHelpPopup
+          open={showHelpPopup}
+          onClose={() => setShowHelpPopup(false)}
+        />
 
         {(overlayTopLeft || overlayTopRight) && (
           <div

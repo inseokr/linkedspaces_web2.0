@@ -2,6 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import Link from "next/link";
+import { useAuth } from "@/hooks/useAuth";
 
 const BASE = "/bloggo";
 
@@ -17,10 +18,13 @@ const footerLinks = {
 
 export default function BloggoFooter() {
   const pathname = usePathname();
+  const { isAuthenticated } = useAuth();
+
   if (
     pathname === "/bloggo/recap" ||
     pathname.startsWith("/bloggo/profile/") ||
-    pathname.startsWith("/bloggo/trip/")
+    pathname.startsWith("/bloggo/trip/") ||
+    isAuthenticated
   )
     return null;
 
