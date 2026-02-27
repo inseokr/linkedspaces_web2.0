@@ -29,8 +29,9 @@ export default function RecapDayTabs({
   return (
     <div
       className={[
-        "flex max-w-full items-center gap-2 overflow-x-auto",
-        "[-webkit-overflow-scrolling:touch]",
+        "flex max-w-full items-center gap-2 overflow-x-auto overflow-y-hidden",
+        "[-webkit-overflow-scrolling:touch] [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden",
+        "px-0.5 py-1", // small padding so scale/shadow isn't clipped
         className,
       ].join(" ")}
     >
