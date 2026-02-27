@@ -23,6 +23,7 @@ import RecapDayTabs, {
 import MapboxMap, {
   type MarkerData,
 } from "@/views/Profile/travel-stats/components/MapBoxMap";
+import ScrollToTopButton from "@/components/ui/ScrollToTopButton";
 
 // ── Layout constants (mirrors OwnerTripRecapView / GuestRecapPage) ─────────────
 const TOPBAR_OFFSET_PX = 200;
@@ -64,6 +65,7 @@ export default function DemoBlogDetailView({ params }: Props) {
       authorName: blog.author.name,
       postedLabel: `@${blog.author.username}`,
       avatarUrl: blog.author.avatar,
+      lastEditedAt: "2 hrs ago",
     }),
     [blog],
   );
@@ -405,7 +407,7 @@ export default function DemoBlogDetailView({ params }: Props) {
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-[#F5F5F7]">
       {/* Back link bar */}
       <div className="sticky top-0 z-30 border-b border-black/10 bg-white/95 backdrop-blur-md">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -529,6 +531,9 @@ export default function DemoBlogDetailView({ params }: Props) {
           </div>
         </section>
       </div>
+      <ScrollToTopButton
+        scrollContainerRef={isLg ? leftScrollRef : undefined}
+      />
     </div>
   );
 }

@@ -80,68 +80,52 @@ export function TripMeta({
   const hasPlaces = typeof placesCount === "number" && placesCount > 0;
   const isOnDark = tone === "onDark";
 
+  const divider = (
+    <span className={isOnDark ? "text-white/40" : "text-black/30"}>•</span>
+  );
+
   return (
     <div
       className={[
-        "mt-3 flex flex-wrap items-center justify-center gap-x-8 gap-y-2 text-center",
-        isOnDark ? "text-white/90" : "text-black/70",
+        "mt-5 flex flex-wrap items-center justify-center gap-x-3 gap-y-2 text-center",
+        isOnDark ? "text-white/80" : "text-black/60",
       ].join(" ")}
     >
       {hasDate && (
-        <div className="inline-flex items-center gap-2">
-          <span
-            className={[
-              "inline-block h-2 w-2 rounded-full",
-              isOnDark ? "bg-white/80" : "bg-black/35",
-            ].join(" ")}
-          />
-          <span
-            className={[
-              "text-sm font-medium",
-              isOnDark ? "" : "text-black/70",
-            ].join(" ")}
-          >
-            {dateText}
-          </span>
-        </div>
+        <span
+          className={[
+            "text-[15px] font-medium tracking-wide uppercase",
+            isOnDark ? "text-white/90" : "text-black/70",
+          ].join(" ")}
+        >
+          {dateText}
+        </span>
       )}
+
+      {hasDate && (hasPlaces || hasLocation) && divider}
 
       {hasPlaces && (
-        <div className="inline-flex items-center gap-2">
-          <span
-            className={[
-              "inline-block h-2 w-2 rounded-full",
-              isOnDark ? "bg-white/80" : "bg-black/35",
-            ].join(" ")}
-          />
-          <span
-            className={[
-              "text-sm font-medium",
-              isOnDark ? "" : "text-black/70",
-            ].join(" ")}
-          >
-            {placesCount} Place{placesCount === 1 ? "" : "s"}
-          </span>
-        </div>
+        <span
+          className={[
+            "text-[15px] font-medium tracking-wide uppercase",
+            isOnDark ? "text-white/90" : "text-black/70",
+          ].join(" ")}
+        >
+          {placesCount} Place{placesCount === 1 ? "" : "s"}
+        </span>
       )}
 
+      {hasPlaces && hasLocation && divider}
+
       {hasLocation && (
-        <div className="inline-flex items-center gap-2">
-          <span
-            className={[
-              "inline-block h-2 w-2 rounded-full",
-              isOnDark ? "bg-white/80" : "bg-black/35",
-            ].join(" ")}
-          />
-          <span
-            className={[
-              "text-sm font-medium",
-              isOnDark ? "" : "text-black/70",
-            ].join(" ")}
-          >
-            {locationText}
-          </span>
-        </div>
+        <span
+          className={[
+            "text-[15px] font-medium tracking-wide uppercase",
+            isOnDark ? "text-white/90" : "text-black/70",
+          ].join(" ")}
+        >
+          {locationText}
+        </span>
       )}
     </div>
   );
@@ -155,6 +139,7 @@ export function RecapBlogHeader({
   postedLabel,
   avatarUrl,
   placesCount,
+  lastEditedAt,
   tone = "onLight",
 }: {
   title: string;
@@ -164,58 +149,25 @@ export function RecapBlogHeader({
   postedLabel: string;
   avatarUrl?: string;
   placesCount?: number;
+  lastEditedAt?: string;
   tone?: Tone;
 }) {
   const isOnDark = tone === "onDark";
   const hasDate = Boolean(dateText?.trim());
 
   return (
-    <div className="w-full">
-      <div className="pointer-events-auto flex items-start justify-between gap-3">
-        <AuthorBadge
-          name={authorName}
-          postedLabel={postedLabel}
-          avatarUrl={avatarUrl}
-          tone={tone}
-        />
-
-        {/* Mobile: date sits next to profile */}
-        {hasDate && (
-          <div
-            className={[
-              "sm:hidden",
-              "mt-1 shrink-0 rounded-full border px-3 py-1.5 text-[13px] font-semibold",
-              isOnDark
-                ? "border-white/25 bg-white/10 text-white/90"
-                : "border-black/10 bg-black/5 text-black/70",
-            ].join(" ")}
-          >
-            {dateText}
-          </div>
-        )}
-      </div>
-
-      <div className="pt-4 text-center">
+    <div className="w-full flex flex-col items-center">
+      <div className="text-center w-full max-w-3xl mx-auto">
         <h1
           className={[
-            // NOTE: use `!` to avoid any global h1 typography overrides
-            "!text-[22px] !leading-[1.15] font-semibold tracking-tight sm:!text-4xl md:!text-5xl",
+            "!text-3xl !leading-[1.1] font-extrabold tracking-tighter sm:!text-5xl md:!text-6xl lg:!text-7xl",
             isOnDark ? "text-white" : "text-black",
           ].join(" ")}
         >
           {title}
         </h1>
 
-        {/* Mobile: since date is shown next to profile, show meta without the date to avoid duplication */}
-        <div className="sm:hidden">
-          <TripMeta
-            dateText=""
-            locationText={locationText}
-            placesCount={placesCount}
-            tone={tone}
-          />
-        </div>
-        <div className="hidden sm:block">
+        <div className="mt-5 w-full flex justify-center">
           <TripMeta
             dateText={dateText}
             locationText={locationText}
@@ -223,6 +175,15 @@ export function RecapBlogHeader({
             tone={tone}
           />
         </div>
+      </div>
+
+      <div className="pointer-events-auto flex items-center justify-center mt-6">
+        <AuthorBadge
+          name={authorName}
+          postedLabel={postedLabel}
+          avatarUrl={avatarUrl}
+          tone={tone}
+        />
       </div>
     </div>
   );
@@ -242,7 +203,7 @@ function CoverImage({
   console.log("[Hero final src]", src, "unoptimized:", unoptimized);
 
   return (
-    <div className="relative w-full aspect-[16/10] sm:aspect-[16/6] md:aspect-[16/5]">
+    <div className="relative w-full aspect-[4/3] sm:aspect-[16/7] md:aspect-[21/9]">
       {src ? (
         <Image
           src={src}
@@ -260,7 +221,7 @@ function CoverImage({
       )}
 
       {showGradient && (
-        <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/25 to-black/10" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
       )}
     </div>
   );
@@ -274,7 +235,7 @@ export function RecapBlogCoverImage({
   title: string;
 }) {
   return (
-    <section className="relative w-full overflow-hidden rounded-3xl border border-black/10">
+    <section className="relative w-full overflow-hidden rounded-[32px] border border-black/5">
       <CoverImage
         coverImageUrl={coverImageUrl}
         title={title}
@@ -294,6 +255,7 @@ export default function RecapBlogHero({
   postedLabel,
   avatarUrl,
   placesCount,
+  lastEditedAt,
 }: {
   coverImageUrl: string;
   title: string;
@@ -303,12 +265,13 @@ export default function RecapBlogHero({
   postedLabel: string;
   avatarUrl?: string;
   placesCount?: number;
+  lastEditedAt?: string;
 }) {
   return (
     <>
-      {/* Mobile: no cover photo */}
+      {/* Mobile: Use background tone to frame header if no image */}
       <section className="w-full sm:hidden">
-        <div className="rounded-3xl border border-black/10 bg-white p-5">
+        <div className="rounded-[32px] border border-black/5 bg-white p-6 shadow-[0_4px_20px_rgba(0,0,0,0.03)]">
           <RecapBlogHeader
             title={title}
             dateText={dateText}
@@ -317,40 +280,50 @@ export default function RecapBlogHero({
             postedLabel={postedLabel}
             avatarUrl={avatarUrl}
             placesCount={placesCount}
+            lastEditedAt={lastEditedAt}
             tone="onLight"
           />
         </div>
       </section>
 
-      {/* Desktop: cover photo + overlay */}
-      <section className="relative hidden w-full overflow-hidden rounded-3xl border border-black/10 sm:block">
+      {/* Desktop: Cover photo + overlay */}
+      <section className="relative hidden w-full overflow-hidden rounded-[32px] shadow-sm sm:block">
         <CoverImage coverImageUrl={coverImageUrl} title={title} showGradient />
 
-        <div className="pointer-events-none absolute inset-0 flex flex-col p-5 sm:p-7">
-          <div className="pointer-events-auto">
-            <AuthorBadge
-              name={authorName}
-              postedLabel={postedLabel}
-              avatarUrl={avatarUrl}
-              tone="onDark"
-            />
-          </div>
-
+        <div className="pointer-events-none absolute inset-0 flex flex-col p-8 sm:p-12">
           <div className="flex-1" />
 
-          <div className="pb-4 text-center sm:pb-6">
-            <h1 className="!text-[22px] !leading-[1.15] font-semibold tracking-tight text-white sm:!text-4xl md:!text-5xl">
+          <div className="pb-6 text-center w-full max-w-4xl mx-auto">
+            <h1 className="!text-5xl !leading-[1.1] font-extrabold tracking-tighter text-white md:!text-6xl lg:!text-7xl">
               {title}
             </h1>
-            <TripMeta
-              dateText={dateText}
-              locationText={locationText}
-              placesCount={placesCount}
-              tone="onDark"
-            />
+            <div className="mt-4 flex flex-col items-center justify-center gap-6 w-full shadow-black">
+              <TripMeta
+                dateText={dateText}
+                locationText={locationText}
+                placesCount={placesCount}
+                tone="onDark"
+              />
+              <div className="pointer-events-auto">
+                <AuthorBadge
+                  name={authorName}
+                  postedLabel={postedLabel}
+                  avatarUrl={avatarUrl}
+                  tone="onDark"
+                />
+              </div>
+            </div>
           </div>
         </div>
       </section>
+
+      {lastEditedAt && (
+        <div className="mt-8 mb-4 px-4 sm:px-6 lg:px-8 text-left">
+          <div className="text-[13px] font-bold text-black/30 tracking-[0.2em] uppercase">
+            Last Edited {lastEditedAt}
+          </div>
+        </div>
+      )}
     </>
   );
 }

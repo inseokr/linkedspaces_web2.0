@@ -23,6 +23,7 @@ export type RecapHeroModel = {
   avatarUrl?: string;
   startingYear?: number;
   placesCount?: number;
+  lastEditedAt?: string;
 };
 
 export type RecapPageModel = {
@@ -93,6 +94,7 @@ export function mapTripRecapToPageModel(
       avatarUrl,
       startingYear: trip.startingYear ? Number(trip.startingYear) : undefined,
       placesCount,
+      lastEditedAt: (trip as any).updatedAt ? "2 hrs ago" : undefined,
     },
     days,
     markers,

@@ -18,7 +18,8 @@ import {
   type RecapBlogPageData,
 } from "./component/RecapBlogPlace";
 import RecapDayTabs, { type DayTab } from "./component/RecapDayTabs";
-import RecapLoginBar from "./component/GuestRBLoginBar"; //추가
+import RecapLoginBar from "./component/GuestRBLoginBar";
+import ScrollToTopButton from "@/components/ui/ScrollToTopButton";
 
 import MapboxMap, {
   type MarkerData,
@@ -1554,7 +1555,7 @@ export default function GuestRecapPage({ userId, tripId, brand }: Props) {
 
   // ===== render (기존 UI 그대로) =====
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-[#F5F5F7]">
       {brand === "bloggo" ? (
         <div className="sticky top-0 z-[150] w-full bg-white/85 backdrop-blur-md border-b border-black/10">
           <div className="flex h-[74px] items-center justify-between px-6">
@@ -1587,6 +1588,7 @@ export default function GuestRecapPage({ userId, tripId, brand }: Props) {
         <RecapBlogHero
           {...effectiveModel.hero}
           coverImageUrl={tripCoverOverride ?? effectiveModel.hero.coverImageUrl}
+          lastEditedAt={effectiveModel.hero.lastEditedAt}
         />
       </div>
 
@@ -1874,6 +1876,10 @@ export default function GuestRecapPage({ userId, tripId, brand }: Props) {
           onCreateAccount={() => setIsDownloadOpen(true)}
         />
       )}
+
+      <ScrollToTopButton
+        scrollContainerRef={isLg ? leftScrollRef : undefined}
+      />
     </div>
   );
 }

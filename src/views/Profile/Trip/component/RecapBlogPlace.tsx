@@ -76,6 +76,7 @@ export type RecapBlogPageData = {
     postedLabel: string;
     avatarUrl?: string;
     placesCount?: number;
+    lastEditedAt?: string;
   };
   days: RecapDay[];
 };
@@ -128,9 +129,15 @@ export function RecapBlogDaySection({
   };
 
   return (
-    <section className="space-y-6">
-      <div className='text-black text-left font-["Nunito_Sans"] text-[28px] sm:text-[40px] font-bold leading-normal'>
-        Day {dayIndex}: {title}
+    <section className="space-y-8">
+      <div className="flex flex-col items-start gap-1">
+        <span className="text-[14px] font-bold text-black/30 tracking-[0.2em] uppercase">
+          Day {dayIndex}
+        </span>
+        <h2 className='text-black font-["Inter"] text-[32px] sm:text-[44px] font-extrabold tracking-tight leading-[1.1]'>
+          {title}
+        </h2>
+        <div className="mt-4 h-[1px] w-12 bg-black/10" />
       </div>
 
       <div className="space-y-10">
@@ -220,8 +227,7 @@ function RecapPlaceBlock({
       {/* Header: Place Name and Time/Category/Actions */}
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-3">
-            <MapPin className="h-7 w-7 text-[#B84A2F] shrink-0" />
+          <div className="flex flex-col items-start gap-1">
             <div className="min-w-0 flex-1">
               {mode === "edit" ? (
                 <input
@@ -231,22 +237,22 @@ function RecapPlaceBlock({
                     onPlaceNameChange?.(entry.id, e.target.value)
                   }
                   placeholder="Enter place name"
-                  className="w-full bg-transparent text-[24px] font-extrabold text-black underline underline-offset-4 focus:outline-none focus:ring-2 focus:ring-sky-500/20 rounded-lg p-1"
+                  className="w-full bg-transparent text-[24px] sm:text-[32px] font-extrabold text-black focus:outline-none focus:ring-2 focus:ring-sky-500/20 rounded-lg p-1"
                 />
               ) : (
-                <div className="truncate text-[24px] font-extrabold text-black underline underline-offset-4">
+                <h3 className="truncate text-[24px] sm:text-[32px] font-extrabold text-black tracking-tight">
                   {entry.placeName}
-                </div>
+                </h3>
               )}
             </div>
+            {/* If no photos exist, keep time visible here as fallback */}
+            {(!entry.photos || entry.photos.length === 0) &&
+              !!entry.timeRangeText?.trim() && (
+                <div className="text-[14px] font-bold text-black/30 tracking-tight">
+                  {entry.timeRangeText}
+                </div>
+              )}
           </div>
-          {/* If no photos exist, keep time visible here as fallback */}
-          {(!entry.photos || entry.photos.length === 0) &&
-            !!entry.timeRangeText?.trim() && (
-              <div className="mt-1 ml-10 text-[16px] font-medium text-black/70">
-                {entry.timeRangeText}
-              </div>
-            )}
         </div>
 
         <div className="flex items-center gap-3 shrink-0">
@@ -509,7 +515,7 @@ function RecapPhotoCard({
       <article
         className={[
           "w-full",
-          "overflow-hidden rounded-[28px] border border-black/15 bg-white shadow-sm",
+          "overflow-hidden rounded-[32px] border border-black/5 bg-white shadow-[0_4px_20px_rgba(0,0,0,0.03)]",
         ].join(" ")}
       >
         <div className="relative">
@@ -518,13 +524,10 @@ function RecapPhotoCard({
             onClick={() => setLightboxOpen(true)}
             className={[
               layout === "sheet"
-                ? // Bottom sheet: keep photo shorter so other UI stays visible
-                  "relative mx-4 my-3 h-[32dvh] min-h-[240px] max-h-[420px] w-[calc(100%-2rem)]"
-                : // Default: use more space (bigger photo, smaller margins)
-                  "relative mx-4 my-4 aspect-[4/5] w-[calc(100%-2rem)]",
-              // Desktop: keep the wider cinematic ratio
+                ? "relative mx-4 my-3 h-[32dvh] min-h-[240px] max-h-[420px] w-[calc(100%-2rem)]"
+                : "relative mx-4 my-4 aspect-[4/5] w-[calc(100%-2rem)]",
               "sm:m-6 sm:aspect-[16/9] sm:w-[calc(100%-3rem)]",
-              "overflow-hidden rounded-2xl bg-black/5 focus:outline-none focus:ring-2 focus:ring-black/30",
+              "overflow-hidden rounded-[24px] bg-black/[0.03] focus:outline-none focus:ring-2 focus:ring-black/10",
             ].join(" ")}
             aria-label="Open photo"
           >
@@ -552,7 +555,7 @@ function RecapPhotoCard({
               <p
                 ref={setCaptionEl}
                 className={[
-                  "text-[22px] leading-[1.35] text-black/85",
+                  "text-[24px] font-medium leading-[1.3] text-black/90 font-['Inter'] tracking-tight",
                   expanded ? "" : collapsedClampClass,
                 ].join(" ")}
               >
