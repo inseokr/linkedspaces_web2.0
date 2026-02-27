@@ -60,6 +60,7 @@ import {
 import type { UserSentiment } from "../../mapbox-category-pins";
 import OrangePlaceMarker from "../../components/OrangePlaceMarker";
 import type { SavedPlace } from "../mockData";
+import WebGLHelpPopup from "@/components/ui/WebGLHelpPopup";
 
 const DEBUG_MAP =
   typeof process !== "undefined" &&
@@ -273,6 +274,7 @@ export default function PhotoMap({
   is3DRef.current = is3D;
   const [mapReady, setMapReady] = useState(false);
   const [contextLost, setContextLost] = useState(false);
+  const [showHelpPopup, setShowHelpPopup] = useState(false);
   const webGLSupported = isWebGLSupported();
 
   const token =
@@ -446,6 +448,7 @@ export default function PhotoMap({
           if (typeof console !== "undefined")
             console.error("[PhotoMap] Map init failed", err);
           setContextLost(true);
+          setShowHelpPopup(true);
           return;
         }
         mapRef.current = map;
@@ -1218,6 +1221,10 @@ export default function PhotoMap({
         <p className="text-gray-500">
           Try closing and reopening the map or refreshing the page.
         </p>
+        <WebGLHelpPopup
+          open={showHelpPopup}
+          onClose={() => setShowHelpPopup(false)}
+        />
       </div>
     );
   }

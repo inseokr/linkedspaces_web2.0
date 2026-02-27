@@ -42,21 +42,19 @@ export default function TermsPage() {
         </p>
         <ul>
           <li>
-            <strong>AI-powered blog generation</strong> — automatically create
-            blog posts from your travel photos using on-device or cloud-based AI
+            AI-powered blog generation: automatically create blog posts from
+            your travel photos using on-device or cloud-based AI
           </li>
           <li>
-            <strong>Cloud upload &amp; sync</strong> — upload and store your
-            locally created blogs to the cloud so they are accessible from any
-            device
+            Cloud upload and sync: upload and store your locally created blogs
+            to the cloud so they are accessible from any device
           </li>
           <li>
-            <strong>Web blog editor</strong> — edit, format, and publish your
-            blog posts directly from a web browser at bloggo.linkedspaces.com
+            Web blog editor: edit, format, and publish your blog posts directly
+            from a web browser at bloggo.linkedspaces.com
           </li>
           <li>
-            <strong>Public sharing</strong> — share your published blogs via a
-            unique public link
+            Public sharing: share your published blogs via a unique public link
           </li>
         </ul>
         <p>
@@ -72,8 +70,8 @@ export default function TermsPage() {
           your account.
         </p>
         <ul>
-          <li>You must be at least 13 years old to use Bloggo</li>
-          <li>You may not create more than one account per person</li>
+          <li>You must be at least 4 years old to use Bloggo</li>
+          <li>You may not create more than one account per email</li>
           <li>You must provide accurate and complete information</li>
           <li>You are responsible for all content posted from your account</li>
         </ul>
@@ -95,17 +93,8 @@ export default function TermsPage() {
             any photos or content you submit
           </li>
           <li>
-            Free (Starter) plan users may upload up to 10 cloud blogs over the
-            lifetime of their account; you may remove or download existing cloud
-            blogs to free up capacity
-          </li>
-          <li>
-            Paid plan subscribers receive unlimited cloud blog storage as
-            described in the current pricing page
-          </li>
-          <li>
-            We may compress or optimize photos during the upload process;
-            higher-resolution uploads are available on paid plans
+            We may compress or optimize photos during the upload process to
+            ensure optimal performance
           </li>
           <li>
             Bloggo is not responsible for data loss due to user-initiated
@@ -169,19 +158,7 @@ export default function TermsPage() {
           other intellectual property laws.
         </p>
 
-        <h2>8. Subscription and Billing</h2>
-        <p>
-          Paid plans are billed in advance on a monthly or annual basis. All
-          fees are non-refundable except as required by law. We reserve the
-          right to change pricing with 30 days notice.
-        </p>
-        <p>
-          In-app purchases made through the Apple App Store or Google Play Store
-          are subject to the respective platform&apos;s refund and billing
-          policies in addition to these Terms.
-        </p>
-
-        <h2>9. Termination</h2>
+        <h2>8. Termination</h2>
         <p>
           We may terminate or suspend your account at our sole discretion,
           without notice, for conduct that we believe violates these Terms or is
@@ -189,7 +166,7 @@ export default function TermsPage() {
           cloud-stored content may be deleted after a reasonable grace period.
         </p>
 
-        <h2>10. Disclaimer of Warranties</h2>
+        <h2>9. Disclaimer of Warranties</h2>
         <p>
           Bloggo is provided &quot;as is&quot; without warranties of any kind.
           We do not warrant that the service will be uninterrupted, error-free,
@@ -198,7 +175,7 @@ export default function TermsPage() {
           guaranteed to be 100% available at all times.
         </p>
 
-        <h2>11. Limitation of Liability</h2>
+        <h2>10. Limitation of Liability</h2>
         <p>
           To the maximum extent permitted by law, Bloggo shall not be liable for
           any indirect, incidental, special, consequential, or punitive damages
@@ -206,13 +183,13 @@ export default function TermsPage() {
           any loss of cloud-stored data.
         </p>
 
-        <h2>12. Governing Law</h2>
+        <h2>11. Governing Law</h2>
         <p>
           These Terms shall be governed by the laws of the State of California,
           without regard to its conflict of law provisions.
         </p>
 
-        <h2>13. Contact</h2>
+        <h2>12. Contact</h2>
         <p>
           For questions about these Terms, contact us at{" "}
           <a
