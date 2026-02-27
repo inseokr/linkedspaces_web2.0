@@ -441,12 +441,16 @@ export default function DemoBlogDetailView({ params }: Props) {
 
         {/* Mobile day tabs */}
         {!isLg && (
-          <div className="sticky top-12 z-20 mt-3 overflow-x-auto rounded-2xl border border-black/10 bg-white/95 p-3 shadow-sm backdrop-blur-md">
-            <RecapDayTabs
-              tabs={dayTabs}
-              activeId={activeDayId}
-              onChange={(id) => handleDayChange(id)}
-            />
+          <div className="sticky top-[48px] z-20 border-b border-black/10 bg-white/80 backdrop-blur-md">
+            <div className="w-full px-3 py-2">
+              <RecapDayTabs
+                tabs={dayTabs}
+                activeId={activeDayId}
+                onChange={(id) => handleDayChange(id)}
+                size="sm"
+                className="max-w-full"
+              />
+            </div>
           </div>
         )}
       </div>
@@ -515,19 +519,17 @@ export default function DemoBlogDetailView({ params }: Props) {
               onPlaceMarkerClick={onMarkerClick}
               activePlaceMarkerId={activeEntryId ?? undefined}
               useSimpleMarkers
+              overlayTopRight={
+                <div className="rounded-full bg-white/70 backdrop-blur-md border border-white/50 px-2 py-2 shadow-sm">
+                  <RecapDayTabs
+                    tabs={dayTabs}
+                    activeId={activeDayId}
+                    onChange={(id) => handleDayChange(id)}
+                    className="max-w-[min(72vw,420px)] [&>button]:!h-7 [&>button]:!px-3 [&>button]:!text-[13px]"
+                  />
+                </div>
+              }
             />
-
-            {/* Day tabs — absolute overlay, top-right corner of the map */}
-            <div className="pointer-events-auto absolute right-3 top-3 z-10">
-              <div className="rounded-2xl border border-black/10 bg-white/90 p-2 shadow-lg backdrop-blur-md">
-                <RecapDayTabs
-                  tabs={dayTabs}
-                  activeId={activeDayId}
-                  onChange={(id) => handleDayChange(id)}
-                  size="sm"
-                />
-              </div>
-            </div>
           </div>
         </section>
       </div>

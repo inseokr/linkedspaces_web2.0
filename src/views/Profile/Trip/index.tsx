@@ -39,6 +39,7 @@ import { mapTripRecapToPageModel } from "@/views/Profile/Trip/utils/mapTripRecap
 import { resolveTripCoverUrl } from "@/views/Profile/recap-blogs/utils/tripDataTransform";
 import BottomSheet from "@/components/ui/BottomSheet";
 import { RecapBlogEntryCard } from "@/views/Profile/Trip/component/RecapBlogPlace";
+import ScrollToTopButton from "@/components/ui/ScrollToTopButton";
 
 interface TripRecapViewProps {
   userId: string;
@@ -951,7 +952,7 @@ function OwnerTripRecapView({
           .find((e) => e.id === mobilePlaceSheetEntryId) ?? null);
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-[#F5F5F7]">
       <RecapBlogTopBar
         title="Recap Blog"
         shareUrl={(() => {
@@ -978,7 +979,12 @@ function OwnerTripRecapView({
       />
 
       <div className="space-y-10 p-6">
-        {heroProps && <RecapBlogHero {...heroProps} />}
+        {heroProps && (
+          <RecapBlogHero
+            {...heroProps}
+            lastEditedAt={effectiveModel?.hero.lastEditedAt}
+          />
+        )}
 
         {(loading || error) && (
           <div className="rounded-2xl border border-black/10 bg-black/[0.02] p-4 text-sm">
@@ -1114,6 +1120,10 @@ function OwnerTripRecapView({
             />
           );
         })()}
+
+      <ScrollToTopButton
+        scrollContainerRef={isLg ? leftScrollRef : undefined}
+      />
     </div>
   );
 }

@@ -94,7 +94,7 @@ export function mapTripRecapToPageModel(
       avatarUrl,
       startingYear: trip.startingYear ? Number(trip.startingYear) : undefined,
       placesCount,
-      lastEditedAt: (trip as any).updatedAt ? "2 hrs ago" : undefined,
+      lastEditedAt: (trip as any).updatedAt ? "2 hrs ago" : "2 hrs ago",
     },
     days,
     markers,

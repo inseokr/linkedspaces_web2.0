@@ -780,6 +780,7 @@ export default function MapboxMap({
             imageUrl={m.imageUrl}
             dateLabel={m.dateLabel}
             isActive={isActive}
+            onClick={() => onMarkerClickRef.current?.(m.id)}
           />,
         );
       };
