@@ -1,14 +1,19 @@
 import "@/app/bloggo/bloggo.css";
 import BloggoHeader from "@/bloggo/components/layout/Header";
 import BloggoFooter from "@/bloggo/components/layout/Footer";
+import { Metadata } from "next";
 
-export const metadata = {
+export const metadata: Metadata = {
   title: {
     default: "Bloggo – The fastest way to turn photos into blogs",
     template: "%s | Bloggo",
   },
   description: "Bloggo is the fastest way to turn photos into blogs.",
   keywords: ["blogging", "writing", "developer blog", "content creation"],
+  icons: {
+    icon: "/bloggo-icon.png",
+    apple: "/bloggo-icon.png",
+  },
   openGraph: {
     type: "website",
     siteName: "Bloggo",

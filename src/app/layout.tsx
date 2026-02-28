@@ -5,6 +5,13 @@ import "mapbox-gl/dist/mapbox-gl.css";
 import { Montserrat, Poppins, Inter } from "next/font/google";
 import { headers } from "next/headers";
 import LayoutClient from "./LayoutClient";
+import { Metadata } from "next";
+
+export const metadata: Metadata = {
+  icons: {
+    icon: "/favicon.ico",
+  },
+};
 
 const montserrat = Montserrat({
   subsets: ["latin"],
