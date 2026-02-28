@@ -50,6 +50,8 @@ export function draftFromPageModel(pageModel: any): RecapEditDraft {
           id: e.id,
           placeKey: String(e.placeKey ?? e.digitizedTime ?? e.id ?? ""),
           placeName: e.placeName ?? e.label ?? "",
+          originalPlaceName:
+            e.originalPlaceName ?? e.placeName ?? e.label ?? "",
           timeRangeText: e.timeRangeText ?? e.time ?? "",
           categoryLabel: e.categoryLabel ?? e.category ?? undefined,
           placeStory:

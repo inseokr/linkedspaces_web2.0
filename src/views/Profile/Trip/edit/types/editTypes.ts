@@ -8,6 +8,7 @@ export type PlaceDraft = {
   /** Backend identifier for /placeVisitHistory/story (usually digitizedTime). */
   placeKey: string;
   placeName: string;
+  originalPlaceName?: string;
   timeRangeText?: string;
   categoryLabel?: string;
   /** Place-level story (not photo caption). */

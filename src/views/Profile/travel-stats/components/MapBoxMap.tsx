@@ -90,6 +90,9 @@ type Props = {
 
   /** Fired when the user clicks a built-in Mapbox POI label on the map. */
   onPoiClick?: (poi: PoiInfo) => void;
+
+  /** When true, render + / − zoom buttons in the bottom-right corner. */
+  showZoomControls?: boolean;
 };
 
 function PlaceMarker({
@@ -354,6 +357,7 @@ export default function MapboxMap({
   showPlacePath = true,
   useSimpleMarkers = false,
   onPoiClick,
+  showZoomControls = false,
 }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<MapboxMapType | null>(null);
@@ -1491,6 +1495,54 @@ export default function MapboxMap({
               {overlayTopRight}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Controls Container */}
+      {showZoomControls && (
+        <div
+          style={{
+            position: "absolute",
+            top: 16,
+            right: 16,
+            display: "flex",
+            flexDirection: "column",
+            gap: 4,
+            pointerEvents: "auto",
+          }}
+        >
+          {(
+            [
+              { label: "+", action: () => mapRef.current?.zoomIn() },
+              { label: "−", action: () => mapRef.current?.zoomOut() },
+            ] as const
+          ).map(({ label, action }) => (
+            <button
+              key={label}
+              type="button"
+              onClick={action}
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 10,
+                background: "rgba(255,255,255,0.92)",
+                backdropFilter: "blur(8px)",
+                border: "1px solid rgba(0,0,0,0.10)",
+                boxShadow: "0 2px 8px rgba(0,0,0,0.14)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 20,
+                fontWeight: 500,
+                lineHeight: 1,
+                color: "rgba(0,0,0,0.75)",
+                cursor: "pointer",
+              }}
+              aria-label={label === "+" ? "Zoom in" : "Zoom out"}
+            >
+              {label}
+            </button>
+          ))}
         </div>
       )}
     </div>

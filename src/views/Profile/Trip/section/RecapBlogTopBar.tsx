@@ -5,8 +5,7 @@ import RecapDayTabs, {
   type DayTab,
 } from "@/views/Profile/Trip/component/RecapDayTabs";
 import Image from "next/image";
-import updateIcon from "@/assets/icons/update.svg";
-import { Check } from "lucide-react";
+import { Check, RefreshCw } from "lucide-react";
 
 type Props = {
   title?: string;
@@ -196,13 +195,9 @@ export default function RecapBlogTopBar({
                         : primaryButtonClass
                     }
                   >
-                    <Image
-                      src={updateIcon}
-                      alt="Update"
-                      width={18}
-                      height={18}
+                    <RefreshCw
                       className={[
-                        "block shrink-0",
+                        "w-[18px] h-[18px] shrink-0",
                         updateDisabled ? "opacity-40" : "opacity-90",
                       ].join(" ")}
                     />

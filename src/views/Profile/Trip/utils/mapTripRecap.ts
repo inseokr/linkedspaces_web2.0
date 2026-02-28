@@ -207,6 +207,7 @@ function mapPlaceToEntry(p: TripRecapPlace, fallbackId: string): RecapEntry {
     id,
     placeKey,
     placeName,
+    originalPlaceName: p.placeName || "Place",
     externalUrl: externalUrl || undefined,
     timeRangeText,
     categoryLabel,

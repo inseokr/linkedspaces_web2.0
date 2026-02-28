@@ -37,6 +37,7 @@ export type RecapEntry = {
    */
   placeKey?: string;
   placeName: string;
+  originalPlaceName?: string;
   /** Optional place deep link (e.g., Google Maps / website). */
   externalUrl?: string;
   timeRangeText: string;
