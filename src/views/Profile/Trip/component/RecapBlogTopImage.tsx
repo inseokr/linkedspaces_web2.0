@@ -1,4 +1,5 @@
 "use client";
+import React from "react";
 import { getBlogImageResolved } from "@/views/Profile/Trip/edit/utils/blogImageCache";
 import Image from "next/image";
 
@@ -98,21 +99,21 @@ export function TripMeta({
   const isOnDark = tone === "onDark";
 
   const divider = (
-    <span className={isOnDark ? "text-white/40" : "text-black/30"}>•</span>
+    <span className={isOnDark ? "text-white/60" : "text-black/30"}>•</span>
   );
 
   return (
     <div
       className={[
         "mt-5 flex flex-wrap items-center justify-center gap-x-3 gap-y-2 text-center",
-        isOnDark ? "text-white/80" : "text-black/60",
+        isOnDark ? "text-white" : "text-black/60",
       ].join(" ")}
     >
       {hasDate && (
         <span
           className={[
             "text-[15px] font-medium tracking-wide uppercase",
-            isOnDark ? "text-white/90" : "text-black/70",
+            isOnDark ? "text-white" : "text-black/70",
           ].join(" ")}
         >
           {dateText}
@@ -125,7 +126,7 @@ export function TripMeta({
         <span
           className={[
             "text-[15px] font-medium tracking-wide uppercase",
-            isOnDark ? "text-white/90" : "text-black/70",
+            isOnDark ? "text-white" : "text-black/70",
           ].join(" ")}
         >
           {placesCount} Place{placesCount === 1 ? "" : "s"}
@@ -138,7 +139,7 @@ export function TripMeta({
         <span
           className={[
             "text-[15px] font-medium tracking-wide uppercase",
-            isOnDark ? "text-white/90" : "text-black/70",
+            isOnDark ? "text-white" : "text-black/70",
           ].join(" ")}
         >
           {locationText}
@@ -219,26 +220,66 @@ function CoverImage({
   console.log("[Hero props coverImageUrl]", coverImageUrl);
   console.log("[Hero final src]", src, "unoptimized:", unoptimized);
 
+  // Parallax refs
+  const containerRef = React.useRef<HTMLDivElement>(null);
+  const imgRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    const container = containerRef.current;
+    const img = imgRef.current;
+    if (!container || !img) return;
+
+    const PARALLAX_STRENGTH = 0.35; // 0 = no parallax, 1 = full scroll speed
+
+    const onScroll = () => {
+      const rect = container.getBoundingClientRect();
+      // rect.top is negative once we've scrolled past the top of the element
+      // We shift the inner image upward proportionally
+      const scrolledPast = -rect.top;
+      const offset = scrolledPast * PARALLAX_STRENGTH;
+      img.style.transform = `translateY(${offset}px)`;
+    };
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+    onScroll(); // initialise
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
   return (
-    <div className="relative w-full aspect-[4/3] sm:aspect-[16/7] md:aspect-[21/9]">
-      {src ? (
-        <Image
-          src={src}
-          alt={title}
-          fill
-          unoptimized={unoptimized}
-          priority
-          className="object-cover"
-          sizes="(max-width: 768px) 100vw, 1200px"
-        />
-      ) : (
-        <div className="absolute inset-0 flex h-full w-full items-center justify-center bg-black/5 text-sm text-black/50">
-          No image
-        </div>
-      )}
+    // Outer container: fixed height, clips the overflowing image
+    <div
+      ref={containerRef}
+      className="relative w-full overflow-hidden"
+      style={{ aspectRatio: "16/7" }}
+    >
+      {/* Inner wrapper: taller than container so parallax has room to travel */}
+      <div
+        ref={imgRef}
+        className="absolute inset-0 will-change-transform"
+        style={{
+          top: "-20%",
+          bottom: "-20%",
+        }}
+      >
+        {src ? (
+          <Image
+            src={src}
+            alt={title}
+            fill
+            unoptimized={unoptimized}
+            priority
+            className="object-cover"
+            sizes="(max-width: 768px) 100vw, 1200px"
+          />
+        ) : (
+          <div className="absolute inset-0 flex h-full w-full items-center justify-center bg-black/5 text-sm text-black/50">
+            No image
+          </div>
+        )}
+      </div>
 
       {showGradient && (
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent z-10" />
       )}
     </div>
   );
@@ -336,14 +377,17 @@ export default function RecapBlogHero({
       <section className="relative hidden w-full overflow-hidden rounded-[32px] shadow-sm sm:block">
         <CoverImage coverImageUrl={coverImageUrl} title={title} showGradient />
 
-        <div className="pointer-events-none absolute inset-0 flex flex-col p-8 sm:px-12 sm:pt-16 sm:pb-8">
+        <div className="pointer-events-none absolute inset-0 flex flex-col p-8 sm:px-12 sm:pt-16 sm:pb-8 z-20">
           <div className="flex-1" />
 
           <div className="pb-4 text-center w-full max-w-4xl mx-auto">
-            <h1 className="!text-5xl !leading-[1.1] font-extrabold tracking-tighter text-white md:!text-6xl lg:!text-7xl">
+            <h1
+              className="!text-5xl !leading-[1.1] font-extrabold tracking-tighter text-white md:!text-6xl lg:!text-7xl"
+              style={{ textShadow: "0 2px 12px rgba(0,0,0,0.3)" }}
+            >
               {title}
             </h1>
-            <div className="mt-4 flex flex-col items-center justify-center gap-6 w-full shadow-black">
+            <div className="mt-4 flex flex-col items-center justify-center gap-6 w-full">
               <TripMeta
                 dateText={dateText}
                 locationText={locationText}
@@ -371,7 +415,7 @@ export default function RecapBlogHero({
                   window.scrollBy({ top: 500, behavior: "smooth" });
                 }
               }}
-              className="group flex flex-col items-center gap-1 text-white/70 hover:text-white transition-colors"
+              className="group flex flex-col items-center gap-1 text-white hover:text-white/80 transition-colors"
             >
               <span className="text-[13px] font-bold uppercase tracking-widest">
                 Read

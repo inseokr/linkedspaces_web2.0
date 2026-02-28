@@ -24,7 +24,10 @@ import {
 import ImageFieldEditor from "./components/ImageFieldEditor";
 import TextRow from "./components/TextRow";
 import { RecapBlogDaySection } from "@/views/Profile/Trip/component/RecapBlogPlace";
+import type { RecapEntry } from "@/views/Profile/Trip/component/RecapBlogPlace";
 import PhotoLightbox from "@/components/ui/PhotoLightbox";
+import PlaceMapEditorModal from "@/views/Profile/Trip/component/PlaceMapEditorModal";
+import type { PoiInfo } from "@/views/Profile/travel-stats/components/MapBoxMap";
 
 export default function BloggoRecapEditView({
   userId,
@@ -44,6 +47,11 @@ export default function BloggoRecapEditView({
   // draft
   const [draft, setDraft] = useState<RecapEditDraft | null>(null);
   const draftRef = useRef<RecapEditDraft | null>(null);
+  // Place map editor modal
+  const [editorOpen, setEditorOpen] = useState<{
+    entryId: string;
+    dayId: string;
+  } | null>(null);
   useEffect(() => {
     draftRef.current = draft;
   }, [draft]);
@@ -555,6 +563,79 @@ export default function BloggoRecapEditView({
     });
   };
 
+  /** Flat list of all RecapEntry-shaped objects across all days (for map context) */
+  const allEntries = useMemo((): RecapEntry[] => {
+    if (!draft) return [];
+    return draft.days.flatMap((d) =>
+      d.places.map(
+        (p) =>
+          ({
+            id: p.id,
+            placeKey: p.placeKey,
+            placeName: p.placeName,
+            timeRangeText: p.timeRangeText ?? "",
+            categoryLabel: p.categoryLabel ?? undefined,
+            liked: false,
+            likeCount: 0,
+            commentCount: 0,
+            placeStory: p.placeStory ?? "",
+            photos: p.photos ?? [],
+            captions: (p as any).captions ?? [],
+            caption: (p as any).caption ?? "",
+            coordinate: p.coordinate,
+            markerRole: (p as any).markerRole,
+            visitIndex: (p as any).visitIndex,
+            status: p.status,
+          }) as RecapEntry,
+      ),
+    );
+  }, [draft]);
+
+  /** Active entry for the editor modal */
+  const editorEntry = useMemo((): RecapEntry | null => {
+    if (!editorOpen) return null;
+    return allEntries.find((e) => e.id === editorOpen.entryId) ?? null;
+  }, [editorOpen, allEntries]);
+
+  /** POI confirm from the map editor modal */
+  const handlePoiConfirmFromModal = async (poi: PoiInfo, entryId: string) => {
+    if (!editorOpen || !draft) return;
+    const { dayId } = editorOpen;
+    const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${poi.name} ${poi.lat},${poi.lng}`)}`;
+
+    // 1) Update draft optimistically
+    updatePlaceInDay(
+      dayId,
+      entryId,
+      (p) =>
+        ({
+          ...p,
+          placeName: poi.name,
+          coordinate: { latitude: poi.lat, longitude: poi.lng },
+          externalUrl: mapsUrl,
+        }) as any,
+    );
+
+    // 2) Persist to server
+    const place = draft.days
+      .find((d) => d.id === dayId)
+      ?.places.find((p) => p.id === entryId);
+    const placeKey = place?.placeKey;
+    if (placeKey) {
+      try {
+        await updatePlaceInfo({
+          placeKey,
+          placeName: poi.name,
+          coordinate: { latitude: poi.lat, longitude: poi.lng },
+          categories: poi.category ? [poi.category] : undefined,
+          externalUrl: mapsUrl,
+        });
+      } catch (err) {
+        console.error("[PlaceMapEditor] POI update failed", err);
+      }
+    }
+  };
+
   const tripPhotos = useMemo(() => {
     if (!draft) return [];
     const raw = draft.days.flatMap((d) =>
@@ -626,7 +707,7 @@ export default function BloggoRecapEditView({
   if (!pageModel || !draft) return <div className="p-6">No data</div>;
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-slate-50">
       <RecapBlogTopBar
         mode="edit"
         brand="bloggo"
@@ -643,13 +724,39 @@ export default function BloggoRecapEditView({
         className="sticky top-[64px] z-50 border-b border-black/10"
       />
 
-      <div className="mx-auto max-w-[1200px] p-6">
-        {/* Settings header */}
-        <div className="flex justify-between">
-          <div className="text-3xl font-bold">Recap Blog Settings</div>
+      {/* ── Hero Zone: Cover + Title ─────────────────────────── */}
+      <div className="mx-auto max-w-[1200px] px-4 sm:px-6 pt-6 pb-2">
+        {/* Cover photo — full-width hero */}
+        <ImageFieldEditor
+          value={draft.coverPhoto}
+          userId={userId}
+          tripId={tripId}
+          onOpenGallery={() => setCoverGalleryOpen(true)}
+          onChange={(coverPhoto) => {
+            setDraft({ ...draft, updatedAt: Date.now(), coverPhoto });
+            if (coverPhoto.kind === "keep") {
+              void persistCoverPhoto(coverPhoto.url);
+            } else if (coverPhoto.kind === "remove") {
+              void persistCoverPhoto(null);
+            }
+          }}
+        />
+
+        {/* Blog title — transparent, centered, hero-sized */}
+        <div className="mt-6 pb-6 border-b border-slate-200">
+          <TextRow
+            value={draft.recapTitle}
+            variant="title"
+            placeholder="Untitled trip..."
+            onChange={setRecapTitle}
+          />
         </div>
-        <div className="mt-6 flex gap-10 pl-0 p-4">
-          <div className="font-bold text-2xl">Shared with friends</div>
+
+        {/* ── Settings row (compact) ───────────────────────────── */}
+        <div className="flex items-center justify-end gap-4 py-3">
+          <span className="text-sm font-semibold text-slate-500">
+            Shared with friends
+          </span>
           <label className="relative inline-flex cursor-pointer">
             <input
               type="checkbox"
@@ -679,40 +786,11 @@ export default function BloggoRecapEditView({
             />
           </label>
         </div>
+      </div>
 
-        {/* Cover photo */}
-        <div className="mt-8">
-          <div className="mb-3 text-2xl font-semibold">Cover Photo</div>
-          <ImageFieldEditor
-            value={draft.coverPhoto}
-            userId={userId}
-            tripId={tripId}
-            onOpenGallery={() => setCoverGalleryOpen(true)}
-            onChange={(coverPhoto) => {
-              setDraft({ ...draft, updatedAt: Date.now(), coverPhoto });
-              if (coverPhoto.kind === "keep") {
-                void persistCoverPhoto(coverPhoto.url);
-              } else if (coverPhoto.kind === "remove") {
-                void persistCoverPhoto(null);
-              }
-              // Note: "local" cover uploads are currently local-only (idb) and not persisted server-side.
-            }}
-          />
-        </div>
-
-        {/* Recap title (큰 필드) */}
-        <div className="mt-10">
-          <TextRow
-            label="Recap Blog Title"
-            value={draft.recapTitle}
-            variant="title"
-            placeholder="Write a title"
-            onChange={setRecapTitle}
-          />
-        </div>
-
-        {/* ✅ 모든 day를 한 페이지에 쭉 */}
-        <div className="mt-14 space-y-16">
+      {/* ── Itinerary Content ────────────────────────────────── */}
+      <div className="mx-auto max-w-[1200px] px-4 sm:px-6 pb-24">
+        <div className="mt-10 space-y-20">
           {draft.days.map((d) => (
             <div
               key={d.id}
@@ -756,6 +834,9 @@ export default function BloggoRecapEditView({
                 onRemovePhoto={(entryId, photoIndex) =>
                   onRemovePhoto(d.id, entryId, photoIndex)
                 }
+                onOpenPlaceMapEditor={(entryId) =>
+                  setEditorOpen({ entryId, dayId: d.id })
+                }
               />
             </div>
           ))}
@@ -770,6 +851,19 @@ export default function BloggoRecapEditView({
           selectLabel="Use as cover"
           onSelect={(photo) => applyCoverFromTripPhoto(photo)}
           onClose={() => setCoverGalleryOpen(false)}
+        />
+      )}
+
+      {/* Place map editor modal */}
+      {editorOpen && editorEntry && (
+        <PlaceMapEditorModal
+          entry={editorEntry}
+          allEntries={allEntries}
+          onPlaceNameChange={(next) =>
+            onPlaceNameChange(editorOpen.dayId, editorOpen.entryId, next)
+          }
+          onPoiConfirm={handlePoiConfirmFromModal}
+          onClose={() => setEditorOpen(null)}
         />
       )}
     </div>

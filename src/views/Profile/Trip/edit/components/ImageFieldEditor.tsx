@@ -150,47 +150,84 @@ export default function ImageFieldEditor({
   const hasGallery = typeof onOpenGallery === "function";
 
   return (
-    <div className="rounded-3xl border border-black/10 p-4">
-      <div className="w-full">
-        <div className="relative aspect-[780/230] w-full overflow-hidden rounded-2xl bg-black/[0.04]">
-          {resolvedSrc ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={resolvedSrc}
-              alt="cover"
-              className="h-full w-full object-cover"
-            />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center text-sm opacity-60">
-              No image
-            </div>
-          )}
-        </div>
+    <div
+      className={[
+        "relative w-full overflow-hidden rounded-2xl transition-all duration-300 group",
+        "aspect-[21/7]",
+        resolvedSrc
+          ? "cursor-pointer"
+          : "cursor-pointer border-2 border-dashed border-slate-200 hover:border-blue-400 bg-slate-50 flex items-center justify-center",
+      ].join(" ")}
+      onClick={
+        !resolvedSrc ? (hasGallery ? onOpenGallery : handlePick) : undefined
+      }
+    >
+      {resolvedSrc ? (
+        <>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={resolvedSrc}
+            alt="cover"
+            className="h-full w-full object-cover"
+          />
 
-        <div className="mt-4 flex flex-wrap items-center gap-3">
-          <Button
-            type="button"
-            radius="full"
-            variant="neutral"
-            className="h-10 px-6 text-lg font-bold"
+          {/* Dark hover scrim + Change Cover pill */}
+          <div
+            className="absolute inset-0 flex items-center justify-center bg-black/25 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
             onClick={hasGallery ? onOpenGallery : handlePick}
           >
-            Change
-          </Button>
+            <div className="rounded-full bg-white px-5 py-2 text-sm font-semibold text-slate-900 shadow-md border border-slate-200">
+              Change Cover
+            </div>
+          </div>
 
+          {/* Upload icon top-right (device upload) */}
           {hasGallery && (
-            <Button
+            <button
               type="button"
-              radius="full"
-              variant="neutral"
-              className="h-10 px-6 text-lg font-bold"
-              onClick={handlePick}
+              title="Upload from device"
+              className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-black/50 text-white opacity-0 backdrop-blur-sm transition-opacity duration-200 group-hover:opacity-100 hover:bg-black/70"
+              onClick={(e) => {
+                e.stopPropagation();
+                handlePick();
+              }}
             >
-              Upload
-            </Button>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={2}
+                stroke="currentColor"
+                className="h-4 w-4"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5"
+                />
+              </svg>
+            </button>
           )}
+        </>
+      ) : (
+        <div className="flex flex-col items-center gap-2 text-slate-400 select-none">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            strokeWidth={1.5}
+            stroke="currentColor"
+            className="h-8 w-8"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z"
+            />
+          </svg>
+          <span className="text-sm font-semibold">Add Cover Photo</span>
         </div>
-      </div>
+      )}
 
       <input
         ref={inputRef}

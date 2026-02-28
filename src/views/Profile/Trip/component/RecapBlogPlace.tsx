@@ -19,11 +19,11 @@ import {
   MoreVertical,
   ChevronLeft,
   ChevronRight,
+  Pencil,
 } from "lucide-react";
 
 import PhotoLightbox from "@/components/ui/PhotoLightbox";
 import { idbGetBlob } from "@/views/Profile/Trip/edit/utils/imageIdb";
-import TextRow from "@/views/Profile/Trip/edit/components/TextRow";
 import { normalizeExternalUrl, openExternalUrl } from "@/utils/externalLinks";
 
 /** ----------------------------
@@ -97,6 +97,9 @@ type Props = {
   onCaptionChange?: (entryId: string, photoIndex: number, next: string) => void;
   onRemovePhoto?: (entryId: string, photoIndex: number) => void;
 
+  /** Edit mode: open the Mapbox place editor popup for a given entry */
+  onOpenPlaceMapEditor?: (entryId: string) => void;
+
   onEntryMount?: (entryId: string, el: HTMLDivElement | null) => void;
 };
 
@@ -118,6 +121,7 @@ export function RecapBlogDaySection({
   onTogglePlaceHide,
   onCaptionChange,
   onRemovePhoto,
+  onOpenPlaceMapEditor,
   onEntryMount,
 }: Props) {
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
@@ -142,7 +146,7 @@ export function RecapBlogDaySection({
         <div className="mt-4 h-[1px] w-12 bg-black/10" />
       </div>
 
-      <div className="space-y-10">
+      <div className="space-y-6">
         {entries.map((entry) => {
           const entryRole = entry.markerRole ?? "poi";
           return (
@@ -162,6 +166,7 @@ export function RecapBlogDaySection({
                 onTogglePlaceHide={onTogglePlaceHide}
                 onCaptionChange={onCaptionChange}
                 onRemovePhoto={onRemovePhoto}
+                onOpenPlaceMapEditor={onOpenPlaceMapEditor}
               />
             </div>
           );
@@ -212,6 +217,7 @@ function RecapPlaceBlock({
   onTogglePlaceHide,
   onCaptionChange,
   onRemovePhoto,
+  onOpenPlaceMapEditor,
   photoLayout = "default",
 }: {
   entry: RecapEntry;
@@ -224,6 +230,7 @@ function RecapPlaceBlock({
   onTogglePlaceHide?: (entryId: string) => void;
   onCaptionChange?: (entryId: string, photoIndex: number, next: string) => void;
   onRemovePhoto?: (entryId: string, photoIndex: number) => void;
+  onOpenPlaceMapEditor?: (entryId: string) => void;
   photoLayout?: "default" | "sheet";
 }) {
   const placeStoryTrimmed = (entry.placeStory ?? "").trim();
@@ -231,22 +238,35 @@ function RecapPlaceBlock({
   const canTogglePlaceStory = placeStoryTrimmed.length > 160;
 
   return (
-    <div className="space-y-4">
+    <div
+      className={[
+        "space-y-5 bg-white rounded-2xl border border-slate-100 p-6 md:p-8",
+        "shadow-[0_2px_12px_-4px_rgba(0,0,0,0.06)]",
+        "transition-shadow duration-300",
+        mode === "edit"
+          ? "hover:shadow-[0_8px_24px_-8px_rgba(0,0,0,0.10)] focus-within:ring-2 focus-within:ring-blue-500/20"
+          : "",
+      ].join(" ")}
+    >
       {/* Header: Place Name and Time/Category/Actions */}
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
           <div className="flex flex-col items-start gap-1">
             <div className="min-w-0 flex-1">
               {mode === "edit" ? (
-                <input
-                  type="text"
-                  value={entry.placeName}
-                  onChange={(e) =>
-                    onPlaceNameChange?.(entry.id, e.target.value)
-                  }
-                  placeholder="Enter place name"
-                  className="w-full bg-transparent text-[24px] sm:text-[32px] font-extrabold text-black focus:outline-none focus:ring-2 focus:ring-sky-500/20 rounded-lg p-1"
-                />
+                <button
+                  type="button"
+                  onClick={() => onOpenPlaceMapEditor?.(entry.id)}
+                  className="group flex items-center gap-2 text-left w-full rounded-lg px-1 py-0.5 hover:bg-black/[0.03] transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500/20"
+                  title="Click to open map and edit location"
+                >
+                  <span className="truncate text-[24px] sm:text-[32px] font-extrabold text-black tracking-tight">
+                    {entry.placeName || (
+                      <span className="text-black/30">Enter place name…</span>
+                    )}
+                  </span>
+                  <Pencil className="shrink-0 h-4 w-4 text-black/30 group-hover:text-black/60 transition-colors mt-1" />
+                </button>
               ) : (
                 <a
                   href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
@@ -312,13 +332,13 @@ function RecapPlaceBlock({
 
       {/* Place Story Section */}
       {mode === "edit" ? (
-        <div className="w-full max-w-[920px] 2xl:max-w-[1100px]">
-          <TextRow
-            label="Place story"
+        <div className="w-full">
+          <textarea
             value={entry.placeStory ?? ""}
-            multiline
-            placeholder="Write a story for this place"
-            onChange={(v) => onPlaceStoryChange?.(entry.id, v)}
+            placeholder="Write a story for this place..."
+            rows={3}
+            onChange={(e) => onPlaceStoryChange?.(entry.id, e.target.value)}
+            className="w-full resize-none rounded-xl border border-slate-200 bg-transparent px-4 py-3 text-lg leading-relaxed text-slate-800 placeholder:text-slate-400 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20 transition min-h-[80px]"
           />
         </div>
       ) : (
@@ -796,8 +816,8 @@ function PhotoCaptionRow({
   onOpenPhoto: () => void;
 }) {
   return (
-    <div className="flex gap-4 items-center">
-      <div className="relative h-[150px] w-[150px] shrink-0 overflow-hidden rounded-2xl bg-black/10">
+    <div className="flex gap-4 items-center rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
+      <div className="relative h-[120px] w-[120px] shrink-0 overflow-hidden rounded-xl bg-black/10">
         <button
           type="button"
           className="absolute inset-0"
@@ -822,12 +842,12 @@ function PhotoCaptionRow({
       </div>
 
       <div className="w-full">
-        <TextRow
-          label=""
+        <textarea
           value={caption}
-          multiline
           placeholder="Write a caption"
-          onChange={(v) => onCaptionChange?.(entryId, index, v)}
+          rows={2}
+          onChange={(e) => onCaptionChange?.(entryId, index, e.target.value)}
+          className="w-full resize-none rounded-xl border border-slate-200 bg-transparent px-4 py-3 text-base leading-relaxed text-slate-800 placeholder:text-slate-400 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20 transition"
         />
       </div>
     </div>

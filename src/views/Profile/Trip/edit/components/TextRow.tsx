@@ -21,31 +21,19 @@ export default function TextRow({
 
   const isTitle = variant === "title";
 
-  const baseField =
-    "w-full rounded-[18px] border border-transparent bg-[#F0F0F0] outline-none focus:ring-2 focus:ring-black/10";
-
-  const fieldSize = isTitle
-    ? "px-6 py-5 text-[40px] font-bold leading-[1.1]"
-    : "px-5 py-4 text-[16px] leading-[1.5]";
+  const baseField = isTitle
+    ? "w-full bg-transparent outline-none focus:ring-0 text-center placeholder:text-slate-300 text-4xl sm:text-5xl font-extrabold tracking-tight leading-[1.1] text-slate-900"
+    : "w-full rounded-[18px] border border-transparent bg-[#F0F0F0] outline-none focus:ring-2 focus:ring-black/10 px-5 py-4 text-[16px] leading-[1.5]";
 
   return (
-    <div>
-      {label ? (
-        <div
-          className={
-            isTitle
-              ? "mb-2 text-sm font-semibold"
-              : "mb-2 text-sm font-semibold"
-          }
-        >
-          {label}
-        </div>
+    <div className={isTitle ? "w-full" : ""}>
+      {label && !isTitle ? (
+        <div className="mb-2 text-sm font-semibold">{label}</div>
       ) : null}
 
       <FieldTag
         className={[
           baseField,
-          fieldSize,
           multiline ? "min-h-[150px] resize-none" : "",
         ].join(" ")}
         value={value}
