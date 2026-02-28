@@ -215,9 +215,12 @@ function OwnerTripRecapView({
   const [error, setError] = useState<string | null>(null);
 
   /** Layout */
-  const TOPBAR_OFFSET_PX = 250;
-  const PANEL_HEIGHT_OFFSET = 220;
-  const PANEL_HEIGHT = `calc(100vh - ${PANEL_HEIGHT_OFFSET}px)`;
+  const BLOG_TOP_OFFSET_PX = 120;
+  const MAP_TOP_OFFSET_PX = 152;
+  const BLOG_HEIGHT_OFFSET_PX = 145;
+  const MAP_HEIGHT_OFFSET_PX = 176;
+  const BLOG_HEIGHT = `calc(100vh - ${BLOG_HEIGHT_OFFSET_PX}px)`;
+  const MAP_HEIGHT = `calc(100vh - ${MAP_HEIGHT_OFFSET_PX}px)`;
 
   /** Refs */
   const leftScrollRef = useRef<HTMLDivElement | null>(null);
@@ -246,7 +249,26 @@ function OwnerTripRecapView({
     () => `tripRecapScroll:${String(userId)}:${String(tripId)}`,
     [userId, tripId],
   );
+  const scrollResetKey = useMemo(
+    () => `${scrollStateKey}:reset`,
+    [scrollStateKey],
+  );
   const externalNavKey = useMemo(() => `ls:externalNav:tripRecap`, []);
+
+  const handleEditBlog = useCallback(
+    (entryId?: string) => {
+      try {
+        window.sessionStorage.setItem(scrollResetKey, "true");
+      } catch {
+        /* ignore */
+      }
+      const scrollToParam = entryId ? `?scrollTo=${entryId}` : "";
+      router.push(
+        `${basePath || "/trip"}/${userId}/${tripId}/edit${scrollToParam}`,
+      );
+    },
+    [basePath, scrollResetKey, userId, tripId, router],
+  );
 
   const shouldSkipReturnRefetch = useCallback(() => {
     // Returning from an external tab should not reset the UI state.
@@ -626,6 +648,13 @@ function OwnerTripRecapView({
 
     let parsed: any = null;
     try {
+      const resetFlag = window.sessionStorage.getItem(scrollResetKey);
+      if (resetFlag === "true") {
+        window.sessionStorage.removeItem(scrollResetKey);
+        window.sessionStorage.removeItem(scrollStateKey);
+        return;
+      }
+
       const raw = window.sessionStorage.getItem(scrollStateKey);
       if (!raw) return;
       parsed = JSON.parse(raw);
@@ -673,7 +702,7 @@ function OwnerTripRecapView({
     ) {
       setFocusLatLng({ lat: savedFocus.lat, lng: savedFocus.lng });
     }
-  }, [effectiveModel, scrollStateKey, dayTabs]);
+  }, [effectiveModel, scrollStateKey, scrollResetKey, dayTabs]);
 
   /** 10) initial scroll stabilization (친구 로직 유지) */
   useLayoutEffect(() => {
@@ -898,7 +927,7 @@ function OwnerTripRecapView({
       if (!mapEl) return;
 
       const rect = mapEl.getBoundingClientRect();
-      const pinnedNow = rect.top <= TOPBAR_OFFSET_PX + 1;
+      const pinnedNow = rect.top <= MAP_TOP_OFFSET_PX + 1;
       if (!pinnedNow) return;
 
       const mapWrap = mapContainerRef.current;
@@ -924,7 +953,37 @@ function OwnerTripRecapView({
       window.removeEventListener("wheel", onWheel, opts);
       document.removeEventListener("wheel", onWheel, opts);
     };
-  }, [TOPBAR_OFFSET_PX, userInteracted, allMarkers]);
+  }, [MAP_TOP_OFFSET_PX, userInteracted, allMarkers]);
+
+  /** 15) lock left panel scroll until pinned */
+  useLayoutEffect(() => {
+    const leftPanel = leftScrollRef.current;
+    if (!leftPanel) return;
+
+    let ticking = false;
+    const updateLock = () => {
+      const mapEl = mapStickyRef.current;
+      if (!mapEl) return;
+      const rect = mapEl.getBoundingClientRect();
+      const isPinned = rect.top <= MAP_TOP_OFFSET_PX + 1;
+
+      leftPanel.style.overflowY = isPinned ? "auto" : "hidden";
+    };
+
+    const onScroll = () => {
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          updateLock();
+          ticking = false;
+        });
+        ticking = true;
+      }
+    };
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+    updateLock(); // init
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [MAP_TOP_OFFSET_PX]);
 
   /** render */
   // Only block-render on the very first load.
@@ -980,19 +1039,19 @@ function OwnerTripRecapView({
             );
           }
         }}
-        onEditBlog={() =>
-          router.push(`${basePath || "/trip"}/${userId}/${tripId}/edit`)
-        }
+        onEditBlog={handleEditBlog}
         brand={brand}
         className="sticky top-[64px] z-50"
       />
 
-      <div className="space-y-10 px-6 pb-6 pt-2">
+      <div className="flex flex-col gap-[70px] px-6 pb-6 pt-2">
         {heroProps && (
-          <RecapBlogHero
-            {...heroProps}
-            lastEditedAt={effectiveModel?.hero.lastEditedAt}
-          />
+          <div className="-mt-[30px]">
+            <RecapBlogHero
+              {...heroProps}
+              lastEditedAt={effectiveModel?.hero.lastEditedAt}
+            />
+          </div>
         )}
 
         {(loading || error) && (
@@ -1003,18 +1062,23 @@ function OwnerTripRecapView({
         )}
 
         <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
-          {/* Left */}
           <section
-            className="min-w-0 flex-1 sticky self-start"
-            style={{ top: TOPBAR_OFFSET_PX }}
+            className="min-w-0 flex-1 sticky self-start relative"
+            style={{ top: BLOG_TOP_OFFSET_PX }}
           >
+            {effectiveModel.hero.lastEditedAt && (
+              <div className="absolute left-2 -top-6 text-[11px] font-bold text-black/40 tracking-[0.15em] uppercase pointer-events-none">
+                Last Edited {effectiveModel.hero.lastEditedAt}
+              </div>
+            )}
             <div
               ref={leftScrollRef}
-              className="w-full overflow-y-auto touch-pan-y rounded-2xl"
+              className="w-full touch-pan-y rounded-2xl"
               style={{
-                height: PANEL_HEIGHT,
+                height: BLOG_HEIGHT,
                 scrollBehavior: "auto",
                 overflowAnchor: "none",
+                overflowY: "hidden", // Default to hidden until JS overrides
               }}
             >
               <div className="space-y-12 p-4">
@@ -1036,6 +1100,7 @@ function OwnerTripRecapView({
                         onEntryMount={(entryId, el) => {
                           entryRefs.current[entryId] = el;
                         }}
+                        onEditBlog={handleEditBlog}
                       />
                     </div>
                   );
@@ -1049,13 +1114,13 @@ function OwnerTripRecapView({
             ref={(el) => {
               mapStickyRef.current = el;
             }}
-            className="min-w-0 flex-1 sticky self-start"
-            style={{ top: TOPBAR_OFFSET_PX }}
+            className="min-w-0 flex-1 sticky self-start relative"
+            style={{ top: MAP_TOP_OFFSET_PX }}
           >
             <div
               ref={mapContainerRef}
               className="relative w-full overflow-hidden rounded-2xl border border-black/10"
-              style={{ height: isLg ? PANEL_HEIGHT : "45dvh" }}
+              style={{ height: isLg ? MAP_HEIGHT : "45dvh" }}
             >
               <MapboxMap
                 mode="place"

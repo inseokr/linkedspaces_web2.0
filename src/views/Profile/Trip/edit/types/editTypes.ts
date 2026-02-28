@@ -18,6 +18,13 @@ export type PlaceDraft = {
   captions: string[];
   coordinate?: { latitude: number; longitude: number };
   status?: "saved" | "hidden" | "deleted" | string;
+  originalIndex?: number;
+  isHidden?: boolean;
+  hiddenAt?: number;
+  anchorBeforeId?: string;
+  anchorAfterId?: string;
+  visitIndex?: number;
+  markerRole?: "start" | "end" | "poi";
 };
 
 export type DayDraft = {

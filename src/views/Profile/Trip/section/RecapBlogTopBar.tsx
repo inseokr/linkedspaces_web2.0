@@ -5,7 +5,7 @@ import RecapDayTabs, {
   type DayTab,
 } from "@/views/Profile/Trip/component/RecapDayTabs";
 import Image from "next/image";
-import { Check, RefreshCw } from "lucide-react";
+import { Check, RefreshCw, SquareArrowUp } from "lucide-react";
 
 type Props = {
   title?: string;
@@ -219,6 +219,7 @@ export default function RecapBlogTopBar({
                     onClick={onShare ?? handleShare}
                     className={secondaryButtonClass}
                   >
+                    <SquareArrowUp className="w-[18px] h-[18px] opacity-90" />
                     Share
                   </button>
 

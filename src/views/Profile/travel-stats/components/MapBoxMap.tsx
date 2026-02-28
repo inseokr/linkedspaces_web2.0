@@ -159,6 +159,7 @@ function PlaceMarker({
             borderRadius: 9999,
             whiteSpace: "nowrap",
             boxShadow: "0 2px 6px rgba(0,0,0,0.22)",
+            marginBottom: 15,
             pointerEvents: "none",
           }}
         >
@@ -628,9 +629,60 @@ export default function MapboxMap({
       return;
     }
 
-    const coords = placeMarkersRef.current
-      .filter((m) => Number.isFinite(m.lng) && Number.isFinite(m.lat))
-      .map((m) => [m.lng, m.lat]);
+    const isPlaceMode = modeRef.current === "place";
+    const useSimple = useSimpleMarkersRef.current;
+
+    let coords: number[][] = [];
+
+    if (isPlaceMode) {
+      // Calculate offsets using the same logic as syncMarkers
+      const simpleSize = 48;
+      const markerSizePx = useSimple ? simpleSize : 72;
+      const layout = computePlaceMarkerLayout(
+        placeMarkersRef.current,
+        markerSizePx,
+      );
+
+      coords = placeMarkersRef.current
+        .filter((m) => Number.isFinite(m.lng) && Number.isFinite(m.lat))
+        .map((m) => {
+          const l = layout.get(m.id);
+          if (l) {
+            // Unproject the screen offset back to lngLat if needed. However, since Mapbox adds lines based on lngLat,
+            // the exact marker position incorporates `POI_NUDGE_DEG` for base offset, which is l.lngLat.
+            let [lng, lat] = l.lngLat;
+
+            // To be perfectly centered on the start/end markers, we would ideally project -> offset -> unproject,
+            // but Mapbox lines don't natively take pixel offsets. An approximation in degrees roughly based on zoom.
+            const zoom = map.getZoom();
+            // pixels to degrees approximation at equador: 1px ~ 360 / (256 * 2^zoom)
+            // scale it by cos(lat)
+            const degPerPxLng = 360 / (256 * Math.pow(2, zoom));
+            const degPerPxLat =
+              (360 / (256 * Math.pow(2, zoom))) *
+              Math.cos((lat * Math.PI) / 180);
+
+            // Add the layout offset (circle spreading)
+            lng += l.offset[0] * degPerPxLng;
+            // Subtract y offset because screen y grows down, lat grows up
+            lat -= l.offset[1] * degPerPxLat;
+
+            // Add the anchor offset
+            // Simple markers use "center" anchor, full markers use "bottom" anchor and the photo center is higher up.
+            if (!useSimple) {
+              // the PlaceMarker is ~109px tall (72px photo + stem + label). The center of the 72px photo is about 48px from bottom
+              lat += 48 * degPerPxLat;
+            }
+
+            return [lng, lat];
+          }
+          return [m.lng, m.lat];
+        });
+    } else {
+      coords = placeMarkersRef.current
+        .filter((m) => Number.isFinite(m.lng) && Number.isFinite(m.lat))
+        .map((m) => [m.lng, m.lat]);
+    }
 
     if (coords.length < 2) {
       clearPlacePath();
@@ -1187,10 +1239,24 @@ export default function MapboxMap({
       markUserInteraction = () => {
         lastUserInteractionAtRef.current = Date.now();
       };
+
+      const onMoveOrInteraction = () => {
+        if (markUserInteraction) {
+          markUserInteraction();
+        }
+        if (mapRef.current?.isStyleLoaded()) {
+          syncPlacePath();
+        }
+      };
+
       map.on("dragstart", markUserInteraction);
       map.on("zoomstart", markUserInteraction);
       map.on("rotatestart", markUserInteraction);
       map.on("pitchstart", markUserInteraction);
+
+      // We need to continuously sync place path during movement to keep the line connected properly
+      // since the pixel-to-degree offset depends on zoom/pitch/rotation
+      map.on("move", onMoveOrInteraction);
 
       let resizeScheduled = false;
       const throttledResize = () => {
@@ -1215,6 +1281,7 @@ export default function MapboxMap({
         map.off("zoomstart", markUserInteraction);
         map.off("rotatestart", markUserInteraction);
         map.off("pitchstart", markUserInteraction);
+        // We cannot reliably turn off onMoveOrInteraction without a ref, but removing the map handles it.
       }
       clearMarkers();
       if (map) map.remove();

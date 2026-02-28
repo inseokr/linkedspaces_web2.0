@@ -11,7 +11,6 @@ import React, {
 import Image from "next/image";
 import {
   MapPin,
-  ThumbsUp,
   Bookmark,
   Link2,
   Heart,
@@ -20,6 +19,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Pencil,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 
 import PhotoLightbox from "@/components/ui/PhotoLightbox";
@@ -102,6 +103,9 @@ type Props = {
   onOpenPlaceMapEditor?: (entryId: string) => void;
 
   onEntryMount?: (entryId: string, el: HTMLDivElement | null) => void;
+  onEditBlog?: (entryId?: string) => void;
+  hiddenCount?: number;
+  onOpenHiddenPlaces?: () => void;
 };
 
 // Collapsed caption preview:
@@ -124,6 +128,9 @@ export function RecapBlogDaySection({
   onRemovePhoto,
   onOpenPlaceMapEditor,
   onEntryMount,
+  onEditBlog,
+  hiddenCount,
+  onOpenHiddenPlaces,
 }: Props) {
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
@@ -137,13 +144,25 @@ export function RecapBlogDaySection({
 
   return (
     <section className="space-y-8">
-      <div className="flex flex-col items-start gap-1">
+      <div className="flex flex-col items-start gap-1 w-full">
         <span className="text-[14px] font-bold text-black/30 tracking-[0.2em] uppercase">
           Day {dayIndex}
         </span>
-        <h2 className='text-black font-["Inter"] text-[32px] sm:text-[44px] font-extrabold tracking-tight leading-[1.1]'>
-          {title}
-        </h2>
+        <div className="flex items-center justify-between w-full">
+          <h2 className='text-black font-["Inter"] text-[32px] sm:text-[44px] font-extrabold tracking-tight leading-[1.1]'>
+            {title}
+          </h2>
+          {mode === "edit" && (hiddenCount ?? 0) > 0 && (
+            <button
+              type="button"
+              onClick={onOpenHiddenPlaces}
+              className="group flex items-center gap-1.5 shrink-0 rounded-full border border-black/10 bg-black/[0.03] px-3.5 py-1.5 text-[14px] font-bold text-black/70 hover:bg-black/[0.06] hover:text-black transition-colors"
+            >
+              <EyeOff className="h-4 w-4 text-black/40 group-hover:text-black/60 transition-colors" />
+              Hidden Places ({hiddenCount})
+            </button>
+          )}
+        </div>
         <div className="mt-4 h-[1px] w-12 bg-black/10" />
       </div>
 
@@ -168,6 +187,7 @@ export function RecapBlogDaySection({
                 onCaptionChange={onCaptionChange}
                 onRemovePhoto={onRemovePhoto}
                 onOpenPlaceMapEditor={onOpenPlaceMapEditor}
+                onEditBlog={onEditBlog}
               />
             </div>
           );
@@ -219,6 +239,7 @@ function RecapPlaceBlock({
   onCaptionChange,
   onRemovePhoto,
   onOpenPlaceMapEditor,
+  onEditBlog,
   photoLayout = "default",
 }: {
   entry: RecapEntry;
@@ -232,6 +253,7 @@ function RecapPlaceBlock({
   onCaptionChange?: (entryId: string, photoIndex: number, next: string) => void;
   onRemovePhoto?: (entryId: string, photoIndex: number) => void;
   onOpenPlaceMapEditor?: (entryId: string) => void;
+  onEditBlog?: (entryId?: string) => void;
   photoLayout?: "default" | "sheet";
 }) {
   const placeStoryTrimmed = (entry.placeStory ?? "").trim();
@@ -253,40 +275,57 @@ function RecapPlaceBlock({
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
           <div className="flex flex-col items-start gap-1">
-            <div className="min-w-0 flex-1">
-              {mode === "edit" ? (
-                <button
-                  type="button"
-                  onClick={() => onOpenPlaceMapEditor?.(entry.id)}
-                  className="group flex items-center gap-2 text-left w-full rounded-lg px-1 py-0.5 hover:bg-black/[0.03] transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500/20"
-                  title="Click to open map and edit location"
+            <div className="flex items-center gap-3 sm:gap-4 w-full min-w-0">
+              {typeof entry.visitIndex === "number" && (
+                <div
+                  className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[14px] font-bold text-white sm:h-8 sm:w-8 ${
+                    entryRole === "start"
+                      ? "bg-green-500"
+                      : entryRole === "end"
+                        ? "bg-orange-500"
+                        : "bg-blue-500"
+                  }`}
                 >
-                  <span className="truncate text-[24px] sm:text-[32px] font-extrabold text-black tracking-tight">
-                    {entry.placeName || (
-                      <span className="text-black/30">Enter place name…</span>
-                    )}
-                  </span>
-                  <Pencil className="shrink-0 h-4 w-4 text-black/30 group-hover:text-black/60 transition-colors mt-1" />
-                </button>
-              ) : (
-                <a
-                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-                    entry.placeName,
-                  )}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="hover:opacity-80 transition-opacity"
-                >
-                  <h3 className="truncate text-[24px] sm:text-[32px] font-extrabold text-black tracking-tight">
-                    {entry.placeName}
-                  </h3>
-                </a>
+                  {entry.visitIndex}
+                </div>
               )}
+              <div className="min-w-0 w-full flex-1">
+                {mode === "edit" ? (
+                  <button
+                    type="button"
+                    onClick={() => onOpenPlaceMapEditor?.(entry.id)}
+                    className="group flex items-center gap-2 text-left w-full rounded-lg px-1 py-0.5 hover:bg-black/[0.03] transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500/20"
+                    title="Click to open map and edit location"
+                  >
+                    <span className="truncate text-[24px] sm:text-[32px] font-extrabold text-black tracking-tight">
+                      {entry.placeName || (
+                        <span className="text-black/30">Enter place name…</span>
+                      )}
+                    </span>
+                    <Pencil className="shrink-0 h-4 w-4 text-black/30 group-hover:text-black/60 transition-colors mt-1" />
+                  </button>
+                ) : (
+                  <a
+                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                      entry.placeName,
+                    )}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:opacity-80 transition-opacity"
+                  >
+                    <h3 className="truncate text-[24px] sm:text-[32px] font-extrabold text-black tracking-tight">
+                      {entry.placeName}
+                    </h3>
+                  </a>
+                )}
+              </div>
             </div>
             {/* If no photos exist, keep time visible here as fallback */}
             {(!entry.photos || entry.photos.length === 0) &&
               !!entry.timeRangeText?.trim() && (
-                <div className="text-[14px] font-bold text-black/30 tracking-tight">
+                <div
+                  className={`text-[14px] font-bold text-black/30 tracking-tight ${typeof entry.visitIndex === "number" ? "pl-10 sm:pl-12" : ""}`}
+                >
                   {entry.timeRangeText}
                 </div>
               )}
@@ -295,37 +334,31 @@ function RecapPlaceBlock({
 
         <div className="flex items-center gap-3 shrink-0">
           {entry.categoryLabel && (
-            <span className="hidden sm:inline-block rounded-full bg-black/5 px-3 py-1 text-[14px] font-semibold text-black/60">
+            <span className="hidden sm:inline-block rounded-full bg-sky-50 px-3 py-1 text-[14px] font-semibold text-sky-600">
               {entry.categoryLabel}
             </span>
           )}
-          <button
-            type="button"
-            className={[
-              "inline-flex h-11 w-11 items-center justify-center rounded-full",
-              entry.liked
-                ? "bg-emerald-200 text-emerald-900"
-                : "bg-black/5 text-black/60",
-            ].join(" ")}
-            aria-label="Like"
-          >
-            <ThumbsUp className="h-6 w-6" />
-          </button>
 
           {mode === "edit" && (
             <button
               type="button"
               onClick={() => onTogglePlaceHide?.(entry.id)}
               className={[
-                "inline-flex h-11 px-4 items-center justify-center rounded-full text-sm font-bold transition-colors",
+                "inline-flex h-11 px-4 items-center justify-center rounded-full text-sm font-bold transition-colors gap-1.5",
                 (entry as any).status === "hidden"
                   ? "bg-amber-100 text-amber-700 hover:bg-amber-200"
                   : "bg-red-50 text-red-600 hover:bg-red-100",
               ].join(" ")}
             >
-              {(entry as any).status === "hidden"
-                ? "Unhide Place"
-                : "Hide Place"}
+              {(entry as any).status === "hidden" ? (
+                <>
+                  Unhide <Eye className="w-4 h-4 ml-0.5" />
+                </>
+              ) : (
+                <>
+                  Hide <EyeOff className="w-4 h-4 ml-0.5" />
+                </>
+              )}
             </button>
           )}
         </div>
@@ -378,6 +411,7 @@ function RecapPlaceBlock({
           onToggleExpanded={onToggleExpanded}
           layout={photoLayout}
           entryRole={entryRole}
+          onEditBlog={onEditBlog}
         />
       )}
     </div>
@@ -393,12 +427,14 @@ function RecapPhotoCarousel({
   onToggleExpanded,
   layout = "default",
   entryRole = "poi",
+  onEditBlog,
 }: {
   entry: RecapEntry;
   expanded: boolean;
   onToggleExpanded: () => void;
   layout?: "default" | "sheet";
   entryRole?: "start" | "end" | "poi";
+  onEditBlog?: (entryId?: string) => void;
 }) {
   const total = entry.photos.length;
   const [activeIdx, setActiveIdx] = useState(0);
@@ -473,6 +509,7 @@ function RecapPhotoCarousel({
               expanded={expanded}
               onToggleExpanded={onToggleExpanded}
               layout={layout}
+              onEditBlog={onEditBlog}
             />
           </div>
         ))}
@@ -516,6 +553,7 @@ function RecapPhotoCard({
   onToggleExpanded,
   mode = "view",
   layout = "default",
+  onEditBlog,
 }: {
   entry: RecapEntry;
   photoUrl: string;
@@ -525,6 +563,7 @@ function RecapPhotoCard({
   onToggleExpanded?: () => void;
   mode?: Mode;
   layout?: "default" | "sheet";
+  onEditBlog?: (entryId?: string) => void;
 }) {
   const captionText =
     entry.captions?.[photoIndex] ??
@@ -626,8 +665,9 @@ function RecapPhotoCard({
             <div className="relative min-w-0 flex-1">
               <p
                 ref={setCaptionEl}
+                onClick={() => setLightboxOpen(true)}
                 className={[
-                  "text-[24px] font-medium leading-[1.3] text-black/90 font-['Inter'] tracking-tight",
+                  "text-[24px] font-medium leading-[1.3] text-black/90 font-['Inter'] tracking-tight cursor-pointer",
                   expanded ? "" : collapsedClampClass,
                 ].join(" ")}
               >
@@ -657,7 +697,7 @@ function RecapPhotoCard({
         <div className="flex items-center justify-end gap-5 border-t border-black/10 px-6 py-4">
           <button
             type="button"
-            className="inline-flex items-center gap-2 text-black/70 hover:text-black"
+            className="inline-flex items-center text-black/70 hover:text-black mb-[2px]"
             aria-label="Open place link"
             onClick={() => {
               if (!placeExternalUrl) return;
@@ -682,7 +722,7 @@ function RecapPhotoCard({
           </button>
 
           <div
-            className="relative text-[20px] font-semibold text-black/80"
+            className="relative flex items-center justify-center text-[20px] font-semibold text-black/80"
             ref={menuRef}
           >
             <button
@@ -713,7 +753,10 @@ function RecapPhotoCard({
                 <button
                   type="button"
                   className="w-full px-5 py-3.5 text-left text-[14px] font-bold text-black border-b border-black/5 hover:bg-black/5 transition-colors"
-                  onClick={() => setMenuOpen(false)}
+                  onClick={() => {
+                    setMenuOpen(false);
+                    onEditBlog?.(entry.id);
+                  }}
                 >
                   Edit Caption & Details
                 </button>
@@ -735,6 +778,9 @@ function RecapPhotoCard({
           photos={entry.photos}
           initialIndex={photoIndex}
           title={entry.placeName}
+          dateTime={entry.timeRangeText}
+          captions={entry.captions}
+          caption={entry.caption}
           onClose={() => setLightboxOpen(false)}
         />
       )}
@@ -790,6 +836,9 @@ function RecapPhotoEditList({
           photos={entry.photos}
           initialIndex={lightboxIndex}
           title={entry.placeName}
+          dateTime={entry.timeRangeText}
+          captions={entry.captions}
+          caption={entry.caption}
           onClose={() => setLightboxOpen(false)}
         />
       )}

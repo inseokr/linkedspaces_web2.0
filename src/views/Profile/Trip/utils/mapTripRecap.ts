@@ -69,11 +69,12 @@ export function mapTripRecapToPageModel(
 
   let globalIndex = 0;
   days.forEach((d) => {
-    d.entries.forEach((e) => {
+    const dayEntries = d.entries;
+    dayEntries.forEach((e, dayEntryIdx) => {
       e.visitIndex = globalIndex + 1;
-      if (globalIndex === 0) {
+      if (dayEntryIdx === 0) {
         e.markerRole = "start";
-      } else if (globalIndex === placesCount - 1 && placesCount > 1) {
+      } else if (dayEntryIdx === dayEntries.length - 1) {
         e.markerRole = "end";
       } else {
         e.markerRole = "poi";

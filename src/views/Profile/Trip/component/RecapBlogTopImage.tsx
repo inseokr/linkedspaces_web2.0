@@ -175,6 +175,15 @@ export function RecapBlogHeader({
 
   return (
     <div className="w-full flex flex-col items-center">
+      <div className="pointer-events-auto flex items-center justify-center mb-6">
+        <AuthorBadge
+          name={authorName}
+          postedLabel={postedLabel}
+          avatarUrl={avatarUrl}
+          tone={tone}
+        />
+      </div>
+
       <div className="text-center w-full max-w-3xl mx-auto">
         <h1
           className={[
@@ -193,15 +202,6 @@ export function RecapBlogHeader({
             tone={tone}
           />
         </div>
-      </div>
-
-      <div className="pointer-events-auto flex items-center justify-center mt-6">
-        <AuthorBadge
-          name={authorName}
-          postedLabel={postedLabel}
-          avatarUrl={avatarUrl}
-          tone={tone}
-        />
       </div>
     </div>
   );
@@ -229,14 +229,15 @@ function CoverImage({
     const img = imgRef.current;
     if (!container || !img) return;
 
-    const PARALLAX_STRENGTH = 0.35; // 0 = no parallax, 1 = full scroll speed
+    const PARALLAX_STRENGTH = 0.6; // Higher value moves it out of view faster
 
     const onScroll = () => {
       const rect = container.getBoundingClientRect();
       // rect.top is negative once we've scrolled past the top of the element
-      // We shift the inner image upward proportionally
+      // By using a negative multiplier on scrolledPast, the image translates upwards
       const scrolledPast = -rect.top;
-      const offset = scrolledPast * PARALLAX_STRENGTH;
+      // When scrolledPast > 0 (scrolling down), offset becomes negative, shifting image UP
+      const offset = scrolledPast > 0 ? -(scrolledPast * PARALLAX_STRENGTH) : 0;
       img.style.transform = `translateY(${offset}px)`;
     };
 
@@ -255,10 +256,11 @@ function CoverImage({
       {/* Inner wrapper: taller than container so parallax has room to travel */}
       <div
         ref={imgRef}
-        className="absolute inset-0 will-change-transform"
+        className="absolute inset-x-0 will-change-transform"
         style={{
-          top: "-20%",
-          bottom: "-20%",
+          // Give it more room at the bottom so it can travel upwards without showing empty space
+          top: "0%",
+          bottom: "-60%",
         }}
       >
         {src ? (
@@ -350,7 +352,7 @@ export default function RecapBlogHero({
                 window.scrollBy({ top: 300, behavior: "smooth" });
               }
             }}
-            className="group mt-6 flex flex-col items-center gap-1 text-black/40 hover:text-black/60 transition-colors"
+            className="group mt-10 flex flex-col items-center gap-1 text-black/40 hover:text-black/60 transition-colors"
           >
             <span className="text-[12px] font-bold uppercase tracking-widest">
               Read
@@ -381,31 +383,31 @@ export default function RecapBlogHero({
           <div className="flex-1" />
 
           <div className="pb-4 text-center w-full max-w-4xl mx-auto">
+            <div className="pointer-events-auto flex items-center justify-center mb-6 w-full">
+              <AuthorBadge
+                name={authorName}
+                postedLabel={postedLabel}
+                avatarUrl={avatarUrl}
+                tone="onDark"
+              />
+            </div>
             <h1
               className="!text-5xl !leading-[1.1] font-extrabold tracking-tighter text-white md:!text-6xl lg:!text-7xl"
               style={{ textShadow: "0 2px 12px rgba(0,0,0,0.3)" }}
             >
               {title}
             </h1>
-            <div className="mt-4 flex flex-col items-center justify-center gap-6 w-full">
+            <div className="mt-4 flex flex-col items-center justify-center gap-6 w-full mb-8">
               <TripMeta
                 dateText={dateText}
                 locationText={locationText}
                 placesCount={placesCount}
                 tone="onDark"
               />
-              <div className="pointer-events-auto">
-                <AuthorBadge
-                  name={authorName}
-                  postedLabel={postedLabel}
-                  avatarUrl={avatarUrl}
-                  tone="onDark"
-                />
-              </div>
             </div>
           </div>
 
-          <div className="pointer-events-auto mt-auto flex justify-center pb-2">
+          <div className="pointer-events-auto mt-16 flex justify-center pb-2">
             <button
               onClick={() => {
                 const dayEl = document.querySelector('[data-day-id="day-1"]');
@@ -438,14 +440,6 @@ export default function RecapBlogHero({
           </div>
         </div>
       </section>
-
-      {lastEditedAt && (
-        <div className="mt-8 mb-4 px-4 sm:px-6 lg:px-8 text-left">
-          <div className="text-[13px] font-bold text-black/30 tracking-[0.2em] uppercase">
-            Last Edited {lastEditedAt}
-          </div>
-        </div>
-      )}
     </>
   );
 }

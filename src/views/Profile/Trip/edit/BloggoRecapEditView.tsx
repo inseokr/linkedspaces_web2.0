@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { apiFetch } from "@/api/client";
 import {
   updateTripCoverPhoto,
@@ -28,6 +28,7 @@ import type { RecapEntry } from "@/views/Profile/Trip/component/RecapBlogPlace";
 import PhotoLightbox from "@/components/ui/PhotoLightbox";
 import PlaceMapEditorModal from "@/views/Profile/Trip/component/PlaceMapEditorModal";
 import type { PoiInfo } from "@/views/Profile/travel-stats/components/MapBoxMap";
+import RestoreHiddenPlacesModal from "./components/RestoreHiddenPlacesModal";
 
 export default function BloggoRecapEditView({
   userId,
@@ -52,6 +53,9 @@ export default function BloggoRecapEditView({
     entryId: string;
     dayId: string;
   } | null>(null);
+
+  // Restore hidden places modal
+  const [restoreDayId, setRestoreDayId] = useState<string | null>(null);
   useEffect(() => {
     draftRef.current = draft;
   }, [draft]);
@@ -73,6 +77,7 @@ export default function BloggoRecapEditView({
 
   // day scroll refs
   const daySectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const entryRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   const draftFingerprint = (d: RecapEditDraft) => {
     // Exclude `updatedAt` (it changes on every keystroke), but include actual editable fields.
@@ -206,6 +211,22 @@ export default function BloggoRecapEditView({
     const base = draftFromPageModel(pageModel);
     setDraft(base);
   }, [pageModel, userId, tripId]);
+
+  /** 2.1) auto-scroll to entry if requested */
+  const searchParams = useSearchParams();
+  const scrollToTarget = searchParams.get("scrollTo");
+  const scrolledToTargetRef = useRef(false);
+
+  useEffect(() => {
+    if (!scrollToTarget || scrolledToTargetRef.current || loading) return;
+    const el = entryRefs.current[scrollToTarget];
+    if (!el) return;
+
+    scrolledToTargetRef.current = true;
+    const y =
+      el.getBoundingClientRect().top + window.scrollY - TOPBAR_OFFSET_PX - 12;
+    window.scrollTo({ top: y, behavior: "smooth" });
+  }, [scrollToTarget, loading, draft]);
 
   // Initialize baseline captions once (first time draft becomes available).
   useEffect(() => {
@@ -536,10 +557,87 @@ export default function BloggoRecapEditView({
   };
 
   const onTogglePlaceHide = (dayId: string, placeId: string) => {
-    updatePlaceInDay(dayId, placeId, (p) => {
-      const current = p.status ?? "saved";
-      const next = current === "hidden" ? "saved" : "hidden";
-      return { ...p, status: next };
+    setDraft((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        updatedAt: Date.now(),
+        days: prev.days.map((d) => {
+          if (d.id !== dayId) return d;
+
+          const index = d.places.findIndex((p) => p.id === placeId);
+          if (index === -1) return d;
+
+          const place = d.places[index];
+          const isCurrentlyHidden = place.status === "hidden";
+
+          const newPlaces = [...d.places];
+
+          if (!isCurrentlyHidden) {
+            // Hiding
+            let beforeId: string | undefined;
+            for (let i = index - 1; i >= 0; i--) {
+              if (d.places[i].status !== "hidden") {
+                beforeId = d.places[i].id;
+                break;
+              }
+            }
+            let afterId: string | undefined;
+            for (let i = index + 1; i < d.places.length; i++) {
+              if (d.places[i].status !== "hidden") {
+                afterId = d.places[i].id;
+                break;
+              }
+            }
+
+            newPlaces[index] = {
+              ...place,
+              status: "hidden",
+              originalIndex: index,
+              isHidden: true,
+              hiddenAt: Date.now(),
+              anchorBeforeId: beforeId,
+              anchorAfterId: afterId,
+            };
+            return { ...d, places: newPlaces };
+          } else {
+            // Restoring
+            const toRestore = {
+              ...place,
+              status: "saved",
+              isHidden: false,
+              hiddenAt: undefined,
+            };
+
+            newPlaces.splice(index, 1);
+
+            let insertIndex = newPlaces.length;
+            const bIdx = toRestore.anchorBeforeId
+              ? newPlaces.findIndex(
+                  (p) =>
+                    p.id === toRestore.anchorBeforeId && p.status !== "hidden",
+                )
+              : -1;
+            const aIdx = toRestore.anchorAfterId
+              ? newPlaces.findIndex(
+                  (p) =>
+                    p.id === toRestore.anchorAfterId && p.status !== "hidden",
+                )
+              : -1;
+
+            if (bIdx !== -1) {
+              insertIndex = bIdx + 1;
+            } else if (aIdx !== -1) {
+              insertIndex = aIdx;
+            } else if (toRestore.originalIndex !== undefined) {
+              insertIndex = Math.min(toRestore.originalIndex, newPlaces.length);
+            }
+
+            newPlaces.splice(insertIndex, 0, toRestore);
+            return { ...d, places: newPlaces };
+          }
+        }),
+      };
     });
   };
 
@@ -754,7 +852,7 @@ export default function BloggoRecapEditView({
         </div>
 
         {/* ── Settings row (compact) ───────────────────────────── */}
-        <div className="flex items-center justify-end gap-4 py-3">
+        <div className="hidden items-center justify-end gap-4 py-3">
           <span className="text-sm font-semibold text-slate-500">
             Shared with friends
           </span>
@@ -806,23 +904,29 @@ export default function BloggoRecapEditView({
                 dayIndex={d.dayIndex}
                 title={d.title}
                 mode="edit"
-                entries={d.places.map((p) => ({
-                  id: p.id,
-                  placeKey: p.placeKey,
-                  placeName: p.placeName,
-                  originalPlaceName: p.originalPlaceName,
-                  timeRangeText: p.timeRangeText ?? "",
-                  categoryLabel: p.categoryLabel ?? undefined,
-                  liked: false,
-                  likeCount: 0,
-                  commentCount: 0,
-                  placeStory: p.placeStory ?? "",
-                  photos: p.photos ?? [],
-                  captions: p.captions ?? [],
-                  caption: p.caption ?? "",
-                  coordinate: p.coordinate,
-                  status: p.status,
-                }))}
+                hiddenCount={
+                  d.places.filter((p) => p.status === "hidden").length
+                }
+                onOpenHiddenPlaces={() => setRestoreDayId(d.id)}
+                entries={d.places
+                  .filter((p) => p.status !== "hidden")
+                  .map((p) => ({
+                    id: p.id,
+                    placeKey: p.placeKey,
+                    placeName: p.placeName,
+                    originalPlaceName: p.originalPlaceName,
+                    timeRangeText: p.timeRangeText ?? "",
+                    categoryLabel: p.categoryLabel ?? undefined,
+                    liked: false,
+                    likeCount: 0,
+                    commentCount: 0,
+                    placeStory: p.placeStory ?? "",
+                    photos: p.photos ?? [],
+                    captions: p.captions ?? [],
+                    caption: p.caption ?? "",
+                    coordinate: p.coordinate,
+                    status: p.status,
+                  }))}
                 onPlaceStoryChange={(entryId, next) =>
                   onPlaceStoryChange(d.id, entryId, next)
                 }
@@ -839,6 +943,9 @@ export default function BloggoRecapEditView({
                 onOpenPlaceMapEditor={(entryId) =>
                   setEditorOpen({ entryId, dayId: d.id })
                 }
+                onEntryMount={(entryId, el) => {
+                  entryRefs.current[entryId] = el;
+                }}
               />
             </div>
           ))}
@@ -866,6 +973,26 @@ export default function BloggoRecapEditView({
           }
           onPoiConfirm={handlePoiConfirmFromModal}
           onClose={() => setEditorOpen(null)}
+        />
+      )}
+
+      {/* Restore hidden places modal */}
+      {restoreDayId && draft?.days.find((d) => d.id === restoreDayId) && (
+        <RestoreHiddenPlacesModal
+          hiddenPlaces={draft.days
+            .find((d) => d.id === restoreDayId)!
+            .places.filter((p) => p.status === "hidden")}
+          onRestorePlace={(placeId) => {
+            onTogglePlaceHide(restoreDayId, placeId);
+          }}
+          onRestoreAll={() => {
+            const hidden = draft.days
+              .find((d) => d.id === restoreDayId)!
+              .places.filter((p) => p.status === "hidden");
+            hidden.forEach((p) => onTogglePlaceHide(restoreDayId, p.id));
+            setRestoreDayId(null);
+          }}
+          onClose={() => setRestoreDayId(null)}
         />
       )}
     </div>

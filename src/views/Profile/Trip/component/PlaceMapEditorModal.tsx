@@ -114,24 +114,24 @@ export default function PlaceMapEditorModal({
     return () => document.removeEventListener("mousedown", onClick);
   }, [showDropdown]);
 
-  // Single marker for this entry only
-  const placeMarkers: MarkerData[] =
-    entry.coordinate?.latitude && entry.coordinate?.longitude
-      ? [
-          {
-            id: entry.id,
-            lat: entry.coordinate.latitude,
-            lng: entry.coordinate.longitude,
-            year: new Date().getFullYear(),
-            label: entry.placeName,
-            imageUrl: entry.photos?.[0] ?? "/images/avatar.png",
-            visitIndex: entry.visitIndex,
-            visitTimeText: entry.timeRangeText ?? "",
-            externalUrl: entry.externalUrl,
-            markerRole: entry.markerRole ?? "poi",
-          },
-        ]
-      : [];
+  // Show markers for all entries to provide context (colored numbers, Start/End labels)
+  const placeMarkers: MarkerData[] = (allEntries ?? []).flatMap((e) => {
+    if (!e.coordinate?.latitude || !e.coordinate?.longitude) return [];
+    return [
+      {
+        id: e.id,
+        lat: e.coordinate.latitude,
+        lng: e.coordinate.longitude,
+        year: new Date().getFullYear(),
+        label: e.placeName,
+        imageUrl: e.photos?.[0] ?? "/images/avatar.png",
+        visitIndex: e.visitIndex,
+        visitTimeText: e.timeRangeText ?? "",
+        externalUrl: e.externalUrl,
+        markerRole: e.markerRole ?? "poi",
+      },
+    ];
+  });
 
   const searchMapboxPlaces = async (query: string) => {
     try {
@@ -374,7 +374,7 @@ export default function PlaceMapEditorModal({
             </span>
           )}
           {entry.categoryLabel && (
-            <span className="rounded-full bg-black/5 px-3 py-0.5 text-[12px] font-semibold text-black/60">
+            <span className="rounded-full bg-sky-50 px-3 py-0.5 text-[12px] font-semibold text-sky-600">
               {entry.categoryLabel}
             </span>
           )}

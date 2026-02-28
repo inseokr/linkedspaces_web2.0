@@ -67,6 +67,8 @@ export function draftFromPageModel(pageModel: any): RecapEditDraft {
           // 호환용: 첫 번째 캡션을 caption으로도 유지
           caption: captions[0] ?? e.caption ?? "",
           coordinate: e.coordinate,
+          visitIndex: e.visitIndex,
+          markerRole: e.markerRole,
         };
       }),
     };
