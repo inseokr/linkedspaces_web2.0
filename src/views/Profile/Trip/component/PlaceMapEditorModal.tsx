@@ -2,19 +2,18 @@
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { X, MapPin, Pencil } from "lucide-react";
+import { X, MapPin, Pencil, Check } from "lucide-react";
 
 import MapboxMap, {
   type MarkerData,
   type PoiInfo,
 } from "@/views/Profile/travel-stats/components/MapBoxMap";
-import PoiUpdatePopup from "@/views/Profile/Trip/component/PoiUpdatePopup";
 import type { RecapEntry } from "./RecapBlogPlace";
 
 type Props = {
   /** The entry being edited */
   entry: RecapEntry;
-  /** All entries across ALL days — used to build route polyline context on the map */
+  /** All entries across ALL days — passed in but unused for markers (single-marker mode) */
   allEntries: RecapEntry[];
   /** Called when user changes the place name text */
   onPlaceNameChange: (next: string) => void;
@@ -31,35 +30,45 @@ export default function PlaceMapEditorModal({
   onClose,
 }: Props) {
   const [localName, setLocalName] = useState(entry.placeName);
-  const [pendingPoi, setPendingPoi] = useState<PoiInfo | null>(null);
-  const [poiSaving, setPoiSaving] = useState(false);
-  // Incrementing this forces MapboxMap to call resize() after the portal mounts
+  // The staged POI from a map tap — shown in header, confirmed via button
+  const [stagedPoi, setStagedPoi] = useState<PoiInfo | null>(null);
+  const [confirming, setConfirming] = useState(false);
   const [mapResizeKey, setMapResizeKey] = useState(0);
+  // Keep camera on POI after click (updated dynamically so the map doesn't zoom out)
+  const [focusLatLng, setFocusLatLng] = useState<
+    { lat: number; lng: number } | undefined
+  >(
+    entry.coordinate?.latitude && entry.coordinate?.longitude
+      ? { lat: entry.coordinate.latitude, lng: entry.coordinate.longitude }
+      : undefined,
+  );
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Trigger a map resize shortly after mount so Mapbox fills the container
+  // Resize map after portal mounts
   useEffect(() => {
     const id = window.setTimeout(() => setMapResizeKey((k) => k + 1), 80);
     return () => window.clearTimeout(id);
   }, []);
 
-  // Sync if entry.placeName changes from outside (e.g., POI confirm upstream)
+  // Sync name if upstream changes (e.g., after confirm)
   useEffect(() => {
     setLocalName(entry.placeName);
   }, [entry.placeName]);
 
-  // Focus input when modal opens
+  // Focus input on open
   useEffect(() => {
     const raf = requestAnimationFrame(() => inputRef.current?.focus());
     return () => cancelAnimationFrame(raf);
   }, []);
 
-  // ESC closes modal
+  // ESC: clear staged POI first, then close
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        if (pendingPoi) {
-          setPendingPoi(null);
+        if (stagedPoi) {
+          // Revert name back, clear staging
+          setLocalName(entry.placeName);
+          setStagedPoi(null);
         } else {
           onClose();
         }
@@ -67,9 +76,9 @@ export default function PlaceMapEditorModal({
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [onClose, pendingPoi]);
+  }, [onClose, stagedPoi, entry.placeName]);
 
-  // Only show this single entry's marker — no other places, no route path
+  // Single marker for this entry only
   const placeMarkers: MarkerData[] =
     entry.coordinate?.latitude && entry.coordinate?.longitude
       ? [
@@ -88,36 +97,40 @@ export default function PlaceMapEditorModal({
         ]
       : [];
 
-  const focusLatLng =
-    entry.coordinate?.latitude && entry.coordinate?.longitude
-      ? { lat: entry.coordinate.latitude, lng: entry.coordinate.longitude }
-      : undefined;
+  // focusLatLng now lives in state — see useState above
 
   const handleNameChange = (next: string) => {
     setLocalName(next);
+    setStagedPoi(null); // clear any staged POI if user types manually
     onPlaceNameChange(next);
   };
 
+  // POI tap on map → stage it + update name input + keep camera centered
   const handlePoiClick = useCallback((poi: PoiInfo) => {
-    setPendingPoi(poi);
+    setStagedPoi(poi);
+    setLocalName(poi.name);
+    // Keep the camera where it is — just update focusLatLng to the POI
+    // so the map doesn't fall back to fitToCurrentMarkersBounds
+    setFocusLatLng({ lat: poi.lat, lng: poi.lng });
   }, []);
 
-  const handlePoiConfirm = useCallback(async () => {
-    if (!pendingPoi) return;
-    setPoiSaving(true);
+  // Confirm button → persist staged POI
+  const handleConfirm = useCallback(async () => {
+    if (!stagedPoi) return;
+    setConfirming(true);
     try {
-      await onPoiConfirm(pendingPoi, entry.id);
-      setLocalName(pendingPoi.name);
+      await onPoiConfirm(stagedPoi, entry.id);
+      setStagedPoi(null);
+      onClose();
     } finally {
-      setPoiSaving(false);
-      setPendingPoi(null);
+      setConfirming(false);
     }
-  }, [pendingPoi, onPoiConfirm, entry.id]);
+  }, [stagedPoi, onPoiConfirm, entry.id, onClose]);
 
   if (typeof document === "undefined") return null;
 
-  // Fixed heights so Mapbox GL gets a concrete pixel measurement
   const MAP_HEIGHT = 600;
+  const hasStaged = !!stagedPoi;
 
   return createPortal(
     <div
@@ -132,14 +145,14 @@ export default function PlaceMapEditorModal({
         onClick={onClose}
       />
 
-      {/* Modal panel — width capped, height determined by fixed map + chrome */}
+      {/* Modal panel */}
       <div
         className="relative z-10 w-full max-w-[1075px] bg-white rounded-[28px] overflow-hidden shadow-[0_32px_80px_rgba(0,0,0,0.22)]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* ── Header ── */}
         <div className="flex items-center gap-3 px-4 py-3 border-b border-black/[0.08] bg-white">
-          {/* Close button — top left */}
+          {/* Close — top left */}
           <button
             type="button"
             onClick={onClose}
@@ -152,7 +165,7 @@ export default function PlaceMapEditorModal({
 
           <div className="h-6 w-px bg-black/10 shrink-0" />
 
-          {/* Place name input */}
+          {/* Place name input (fills center) */}
           <div className="flex-1 flex items-center gap-2 min-w-0">
             <MapPin className="h-4 w-4 text-black/30 shrink-0" />
             <input
@@ -163,11 +176,35 @@ export default function PlaceMapEditorModal({
               placeholder="Place name…"
               className="flex-1 min-w-0 bg-transparent text-[17px] font-bold text-black placeholder:text-black/30 focus:outline-none"
             />
-            <Pencil className="h-3.5 w-3.5 text-black/20 shrink-0" />
+            {!hasStaged && (
+              <Pencil className="h-3.5 w-3.5 text-black/20 shrink-0" />
+            )}
           </div>
+
+          {/* Confirm — top right, only shown when a POI is staged */}
+          {hasStaged && (
+            <button
+              type="button"
+              onClick={handleConfirm}
+              disabled={confirming}
+              className="shrink-0 inline-flex items-center gap-1.5 rounded-full bg-blue-600 px-4 py-2 text-[13px] font-bold text-white hover:bg-blue-700 active:scale-95 transition-all disabled:opacity-70 shadow-sm shadow-blue-500/30"
+            >
+              {confirming ? (
+                <>
+                  <span className="h-3.5 w-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                  <span>Saving…</span>
+                </>
+              ) : (
+                <>
+                  <Check className="h-4 w-4" />
+                  <span>Confirm</span>
+                </>
+              )}
+            </button>
+          )}
         </div>
 
-        {/* Place meta row */}
+        {/* Meta row */}
         <div className="flex items-center gap-3 px-5 py-2.5 bg-black/[0.02] border-b border-black/[0.05] flex-wrap">
           {entry.timeRangeText?.trim() && (
             <span className="text-[13px] font-semibold text-black/50">
@@ -193,11 +230,13 @@ export default function PlaceMapEditorModal({
             </span>
           )}
           <span className="text-[12px] font-medium text-black/30 ml-auto">
-            Tap a POI on the map to update this location
+            {hasStaged
+              ? `"${stagedPoi!.name}" selected — tap Confirm to save`
+              : "Tap a POI on the map to update this location"}
           </span>
         </div>
 
-        {/* ── Map — explicit height so Mapbox GL can render ── */}
+        {/* Map */}
         <div
           className="relative w-full overflow-hidden"
           style={{ height: MAP_HEIGHT }}
@@ -207,16 +246,14 @@ export default function PlaceMapEditorModal({
             placeMarkers={placeMarkers}
             activePlaceMarkerId={entry.id}
             focusLatLng={focusLatLng}
-            onPlaceMarkerClick={() => {
-              /* clicking own marker — no-op */
-            }}
+            onPlaceMarkerClick={() => {}}
             onPoiClick={handlePoiClick}
             showPlacePath={false}
             containerResizeKey={mapResizeKey}
           />
 
-          {/* "No link" hint pill */}
-          {!entry.externalUrl && (
+          {/* Hint pill */}
+          {!entry.externalUrl && !hasStaged && (
             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 pointer-events-none whitespace-nowrap">
               <div className="flex items-center gap-2.5 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 px-4 py-2.5 shadow-lg shadow-blue-500/40 text-[13px] font-semibold text-white">
                 <span className="relative flex h-2.5 w-2.5 flex-shrink-0">
@@ -227,19 +264,23 @@ export default function PlaceMapEditorModal({
               </div>
             </div>
           )}
+
+          {/* Staged POI pill — shows name + invite to confirm */}
+          {hasStaged && (
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 pointer-events-none whitespace-nowrap">
+              <div className="flex items-center gap-2 rounded-full bg-white/95 backdrop-blur-md border border-blue-200 px-4 py-2.5 shadow-lg text-[13px] font-semibold text-blue-600">
+                <Check className="h-3.5 w-3.5 shrink-0" />
+                {stagedPoi!.name}
+                {stagedPoi!.category && (
+                  <span className="font-normal text-blue-400">
+                    · {stagedPoi!.category}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
-
-      {/* POI confirmation popup (rendered above modal, via its own portal) */}
-      {pendingPoi && (
-        <PoiUpdatePopup
-          poi={pendingPoi}
-          targetPlaceName={localName || entry.placeName}
-          saving={poiSaving}
-          onConfirm={handlePoiConfirm}
-          onCancel={() => setPendingPoi(null)}
-        />
-      )}
     </div>,
     document.body,
   );

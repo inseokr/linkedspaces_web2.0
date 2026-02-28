@@ -249,6 +249,20 @@ function PlaceMarker({
           </div>
         )}
       </div>
+
+      {/* Pin stem — triangle pointing down, anchors the marker to the coordinate */}
+      <div
+        style={{
+          width: 0,
+          height: 0,
+          borderLeft: "7px solid transparent",
+          borderRight: "7px solid transparent",
+          borderTop: `12px solid ${isActive ? alphaColor98 : "rgba(255,255,255,0.92)"}`,
+          filter: "drop-shadow(0 3px 4px rgba(0,0,0,0.22))",
+          marginTop: -1,
+          flexShrink: 0,
+        }}
+      />
     </div>
   );
 }
@@ -785,7 +799,7 @@ export default function MapboxMap({
 
         const marker = new mapboxgl.Marker({
           element: el,
-          anchor: "center",
+          anchor: "bottom",
           offset: pos.offset,
         })
           .setLngLat(pos.lngLat)
