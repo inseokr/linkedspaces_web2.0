@@ -28,7 +28,24 @@ export function AuthorBadge({
         ].join(" ")}
       >
         {avatarUrl ? (
-          <Image src={avatarUrl} alt={name} fill className="object-cover" />
+          <Image
+            src={avatarUrl}
+            alt={name}
+            fill
+            className="object-cover"
+            onError={(e) => {
+              (e.target as HTMLElement).style.display = "none";
+              const parent = (e.target as HTMLElement).parentElement;
+              if (parent) {
+                const fallback = document.createElement("div");
+                fallback.className = `grid h-full w-full place-items-center text-xs font-semibold ${
+                  isOnDark ? "text-white/80" : "text-black/70"
+                }`;
+                fallback.innerText = name.slice(0, 1).toUpperCase();
+                parent.appendChild(fallback);
+              }
+            }}
+          />
         ) : (
           <div
             className={[
@@ -271,7 +288,7 @@ export default function RecapBlogHero({
     <>
       {/* Mobile: Use background tone to frame header if no image */}
       <section className="w-full sm:hidden">
-        <div className="rounded-[32px] border border-black/5 bg-white p-6 shadow-[0_4px_20px_rgba(0,0,0,0.03)]">
+        <div className="rounded-[32px] border border-black/5 bg-white p-6 pb-4 shadow-[0_4px_20px_rgba(0,0,0,0.03)] flex flex-col items-center">
           <RecapBlogHeader
             title={title}
             dateText={dateText}
@@ -283,6 +300,35 @@ export default function RecapBlogHero({
             lastEditedAt={lastEditedAt}
             tone="onLight"
           />
+          <button
+            onClick={() => {
+              const dayEl = document.querySelector('[data-day-id="day-1"]');
+              if (dayEl) {
+                dayEl.scrollIntoView({ behavior: "smooth", block: "start" });
+              } else {
+                window.scrollBy({ top: 300, behavior: "smooth" });
+              }
+            }}
+            className="group mt-6 flex flex-col items-center gap-1 text-black/40 hover:text-black/60 transition-colors"
+          >
+            <span className="text-[12px] font-bold uppercase tracking-widest">
+              Read
+            </span>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={2.5}
+              stroke="currentColor"
+              className="w-5 h-5 animate-bounce"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M19.5 8.25l-7.5 7.5-7.5-7.5"
+              />
+            </svg>
+          </button>
         </div>
       </section>
 
@@ -290,10 +336,10 @@ export default function RecapBlogHero({
       <section className="relative hidden w-full overflow-hidden rounded-[32px] shadow-sm sm:block">
         <CoverImage coverImageUrl={coverImageUrl} title={title} showGradient />
 
-        <div className="pointer-events-none absolute inset-0 flex flex-col p-8 sm:p-12">
+        <div className="pointer-events-none absolute inset-0 flex flex-col p-8 sm:px-12 sm:pt-16 sm:pb-8">
           <div className="flex-1" />
 
-          <div className="pb-6 text-center w-full max-w-4xl mx-auto">
+          <div className="pb-4 text-center w-full max-w-4xl mx-auto">
             <h1 className="!text-5xl !leading-[1.1] font-extrabold tracking-tighter text-white md:!text-6xl lg:!text-7xl">
               {title}
             </h1>
@@ -313,6 +359,38 @@ export default function RecapBlogHero({
                 />
               </div>
             </div>
+          </div>
+
+          <div className="pointer-events-auto mt-auto flex justify-center pb-2">
+            <button
+              onClick={() => {
+                const dayEl = document.querySelector('[data-day-id="day-1"]');
+                if (dayEl) {
+                  dayEl.scrollIntoView({ behavior: "smooth", block: "start" });
+                } else {
+                  window.scrollBy({ top: 500, behavior: "smooth" });
+                }
+              }}
+              className="group flex flex-col items-center gap-1 text-white/70 hover:text-white transition-colors"
+            >
+              <span className="text-[13px] font-bold uppercase tracking-widest">
+                Read
+              </span>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={2.5}
+                stroke="currentColor"
+                className="w-5 h-5 animate-bounce"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M19.5 8.25l-7.5 7.5-7.5-7.5"
+                />
+              </svg>
+            </button>
           </div>
         </div>
       </section>

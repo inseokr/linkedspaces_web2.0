@@ -983,18 +983,21 @@ export default function GuestRecapPage({ userId, tripId, brand }: Props) {
         ? recapData.trip.startingYear
         : Number(recapData?.trip?.startingYear)) || new Date().getFullYear();
 
-    return effectiveModel.days.flatMap((d) =>
-      d.entries.map((e: any, idx: number) => ({
-        id: e.id,
-        lat: e.coordinate?.latitude ?? baseCenter.lat,
-        lng: e.coordinate?.longitude ?? baseCenter.lng,
-        year: travelYear,
-        label: e.placeName,
-        imageUrl: e.photos?.[0] ?? "/images/avatar.png",
-        visitIndex: idx + 1,
-        visitTimeText: e.timeRangeText ?? "",
-      })),
-    );
+    return effectiveModel.days.flatMap((d) => {
+      return d.entries.map((e: any) => {
+        return {
+          id: e.id,
+          lat: e.coordinate?.latitude ?? baseCenter.lat,
+          lng: e.coordinate?.longitude ?? baseCenter.lng,
+          year: travelYear,
+          label: e.placeName,
+          imageUrl: e.photos?.[0] ?? "/images/avatar.png",
+          visitIndex: e.visitIndex,
+          visitTimeText: e.timeRangeText ?? "",
+          markerRole: e.markerRole,
+        };
+      });
+    });
   }, [effectiveModel, recapData, baseCenter]);
 
   const entryIdToDayId = useMemo(() => {
@@ -1512,7 +1515,12 @@ export default function GuestRecapPage({ userId, tripId, brand }: Props) {
       const pinnedNow = rect.top <= desktopStickyTopRef.current + 1;
       if (!pinnedNow) return;
 
-      if (e.ctrlKey) return;
+      const mapWrap = mapContainerRef.current;
+      const isOnMap = !!(mapWrap && mapWrap.contains(e.target as Node));
+
+      // If hovering over the map, let Mapbox handle the wheel event to zoom in/out freely.
+      if (isOnMap) return;
+
       if (!canScrollLeftPanel(delta)) return;
 
       // We are about to move the left panel -> ensure the split view is snapped.
@@ -1557,7 +1565,7 @@ export default function GuestRecapPage({ userId, tripId, brand }: Props) {
   return (
     <div className="min-h-screen bg-[#F5F5F7]">
       {brand === "bloggo" ? (
-        <div className="sticky top-0 z-[150] w-full bg-white/85 backdrop-blur-md border-b border-black/10">
+        <div className="sticky top-0 z-[150] w-full bg-white backdrop-blur-md border-b border-black/10">
           <div className="flex h-[74px] items-center justify-between px-6">
             <div className="font-bold text-xl tracking-tight text-sky-600">
               Bloggo
@@ -1599,7 +1607,7 @@ export default function GuestRecapPage({ userId, tripId, brand }: Props) {
           <div ref={dayTabsSentinelRef} className="h-0" aria-hidden="true" />
 
           <div
-            className="sticky z-[180] border-b border-black/10 bg-white/85 backdrop-blur-md"
+            className="sticky z-[180] border-b border-black/10 bg-white backdrop-blur-md"
             style={{ top: mobileHeaderOffsetPx }}
           >
             <div className="mx-auto w-full px-3 py-2">
@@ -1625,7 +1633,7 @@ export default function GuestRecapPage({ userId, tripId, brand }: Props) {
           >
             <div
               ref={leftScrollRef}
-              className="w-full overflow-y-auto overscroll-contain touch-pan-y rounded-2xl"
+              className="w-full overflow-y-auto touch-pan-y rounded-2xl"
               style={{
                 height: PANEL_HEIGHT,
                 scrollBehavior: "auto",

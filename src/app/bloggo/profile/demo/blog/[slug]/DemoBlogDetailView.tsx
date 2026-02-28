@@ -464,7 +464,7 @@ export default function DemoBlogDetailView({ params }: Props) {
         >
           <div
             ref={leftScrollRef}
-            className="w-full overflow-y-auto overscroll-contain touch-pan-y rounded-2xl"
+            className="w-full overflow-y-auto overscroll-contain touch-pan-y rounded-2xl scrollbar-hide [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
             style={{
               height: isLg ? PANEL_HEIGHT : "auto",
               maxHeight: isLg ? undefined : "none",

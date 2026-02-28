@@ -65,6 +65,23 @@ export function mapTripRecapToPageModel(
     mapDayFromApi(d, idx),
   );
 
+  const placesCount = days.reduce((acc, d) => acc + d.entries.length, 0);
+
+  let globalIndex = 0;
+  days.forEach((d) => {
+    d.entries.forEach((e) => {
+      e.visitIndex = globalIndex + 1;
+      if (globalIndex === 0) {
+        e.markerRole = "start";
+      } else if (globalIndex === placesCount - 1 && placesCount > 1) {
+        e.markerRole = "end";
+      } else {
+        e.markerRole = "poi";
+      }
+      globalIndex++;
+    });
+  });
+
   const markers = days.flatMap((d) =>
     d.entries.flatMap((e) =>
       e.coordinate
@@ -80,7 +97,6 @@ export function mapTripRecapToPageModel(
     ),
   );
 
-  const placesCount = days.reduce((acc, d) => acc + d.entries.length, 0);
   const dateText = buildDateText(trip, days);
 
   return {

@@ -640,7 +640,7 @@ export default function BloggoRecapEditView({
         discardDisabled={!hasLocalChanges || loading}
         onUpdate={handleUpdate}
         updateDisabled={!hasLocalChanges || loading}
-        className="sticky top-0 z-50 border-b border-black/10"
+        className="sticky top-[64px] z-50 border-b border-black/10"
       />
 
       <div className="mx-auto max-w-[1200px] p-6">

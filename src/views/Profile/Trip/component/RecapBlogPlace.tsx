@@ -58,6 +58,8 @@ export type RecapEntry = {
   photos: string[];
 
   coordinate?: { latitude: number; longitude: number };
+  markerRole?: "start" | "end" | "poi";
+  visitIndex?: number;
 };
 
 export type RecapDay = {
@@ -141,25 +143,29 @@ export function RecapBlogDaySection({
       </div>
 
       <div className="space-y-10">
-        {entries.map((entry) => (
-          <div
-            key={entry.id}
-            ref={(el) => onEntryMount?.(entry.id, el)}
-            data-entry-id={entry.id}
-          >
-            <RecapPlaceBlock
-              entry={entry}
-              expanded={expandedIds.has(entry.id)}
-              onToggleExpanded={() => toggleExpanded(entry.id)}
-              mode={mode}
-              onPlaceStoryChange={onPlaceStoryChange}
-              onPlaceNameChange={onPlaceNameChange}
-              onTogglePlaceHide={onTogglePlaceHide}
-              onCaptionChange={onCaptionChange}
-              onRemovePhoto={onRemovePhoto}
-            />
-          </div>
-        ))}
+        {entries.map((entry) => {
+          const entryRole = entry.markerRole ?? "poi";
+          return (
+            <div
+              key={entry.id}
+              ref={(el) => onEntryMount?.(entry.id, el)}
+              data-entry-id={entry.id}
+            >
+              <RecapPlaceBlock
+                entry={entry}
+                expanded={expandedIds.has(entry.id)}
+                onToggleExpanded={() => toggleExpanded(entry.id)}
+                mode={mode}
+                entryRole={entryRole}
+                onPlaceStoryChange={onPlaceStoryChange}
+                onPlaceNameChange={onPlaceNameChange}
+                onTogglePlaceHide={onTogglePlaceHide}
+                onCaptionChange={onCaptionChange}
+                onRemovePhoto={onRemovePhoto}
+              />
+            </div>
+          );
+        })}
       </div>
     </section>
   );
@@ -200,6 +206,7 @@ function RecapPlaceBlock({
   expanded,
   onToggleExpanded,
   mode,
+  entryRole = "poi",
   onPlaceStoryChange,
   onPlaceNameChange,
   onTogglePlaceHide,
@@ -211,6 +218,7 @@ function RecapPlaceBlock({
   expanded: boolean;
   onToggleExpanded: () => void;
   mode: Mode;
+  entryRole?: "start" | "end" | "poi";
   onPlaceStoryChange?: (entryId: string, next: string) => void;
   onPlaceNameChange?: (entryId: string, next: string) => void;
   onTogglePlaceHide?: (entryId: string) => void;
@@ -240,9 +248,18 @@ function RecapPlaceBlock({
                   className="w-full bg-transparent text-[24px] sm:text-[32px] font-extrabold text-black focus:outline-none focus:ring-2 focus:ring-sky-500/20 rounded-lg p-1"
                 />
               ) : (
-                <h3 className="truncate text-[24px] sm:text-[32px] font-extrabold text-black tracking-tight">
-                  {entry.placeName}
-                </h3>
+                <a
+                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                    entry.placeName,
+                  )}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:opacity-80 transition-opacity"
+                >
+                  <h3 className="truncate text-[24px] sm:text-[32px] font-extrabold text-black tracking-tight">
+                    {entry.placeName}
+                  </h3>
+                </a>
               )}
             </div>
             {/* If no photos exist, keep time visible here as fallback */}
@@ -339,6 +356,7 @@ function RecapPlaceBlock({
           expanded={expanded}
           onToggleExpanded={onToggleExpanded}
           layout={photoLayout}
+          entryRole={entryRole}
         />
       )}
     </div>
@@ -353,11 +371,13 @@ function RecapPhotoCarousel({
   expanded,
   onToggleExpanded,
   layout = "default",
+  entryRole = "poi",
 }: {
   entry: RecapEntry;
   expanded: boolean;
   onToggleExpanded: () => void;
   layout?: "default" | "sheet";
+  entryRole?: "start" | "end" | "poi";
 }) {
   const total = entry.photos.length;
   const [activeIdx, setActiveIdx] = useState(0);
@@ -389,6 +409,23 @@ function RecapPhotoCarousel({
 
   return (
     <div className="relative w-full mx-auto max-w-full lg:max-w-[920px] 2xl:max-w-[1100px]">
+      {/* Start / End label pill above the first photo */}
+      {entryRole !== "poi" && (
+        <div className="mb-2">
+          <span
+            className="inline-flex items-center rounded-full px-3 py-1 text-[13px] font-bold text-white"
+            style={{
+              background:
+                entryRole === "start"
+                  ? "rgb(34, 197, 94)" /* green-500 */
+                  : "rgb(249, 115, 22)" /* orange-500 */,
+            }}
+          >
+            {entryRole === "start" ? "Start" : "End"}
+          </span>
+        </div>
+      )}
+
       <div
         ref={scrollerRef}
         className={[
@@ -425,18 +462,18 @@ function RecapPhotoCarousel({
           <button
             type="button"
             onClick={prev}
-            className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-white/70 p-2 shadow-sm backdrop-blur hover:bg-white"
+            className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-black/50 p-2 shadow-sm backdrop-blur hover:bg-black/70 transition-colors"
             aria-label="Previous card"
           >
-            <ChevronLeft className="h-6 w-6 text-black/70" />
+            <ChevronLeft className="h-6 w-6 text-white" />
           </button>
           <button
             type="button"
             onClick={next}
-            className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-white/70 p-2 shadow-sm backdrop-blur hover:bg-white"
+            className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-black/50 p-2 shadow-sm backdrop-blur hover:bg-black/70 transition-colors"
             aria-label="Next card"
           >
-            <ChevronRight className="h-6 w-6 text-black/70" />
+            <ChevronRight className="h-6 w-6 text-white" />
           </button>
         </>
       )}
@@ -475,6 +512,20 @@ function RecapPhotoCard({
 
   const [captionEl, setCaptionEl] = useState<HTMLParagraphElement | null>(null);
   const [isTruncated, setIsTruncated] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+    if (menuOpen) {
+      document.addEventListener("mousedown", handleOutsideClick);
+    }
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, [menuOpen]);
   const placeExternalUrl = useMemo(
     () => String(entry.externalUrl ?? "").trim(),
     [entry.externalUrl],
@@ -582,58 +633,78 @@ function RecapPhotoCard({
           </div>
         </div>
 
-        <div className="flex items-center justify-between border-t border-black/10 px-6 py-4">
-          <div className="flex items-center gap-5 text-black/70">
-            <button
-              type="button"
-              className="inline-flex items-center gap-2 hover:text-black"
-              aria-label="Bookmark"
-            >
-              <Bookmark className="h-6 w-6" />
-            </button>
-            <button
-              type="button"
-              className="inline-flex items-center gap-2 hover:text-black"
-              aria-label="Open place link"
-              onClick={() => {
-                if (!placeExternalUrl) return;
-                const normalized = normalizeExternalUrl(placeExternalUrl);
-                if (!normalized) return;
-                // Mark that we intentionally opened an external page, so the recap view can
-                // preserve UI state (avoid refetch/reset) when the user returns.
-                try {
-                  window.sessionStorage.setItem(
-                    `ls:externalNav:tripRecap`,
-                    String(Date.now()),
-                  );
-                } catch {
-                  // ignore
-                }
-                openExternalUrl(normalized);
-              }}
-              disabled={!placeExternalUrl}
-              title={placeExternalUrl ? "Open link" : "No link available"}
-            >
-              <Link2 className="h-6 w-6" />
-            </button>
-          </div>
+        <div className="flex items-center justify-end gap-5 border-t border-black/10 px-6 py-4">
+          <button
+            type="button"
+            className="inline-flex items-center gap-2 text-black/70 hover:text-black"
+            aria-label="Open place link"
+            onClick={() => {
+              if (!placeExternalUrl) return;
+              const normalized = normalizeExternalUrl(placeExternalUrl);
+              if (!normalized) return;
+              // Mark that we intentionally opened an external page, so the recap view can
+              // preserve UI state (avoid refetch/reset) when the user returns.
+              try {
+                window.sessionStorage.setItem(
+                  `ls:externalNav:tripRecap`,
+                  String(Date.now()),
+                );
+              } catch {
+                // ignore
+              }
+              openExternalUrl(normalized);
+            }}
+            disabled={!placeExternalUrl}
+            title={placeExternalUrl ? "Open link" : "No link available"}
+          >
+            <Link2 className="h-6 w-6" />
+          </button>
 
-          <div className="flex items-center gap-6 text-[20px] font-semibold text-black/80">
-            <div className="inline-flex items-center gap-2">
-              <span>{entry.likeCount}</span>
-              <Heart className="h-6 w-6" />
-            </div>
-            <div className="inline-flex items-center gap-2">
-              <span>{entry.commentCount}</span>
-              <MessageSquare className="h-6 w-6" />
-            </div>
+          <div
+            className="relative text-[20px] font-semibold text-black/80"
+            ref={menuRef}
+          >
             <button
               type="button"
               aria-label="More"
-              className="hover:text-black"
+              className="inline-flex items-center text-black/70 hover:text-black"
+              onClick={() => setMenuOpen(!menuOpen)}
             >
               <MoreVertical className="h-6 w-6" />
             </button>
+
+            {menuOpen && (
+              <div className="absolute right-0 bottom-full mb-3 w-56 rounded-xl bg-white shadow-[0_4px_24px_rgba(0,0,0,0.15)] border border-black/5 overflow-hidden z-20">
+                <button
+                  type="button"
+                  className="w-full px-5 py-3.5 text-left text-[14px] font-bold text-black border-b border-black/5 hover:bg-black/5 transition-colors"
+                  onClick={() => setMenuOpen(false)}
+                >
+                  Edit Place name
+                </button>
+                <button
+                  type="button"
+                  className="w-full px-5 py-3.5 text-left text-[14px] font-bold text-black border-b border-black/5 hover:bg-black/5 transition-colors"
+                  onClick={() => setMenuOpen(false)}
+                >
+                  Manage Photos
+                </button>
+                <button
+                  type="button"
+                  className="w-full px-5 py-3.5 text-left text-[14px] font-bold text-black border-b border-black/5 hover:bg-black/5 transition-colors"
+                  onClick={() => setMenuOpen(false)}
+                >
+                  Edit Caption & Details
+                </button>
+                <button
+                  type="button"
+                  className="w-full px-5 py-3.5 text-left text-[14px] font-bold text-red-600 hover:bg-red-50 transition-colors"
+                  onClick={() => setMenuOpen(false)}
+                >
+                  Hide from blog
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </article>

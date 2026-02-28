@@ -113,8 +113,7 @@ export default function RecapBlogTopBar({
   return (
     <header
       className={[
-        "sticky top-[0px] z-50", // 필요에 맞게 px 조정
-        "w-full bg-white/85 backdrop-blur border-b border-black/10 relative",
+        "w-full bg-white backdrop-blur border-b border-black/10 relative",
         className,
       ].join(" ")}
     >
@@ -128,7 +127,7 @@ export default function RecapBlogTopBar({
         <Check className="h-4 w-4 text-emerald-400" />
         Blog link copied to share!
       </div>
-      <div className="w-full px-6 py-4">
+      <div className="w-full px-4 sm:px-6 lg:px-8 py-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           {/* Left: Go Back (bloggo) or Title (linkedspaces) */}
           <div className="min-w-0 flex items-center gap-3">

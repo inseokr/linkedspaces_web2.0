@@ -40,6 +40,8 @@ export type MarkerData = {
   visitIndex?: number; // 1-based order within active day
   visitTimeText?: string; // e.g. "9:30 AM" or "9:30–10:10 AM"
   externalUrl?: string; // when present, place is a concrete POI (not abstract)
+  /** Visual role of this place marker: start of day = green, end of day = orange, midpoint = blue */
+  markerRole?: "start" | "end" | "poi";
 };
 
 export interface CountryStat {
@@ -96,111 +98,157 @@ function PlaceMarker({
   isActive = false,
   visitIndex,
   visitTimeText,
+  markerRole = "poi",
 }: {
   imageUrl: string;
   size?: number;
   isActive?: boolean;
   visitIndex?: number;
   visitTimeText?: string;
+  markerRole?: "start" | "end" | "poi";
 }) {
+  // Role-based colors
+  const roleColor =
+    markerRole === "start"
+      ? { r: 34, g: 197, b: 94 } // green-500
+      : markerRole === "end"
+        ? { r: 249, g: 115, b: 22 } // orange-500
+        : { r: 59, g: 130, b: 246 }; // blue-500
+
+  const { r, g, b } = roleColor;
+  const solidColor = `rgb(${r}, ${g}, ${b})`;
+  const alphaColor32 = `rgba(${r}, ${g}, ${b}, 0.32)`;
+  const alphaColor16 = `rgba(${r}, ${g}, ${b}, 0.16)`;
+  const alphaColor98 = `rgba(${r}, ${g}, ${b}, 0.98)`;
+
   const baseShadow = "0 8px 20px rgba(0,0,0,0.18)";
   const activeRings = [
-    // crisp main ring
-    "0 0 0 3px rgba(249, 115, 22, 0.98)",
-    // soft outer rings
-    "0 0 0 8px rgba(249, 115, 22, 0.32)",
-    "0 0 0 14px rgba(249, 115, 22, 0.16)",
-    // subtle inner highlight for pop
+    `0 0 0 3px ${alphaColor98}`,
+    `0 0 0 8px ${alphaColor32}`,
+    `0 0 0 14px ${alphaColor16}`,
     "inset 0 0 0 1px rgba(255,255,255,0.55)",
   ].join(", ");
 
+  const roleLabel =
+    markerRole === "start" ? "Start" : markerRole === "end" ? "End" : null;
+
   return (
-    <div style={{ width: size, height: size, position: "relative" }}>
-      <div
-        style={{
-          position: "relative",
-          width: size,
-          height: size,
-          borderRadius: 9999,
-          overflow: "hidden",
-          border: isActive
-            ? "3px solid rgba(249, 115, 22, 0.98)" // orange-500
-            : "3px solid rgba(255,255,255,0.9)",
-          boxShadow: isActive ? `${baseShadow}, ${activeRings}` : baseShadow,
-          background: "rgba(0,0,0,0.05)",
-          transform: isActive ? "scale(1.03)" : "scale(1)",
-          transition:
-            "transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease",
-        }}
-      >
-        <Image
-          src={normalizeImageSrc(imageUrl).src}
-          alt=""
-          fill
-          unoptimized={normalizeImageSrc(imageUrl).unoptimized}
-          sizes={`${size ?? 80}px`}
-          style={{ objectFit: "cover" }}
-        />
-      </div>
-
-      {typeof visitIndex === "number" && Number.isFinite(visitIndex) && (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        gap: 4,
+        position: "relative",
+      }}
+    >
+      {/* Start / End label pill above the photo circle */}
+      {roleLabel && (
         <div
           style={{
-            position: "absolute",
-            top: -8,
-            right: -8,
-            minWidth: 26,
-            height: 26,
-            padding: "0 8px",
-            borderRadius: 9999,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            background: "rgba(0, 0, 0, 0.88)",
+            background: solidColor,
             color: "white",
-            fontWeight: 900,
-            fontSize: 12,
-            lineHeight: "12px",
-            letterSpacing: 0.2,
-            border: "2px solid rgba(255,255,255,0.95)",
-            boxShadow: "0 6px 14px rgba(0,0,0,0.18)",
+            fontWeight: 800,
+            fontSize: 11,
+            lineHeight: "16px",
+            letterSpacing: 0.3,
+            padding: "2px 8px",
+            borderRadius: 9999,
+            whiteSpace: "nowrap",
+            boxShadow: "0 2px 6px rgba(0,0,0,0.22)",
             pointerEvents: "none",
           }}
         >
-          {visitIndex}
+          {roleLabel}
         </div>
       )}
 
-      {!!visitTimeText && (
+      {/* Photo circle */}
+      <div style={{ width: size, height: size, position: "relative" }}>
         <div
           style={{
-            position: "absolute",
-            left: "50%",
-            top: "100%",
-            marginTop: 4,
-            // Optical centering: the pill can read slightly left under the circle,
-            // so we nudge it a couple pixels to the right.
-            transform: "translateX(calc(-50% + 3px))",
-            background: "rgba(255,255,255,0.96)",
-            border: "1px solid rgba(0,0,0,0.12)",
-            boxShadow: "0 10px 24px rgba(0,0,0,0.16)",
+            position: "relative",
+            width: size,
+            height: size,
             borderRadius: 9999,
-            padding: "6px 10px",
-            maxWidth: 160,
-            whiteSpace: "nowrap",
             overflow: "hidden",
-            textOverflow: "ellipsis",
-            fontSize: 12,
-            fontWeight: 800,
-            color: "rgba(0,0,0,0.78)",
-            pointerEvents: "none",
-            backdropFilter: "blur(6px)",
+            border: isActive
+              ? `3px solid ${alphaColor98}`
+              : "3px solid rgba(255,255,255,0.9)",
+            boxShadow: isActive ? `${baseShadow}, ${activeRings}` : baseShadow,
+            background: "rgba(0,0,0,0.05)",
+            transform: isActive ? "scale(1.03)" : "scale(1)",
+            transition:
+              "transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease",
           }}
-          title={visitTimeText}
         >
-          {visitTimeText}
+          <Image
+            src={normalizeImageSrc(imageUrl).src}
+            alt=""
+            fill
+            unoptimized={normalizeImageSrc(imageUrl).unoptimized}
+            sizes={`${size ?? 80}px`}
+            style={{ objectFit: "cover" }}
+          />
         </div>
-      )}
+
+        {typeof visitIndex === "number" && Number.isFinite(visitIndex) && (
+          <div
+            style={{
+              position: "absolute",
+              top: -8,
+              right: -8,
+              minWidth: 26,
+              height: 26,
+              padding: "0 8px",
+              borderRadius: 9999,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              background: solidColor,
+              color: "white",
+              fontWeight: 900,
+              fontSize: 12,
+              lineHeight: "12px",
+              letterSpacing: 0.2,
+              border: "2px solid rgba(255,255,255,0.95)",
+              boxShadow: "0 6px 14px rgba(0,0,0,0.18)",
+              pointerEvents: "none",
+            }}
+          >
+            {visitIndex}
+          </div>
+        )}
+
+        {!!visitTimeText && (
+          <div
+            style={{
+              position: "absolute",
+              left: "50%",
+              top: "100%",
+              marginTop: 4,
+              transform: "translateX(calc(-50% + 3px))",
+              background: "rgba(255,255,255,0.96)",
+              border: "1px solid rgba(0,0,0,0.12)",
+              boxShadow: "0 10px 24px rgba(0,0,0,0.16)",
+              borderRadius: 9999,
+              padding: "6px 10px",
+              maxWidth: 160,
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              fontSize: 12,
+              fontWeight: 800,
+              color: "rgba(0,0,0,0.78)",
+              pointerEvents: "none",
+              backdropFilter: "blur(6px)",
+            }}
+            title={visitTimeText}
+          >
+            {visitTimeText}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -726,6 +774,7 @@ export default function MapboxMap({
               isActive={isActive}
               visitIndex={m.visitIndex}
               visitTimeText={m.externalUrl ? m.label : undefined}
+              markerRole={m.markerRole ?? "poi"}
             />,
           );
         };

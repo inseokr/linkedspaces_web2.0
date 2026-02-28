@@ -426,19 +426,22 @@ function OwnerTripRecapView({
         ? startingYear
         : Number(startingYear)) || new Date().getFullYear();
 
-    return effectiveModel.days.flatMap((d) =>
-      d.entries.map((e: any, idx: number) => ({
-        id: e.id,
-        lat: e.coordinate?.latitude ?? baseCenter.lat,
-        lng: e.coordinate?.longitude ?? baseCenter.lng,
-        year: travelYear,
-        label: e.placeName,
-        imageUrl: e.photos?.[0] ?? "/images/avatar.png",
-        visitIndex: idx + 1,
-        visitTimeText: e.timeRangeText ?? "",
-        externalUrl: e.externalUrl,
-      })),
-    );
+    return effectiveModel.days.flatMap((d) => {
+      return d.entries.map((e: any) => {
+        return {
+          id: e.id,
+          lat: e.coordinate?.latitude ?? baseCenter.lat,
+          lng: e.coordinate?.longitude ?? baseCenter.lng,
+          year: travelYear,
+          label: e.placeName,
+          imageUrl: e.photos?.[0] ?? "/images/avatar.png",
+          visitIndex: e.visitIndex,
+          visitTimeText: e.timeRangeText ?? "",
+          externalUrl: e.externalUrl,
+          markerRole: e.markerRole,
+        };
+      });
+    });
   }, [effectiveModel, baseCenter, recapData?.trip?.startingYear]);
 
   const activeDayMarkers = useMemo<MarkerData[]>(() => {
@@ -901,18 +904,14 @@ function OwnerTripRecapView({
       const mapWrap = mapContainerRef.current;
       const isOnMap = !!(mapWrap && mapWrap.contains(e.target as Node));
 
-      // ctrl+wheel => map zoom 허용
-      if (isOnMap && e.ctrlKey) return;
+      // If hovering over the map, do not hijack the scroll event.
+      // Let Mapbox handle the wheel event to zoom in/out freely.
+      if (isOnMap) return;
 
       // left panel 더 못 가면 window scroll 허용
       if (!canScrollLeftPanel(delta)) return;
 
       e.preventDefault();
-
-      if (isOnMap) {
-        e.stopPropagation();
-        (e as any).stopImmediatePropagation?.();
-      }
 
       root.scrollTop += delta * 0.6;
     };
@@ -970,15 +969,25 @@ function OwnerTripRecapView({
         dayTabs={dayTabs}
         activeDayId={activeDayId}
         onDayChange={(id) => handleDayChange(id, true)}
-        onGoBack={() => window.history.back()}
+        onGoBack={() => {
+          if (window.history.length > 2) {
+            window.history.back();
+          } else {
+            router.push(
+              brand === "bloggo"
+                ? `/bloggo/profile/${userId}`
+                : `/profile/${userId}`,
+            );
+          }
+        }}
         onEditBlog={() =>
           router.push(`${basePath || "/trip"}/${userId}/${tripId}/edit`)
         }
         brand={brand}
-        className="sticky top-0 z-50 border-b border-black/10"
+        className="sticky top-[64px] z-50"
       />
 
-      <div className="space-y-10 p-6">
+      <div className="space-y-10 px-6 pb-6 pt-2">
         {heroProps && (
           <RecapBlogHero
             {...heroProps}
@@ -1001,7 +1010,7 @@ function OwnerTripRecapView({
           >
             <div
               ref={leftScrollRef}
-              className="w-full overflow-y-auto overscroll-contain touch-pan-y rounded-2xl"
+              className="w-full overflow-y-auto touch-pan-y rounded-2xl"
               style={{
                 height: PANEL_HEIGHT,
                 scrollBehavior: "auto",

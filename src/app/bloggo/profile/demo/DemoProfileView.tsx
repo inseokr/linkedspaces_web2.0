@@ -553,7 +553,7 @@ export default function DemoProfileView() {
             <div className="h-full rounded-2xl border border-black/10 bg-white overflow-hidden">
               <div
                 ref={mapListScrollRef}
-                className="h-full overflow-y-auto pr-2 px-4 pt-2 pb-4"
+                className="h-full overflow-y-auto pr-2 px-4 pt-2 pb-4 scrollbar-hide [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
               >
                 {/* Country header */}
                 {selectedCountryName && (
