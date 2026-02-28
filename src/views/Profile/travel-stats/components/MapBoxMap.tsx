@@ -285,6 +285,7 @@ const POI_NUDGE_DEG = 0.0001;
 function computePlaceMarkerLayout(
   placeMarkers: MarkerData[],
   markerSizePx: number,
+  activeMarkerId?: string,
 ): Map<string, { lngLat: [number, number]; offset: [number, number] }> {
   const key = (lat: number, lng: number) =>
     `${lat.toFixed(5)},${lng.toFixed(5)}`;
@@ -307,8 +308,10 @@ function computePlaceMarkerLayout(
   const radiusPx = markerSizePx / 2 + 24;
 
   for (const g of groups.values()) {
-    const displayLng = g.baseLng + POI_NUDGE_DEG;
-    const displayLat = g.baseLat + POI_NUDGE_DEG;
+    // Skip the nudge for the active/staged marker so the pin points exactly at the POI
+    const hasActive = activeMarkerId && g.ids.includes(activeMarkerId);
+    const displayLng = hasActive ? g.baseLng : g.baseLng + POI_NUDGE_DEG;
+    const displayLat = hasActive ? g.baseLat : g.baseLat + POI_NUDGE_DEG;
     const n = g.ids.length;
 
     if (n === 1) {
@@ -641,6 +644,7 @@ export default function MapboxMap({
       const layout = computePlaceMarkerLayout(
         placeMarkersRef.current,
         markerSizePx,
+        activePlaceMarkerIdRef.current,
       );
 
       coords = placeMarkersRef.current
@@ -768,6 +772,7 @@ export default function MapboxMap({
       const layout = computePlaceMarkerLayout(
         placeMarkersRef.current,
         markerSizePx,
+        activePlaceMarkerIdRef.current,
       );
 
       placeMarkersRef.current.forEach((m) => {

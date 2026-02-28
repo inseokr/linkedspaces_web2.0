@@ -6,7 +6,7 @@ import { X, MapPin, Pencil, Check, Loader2, ExternalLink } from "lucide-react";
 
 function generateMapsUrl(lat: number, lng: number, label: string) {
   const baseUrl = "https://www.google.com/maps/search/?api=1";
-  const query = encodeURIComponent(`${label} ${lat},${lng}`);
+  const query = encodeURIComponent(`${label}, ${lat},${lng}`);
   return `${baseUrl}&query=${query}`;
 }
 
@@ -116,14 +116,21 @@ export default function PlaceMapEditorModal({
 
   // Show markers for all entries to provide context (colored numbers, Start/End labels)
   const placeMarkers: MarkerData[] = (allEntries ?? []).flatMap((e) => {
-    if (!e.coordinate?.latitude || !e.coordinate?.longitude) return [];
+    // When a POI is staged for the active entry, preview its new position on the map
+    const isActiveEntry = e.id === entry.id;
+    const lat =
+      isActiveEntry && stagedPoi ? stagedPoi.lat : e.coordinate?.latitude;
+    const lng =
+      isActiveEntry && stagedPoi ? stagedPoi.lng : e.coordinate?.longitude;
+
+    if (!lat || !lng) return [];
     return [
       {
         id: e.id,
-        lat: e.coordinate.latitude,
-        lng: e.coordinate.longitude,
+        lat,
+        lng,
         year: new Date().getFullYear(),
-        label: e.placeName,
+        label: isActiveEntry && stagedPoi ? stagedPoi.name : e.placeName,
         imageUrl: e.photos?.[0] ?? "/images/avatar.png",
         visitIndex: e.visitIndex,
         visitTimeText: e.timeRangeText ?? "",
@@ -275,7 +282,7 @@ export default function PlaceMapEditorModal({
                 }
               }}
               placeholder="Search for a place…"
-              className="flex-1 min-w-0 bg-transparent text-[17px] font-bold text-black placeholder:text-black/30 focus:outline-none"
+              className="flex-1 min-w-0 bg-transparent text-[22px] font-bold text-black placeholder:text-black/30 focus:outline-none"
             />
             {isSearching && (
               <Loader2 className="h-4 w-4 animate-spin text-blue-500 shrink-0 mr-1" />
@@ -448,11 +455,11 @@ export default function PlaceMapEditorModal({
                 )}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="pointer-events-auto flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/95 backdrop-blur-md shadow-sm border border-blue-100 hover:bg-white hover:border-blue-200 transition-colors group"
+                className="pointer-events-auto flex items-center gap-1.5 px-4 py-2 rounded-full bg-blue-600 hover:bg-blue-700 active:bg-blue-800 shadow-md shadow-blue-500/30 transition-colors group"
                 aria-label="Open in Google Maps"
               >
-                <ExternalLink className="w-3.5 h-3.5 text-blue-500" />
-                <span className="text-[12px] font-medium text-blue-500 group-hover:text-blue-600 opacity-90 transition-colors">
+                <ExternalLink className="w-3.5 h-3.5 text-white" />
+                <span className="text-[12px] font-semibold text-white">
                   Open in Google Maps
                 </span>
               </a>
