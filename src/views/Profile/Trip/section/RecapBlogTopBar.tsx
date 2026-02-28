@@ -147,100 +147,101 @@ export default function RecapBlogTopBar({
           </div>
 
           {/* Right: Actions (Edit / Share / Go Back for linkedspaces) */}
-          <div className="flex items-center gap-2">
-            {mode === "edit" ? (
-              <>
-                <button
-                  type="button"
-                  onClick={onCloseEdit}
-                  className={secondaryButtonClass}
-                >
-                  Close
-                </button>
-
-                {onDiscardLocal && (
+          <div className="flex flex-wrap items-center justify-end gap-4 md:gap-6">
+            {mode === "edit" && dayTabs?.length && onDayChange && (
+              <RecapDayTabs
+                tabs={dayTabs}
+                activeId={activeDayId ?? dayTabs[0]?.id ?? "day-1"}
+                onChange={onDayChange}
+              />
+            )}
+            <div className="flex items-center gap-2">
+              {mode === "edit" ? (
+                <>
                   <button
                     type="button"
-                    onClick={discardDisabled ? undefined : onDiscardLocal}
-                    disabled={discardDisabled}
-                    className={
-                      discardDisabled
-                        ? disabledDestructiveButtonClass
-                        : destructiveButtonClass
-                    }
-                  >
-                    Discard local changes
-                  </button>
-                )}
-
-                <button
-                  type="button"
-                  onClick={updateDisabled ? undefined : onUpdate}
-                  disabled={updateDisabled}
-                  style={{
-                    backgroundColor: updateDisabled ? undefined : primaryColor,
-                  }}
-                  className={
-                    updateDisabled
-                      ? disabledPrimaryButtonClass
-                      : primaryButtonClass
-                  }
-                >
-                  <Image
-                    src={updateIcon}
-                    alt="Update"
-                    width={18}
-                    height={18}
-                    className={[
-                      "block shrink-0",
-                      updateDisabled ? "opacity-40" : "opacity-90",
-                    ].join(" ")}
-                  />
-                  Update
-                </button>
-              </>
-            ) : (
-              <>
-                <button
-                  type="button"
-                  onClick={() => onEditBlog?.()}
-                  className={secondaryButtonClass}
-                >
-                  Edit Blog
-                </button>
-
-                <button
-                  type="button"
-                  onClick={onShare ?? handleShare}
-                  className={secondaryButtonClass}
-                >
-                  Share
-                </button>
-
-                {/* Go Back only on the right for non-bloggo brands */}
-                {onGoBack && brand !== "bloggo" && (
-                  <button
-                    type="button"
-                    onClick={onGoBack}
+                    onClick={onCloseEdit}
                     className={secondaryButtonClass}
                   >
-                    Go Back
+                    Close
                   </button>
-                )}
-              </>
-            )}
+
+                  {onDiscardLocal && (
+                    <button
+                      type="button"
+                      onClick={discardDisabled ? undefined : onDiscardLocal}
+                      disabled={discardDisabled}
+                      className={
+                        discardDisabled
+                          ? disabledDestructiveButtonClass
+                          : destructiveButtonClass
+                      }
+                    >
+                      Discard local changes
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={updateDisabled ? undefined : onUpdate}
+                    disabled={updateDisabled}
+                    style={{
+                      backgroundColor: updateDisabled
+                        ? undefined
+                        : primaryColor,
+                    }}
+                    className={
+                      updateDisabled
+                        ? disabledPrimaryButtonClass
+                        : primaryButtonClass
+                    }
+                  >
+                    <Image
+                      src={updateIcon}
+                      alt="Update"
+                      width={18}
+                      height={18}
+                      className={[
+                        "block shrink-0",
+                        updateDisabled ? "opacity-40" : "opacity-90",
+                      ].join(" ")}
+                    />
+                    Update
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => onEditBlog?.()}
+                    className={secondaryButtonClass}
+                  >
+                    Edit Blog
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={onShare ?? handleShare}
+                    className={secondaryButtonClass}
+                  >
+                    Share
+                  </button>
+
+                  {/* Go Back only on the right for non-bloggo brands */}
+                  {onGoBack && brand !== "bloggo" && (
+                    <button
+                      type="button"
+                      onClick={onGoBack}
+                      className={secondaryButtonClass}
+                    >
+                      Go Back
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
           </div>
         </div>
-
-        {mode === "edit" && dayTabs?.length && onDayChange && (
-          <div className="mt-4">
-            <RecapDayTabs
-              tabs={dayTabs}
-              activeId={activeDayId ?? dayTabs[0]?.id ?? "day-1"}
-              onChange={onDayChange}
-            />
-          </div>
-        )}
       </div>
     </header>
   );
