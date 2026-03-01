@@ -792,7 +792,7 @@ export default function GuestRecapPage({ userId, tripId, brand }: Props) {
   const BLOG_TOP_OFFSET_PX = 120;
   const MAP_TOP_OFFSET_PX = 120;
   const DESKTOP_SNAPPED_TOP_PX = 98;
-  const BLOG_HEIGHT_OFFSET_PX = 145;
+  const BLOG_HEIGHT_OFFSET_PX = 153;
   const MAP_HEIGHT_OFFSET_PX = 122;
   const BLOG_HEIGHT = `calc(100vh - ${BLOG_HEIGHT_OFFSET_PX}px)`;
   const MAP_HEIGHT = `calc(100vh - ${MAP_HEIGHT_OFFSET_PX}px)`;
@@ -1671,7 +1671,7 @@ export default function GuestRecapPage({ userId, tripId, brand }: Props) {
             )}
             <div
               ref={leftScrollRef}
-              className="w-full touch-pan-y rounded-2xl"
+              className="w-full touch-pan-y rounded-2xl mt-2"
               style={{
                 height: BLOG_HEIGHT,
                 scrollBehavior: "auto",
@@ -1768,7 +1768,7 @@ export default function GuestRecapPage({ userId, tripId, brand }: Props) {
             );
           })()}
 
-          <div className="space-y-12 px-3 pb-6">
+          <div className="space-y-12 px-3 pb-6 mt-2">
             {effectiveModel.days.map((d) => {
               const id = `day-${d.dayIndex}`;
               return (

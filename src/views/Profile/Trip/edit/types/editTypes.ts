@@ -16,6 +16,8 @@ export type PlaceDraft = {
   caption?: string;
   photos: string[];
   captions: string[];
+  /** Indices (into the original photos/captions arrays) that the user has hidden in the editor. */
+  hiddenPhotoIndices?: number[];
   coordinate?: { latitude: number; longitude: number };
   status?: "saved" | "hidden" | "deleted" | string;
   originalIndex?: number;

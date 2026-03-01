@@ -78,6 +78,8 @@ export default function BloggoRecapEditView({
   // day scroll refs
   const daySectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const entryRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  // Tracks the last individually-restored place so we can scroll to it on modal close
+  const pendingScrollToPlaceIdRef = useRef<string | null>(null);
 
   const draftFingerprint = (d: RecapEditDraft) => {
     // Exclude `updatedAt` (it changes on every keystroke), but include actual editable fields.
@@ -641,6 +643,28 @@ export default function BloggoRecapEditView({
     });
   };
 
+  const onHidePhoto = (dayId: string, placeId: string, photoIndex: number) => {
+    updatePlaceInDay(dayId, placeId, (p) => {
+      const hidden = Array.from(
+        new Set([...(p.hiddenPhotoIndices ?? []), photoIndex]),
+      );
+      return { ...p, hiddenPhotoIndices: hidden } as any;
+    });
+  };
+
+  const onRestorePhoto = (
+    dayId: string,
+    placeId: string,
+    originalPhotoIndex: number,
+  ) => {
+    updatePlaceInDay(dayId, placeId, (p) => {
+      const hidden = (p.hiddenPhotoIndices ?? []).filter(
+        (i) => i !== originalPhotoIndex,
+      );
+      return { ...p, hiddenPhotoIndices: hidden } as any;
+    });
+  };
+
   const onRemovePhoto = (
     dayId: string,
     placeId: string,
@@ -910,23 +934,41 @@ export default function BloggoRecapEditView({
                 onOpenHiddenPlaces={() => setRestoreDayId(d.id)}
                 entries={d.places
                   .filter((p) => p.status !== "hidden")
-                  .map((p) => ({
-                    id: p.id,
-                    placeKey: p.placeKey,
-                    placeName: p.placeName,
-                    originalPlaceName: p.originalPlaceName,
-                    timeRangeText: p.timeRangeText ?? "",
-                    categoryLabel: p.categoryLabel ?? undefined,
-                    liked: false,
-                    likeCount: 0,
-                    commentCount: 0,
-                    placeStory: p.placeStory ?? "",
-                    photos: p.photos ?? [],
-                    captions: p.captions ?? [],
-                    caption: p.caption ?? "",
-                    coordinate: p.coordinate,
-                    status: p.status,
-                  }))}
+                  .map((p) => {
+                    const hiddenIndices = p.hiddenPhotoIndices ?? [];
+                    const hiddenPhotos = hiddenIndices
+                      .map((origIdx) => ({
+                        url: p.photos?.[origIdx] ?? "",
+                        caption:
+                          p.captions?.[origIdx] ??
+                          (origIdx === 0 ? (p.caption ?? "") : ""),
+                        originalIndex: origIdx,
+                      }))
+                      .filter((h) => !!h.url);
+                    return {
+                      id: p.id,
+                      placeKey: p.placeKey,
+                      placeName: p.placeName,
+                      originalPlaceName: p.originalPlaceName,
+                      timeRangeText: p.timeRangeText ?? "",
+                      categoryLabel: p.categoryLabel ?? undefined,
+                      liked: false,
+                      likeCount: 0,
+                      commentCount: 0,
+                      placeStory: p.placeStory ?? "",
+                      // Visible photos only (those not hidden)
+                      photos: (p.photos ?? []).filter(
+                        (_, i) => !hiddenIndices.includes(i),
+                      ),
+                      captions: (p.captions ?? []).filter(
+                        (_, i) => !hiddenIndices.includes(i),
+                      ),
+                      caption: p.caption ?? "",
+                      coordinate: p.coordinate,
+                      status: p.status,
+                      hiddenPhotos,
+                    };
+                  })}
                 onPlaceStoryChange={(entryId, next) =>
                   onPlaceStoryChange(d.id, entryId, next)
                 }
@@ -939,6 +981,12 @@ export default function BloggoRecapEditView({
                 }
                 onRemovePhoto={(entryId, photoIndex) =>
                   onRemovePhoto(d.id, entryId, photoIndex)
+                }
+                onHidePhoto={(entryId, photoIndex) =>
+                  onHidePhoto(d.id, entryId, photoIndex)
+                }
+                onRestorePhoto={(entryId, originalPhotoIndex) =>
+                  onRestorePhoto(d.id, entryId, originalPhotoIndex)
                 }
                 onOpenPlaceMapEditor={(entryId) =>
                   setEditorOpen({ entryId, dayId: d.id })
@@ -983,16 +1031,34 @@ export default function BloggoRecapEditView({
             .find((d) => d.id === restoreDayId)!
             .places.filter((p) => p.status === "hidden")}
           onRestorePlace={(placeId) => {
+            pendingScrollToPlaceIdRef.current = placeId;
             onTogglePlaceHide(restoreDayId, placeId);
           }}
           onRestoreAll={() => {
+            pendingScrollToPlaceIdRef.current = null;
             const hidden = draft.days
               .find((d) => d.id === restoreDayId)!
               .places.filter((p) => p.status === "hidden");
             hidden.forEach((p) => onTogglePlaceHide(restoreDayId, p.id));
             setRestoreDayId(null);
           }}
-          onClose={() => setRestoreDayId(null)}
+          onClose={() => {
+            const targetId = pendingScrollToPlaceIdRef.current;
+            pendingScrollToPlaceIdRef.current = null;
+            setRestoreDayId(null);
+            if (targetId) {
+              requestAnimationFrame(() => {
+                const el = entryRefs.current[targetId];
+                if (!el) return;
+                const y =
+                  el.getBoundingClientRect().top +
+                  window.scrollY -
+                  TOPBAR_OFFSET_PX -
+                  12;
+                window.scrollTo({ top: y, behavior: "smooth" });
+              });
+            }
+          }}
         />
       )}
     </div>

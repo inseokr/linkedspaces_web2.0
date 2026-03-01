@@ -218,7 +218,7 @@ function OwnerTripRecapView({
   /** Layout */
   const BLOG_TOP_OFFSET_PX = 120;
   const MAP_TOP_OFFSET_PX = 152;
-  const BLOG_HEIGHT_OFFSET_PX = 145;
+  const BLOG_HEIGHT_OFFSET_PX = 153;
   const MAP_HEIGHT_OFFSET_PX = 176;
   const BLOG_HEIGHT = `calc(100vh - ${BLOG_HEIGHT_OFFSET_PX}px)`;
   const MAP_HEIGHT = `calc(100vh - ${MAP_HEIGHT_OFFSET_PX}px)`;
@@ -649,6 +649,23 @@ function OwnerTripRecapView({
     const root = leftScrollRef.current;
     if (!root) return;
     if (typeof window === "undefined") return;
+
+    // Only restore scroll position for bfcache/back-forward navigations.
+    // On fresh page loads ('navigate') or reloads, always start at the top.
+    try {
+      const navEntries = performance.getEntriesByType(
+        "navigation",
+      ) as PerformanceNavigationTiming[];
+      const navType = navEntries[0]?.type;
+      if (navType === "navigate" || navType === "reload") {
+        // Fresh load — clear any stale saved state and always start at top.
+        window.sessionStorage.removeItem(scrollStateKey);
+        return;
+      }
+    } catch {
+      // performance API not available — skip restoration to be safe
+      return;
+    }
 
     let parsed: any = null;
     try {
@@ -1170,10 +1187,9 @@ function OwnerTripRecapView({
           </div>
         )}
 
-        {(loading || error) && (
+        {error && (
           <div className="rounded-2xl border border-black/10 bg-black/[0.02] p-4 text-sm">
-            {loading && <div className="font-medium">Loading API recap…</div>}
-            {error && <div className="mt-1 opacity-70">API error: {error}</div>}
+            <div className="mt-1 opacity-70">API error: {error}</div>
           </div>
         )}
 
@@ -1189,7 +1205,7 @@ function OwnerTripRecapView({
             )}
             <div
               ref={leftScrollRef}
-              className="w-full touch-pan-y rounded-2xl"
+              className="w-full touch-pan-y rounded-2xl mt-2"
               style={{
                 height: BLOG_HEIGHT,
                 scrollBehavior: "auto",

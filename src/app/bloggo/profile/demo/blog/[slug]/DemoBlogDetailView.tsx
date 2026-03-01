@@ -73,7 +73,7 @@ export default function DemoBlogDetailView({ params }: Props) {
   );
 
   // Convert blog.places → RecapDay entries so we reuse RecapBlogDaySection
-  const days = useMemo(() => {
+  const computedDays = useMemo(() => {
     // Group places into days (2 places per day for the demo)
     const PLACES_PER_DAY = 2;
     const dayCount = Math.ceil(blog.places.length / PLACES_PER_DAY);
@@ -97,6 +97,13 @@ export default function DemoBlogDetailView({ params }: Props) {
           caption: place.description,
           placeStory: place.description,
           photos: place.photos.length > 0 ? place.photos : [blog.coverImage],
+          allPhotos: (place.photos.length > 0
+            ? place.photos
+            : [blog.coverImage]
+          ).map((url) => ({
+            url,
+            selected: true,
+          })),
           coordinate: {
             latitude: place.coordinate.lat,
             longitude: place.coordinate.lng,
@@ -105,6 +112,13 @@ export default function DemoBlogDetailView({ params }: Props) {
       };
     });
   }, [blog]);
+
+  const [days, setDays] = useState(computedDays);
+
+  // Sync state if blog changes (e.g. navigation)
+  useEffect(() => {
+    setDays(computedDays);
+  }, [computedDays]);
 
   const dayTabs: DayTab[] = useMemo(
     () =>
@@ -470,6 +484,28 @@ export default function DemoBlogDetailView({ params }: Props) {
                       entries={d.entries as any}
                       onEntryMount={(entryId, el) => {
                         entryRefs.current[entryId] = el;
+                      }}
+                      onManagePhotosConfirm={(
+                        entryId: string,
+                        selectedUrls: string[],
+                      ) => {
+                        setDays((prev) =>
+                          prev.map((day) => ({
+                            ...day,
+                            entries: day.entries.map((entry) =>
+                              entry.id === entryId
+                                ? {
+                                    ...entry,
+                                    photos: selectedUrls,
+                                    allPhotos: entry.allPhotos?.map((p) => ({
+                                      ...p,
+                                      selected: selectedUrls.includes(p.url),
+                                    })),
+                                  }
+                                : entry,
+                            ),
+                          })),
+                        );
                       }}
                     />
                   </div>
