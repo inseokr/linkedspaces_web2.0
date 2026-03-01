@@ -502,7 +502,7 @@ export default function DemoProfileView() {
               )}
             </div>
 
-            <div className="flex flex-col items-end gap-3">
+            <div className="flex flex-col items-end gap-3 hidden sm:block">
               <RecapYearTabs
                 value={selectedYear}
                 years={availableYears}
@@ -510,6 +510,17 @@ export default function DemoProfileView() {
               />
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* ── Mobile Year Filter ──────────────────────────────────────────────── */}
+      <div className="sm:hidden border-b border-black/5 bg-slate-50/50 px-4 py-3">
+        <div className="flex justify-center">
+          <RecapYearTabs
+            value={selectedYear}
+            years={availableYears}
+            onChange={setSelectedYear}
+          />
         </div>
       </div>
 
