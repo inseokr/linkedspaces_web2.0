@@ -33,6 +33,7 @@ import MapboxMap, {
   type PoiInfo,
 } from "@/views/Profile/travel-stats/components/MapBoxMap";
 import PoiUpdatePopup from "@/views/Profile/Trip/component/PoiUpdatePopup";
+import PlaceMapEditorModal from "@/views/Profile/Trip/component/PlaceMapEditorModal";
 import { updatePlaceInfo } from "@/api/user";
 
 import { mapTripRecapToPageModel } from "@/views/Profile/Trip/utils/mapTripRecap";
@@ -308,6 +309,9 @@ function OwnerTripRecapView({
     targetEntryId: string;
   } | null>(null);
   const [poiSaving, setPoiSaving] = useState(false);
+  const [editorOpenEntryId, setEditorOpenEntryId] = useState<string | null>(
+    null,
+  );
 
   /** 1) Fetch */
   const fetchRecap = useCallback(async () => {
@@ -884,6 +888,118 @@ function OwnerTripRecapView({
       setPoiSaving(false);
     }
   }, [pendingPoi, recapData]);
+  const handleOpenPlaceMapEditor = useCallback((entryId: string) => {
+    setEditorOpenEntryId(entryId);
+  }, []);
+
+  const handlePlaceNameChange = useCallback(
+    (entryId: string, nextName: string) => {
+      // Optimistic local update
+      setRecapData((prev: TripRecapResponse | null) => {
+        if (!prev) return prev;
+        const [dayPart, placePart] = entryId.split("-");
+        const dayArrayIdx = Number(dayPart) - 1;
+        const placeArrayIdx = Number(placePart);
+        if (
+          !Number.isFinite(dayArrayIdx) ||
+          !Number.isFinite(placeArrayIdx) ||
+          dayArrayIdx < 0 ||
+          placeArrayIdx < 0
+        )
+          return prev;
+
+        const nextDays = prev.days.map((day, di) => {
+          if (di !== dayArrayIdx) return day;
+          return {
+            ...day,
+            places: day.places.map((place, pi) => {
+              if (pi !== placeArrayIdx) return place;
+              return { ...place, placeName: nextName };
+            }),
+          };
+        });
+        return { ...prev, days: nextDays };
+      });
+
+      // Persist to backend (debounced or immediate, here immediate for simplicity)
+      const entry = effectiveModel?.days
+        .flatMap((d) => d.entries)
+        .find((e) => e.id === entryId);
+      if (entry) {
+        updatePlaceInfo({
+          placeKey: entry.placeKey || entryId,
+          placeName: nextName,
+          coordinate: {
+            latitude: entry.coordinate?.latitude || 0,
+            longitude: entry.coordinate?.longitude || 0,
+          },
+        }).catch((err) => console.error("[Place update] failed", err));
+      }
+    },
+    [effectiveModel],
+  );
+
+  const handlePoiConfirmFromEditor = useCallback(
+    async (poi: PoiInfo, entryId: string) => {
+      const [dayPart, placePart] = entryId.split("-");
+      const dayArrayIdx = Number(dayPart) - 1;
+      const placeArrayIdx = Number(placePart);
+      if (
+        !Number.isFinite(dayArrayIdx) ||
+        !Number.isFinite(placeArrayIdx) ||
+        dayArrayIdx < 0 ||
+        placeArrayIdx < 0
+      )
+        return;
+
+      const mapsUrl = (() => {
+        const query = encodeURIComponent(`${poi.name} ${poi.lat},${poi.lng}`);
+        return `https://www.google.com/maps/search/?api=1&query=${query}`;
+      })();
+
+      // 1) Optimistic local update
+      setRecapData((prev) => {
+        if (!prev) return prev;
+        const nextDays = prev.days.map((day, di) => {
+          if (di !== dayArrayIdx) return day;
+          return {
+            ...day,
+            places: day.places.map((place, pi) => {
+              if (pi !== placeArrayIdx) return place;
+              return {
+                ...place,
+                placeName: poi.name,
+                coordinate: { latitude: poi.lat, longitude: poi.lng },
+                categories: poi.category ? [poi.category] : place.categories,
+                externalUrl: mapsUrl,
+              };
+            }),
+          };
+        });
+        return { ...prev, days: nextDays };
+      });
+
+      // 2) Persist to backend
+      setPoiSaving(true);
+      try {
+        const targetEntry = effectiveModel?.days
+          .flatMap((d) => d.entries)
+          .find((e) => e.id === entryId);
+        await updatePlaceInfo({
+          placeKey: targetEntry?.placeKey || entryId,
+          placeName: poi.name,
+          coordinate: { latitude: poi.lat, longitude: poi.lng },
+          categories: poi.category ? [poi.category] : undefined,
+          externalUrl: mapsUrl,
+        });
+      } catch (err) {
+        console.error("[POI update from editor] failed", err);
+      } finally {
+        setPoiSaving(false);
+      }
+    },
+    [effectiveModel],
+  );
 
   /** 13) marker click: focus + jump to day */
   const focusByMarkerId = (markerId: string) => {
@@ -1101,6 +1217,7 @@ function OwnerTripRecapView({
                           entryRefs.current[entryId] = el;
                         }}
                         onEditBlog={handleEditBlog}
+                        onOpenPlaceMapEditor={handleOpenPlaceMapEditor}
                       />
                     </div>
                   );
@@ -1198,6 +1315,28 @@ function OwnerTripRecapView({
       <ScrollToTopButton
         scrollContainerRef={isLg ? leftScrollRef : undefined}
       />
+
+      {editorOpenEntryId &&
+        (() => {
+          const entry = effectiveModel?.days
+            .flatMap((d) => d.entries)
+            .find((e) => e.id === editorOpenEntryId);
+          if (!entry) return null;
+
+          return (
+            <PlaceMapEditorModal
+              entry={entry as any}
+              allEntries={effectiveModel.days.flatMap((d) => d.entries) as any}
+              onPlaceNameChange={(next: string) =>
+                handlePlaceNameChange(entry.id, next)
+              }
+              onPoiConfirm={(poi: PoiInfo) =>
+                handlePoiConfirmFromEditor(poi, entry.id)
+              }
+              onClose={() => setEditorOpenEntryId(null)}
+            />
+          );
+        })()}
     </div>
   );
 }

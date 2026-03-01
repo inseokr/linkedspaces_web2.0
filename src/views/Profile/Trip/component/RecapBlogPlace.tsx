@@ -260,6 +260,26 @@ function RecapPlaceBlock({
   const [placeStoryExpanded, setPlaceStoryExpanded] = useState(false);
   const canTogglePlaceStory = placeStoryTrimmed.length > 160;
 
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+    if (menuOpen) {
+      document.addEventListener("mousedown", handleOutsideClick);
+    }
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, [menuOpen]);
+
+  const placeExternalUrl = useMemo(
+    () => String(entry.externalUrl ?? "").trim(),
+    [entry.externalUrl],
+  );
+
   return (
     <div
       className={[
@@ -332,12 +352,83 @@ function RecapPlaceBlock({
           </div>
         </div>
 
-        <div className="flex items-center gap-3 shrink-0">
-          {entry.categoryLabel && (
-            <span className="hidden sm:inline-block rounded-full bg-sky-50 px-3 py-1 text-[14px] font-semibold text-sky-600">
-              {entry.categoryLabel}
-            </span>
-          )}
+        <div className="flex items-center gap-4 shrink-0">
+          <button
+            type="button"
+            className="inline-flex items-center text-black/70 hover:text-black mt-[1px]"
+            aria-label="Open place link"
+            onClick={() => {
+              if (!placeExternalUrl) return;
+              const normalized = normalizeExternalUrl(placeExternalUrl);
+              if (!normalized) return;
+              try {
+                window.sessionStorage.setItem(
+                  `ls:externalNav:tripRecap`,
+                  String(Date.now()),
+                );
+              } catch {
+                /* ignore */
+              }
+              openExternalUrl(normalized);
+            }}
+            disabled={!placeExternalUrl}
+            title={placeExternalUrl ? "Open link" : "No link available"}
+          >
+            <Link2 className="h-6 w-6" />
+          </button>
+
+          <div
+            className="relative flex items-center justify-center"
+            ref={menuRef}
+          >
+            <button
+              type="button"
+              aria-label="More"
+              className="inline-flex items-center text-black/70 hover:text-black"
+              onClick={() => setMenuOpen(!menuOpen)}
+            >
+              <MoreVertical className="h-6 w-6" />
+            </button>
+
+            {menuOpen && (
+              <div className="absolute right-0 top-full mt-3 w-56 rounded-xl bg-white shadow-[0_4px_24px_rgba(0,0,0,0.15)] border border-black/5 overflow-hidden z-20">
+                <button
+                  type="button"
+                  className="w-full px-5 py-3.5 text-left text-[14px] font-bold text-black border-b border-black/5 hover:bg-black/5 transition-colors"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    onOpenPlaceMapEditor?.(entry.id);
+                  }}
+                >
+                  Edit Place name
+                </button>
+                <button
+                  type="button"
+                  className="w-full px-5 py-3.5 text-left text-[14px] font-bold text-black border-b border-black/5 hover:bg-black/5 transition-colors"
+                  onClick={() => setMenuOpen(false)}
+                >
+                  Manage Photos
+                </button>
+                <button
+                  type="button"
+                  className="w-full px-5 py-3.5 text-left text-[14px] font-bold text-black border-b border-black/5 hover:bg-black/5 transition-colors"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    onEditBlog?.(entry.id);
+                  }}
+                >
+                  Edit Caption & Details
+                </button>
+                <button
+                  type="button"
+                  className="w-full px-5 py-3.5 text-left text-[14px] font-bold text-red-600 hover:bg-red-50 transition-colors"
+                  onClick={() => setMenuOpen(false)}
+                >
+                  Hide from blog
+                </button>
+              </div>
+            )}
+          </div>
 
           {mode === "edit" && (
             <button
@@ -412,15 +503,13 @@ function RecapPlaceBlock({
           layout={photoLayout}
           entryRole={entryRole}
           onEditBlog={onEditBlog}
+          onOpenPlaceMapEditor={onOpenPlaceMapEditor}
         />
       )}
     </div>
   );
 }
 
-/** ----------------------------
- *  View carousel
- *  ---------------------------- */
 function RecapPhotoCarousel({
   entry,
   expanded,
@@ -428,6 +517,7 @@ function RecapPhotoCarousel({
   layout = "default",
   entryRole = "poi",
   onEditBlog,
+  onOpenPlaceMapEditor,
 }: {
   entry: RecapEntry;
   expanded: boolean;
@@ -435,6 +525,7 @@ function RecapPhotoCarousel({
   layout?: "default" | "sheet";
   entryRole?: "start" | "end" | "poi";
   onEditBlog?: (entryId?: string) => void;
+  onOpenPlaceMapEditor?: (entryId: string) => void;
 }) {
   const total = entry.photos.length;
   const [activeIdx, setActiveIdx] = useState(0);
@@ -466,20 +557,28 @@ function RecapPhotoCarousel({
 
   return (
     <div className="relative w-full mx-auto max-w-full lg:max-w-[920px] 2xl:max-w-[1100px]">
-      {/* Start / End label pill above the first photo */}
-      {entryRole !== "poi" && (
-        <div className="mb-2">
-          <span
-            className="inline-flex items-center rounded-full px-3 py-1 text-[13px] font-bold text-white"
-            style={{
-              background:
-                entryRole === "start"
-                  ? "rgb(34, 197, 94)" /* green-500 */
-                  : "rgb(249, 115, 22)" /* orange-500 */,
-            }}
-          >
-            {entryRole === "start" ? "Start" : "End"}
-          </span>
+      {/* Category and Start/End labels pill above the first photo */}
+      {(entryRole !== "poi" || entry.categoryLabel) && (
+        <div className="mb-2 flex items-center gap-2">
+          {entryRole !== "poi" && (
+            <span
+              className="inline-flex items-center rounded-full px-3 py-1 text-[13px] font-bold text-white"
+              style={{
+                background:
+                  entryRole === "start"
+                    ? "rgb(34, 197, 94)" /* green-500 */
+                    : "rgb(249, 115, 22)" /* orange-500 */,
+              }}
+            >
+              {entryRole === "start" ? "Start" : "End"}
+            </span>
+          )}
+
+          {entry.categoryLabel && (
+            <span className="inline-flex items-center rounded-full bg-sky-100 px-3 py-1 text-[13px] font-bold text-sky-600 shadow-sm">
+              {entry.categoryLabel}
+            </span>
+          )}
         </div>
       )}
 
@@ -510,6 +609,7 @@ function RecapPhotoCarousel({
               onToggleExpanded={onToggleExpanded}
               layout={layout}
               onEditBlog={onEditBlog}
+              onOpenPlaceMapEditor={onOpenPlaceMapEditor}
             />
           </div>
         ))}
@@ -554,6 +654,7 @@ function RecapPhotoCard({
   mode = "view",
   layout = "default",
   onEditBlog,
+  onOpenPlaceMapEditor,
 }: {
   entry: RecapEntry;
   photoUrl: string;
@@ -564,6 +665,7 @@ function RecapPhotoCard({
   mode?: Mode;
   layout?: "default" | "sheet";
   onEditBlog?: (entryId?: string) => void;
+  onOpenPlaceMapEditor?: (entryId: string) => void;
 }) {
   const captionText =
     entry.captions?.[photoIndex] ??
@@ -572,34 +674,13 @@ function RecapPhotoCard({
 
   const [captionEl, setCaptionEl] = useState<HTMLParagraphElement | null>(null);
   const [isTruncated, setIsTruncated] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleOutsideClick = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setMenuOpen(false);
-      }
-    };
-    if (menuOpen) {
-      document.addEventListener("mousedown", handleOutsideClick);
-    }
-    return () => document.removeEventListener("mousedown", handleOutsideClick);
-  }, [menuOpen]);
-  const placeExternalUrl = useMemo(
-    () => String(entry.externalUrl ?? "").trim(),
-    [entry.externalUrl],
-  );
 
   const measureTruncation = useCallback(() => {
     if (!captionEl) return;
     if (expanded) {
-      // Expanded view is never "truncated" (we still show "See Less" if it was truncated).
       setIsTruncated(false);
       return;
     }
-
-    // With line-clamp + overflow hidden, scrollHeight/scrollWidth still represent full content.
     const next =
       captionEl.scrollHeight > captionEl.clientHeight + 1 ||
       captionEl.scrollWidth > captionEl.clientWidth + 1;
@@ -607,7 +688,6 @@ function RecapPhotoCard({
   }, [captionEl, expanded]);
 
   useLayoutEffect(() => {
-    // Avoid synchronous setState in effect body (lint rule).
     const raf = requestAnimationFrame(() => measureTruncation());
     return () => cancelAnimationFrame(raf);
   }, [measureTruncation, captionTrimmed, layout]);
@@ -690,84 +770,6 @@ function RecapPhotoCard({
               >
                 {expanded ? "See Less" : "See More"}
               </button>
-            )}
-          </div>
-        </div>
-
-        <div className="flex items-center justify-end gap-5 border-t border-black/10 px-6 py-4">
-          <button
-            type="button"
-            className="inline-flex items-center text-black/70 hover:text-black mb-[2px]"
-            aria-label="Open place link"
-            onClick={() => {
-              if (!placeExternalUrl) return;
-              const normalized = normalizeExternalUrl(placeExternalUrl);
-              if (!normalized) return;
-              // Mark that we intentionally opened an external page, so the recap view can
-              // preserve UI state (avoid refetch/reset) when the user returns.
-              try {
-                window.sessionStorage.setItem(
-                  `ls:externalNav:tripRecap`,
-                  String(Date.now()),
-                );
-              } catch {
-                // ignore
-              }
-              openExternalUrl(normalized);
-            }}
-            disabled={!placeExternalUrl}
-            title={placeExternalUrl ? "Open link" : "No link available"}
-          >
-            <Link2 className="h-6 w-6" />
-          </button>
-
-          <div
-            className="relative flex items-center justify-center text-[20px] font-semibold text-black/80"
-            ref={menuRef}
-          >
-            <button
-              type="button"
-              aria-label="More"
-              className="inline-flex items-center text-black/70 hover:text-black"
-              onClick={() => setMenuOpen(!menuOpen)}
-            >
-              <MoreVertical className="h-6 w-6" />
-            </button>
-
-            {menuOpen && (
-              <div className="absolute right-0 bottom-full mb-3 w-56 rounded-xl bg-white shadow-[0_4px_24px_rgba(0,0,0,0.15)] border border-black/5 overflow-hidden z-20">
-                <button
-                  type="button"
-                  className="w-full px-5 py-3.5 text-left text-[14px] font-bold text-black border-b border-black/5 hover:bg-black/5 transition-colors"
-                  onClick={() => setMenuOpen(false)}
-                >
-                  Edit Place name
-                </button>
-                <button
-                  type="button"
-                  className="w-full px-5 py-3.5 text-left text-[14px] font-bold text-black border-b border-black/5 hover:bg-black/5 transition-colors"
-                  onClick={() => setMenuOpen(false)}
-                >
-                  Manage Photos
-                </button>
-                <button
-                  type="button"
-                  className="w-full px-5 py-3.5 text-left text-[14px] font-bold text-black border-b border-black/5 hover:bg-black/5 transition-colors"
-                  onClick={() => {
-                    setMenuOpen(false);
-                    onEditBlog?.(entry.id);
-                  }}
-                >
-                  Edit Caption & Details
-                </button>
-                <button
-                  type="button"
-                  className="w-full px-5 py-3.5 text-left text-[14px] font-bold text-red-600 hover:bg-red-50 transition-colors"
-                  onClick={() => setMenuOpen(false)}
-                >
-                  Hide from blog
-                </button>
-              </div>
             )}
           </div>
         </div>
