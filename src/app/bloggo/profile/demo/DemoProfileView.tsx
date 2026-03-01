@@ -58,7 +58,7 @@ function RecapYearTabs({
             className={[
               "rounded-full px-5 py-2.5 text-[14px] font-bold leading-none transition-all duration-200",
               selected
-                ? "bg-black text-white shadow-md shadow-black/10 scale-[1.05]"
+                ? "bg-sky-500 text-white shadow-md shadow-sky-500/20 scale-[1.05]"
                 : "text-black/40 hover:text-black/70 hover:bg-black/5",
               "focus:outline-none",
             ].join(" ")}
