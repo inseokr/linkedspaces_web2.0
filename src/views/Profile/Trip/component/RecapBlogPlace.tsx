@@ -358,8 +358,10 @@ function RecapPlaceBlock({
             className="inline-flex items-center text-black/70 hover:text-black mt-[1px]"
             aria-label="Open place link"
             onClick={() => {
-              if (!placeExternalUrl) return;
-              const normalized = normalizeExternalUrl(placeExternalUrl);
+              const targetUrl =
+                placeExternalUrl ||
+                `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(entry.placeName)}`;
+              const normalized = normalizeExternalUrl(targetUrl);
               if (!normalized) return;
               try {
                 window.sessionStorage.setItem(
@@ -371,8 +373,7 @@ function RecapPlaceBlock({
               }
               openExternalUrl(normalized);
             }}
-            disabled={!placeExternalUrl}
-            title={placeExternalUrl ? "Open link" : "No link available"}
+            title={placeExternalUrl ? "Open link" : "Open in Google Maps"}
           >
             <Link2 className="h-6 w-6" />
           </button>
