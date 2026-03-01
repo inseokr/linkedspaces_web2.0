@@ -10,11 +10,12 @@ import {
 } from "react";
 import Link from "next/link";
 import { use } from "react";
-import { notFound } from "next/navigation";
+import { notFound, useRouter } from "next/navigation";
 
 import { getBlogBySlug } from "@/bloggo/lib/mock-data";
 
 // ── Reuse the exact same Trip-page components ─────────────────────────────────
+import RecapBlogTopBar from "@/views/Profile/Trip/section/RecapBlogTopBar";
 import RecapBlogHero from "@/views/Profile/Trip/component/RecapBlogTopImage";
 import { RecapBlogDaySection } from "@/views/Profile/Trip/component/RecapBlogPlace";
 import RecapDayTabs, {
@@ -23,6 +24,7 @@ import RecapDayTabs, {
 import MapboxMap, {
   type MarkerData,
 } from "@/views/Profile/travel-stats/components/MapBoxMap";
+import ScrollToTopButton from "@/components/ui/ScrollToTopButton";
 
 // ── Layout constants (mirrors OwnerTripRecapView / GuestRecapPage) ─────────────
 const TOPBAR_OFFSET_PX = 200;
@@ -46,6 +48,7 @@ function useIsDesktopLg() {
 }
 
 export default function DemoBlogDetailView({ params }: Props) {
+  const router = useRouter();
   const { slug } = use(params);
   const blog = getBlogBySlug(slug);
   if (!blog) notFound();
@@ -64,6 +67,7 @@ export default function DemoBlogDetailView({ params }: Props) {
       authorName: blog.author.name,
       postedLabel: `@${blog.author.username}`,
       avatarUrl: blog.author.avatar,
+      lastEditedAt: "2 hrs ago",
     }),
     [blog],
   );
@@ -405,46 +409,28 @@ export default function DemoBlogDetailView({ params }: Props) {
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-white">
-      {/* Back link bar */}
-      <div className="sticky top-0 z-30 border-b border-black/10 bg-white/95 backdrop-blur-md">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex h-12 items-center gap-4">
-            <Link
-              href="/bloggo/profile/demo"
-              className="inline-flex items-center gap-1.5 text-sm font-medium text-sky-600 hover:text-sky-500 transition-colors"
-            >
-              <svg
-                className="h-4 w-4"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M15 19l-7-7 7-7"
-                />
-              </svg>
-              Back to profile
-            </Link>
-          </div>
-        </div>
-      </div>
+    <div className="min-h-screen bg-[#F5F5F7]">
+      <RecapBlogTopBar
+        title={blog.title}
+        onGoBack={() => router.push("/bloggo/profile/demo")}
+        brand="bloggo"
+      />
 
-      <div className="p-3 sm:p-4">
-        {/* Hero */}
+      <div className="p-3 sm:p-5">
         <RecapBlogHero {...hero} />
 
         {/* Mobile day tabs */}
         {!isLg && (
-          <div className="sticky top-12 z-20 mt-3 overflow-x-auto rounded-2xl border border-black/10 bg-white/95 p-3 shadow-sm backdrop-blur-md">
-            <RecapDayTabs
-              tabs={dayTabs}
-              activeId={activeDayId}
-              onChange={(id) => handleDayChange(id)}
-            />
+          <div className="sticky top-[48px] z-20 border-b border-black/10 bg-white/80 backdrop-blur-md">
+            <div className="w-full px-3 py-2">
+              <RecapDayTabs
+                tabs={dayTabs}
+                activeId={activeDayId}
+                onChange={(id) => handleDayChange(id)}
+                size="sm"
+                className="max-w-full"
+              />
+            </div>
           </div>
         )}
       </div>
@@ -458,7 +444,7 @@ export default function DemoBlogDetailView({ params }: Props) {
         >
           <div
             ref={leftScrollRef}
-            className="w-full overflow-y-auto overscroll-contain touch-pan-y rounded-2xl"
+            className="w-full overflow-y-auto overscroll-contain touch-pan-y rounded-2xl scrollbar-hide [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
             style={{
               height: isLg ? PANEL_HEIGHT : "auto",
               maxHeight: isLg ? undefined : "none",
@@ -513,22 +499,23 @@ export default function DemoBlogDetailView({ params }: Props) {
               onPlaceMarkerClick={onMarkerClick}
               activePlaceMarkerId={activeEntryId ?? undefined}
               useSimpleMarkers
+              overlayTopRight={
+                <div className="rounded-full bg-white/70 backdrop-blur-md border border-white/50 px-2 py-2 shadow-sm">
+                  <RecapDayTabs
+                    tabs={dayTabs}
+                    activeId={activeDayId}
+                    onChange={(id) => handleDayChange(id)}
+                    className="max-w-[min(72vw,420px)] [&>button]:!h-7 [&>button]:!px-3 [&>button]:!text-[13px]"
+                  />
+                </div>
+              }
             />
-
-            {/* Day tabs — absolute overlay, top-right corner of the map */}
-            <div className="pointer-events-auto absolute right-3 top-3 z-10">
-              <div className="rounded-2xl border border-black/10 bg-white/90 p-2 shadow-lg backdrop-blur-md">
-                <RecapDayTabs
-                  tabs={dayTabs}
-                  activeId={activeDayId}
-                  onChange={(id) => handleDayChange(id)}
-                  size="sm"
-                />
-              </div>
-            </div>
           </div>
         </section>
       </div>
+      <ScrollToTopButton
+        scrollContainerRef={isLg ? leftScrollRef : undefined}
+      />
     </div>
   );
 }

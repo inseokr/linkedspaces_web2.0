@@ -33,12 +33,14 @@ import MapboxMap, {
   type PoiInfo,
 } from "@/views/Profile/travel-stats/components/MapBoxMap";
 import PoiUpdatePopup from "@/views/Profile/Trip/component/PoiUpdatePopup";
+import PlaceMapEditorModal from "@/views/Profile/Trip/component/PlaceMapEditorModal";
 import { updatePlaceInfo } from "@/api/user";
 
 import { mapTripRecapToPageModel } from "@/views/Profile/Trip/utils/mapTripRecap";
 import { resolveTripCoverUrl } from "@/views/Profile/recap-blogs/utils/tripDataTransform";
 import BottomSheet from "@/components/ui/BottomSheet";
 import { RecapBlogEntryCard } from "@/views/Profile/Trip/component/RecapBlogPlace";
+import ScrollToTopButton from "@/components/ui/ScrollToTopButton";
 
 interface TripRecapViewProps {
   userId: string;
@@ -214,9 +216,12 @@ function OwnerTripRecapView({
   const [error, setError] = useState<string | null>(null);
 
   /** Layout */
-  const TOPBAR_OFFSET_PX = 250;
-  const PANEL_HEIGHT_OFFSET = 220;
-  const PANEL_HEIGHT = `calc(100vh - ${PANEL_HEIGHT_OFFSET}px)`;
+  const BLOG_TOP_OFFSET_PX = 120;
+  const MAP_TOP_OFFSET_PX = 152;
+  const BLOG_HEIGHT_OFFSET_PX = 145;
+  const MAP_HEIGHT_OFFSET_PX = 176;
+  const BLOG_HEIGHT = `calc(100vh - ${BLOG_HEIGHT_OFFSET_PX}px)`;
+  const MAP_HEIGHT = `calc(100vh - ${MAP_HEIGHT_OFFSET_PX}px)`;
 
   /** Refs */
   const leftScrollRef = useRef<HTMLDivElement | null>(null);
@@ -245,7 +250,26 @@ function OwnerTripRecapView({
     () => `tripRecapScroll:${String(userId)}:${String(tripId)}`,
     [userId, tripId],
   );
+  const scrollResetKey = useMemo(
+    () => `${scrollStateKey}:reset`,
+    [scrollStateKey],
+  );
   const externalNavKey = useMemo(() => `ls:externalNav:tripRecap`, []);
+
+  const handleEditBlog = useCallback(
+    (entryId?: string) => {
+      try {
+        window.sessionStorage.setItem(scrollResetKey, "true");
+      } catch {
+        /* ignore */
+      }
+      const scrollToParam = entryId ? `?scrollTo=${entryId}` : "";
+      router.push(
+        `${basePath || "/trip"}/${userId}/${tripId}/edit${scrollToParam}`,
+      );
+    },
+    [basePath, scrollResetKey, userId, tripId, router],
+  );
 
   const shouldSkipReturnRefetch = useCallback(() => {
     // Returning from an external tab should not reset the UI state.
@@ -285,6 +309,9 @@ function OwnerTripRecapView({
     targetEntryId: string;
   } | null>(null);
   const [poiSaving, setPoiSaving] = useState(false);
+  const [editorOpenEntryId, setEditorOpenEntryId] = useState<string | null>(
+    null,
+  );
 
   /** 1) Fetch */
   const fetchRecap = useCallback(async () => {
@@ -425,19 +452,22 @@ function OwnerTripRecapView({
         ? startingYear
         : Number(startingYear)) || new Date().getFullYear();
 
-    return effectiveModel.days.flatMap((d) =>
-      d.entries.map((e: any, idx: number) => ({
-        id: e.id,
-        lat: e.coordinate?.latitude ?? baseCenter.lat,
-        lng: e.coordinate?.longitude ?? baseCenter.lng,
-        year: travelYear,
-        label: e.placeName,
-        imageUrl: e.photos?.[0] ?? "/images/avatar.png",
-        visitIndex: idx + 1,
-        visitTimeText: e.timeRangeText ?? "",
-        externalUrl: e.externalUrl,
-      })),
-    );
+    return effectiveModel.days.flatMap((d) => {
+      return d.entries.map((e: any) => {
+        return {
+          id: e.id,
+          lat: e.coordinate?.latitude ?? baseCenter.lat,
+          lng: e.coordinate?.longitude ?? baseCenter.lng,
+          year: travelYear,
+          label: e.placeName,
+          imageUrl: e.photos?.[0] ?? "/images/avatar.png",
+          visitIndex: e.visitIndex,
+          visitTimeText: e.timeRangeText ?? "",
+          externalUrl: e.externalUrl,
+          markerRole: e.markerRole,
+        };
+      });
+    });
   }, [effectiveModel, baseCenter, recapData?.trip?.startingYear]);
 
   const activeDayMarkers = useMemo<MarkerData[]>(() => {
@@ -622,6 +652,13 @@ function OwnerTripRecapView({
 
     let parsed: any = null;
     try {
+      const resetFlag = window.sessionStorage.getItem(scrollResetKey);
+      if (resetFlag === "true") {
+        window.sessionStorage.removeItem(scrollResetKey);
+        window.sessionStorage.removeItem(scrollStateKey);
+        return;
+      }
+
       const raw = window.sessionStorage.getItem(scrollStateKey);
       if (!raw) return;
       parsed = JSON.parse(raw);
@@ -669,7 +706,7 @@ function OwnerTripRecapView({
     ) {
       setFocusLatLng({ lat: savedFocus.lat, lng: savedFocus.lng });
     }
-  }, [effectiveModel, scrollStateKey, dayTabs]);
+  }, [effectiveModel, scrollStateKey, scrollResetKey, dayTabs]);
 
   /** 10) initial scroll stabilization (친구 로직 유지) */
   useLayoutEffect(() => {
@@ -851,6 +888,118 @@ function OwnerTripRecapView({
       setPoiSaving(false);
     }
   }, [pendingPoi, recapData]);
+  const handleOpenPlaceMapEditor = useCallback((entryId: string) => {
+    setEditorOpenEntryId(entryId);
+  }, []);
+
+  const handlePlaceNameChange = useCallback(
+    (entryId: string, nextName: string) => {
+      // Optimistic local update
+      setRecapData((prev: TripRecapResponse | null) => {
+        if (!prev) return prev;
+        const [dayPart, placePart] = entryId.split("-");
+        const dayArrayIdx = Number(dayPart) - 1;
+        const placeArrayIdx = Number(placePart);
+        if (
+          !Number.isFinite(dayArrayIdx) ||
+          !Number.isFinite(placeArrayIdx) ||
+          dayArrayIdx < 0 ||
+          placeArrayIdx < 0
+        )
+          return prev;
+
+        const nextDays = prev.days.map((day, di) => {
+          if (di !== dayArrayIdx) return day;
+          return {
+            ...day,
+            places: day.places.map((place, pi) => {
+              if (pi !== placeArrayIdx) return place;
+              return { ...place, placeName: nextName };
+            }),
+          };
+        });
+        return { ...prev, days: nextDays };
+      });
+
+      // Persist to backend (debounced or immediate, here immediate for simplicity)
+      const entry = effectiveModel?.days
+        .flatMap((d) => d.entries)
+        .find((e) => e.id === entryId);
+      if (entry) {
+        updatePlaceInfo({
+          placeKey: entry.placeKey || entryId,
+          placeName: nextName,
+          coordinate: {
+            latitude: entry.coordinate?.latitude || 0,
+            longitude: entry.coordinate?.longitude || 0,
+          },
+        }).catch((err) => console.error("[Place update] failed", err));
+      }
+    },
+    [effectiveModel],
+  );
+
+  const handlePoiConfirmFromEditor = useCallback(
+    async (poi: PoiInfo, entryId: string) => {
+      const [dayPart, placePart] = entryId.split("-");
+      const dayArrayIdx = Number(dayPart) - 1;
+      const placeArrayIdx = Number(placePart);
+      if (
+        !Number.isFinite(dayArrayIdx) ||
+        !Number.isFinite(placeArrayIdx) ||
+        dayArrayIdx < 0 ||
+        placeArrayIdx < 0
+      )
+        return;
+
+      const mapsUrl = (() => {
+        const query = encodeURIComponent(`${poi.name} ${poi.lat},${poi.lng}`);
+        return `https://www.google.com/maps/search/?api=1&query=${query}`;
+      })();
+
+      // 1) Optimistic local update
+      setRecapData((prev) => {
+        if (!prev) return prev;
+        const nextDays = prev.days.map((day, di) => {
+          if (di !== dayArrayIdx) return day;
+          return {
+            ...day,
+            places: day.places.map((place, pi) => {
+              if (pi !== placeArrayIdx) return place;
+              return {
+                ...place,
+                placeName: poi.name,
+                coordinate: { latitude: poi.lat, longitude: poi.lng },
+                categories: poi.category ? [poi.category] : place.categories,
+                externalUrl: mapsUrl,
+              };
+            }),
+          };
+        });
+        return { ...prev, days: nextDays };
+      });
+
+      // 2) Persist to backend
+      setPoiSaving(true);
+      try {
+        const targetEntry = effectiveModel?.days
+          .flatMap((d) => d.entries)
+          .find((e) => e.id === entryId);
+        await updatePlaceInfo({
+          placeKey: targetEntry?.placeKey || entryId,
+          placeName: poi.name,
+          coordinate: { latitude: poi.lat, longitude: poi.lng },
+          categories: poi.category ? [poi.category] : undefined,
+          externalUrl: mapsUrl,
+        });
+      } catch (err) {
+        console.error("[POI update from editor] failed", err);
+      } finally {
+        setPoiSaving(false);
+      }
+    },
+    [effectiveModel],
+  );
 
   /** 13) marker click: focus + jump to day */
   const focusByMarkerId = (markerId: string) => {
@@ -894,24 +1043,20 @@ function OwnerTripRecapView({
       if (!mapEl) return;
 
       const rect = mapEl.getBoundingClientRect();
-      const pinnedNow = rect.top <= TOPBAR_OFFSET_PX + 1;
+      const pinnedNow = rect.top <= MAP_TOP_OFFSET_PX + 1;
       if (!pinnedNow) return;
 
       const mapWrap = mapContainerRef.current;
       const isOnMap = !!(mapWrap && mapWrap.contains(e.target as Node));
 
-      // ctrl+wheel => map zoom 허용
-      if (isOnMap && e.ctrlKey) return;
+      // If hovering over the map, do not hijack the scroll event.
+      // Let Mapbox handle the wheel event to zoom in/out freely.
+      if (isOnMap) return;
 
       // left panel 더 못 가면 window scroll 허용
       if (!canScrollLeftPanel(delta)) return;
 
       e.preventDefault();
-
-      if (isOnMap) {
-        e.stopPropagation();
-        (e as any).stopImmediatePropagation?.();
-      }
 
       root.scrollTop += delta * 0.6;
     };
@@ -924,7 +1069,37 @@ function OwnerTripRecapView({
       window.removeEventListener("wheel", onWheel, opts);
       document.removeEventListener("wheel", onWheel, opts);
     };
-  }, [TOPBAR_OFFSET_PX, userInteracted, allMarkers]);
+  }, [MAP_TOP_OFFSET_PX, userInteracted, allMarkers]);
+
+  /** 15) lock left panel scroll until pinned */
+  useLayoutEffect(() => {
+    const leftPanel = leftScrollRef.current;
+    if (!leftPanel) return;
+
+    let ticking = false;
+    const updateLock = () => {
+      const mapEl = mapStickyRef.current;
+      if (!mapEl) return;
+      const rect = mapEl.getBoundingClientRect();
+      const isPinned = rect.top <= MAP_TOP_OFFSET_PX + 1;
+
+      leftPanel.style.overflowY = isPinned ? "auto" : "hidden";
+    };
+
+    const onScroll = () => {
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          updateLock();
+          ticking = false;
+        });
+        ticking = true;
+      }
+    };
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+    updateLock(); // init
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [MAP_TOP_OFFSET_PX]);
 
   /** render */
   // Only block-render on the very first load.
@@ -951,7 +1126,7 @@ function OwnerTripRecapView({
           .find((e) => e.id === mobilePlaceSheetEntryId) ?? null);
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-[#F5F5F7]">
       <RecapBlogTopBar
         title="Recap Blog"
         shareUrl={(() => {
@@ -969,16 +1144,31 @@ function OwnerTripRecapView({
         dayTabs={dayTabs}
         activeDayId={activeDayId}
         onDayChange={(id) => handleDayChange(id, true)}
-        onGoBack={() => window.history.back()}
-        onEditBlog={() =>
-          router.push(`${basePath || "/trip"}/${userId}/${tripId}/edit`)
-        }
+        onGoBack={() => {
+          if (window.history.length > 2) {
+            window.history.back();
+          } else {
+            router.push(
+              brand === "bloggo"
+                ? `/bloggo/profile/${userId}`
+                : `/profile/${userId}`,
+            );
+          }
+        }}
+        onEditBlog={handleEditBlog}
         brand={brand}
-        className="sticky top-0 z-50 border-b border-black/10"
+        className="sticky top-[64px] z-50"
       />
 
-      <div className="space-y-10 p-6">
-        {heroProps && <RecapBlogHero {...heroProps} />}
+      <div className="flex flex-col gap-[70px] px-6 pb-6 pt-2">
+        {heroProps && (
+          <div className="-mt-[30px]">
+            <RecapBlogHero
+              {...heroProps}
+              lastEditedAt={effectiveModel?.hero.lastEditedAt}
+            />
+          </div>
+        )}
 
         {(loading || error) && (
           <div className="rounded-2xl border border-black/10 bg-black/[0.02] p-4 text-sm">
@@ -988,18 +1178,23 @@ function OwnerTripRecapView({
         )}
 
         <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
-          {/* Left */}
           <section
-            className="min-w-0 flex-1 sticky self-start"
-            style={{ top: TOPBAR_OFFSET_PX }}
+            className="min-w-0 flex-1 sticky self-start relative"
+            style={{ top: BLOG_TOP_OFFSET_PX }}
           >
+            {effectiveModel.hero.lastEditedAt && (
+              <div className="absolute left-2 -top-6 text-[11px] font-bold text-black/40 tracking-[0.15em] uppercase pointer-events-none">
+                Last Edited {effectiveModel.hero.lastEditedAt}
+              </div>
+            )}
             <div
               ref={leftScrollRef}
-              className="w-full overflow-y-auto overscroll-contain touch-pan-y rounded-2xl"
+              className="w-full touch-pan-y rounded-2xl"
               style={{
-                height: PANEL_HEIGHT,
+                height: BLOG_HEIGHT,
                 scrollBehavior: "auto",
                 overflowAnchor: "none",
+                overflowY: "hidden", // Default to hidden until JS overrides
               }}
             >
               <div className="space-y-12 p-4">
@@ -1021,6 +1216,8 @@ function OwnerTripRecapView({
                         onEntryMount={(entryId, el) => {
                           entryRefs.current[entryId] = el;
                         }}
+                        onEditBlog={handleEditBlog}
+                        onOpenPlaceMapEditor={handleOpenPlaceMapEditor}
                       />
                     </div>
                   );
@@ -1034,13 +1231,13 @@ function OwnerTripRecapView({
             ref={(el) => {
               mapStickyRef.current = el;
             }}
-            className="min-w-0 flex-1 sticky self-start"
-            style={{ top: TOPBAR_OFFSET_PX }}
+            className="min-w-0 flex-1 sticky self-start relative"
+            style={{ top: MAP_TOP_OFFSET_PX }}
           >
             <div
               ref={mapContainerRef}
               className="relative w-full overflow-hidden rounded-2xl border border-black/10"
-              style={{ height: isLg ? PANEL_HEIGHT : "45dvh" }}
+              style={{ height: isLg ? MAP_HEIGHT : "45dvh" }}
             >
               <MapboxMap
                 mode="place"
@@ -1111,6 +1308,32 @@ function OwnerTripRecapView({
               saving={poiSaving}
               onConfirm={handlePoiConfirm}
               onCancel={() => setPendingPoi(null)}
+            />
+          );
+        })()}
+
+      <ScrollToTopButton
+        scrollContainerRef={isLg ? leftScrollRef : undefined}
+      />
+
+      {editorOpenEntryId &&
+        (() => {
+          const entry = effectiveModel?.days
+            .flatMap((d) => d.entries)
+            .find((e) => e.id === editorOpenEntryId);
+          if (!entry) return null;
+
+          return (
+            <PlaceMapEditorModal
+              entry={entry as any}
+              allEntries={effectiveModel.days.flatMap((d) => d.entries) as any}
+              onPlaceNameChange={(next: string) =>
+                handlePlaceNameChange(entry.id, next)
+              }
+              onPoiConfirm={(poi: PoiInfo) =>
+                handlePoiConfirmFromEditor(poi, entry.id)
+              }
+              onClose={() => setEditorOpenEntryId(null)}
             />
           );
         })()}

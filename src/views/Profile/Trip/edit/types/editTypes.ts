@@ -8,6 +8,7 @@ export type PlaceDraft = {
   /** Backend identifier for /placeVisitHistory/story (usually digitizedTime). */
   placeKey: string;
   placeName: string;
+  originalPlaceName?: string;
   timeRangeText?: string;
   categoryLabel?: string;
   /** Place-level story (not photo caption). */
@@ -17,6 +18,13 @@ export type PlaceDraft = {
   captions: string[];
   coordinate?: { latitude: number; longitude: number };
   status?: "saved" | "hidden" | "deleted" | string;
+  originalIndex?: number;
+  isHidden?: boolean;
+  hiddenAt?: number;
+  anchorBeforeId?: string;
+  anchorAfterId?: string;
+  visitIndex?: number;
+  markerRole?: "start" | "end" | "poi";
 };
 
 export type DayDraft = {

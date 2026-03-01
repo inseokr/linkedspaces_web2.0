@@ -11,7 +11,6 @@ import React, {
 import Image from "next/image";
 import {
   MapPin,
-  ThumbsUp,
   Bookmark,
   Link2,
   Heart,
@@ -19,11 +18,13 @@ import {
   MoreVertical,
   ChevronLeft,
   ChevronRight,
+  Pencil,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 
 import PhotoLightbox from "@/components/ui/PhotoLightbox";
 import { idbGetBlob } from "@/views/Profile/Trip/edit/utils/imageIdb";
-import TextRow from "@/views/Profile/Trip/edit/components/TextRow";
 import { normalizeExternalUrl, openExternalUrl } from "@/utils/externalLinks";
 
 /** ----------------------------
@@ -37,6 +38,7 @@ export type RecapEntry = {
    */
   placeKey?: string;
   placeName: string;
+  originalPlaceName?: string;
   /** Optional place deep link (e.g., Google Maps / website). */
   externalUrl?: string;
   timeRangeText: string;
@@ -58,6 +60,8 @@ export type RecapEntry = {
   photos: string[];
 
   coordinate?: { latitude: number; longitude: number };
+  markerRole?: "start" | "end" | "poi";
+  visitIndex?: number;
 };
 
 export type RecapDay = {
@@ -76,6 +80,7 @@ export type RecapBlogPageData = {
     postedLabel: string;
     avatarUrl?: string;
     placesCount?: number;
+    lastEditedAt?: string;
   };
   days: RecapDay[];
 };
@@ -94,7 +99,13 @@ type Props = {
   onCaptionChange?: (entryId: string, photoIndex: number, next: string) => void;
   onRemovePhoto?: (entryId: string, photoIndex: number) => void;
 
+  /** Edit mode: open the Mapbox place editor popup for a given entry */
+  onOpenPlaceMapEditor?: (entryId: string) => void;
+
   onEntryMount?: (entryId: string, el: HTMLDivElement | null) => void;
+  onEditBlog?: (entryId?: string) => void;
+  hiddenCount?: number;
+  onOpenHiddenPlaces?: () => void;
 };
 
 // Collapsed caption preview:
@@ -115,7 +126,11 @@ export function RecapBlogDaySection({
   onTogglePlaceHide,
   onCaptionChange,
   onRemovePhoto,
+  onOpenPlaceMapEditor,
   onEntryMount,
+  onEditBlog,
+  hiddenCount,
+  onOpenHiddenPlaces,
 }: Props) {
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
@@ -128,31 +143,55 @@ export function RecapBlogDaySection({
   };
 
   return (
-    <section className="space-y-6">
-      <div className='text-black text-left font-["Nunito_Sans"] text-[28px] sm:text-[40px] font-bold leading-normal'>
-        Day {dayIndex}: {title}
+    <section className="space-y-8">
+      <div className="flex flex-col items-start gap-1 w-full">
+        <span className="text-[14px] font-bold text-black/30 tracking-[0.2em] uppercase">
+          Day {dayIndex}
+        </span>
+        <div className="flex items-center justify-between w-full">
+          <h2 className='text-black font-["Inter"] text-[32px] sm:text-[44px] font-extrabold tracking-tight leading-[1.1]'>
+            {title}
+          </h2>
+          {mode === "edit" && (hiddenCount ?? 0) > 0 && (
+            <button
+              type="button"
+              onClick={onOpenHiddenPlaces}
+              className="group flex items-center gap-1.5 shrink-0 rounded-full border border-black/10 bg-black/[0.03] px-3.5 py-1.5 text-[14px] font-bold text-black/70 hover:bg-black/[0.06] hover:text-black transition-colors"
+            >
+              <EyeOff className="h-4 w-4 text-black/40 group-hover:text-black/60 transition-colors" />
+              Hidden Places ({hiddenCount})
+            </button>
+          )}
+        </div>
+        <div className="mt-4 h-[1px] w-12 bg-black/10" />
       </div>
 
-      <div className="space-y-10">
-        {entries.map((entry) => (
-          <div
-            key={entry.id}
-            ref={(el) => onEntryMount?.(entry.id, el)}
-            data-entry-id={entry.id}
-          >
-            <RecapPlaceBlock
-              entry={entry}
-              expanded={expandedIds.has(entry.id)}
-              onToggleExpanded={() => toggleExpanded(entry.id)}
-              mode={mode}
-              onPlaceStoryChange={onPlaceStoryChange}
-              onPlaceNameChange={onPlaceNameChange}
-              onTogglePlaceHide={onTogglePlaceHide}
-              onCaptionChange={onCaptionChange}
-              onRemovePhoto={onRemovePhoto}
-            />
-          </div>
-        ))}
+      <div className="space-y-6">
+        {entries.map((entry) => {
+          const entryRole = entry.markerRole ?? "poi";
+          return (
+            <div
+              key={entry.id}
+              ref={(el) => onEntryMount?.(entry.id, el)}
+              data-entry-id={entry.id}
+            >
+              <RecapPlaceBlock
+                entry={entry}
+                expanded={expandedIds.has(entry.id)}
+                onToggleExpanded={() => toggleExpanded(entry.id)}
+                mode={mode}
+                entryRole={entryRole}
+                onPlaceStoryChange={onPlaceStoryChange}
+                onPlaceNameChange={onPlaceNameChange}
+                onTogglePlaceHide={onTogglePlaceHide}
+                onCaptionChange={onCaptionChange}
+                onRemovePhoto={onRemovePhoto}
+                onOpenPlaceMapEditor={onOpenPlaceMapEditor}
+                onEditBlog={onEditBlog}
+              />
+            </div>
+          );
+        })}
       </div>
     </section>
   );
@@ -193,95 +232,224 @@ function RecapPlaceBlock({
   expanded,
   onToggleExpanded,
   mode,
+  entryRole = "poi",
   onPlaceStoryChange,
   onPlaceNameChange,
   onTogglePlaceHide,
   onCaptionChange,
   onRemovePhoto,
+  onOpenPlaceMapEditor,
+  onEditBlog,
   photoLayout = "default",
 }: {
   entry: RecapEntry;
   expanded: boolean;
   onToggleExpanded: () => void;
   mode: Mode;
+  entryRole?: "start" | "end" | "poi";
   onPlaceStoryChange?: (entryId: string, next: string) => void;
   onPlaceNameChange?: (entryId: string, next: string) => void;
   onTogglePlaceHide?: (entryId: string) => void;
   onCaptionChange?: (entryId: string, photoIndex: number, next: string) => void;
   onRemovePhoto?: (entryId: string, photoIndex: number) => void;
+  onOpenPlaceMapEditor?: (entryId: string) => void;
+  onEditBlog?: (entryId?: string) => void;
   photoLayout?: "default" | "sheet";
 }) {
   const placeStoryTrimmed = (entry.placeStory ?? "").trim();
   const [placeStoryExpanded, setPlaceStoryExpanded] = useState(false);
   const canTogglePlaceStory = placeStoryTrimmed.length > 160;
 
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+    if (menuOpen) {
+      document.addEventListener("mousedown", handleOutsideClick);
+    }
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, [menuOpen]);
+
+  const placeExternalUrl = useMemo(
+    () => String(entry.externalUrl ?? "").trim(),
+    [entry.externalUrl],
+  );
+
   return (
-    <div className="space-y-4">
+    <div
+      className={[
+        "space-y-5 bg-white rounded-2xl border border-slate-100 p-6 md:p-8",
+        "shadow-[0_2px_12px_-4px_rgba(0,0,0,0.06)]",
+        "transition-shadow duration-300",
+        mode === "edit"
+          ? "hover:shadow-[0_8px_24px_-8px_rgba(0,0,0,0.10)] focus-within:ring-2 focus-within:ring-blue-500/20"
+          : "",
+      ].join(" ")}
+    >
       {/* Header: Place Name and Time/Category/Actions */}
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-3">
-            <MapPin className="h-7 w-7 text-[#B84A2F] shrink-0" />
-            <div className="min-w-0 flex-1">
-              {mode === "edit" ? (
-                <input
-                  type="text"
-                  value={entry.placeName}
-                  onChange={(e) =>
-                    onPlaceNameChange?.(entry.id, e.target.value)
-                  }
-                  placeholder="Enter place name"
-                  className="w-full bg-transparent text-[24px] font-extrabold text-black underline underline-offset-4 focus:outline-none focus:ring-2 focus:ring-sky-500/20 rounded-lg p-1"
-                />
-              ) : (
-                <div className="truncate text-[24px] font-extrabold text-black underline underline-offset-4">
-                  {entry.placeName}
+          <div className="flex flex-col items-start gap-1">
+            <div className="flex items-center gap-3 sm:gap-4 w-full min-w-0">
+              {typeof entry.visitIndex === "number" && (
+                <div
+                  className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[14px] font-bold text-white sm:h-8 sm:w-8 ${
+                    entryRole === "start"
+                      ? "bg-green-500"
+                      : entryRole === "end"
+                        ? "bg-orange-500"
+                        : "bg-blue-500"
+                  }`}
+                >
+                  {entry.visitIndex}
                 </div>
               )}
-            </div>
-          </div>
-          {/* If no photos exist, keep time visible here as fallback */}
-          {(!entry.photos || entry.photos.length === 0) &&
-            !!entry.timeRangeText?.trim() && (
-              <div className="mt-1 ml-10 text-[16px] font-medium text-black/70">
-                {entry.timeRangeText}
+              <div className="min-w-0 w-full flex-1">
+                {mode === "edit" ? (
+                  <button
+                    type="button"
+                    onClick={() => onOpenPlaceMapEditor?.(entry.id)}
+                    className="group flex items-center gap-2 text-left w-full rounded-lg px-1 py-0.5 hover:bg-black/[0.03] transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500/20"
+                    title="Click to open map and edit location"
+                  >
+                    <span className="truncate text-[24px] sm:text-[32px] font-extrabold text-black tracking-tight">
+                      {entry.placeName || (
+                        <span className="text-black/30">Enter place name…</span>
+                      )}
+                    </span>
+                    <Pencil className="shrink-0 h-4 w-4 text-black/30 group-hover:text-black/60 transition-colors mt-1" />
+                  </button>
+                ) : (
+                  <a
+                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                      entry.placeName,
+                    )}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:opacity-80 transition-opacity"
+                  >
+                    <h3 className="truncate text-[24px] sm:text-[32px] font-extrabold text-black tracking-tight">
+                      {entry.placeName}
+                    </h3>
+                  </a>
+                )}
               </div>
-            )}
+            </div>
+            {/* If no photos exist, keep time visible here as fallback */}
+            {(!entry.photos || entry.photos.length === 0) &&
+              !!entry.timeRangeText?.trim() && (
+                <div
+                  className={`text-[14px] font-bold text-black/30 tracking-tight ${typeof entry.visitIndex === "number" ? "pl-10 sm:pl-12" : ""}`}
+                >
+                  {entry.timeRangeText}
+                </div>
+              )}
+          </div>
         </div>
 
-        <div className="flex items-center gap-3 shrink-0">
-          {entry.categoryLabel && (
-            <span className="hidden sm:inline-block rounded-full bg-black/5 px-3 py-1 text-[14px] font-semibold text-black/60">
-              {entry.categoryLabel}
-            </span>
-          )}
+        <div className="flex items-center gap-4 shrink-0">
           <button
             type="button"
-            className={[
-              "inline-flex h-11 w-11 items-center justify-center rounded-full",
-              entry.liked
-                ? "bg-emerald-200 text-emerald-900"
-                : "bg-black/5 text-black/60",
-            ].join(" ")}
-            aria-label="Like"
+            className="inline-flex items-center text-black/70 hover:text-black mt-[1px]"
+            aria-label="Open place link"
+            onClick={() => {
+              if (!placeExternalUrl) return;
+              const normalized = normalizeExternalUrl(placeExternalUrl);
+              if (!normalized) return;
+              try {
+                window.sessionStorage.setItem(
+                  `ls:externalNav:tripRecap`,
+                  String(Date.now()),
+                );
+              } catch {
+                /* ignore */
+              }
+              openExternalUrl(normalized);
+            }}
+            disabled={!placeExternalUrl}
+            title={placeExternalUrl ? "Open link" : "No link available"}
           >
-            <ThumbsUp className="h-6 w-6" />
+            <Link2 className="h-6 w-6" />
           </button>
+
+          <div
+            className="relative flex items-center justify-center"
+            ref={menuRef}
+          >
+            <button
+              type="button"
+              aria-label="More"
+              className="inline-flex items-center text-black/70 hover:text-black"
+              onClick={() => setMenuOpen(!menuOpen)}
+            >
+              <MoreVertical className="h-6 w-6" />
+            </button>
+
+            {menuOpen && (
+              <div className="absolute right-0 top-full mt-3 w-56 rounded-xl bg-white shadow-[0_4px_24px_rgba(0,0,0,0.15)] border border-black/5 overflow-hidden z-20">
+                <button
+                  type="button"
+                  className="w-full px-5 py-3.5 text-left text-[14px] font-bold text-black border-b border-black/5 hover:bg-black/5 transition-colors"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    onOpenPlaceMapEditor?.(entry.id);
+                  }}
+                >
+                  Edit Place name
+                </button>
+                <button
+                  type="button"
+                  className="w-full px-5 py-3.5 text-left text-[14px] font-bold text-black border-b border-black/5 hover:bg-black/5 transition-colors"
+                  onClick={() => setMenuOpen(false)}
+                >
+                  Manage Photos
+                </button>
+                <button
+                  type="button"
+                  className="w-full px-5 py-3.5 text-left text-[14px] font-bold text-black border-b border-black/5 hover:bg-black/5 transition-colors"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    onEditBlog?.(entry.id);
+                  }}
+                >
+                  Edit Caption & Details
+                </button>
+                <button
+                  type="button"
+                  className="w-full px-5 py-3.5 text-left text-[14px] font-bold text-red-600 hover:bg-red-50 transition-colors"
+                  onClick={() => setMenuOpen(false)}
+                >
+                  Hide from blog
+                </button>
+              </div>
+            )}
+          </div>
 
           {mode === "edit" && (
             <button
               type="button"
               onClick={() => onTogglePlaceHide?.(entry.id)}
               className={[
-                "inline-flex h-11 px-4 items-center justify-center rounded-full text-sm font-bold transition-colors",
+                "inline-flex h-11 px-4 items-center justify-center rounded-full text-sm font-bold transition-colors gap-1.5",
                 (entry as any).status === "hidden"
                   ? "bg-amber-100 text-amber-700 hover:bg-amber-200"
                   : "bg-red-50 text-red-600 hover:bg-red-100",
               ].join(" ")}
             >
-              {(entry as any).status === "hidden"
-                ? "Unhide Place"
-                : "Hide Place"}
+              {(entry as any).status === "hidden" ? (
+                <>
+                  Unhide <Eye className="w-4 h-4 ml-0.5" />
+                </>
+              ) : (
+                <>
+                  Hide <EyeOff className="w-4 h-4 ml-0.5" />
+                </>
+              )}
             </button>
           )}
         </div>
@@ -289,13 +457,13 @@ function RecapPlaceBlock({
 
       {/* Place Story Section */}
       {mode === "edit" ? (
-        <div className="w-full max-w-[920px] 2xl:max-w-[1100px]">
-          <TextRow
-            label="Place story"
+        <div className="w-full">
+          <textarea
             value={entry.placeStory ?? ""}
-            multiline
-            placeholder="Write a story for this place"
-            onChange={(v) => onPlaceStoryChange?.(entry.id, v)}
+            placeholder="Write a story for this place..."
+            rows={3}
+            onChange={(e) => onPlaceStoryChange?.(entry.id, e.target.value)}
+            className="w-full resize-none rounded-xl border border-slate-200 bg-transparent px-4 py-3 text-lg leading-relaxed text-slate-800 placeholder:text-slate-400 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20 transition min-h-[80px]"
           />
         </div>
       ) : (
@@ -333,25 +501,31 @@ function RecapPlaceBlock({
           expanded={expanded}
           onToggleExpanded={onToggleExpanded}
           layout={photoLayout}
+          entryRole={entryRole}
+          onEditBlog={onEditBlog}
+          onOpenPlaceMapEditor={onOpenPlaceMapEditor}
         />
       )}
     </div>
   );
 }
 
-/** ----------------------------
- *  View carousel
- *  ---------------------------- */
 function RecapPhotoCarousel({
   entry,
   expanded,
   onToggleExpanded,
   layout = "default",
+  entryRole = "poi",
+  onEditBlog,
+  onOpenPlaceMapEditor,
 }: {
   entry: RecapEntry;
   expanded: boolean;
   onToggleExpanded: () => void;
   layout?: "default" | "sheet";
+  entryRole?: "start" | "end" | "poi";
+  onEditBlog?: (entryId?: string) => void;
+  onOpenPlaceMapEditor?: (entryId: string) => void;
 }) {
   const total = entry.photos.length;
   const [activeIdx, setActiveIdx] = useState(0);
@@ -383,6 +557,31 @@ function RecapPhotoCarousel({
 
   return (
     <div className="relative w-full mx-auto max-w-full lg:max-w-[920px] 2xl:max-w-[1100px]">
+      {/* Category and Start/End labels pill above the first photo */}
+      {(entryRole !== "poi" || entry.categoryLabel) && (
+        <div className="mb-2 flex items-center gap-2">
+          {entryRole !== "poi" && (
+            <span
+              className="inline-flex items-center rounded-full px-3 py-1 text-[13px] font-bold text-white"
+              style={{
+                background:
+                  entryRole === "start"
+                    ? "rgb(34, 197, 94)" /* green-500 */
+                    : "rgb(249, 115, 22)" /* orange-500 */,
+              }}
+            >
+              {entryRole === "start" ? "Start" : "End"}
+            </span>
+          )}
+
+          {entry.categoryLabel && (
+            <span className="inline-flex items-center rounded-full bg-sky-100 px-3 py-1 text-[13px] font-bold text-sky-600 shadow-sm">
+              {entry.categoryLabel}
+            </span>
+          )}
+        </div>
+      )}
+
       <div
         ref={scrollerRef}
         className={[
@@ -409,6 +608,8 @@ function RecapPhotoCarousel({
               expanded={expanded}
               onToggleExpanded={onToggleExpanded}
               layout={layout}
+              onEditBlog={onEditBlog}
+              onOpenPlaceMapEditor={onOpenPlaceMapEditor}
             />
           </div>
         ))}
@@ -419,18 +620,18 @@ function RecapPhotoCarousel({
           <button
             type="button"
             onClick={prev}
-            className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-white/70 p-2 shadow-sm backdrop-blur hover:bg-white"
+            className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-black/50 p-2 shadow-sm backdrop-blur hover:bg-black/70 transition-colors"
             aria-label="Previous card"
           >
-            <ChevronLeft className="h-6 w-6 text-black/70" />
+            <ChevronLeft className="h-6 w-6 text-white" />
           </button>
           <button
             type="button"
             onClick={next}
-            className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-white/70 p-2 shadow-sm backdrop-blur hover:bg-white"
+            className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-black/50 p-2 shadow-sm backdrop-blur hover:bg-black/70 transition-colors"
             aria-label="Next card"
           >
-            <ChevronRight className="h-6 w-6 text-black/70" />
+            <ChevronRight className="h-6 w-6 text-white" />
           </button>
         </>
       )}
@@ -452,6 +653,8 @@ function RecapPhotoCard({
   onToggleExpanded,
   mode = "view",
   layout = "default",
+  onEditBlog,
+  onOpenPlaceMapEditor,
 }: {
   entry: RecapEntry;
   photoUrl: string;
@@ -461,6 +664,8 @@ function RecapPhotoCard({
   onToggleExpanded?: () => void;
   mode?: Mode;
   layout?: "default" | "sheet";
+  onEditBlog?: (entryId?: string) => void;
+  onOpenPlaceMapEditor?: (entryId: string) => void;
 }) {
   const captionText =
     entry.captions?.[photoIndex] ??
@@ -469,20 +674,13 @@ function RecapPhotoCard({
 
   const [captionEl, setCaptionEl] = useState<HTMLParagraphElement | null>(null);
   const [isTruncated, setIsTruncated] = useState(false);
-  const placeExternalUrl = useMemo(
-    () => String(entry.externalUrl ?? "").trim(),
-    [entry.externalUrl],
-  );
 
   const measureTruncation = useCallback(() => {
     if (!captionEl) return;
     if (expanded) {
-      // Expanded view is never "truncated" (we still show "See Less" if it was truncated).
       setIsTruncated(false);
       return;
     }
-
-    // With line-clamp + overflow hidden, scrollHeight/scrollWidth still represent full content.
     const next =
       captionEl.scrollHeight > captionEl.clientHeight + 1 ||
       captionEl.scrollWidth > captionEl.clientWidth + 1;
@@ -490,7 +688,6 @@ function RecapPhotoCard({
   }, [captionEl, expanded]);
 
   useLayoutEffect(() => {
-    // Avoid synchronous setState in effect body (lint rule).
     const raf = requestAnimationFrame(() => measureTruncation());
     return () => cancelAnimationFrame(raf);
   }, [measureTruncation, captionTrimmed, layout]);
@@ -509,7 +706,7 @@ function RecapPhotoCard({
       <article
         className={[
           "w-full",
-          "overflow-hidden rounded-[28px] border border-black/15 bg-white shadow-sm",
+          "overflow-hidden rounded-[32px] border border-black/5 bg-white shadow-[0_4px_20px_rgba(0,0,0,0.03)]",
         ].join(" ")}
       >
         <div className="relative">
@@ -518,13 +715,10 @@ function RecapPhotoCard({
             onClick={() => setLightboxOpen(true)}
             className={[
               layout === "sheet"
-                ? // Bottom sheet: keep photo shorter so other UI stays visible
-                  "relative mx-4 my-3 h-[32dvh] min-h-[240px] max-h-[420px] w-[calc(100%-2rem)]"
-                : // Default: use more space (bigger photo, smaller margins)
-                  "relative mx-4 my-4 aspect-[4/5] w-[calc(100%-2rem)]",
-              // Desktop: keep the wider cinematic ratio
+                ? "relative mx-4 my-3 h-[32dvh] min-h-[240px] max-h-[420px] w-[calc(100%-2rem)]"
+                : "relative mx-4 my-4 aspect-[4/5] w-[calc(100%-2rem)]",
               "sm:m-6 sm:aspect-[16/9] sm:w-[calc(100%-3rem)]",
-              "overflow-hidden rounded-2xl bg-black/5 focus:outline-none focus:ring-2 focus:ring-black/30",
+              "overflow-hidden rounded-[24px] bg-black/[0.03] focus:outline-none focus:ring-2 focus:ring-black/10",
             ].join(" ")}
             aria-label="Open photo"
           >
@@ -551,8 +745,9 @@ function RecapPhotoCard({
             <div className="relative min-w-0 flex-1">
               <p
                 ref={setCaptionEl}
+                onClick={() => setLightboxOpen(true)}
                 className={[
-                  "text-[22px] leading-[1.35] text-black/85",
+                  "text-[24px] font-medium leading-[1.3] text-black/90 font-['Inter'] tracking-tight cursor-pointer",
                   expanded ? "" : collapsedClampClass,
                 ].join(" ")}
               >
@@ -578,61 +773,6 @@ function RecapPhotoCard({
             )}
           </div>
         </div>
-
-        <div className="flex items-center justify-between border-t border-black/10 px-6 py-4">
-          <div className="flex items-center gap-5 text-black/70">
-            <button
-              type="button"
-              className="inline-flex items-center gap-2 hover:text-black"
-              aria-label="Bookmark"
-            >
-              <Bookmark className="h-6 w-6" />
-            </button>
-            <button
-              type="button"
-              className="inline-flex items-center gap-2 hover:text-black"
-              aria-label="Open place link"
-              onClick={() => {
-                if (!placeExternalUrl) return;
-                const normalized = normalizeExternalUrl(placeExternalUrl);
-                if (!normalized) return;
-                // Mark that we intentionally opened an external page, so the recap view can
-                // preserve UI state (avoid refetch/reset) when the user returns.
-                try {
-                  window.sessionStorage.setItem(
-                    `ls:externalNav:tripRecap`,
-                    String(Date.now()),
-                  );
-                } catch {
-                  // ignore
-                }
-                openExternalUrl(normalized);
-              }}
-              disabled={!placeExternalUrl}
-              title={placeExternalUrl ? "Open link" : "No link available"}
-            >
-              <Link2 className="h-6 w-6" />
-            </button>
-          </div>
-
-          <div className="flex items-center gap-6 text-[20px] font-semibold text-black/80">
-            <div className="inline-flex items-center gap-2">
-              <span>{entry.likeCount}</span>
-              <Heart className="h-6 w-6" />
-            </div>
-            <div className="inline-flex items-center gap-2">
-              <span>{entry.commentCount}</span>
-              <MessageSquare className="h-6 w-6" />
-            </div>
-            <button
-              type="button"
-              aria-label="More"
-              className="hover:text-black"
-            >
-              <MoreVertical className="h-6 w-6" />
-            </button>
-          </div>
-        </div>
       </article>
 
       {lightboxOpen && (
@@ -640,6 +780,9 @@ function RecapPhotoCard({
           photos={entry.photos}
           initialIndex={photoIndex}
           title={entry.placeName}
+          dateTime={entry.timeRangeText}
+          captions={entry.captions}
+          caption={entry.caption}
           onClose={() => setLightboxOpen(false)}
         />
       )}
@@ -695,6 +838,9 @@ function RecapPhotoEditList({
           photos={entry.photos}
           initialIndex={lightboxIndex}
           title={entry.placeName}
+          dateTime={entry.timeRangeText}
+          captions={entry.captions}
+          caption={entry.caption}
           onClose={() => setLightboxOpen(false)}
         />
       )}
@@ -722,8 +868,8 @@ function PhotoCaptionRow({
   onOpenPhoto: () => void;
 }) {
   return (
-    <div className="flex gap-4 items-center">
-      <div className="relative h-[150px] w-[150px] shrink-0 overflow-hidden rounded-2xl bg-black/10">
+    <div className="flex gap-4 items-center rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
+      <div className="relative h-[120px] w-[120px] shrink-0 overflow-hidden rounded-xl bg-black/10">
         <button
           type="button"
           className="absolute inset-0"
@@ -748,12 +894,12 @@ function PhotoCaptionRow({
       </div>
 
       <div className="w-full">
-        <TextRow
-          label=""
+        <textarea
           value={caption}
-          multiline
           placeholder="Write a caption"
-          onChange={(v) => onCaptionChange?.(entryId, index, v)}
+          rows={2}
+          onChange={(e) => onCaptionChange?.(entryId, index, e.target.value)}
+          className="w-full resize-none rounded-xl border border-slate-200 bg-transparent px-4 py-3 text-base leading-relaxed text-slate-800 placeholder:text-slate-400 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20 transition"
         />
       </div>
     </div>

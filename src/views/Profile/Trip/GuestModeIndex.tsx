@@ -18,7 +18,8 @@ import {
   type RecapBlogPageData,
 } from "./component/RecapBlogPlace";
 import RecapDayTabs, { type DayTab } from "./component/RecapDayTabs";
-import RecapLoginBar from "./component/GuestRBLoginBar"; //추가
+import RecapLoginBar from "./component/GuestRBLoginBar";
+import ScrollToTopButton from "@/components/ui/ScrollToTopButton";
 
 import MapboxMap, {
   type MarkerData,
@@ -788,23 +789,26 @@ export default function GuestRecapPage({ userId, tripId, brand }: Props) {
   // ===== layout constants =====
   const LOGIN_BAR_HEIGHT_PX = 74;
   const MOBILE_TABS_HEIGHT_PX = 56;
-  const TOPBAR_OFFSET_PX = 200; // desktop sticky offset (initial; pre-snap)
-  const DESKTOP_SNAPPED_TOP_PX = LOGIN_BAR_HEIGHT_PX;
-  const PANEL_HEIGHT_OFFSET = 100;
-  const PANEL_HEIGHT = `calc(100vh - ${PANEL_HEIGHT_OFFSET}px)`;
+  const BLOG_TOP_OFFSET_PX = 120;
+  const MAP_TOP_OFFSET_PX = 120;
+  const DESKTOP_SNAPPED_TOP_PX = 98;
+  const BLOG_HEIGHT_OFFSET_PX = 145;
+  const MAP_HEIGHT_OFFSET_PX = 122;
+  const BLOG_HEIGHT = `calc(100vh - ${BLOG_HEIGHT_OFFSET_PX}px)`;
+  const MAP_HEIGHT = `calc(100vh - ${MAP_HEIGHT_OFFSET_PX}px)`;
 
   // Desktop-only: once the left panel starts moving, we "snap" both sticky
   // columns (left panel + map) to the top (under the fixed login bar).
   const desktopSnappedRef = useRef(false);
-  const desktopStickyTopRef = useRef<number>(TOPBAR_OFFSET_PX);
+  const desktopStickyTopRef = useRef<number>(MAP_TOP_OFFSET_PX);
   const leftStickyRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     // When switching to mobile, reset so returning to desktop behaves normally.
     if (isLg) return;
     desktopSnappedRef.current = false;
-    desktopStickyTopRef.current = TOPBAR_OFFSET_PX;
-  }, [isLg, TOPBAR_OFFSET_PX]);
+    desktopStickyTopRef.current = MAP_TOP_OFFSET_PX;
+  }, [isLg, MAP_TOP_OFFSET_PX]);
 
   // Mobile: hide the fixed login bar once the Day tabs become sticky.
   const dayTabsSentinelRef = useRef<HTMLDivElement | null>(null);
@@ -982,18 +986,21 @@ export default function GuestRecapPage({ userId, tripId, brand }: Props) {
         ? recapData.trip.startingYear
         : Number(recapData?.trip?.startingYear)) || new Date().getFullYear();
 
-    return effectiveModel.days.flatMap((d) =>
-      d.entries.map((e: any, idx: number) => ({
-        id: e.id,
-        lat: e.coordinate?.latitude ?? baseCenter.lat,
-        lng: e.coordinate?.longitude ?? baseCenter.lng,
-        year: travelYear,
-        label: e.placeName,
-        imageUrl: e.photos?.[0] ?? "/images/avatar.png",
-        visitIndex: idx + 1,
-        visitTimeText: e.timeRangeText ?? "",
-      })),
-    );
+    return effectiveModel.days.flatMap((d) => {
+      return d.entries.map((e: any) => {
+        return {
+          id: e.id,
+          lat: e.coordinate?.latitude ?? baseCenter.lat,
+          lng: e.coordinate?.longitude ?? baseCenter.lng,
+          year: travelYear,
+          label: e.placeName,
+          imageUrl: e.photos?.[0] ?? "/images/avatar.png",
+          visitIndex: e.visitIndex,
+          visitTimeText: e.timeRangeText ?? "",
+          markerRole: e.markerRole,
+        };
+      });
+    });
   }, [effectiveModel, recapData, baseCenter]);
 
   const entryIdToDayId = useMemo(() => {
@@ -1442,6 +1449,36 @@ export default function GuestRecapPage({ userId, tripId, brand }: Props) {
   };
 
   useLayoutEffect(() => {
+    if (!isLg) return;
+    const leftPanel = leftScrollRef.current;
+    if (!leftPanel) return;
+
+    let ticking = false;
+    const updateLock = () => {
+      const mapEl = mapStickyRef.current;
+      if (!mapEl) return;
+      const rect = mapEl.getBoundingClientRect();
+      const isPinned = rect.top <= desktopStickyTopRef.current + 1;
+
+      leftPanel.style.overflowY = isPinned ? "auto" : "hidden";
+    };
+
+    const onScroll = () => {
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          updateLock();
+          ticking = false;
+        });
+        ticking = true;
+      }
+    };
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+    updateLock(); // init
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [isLg]);
+
+  useLayoutEffect(() => {
     // Only relevant for the desktop split layout.
     if (!isLg) return;
 
@@ -1511,7 +1548,12 @@ export default function GuestRecapPage({ userId, tripId, brand }: Props) {
       const pinnedNow = rect.top <= desktopStickyTopRef.current + 1;
       if (!pinnedNow) return;
 
-      if (e.ctrlKey) return;
+      const mapWrap = mapContainerRef.current;
+      const isOnMap = !!(mapWrap && mapWrap.contains(e.target as Node));
+
+      // If hovering over the map, let Mapbox handle the wheel event to zoom in/out freely.
+      if (isOnMap) return;
+
       if (!canScrollLeftPanel(delta)) return;
 
       // We are about to move the left panel -> ensure the split view is snapped.
@@ -1554,9 +1596,9 @@ export default function GuestRecapPage({ userId, tripId, brand }: Props) {
 
   // ===== render (기존 UI 그대로) =====
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-[#F5F5F7]">
       {brand === "bloggo" ? (
-        <div className="sticky top-0 z-[150] w-full bg-white/85 backdrop-blur-md border-b border-black/10">
+        <div className="sticky top-0 z-[150] w-full bg-white backdrop-blur-md border-b border-black/10">
           <div className="flex h-[74px] items-center justify-between px-6">
             <div className="font-bold text-xl tracking-tight text-sky-600">
               Bloggo
@@ -1583,10 +1625,11 @@ export default function GuestRecapPage({ userId, tripId, brand }: Props) {
       {/* push content below the fixed login bar */}
       <div style={{ height: LOGIN_BAR_HEIGHT_PX }} />
 
-      <div className="p-3">
+      <div className="p-3 -mt-[30px] mb-[30px]">
         <RecapBlogHero
           {...effectiveModel.hero}
           coverImageUrl={tripCoverOverride ?? effectiveModel.hero.coverImageUrl}
+          lastEditedAt={effectiveModel.hero.lastEditedAt}
         />
       </div>
 
@@ -1597,7 +1640,7 @@ export default function GuestRecapPage({ userId, tripId, brand }: Props) {
           <div ref={dayTabsSentinelRef} className="h-0" aria-hidden="true" />
 
           <div
-            className="sticky z-[180] border-b border-black/10 bg-white/85 backdrop-blur-md"
+            className="sticky z-[180] border-b border-black/10 bg-white backdrop-blur-md"
             style={{ top: mobileHeaderOffsetPx }}
           >
             <div className="mx-auto w-full px-3 py-2">
@@ -1618,16 +1661,22 @@ export default function GuestRecapPage({ userId, tripId, brand }: Props) {
         <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
           <section
             ref={leftStickyRef}
-            className="min-w-0 flex-1 sticky self-start"
-            style={{ top: desktopStickyTopRef.current }}
+            className="min-w-0 flex-1 sticky self-start relative"
+            style={{ top: BLOG_TOP_OFFSET_PX }}
           >
+            {effectiveModel.hero.lastEditedAt && (
+              <div className="absolute left-2 -top-6 text-[11px] font-bold text-black/40 tracking-[0.15em] uppercase pointer-events-none">
+                Last Edited {effectiveModel.hero.lastEditedAt}
+              </div>
+            )}
             <div
               ref={leftScrollRef}
-              className="w-full overflow-y-auto overscroll-contain touch-pan-y rounded-2xl"
+              className="w-full touch-pan-y rounded-2xl"
               style={{
-                height: PANEL_HEIGHT,
+                height: BLOG_HEIGHT,
                 scrollBehavior: "auto",
                 overflowAnchor: "none",
+                overflowY: "hidden", // Default to hidden until JS overrides
               }}
             >
               <div className="space-y-12 p-4">
@@ -1661,13 +1710,13 @@ export default function GuestRecapPage({ userId, tripId, brand }: Props) {
             ref={(el) => {
               mapStickyRef.current = el;
             }}
-            className="min-w-0 flex-1 sticky self-start"
-            style={{ top: desktopStickyTopRef.current }}
+            className="min-w-0 flex-1 sticky self-start relative"
+            style={{ top: MAP_TOP_OFFSET_PX }}
           >
             <div
               ref={mapContainerRef}
               className="w-[98%] overflow-hidden rounded-2xl border border-black/10"
-              style={{ height: PANEL_HEIGHT }}
+              style={{ height: MAP_HEIGHT }}
             >
               <MapboxMap
                 focusLatLng={focusLatLng ?? undefined}
@@ -1698,15 +1747,22 @@ export default function GuestRecapPage({ userId, tripId, brand }: Props) {
             if (!target) return null;
 
             return createPortal(
-              <div className="h-full w-full overflow-hidden rounded-2xl border border-black/10">
-                <MapboxMap
-                  focusLatLng={focusLatLng ?? undefined}
-                  mode="place"
-                  placeMarkers={activeDayMarkers}
-                  activePlaceMarkerId={activeEntryId ?? undefined}
-                  onPlaceMarkerClick={onMarkerClick}
-                  containerResizeKey={activeDayId}
-                />
+              <div className="relative h-full w-full">
+                {effectiveModel.hero.lastEditedAt && (
+                  <div className="absolute left-2 -top-6 text-[11px] font-bold text-black/40 tracking-[0.15em] uppercase pointer-events-none">
+                    Last Edited {effectiveModel.hero.lastEditedAt}
+                  </div>
+                )}
+                <div className="h-full w-full overflow-hidden rounded-2xl border border-black/10">
+                  <MapboxMap
+                    focusLatLng={focusLatLng ?? undefined}
+                    mode="place"
+                    placeMarkers={activeDayMarkers}
+                    activePlaceMarkerId={activeEntryId ?? undefined}
+                    onPlaceMarkerClick={onMarkerClick}
+                    containerResizeKey={activeDayId}
+                  />
+                </div>
               </div>,
               target,
             );
@@ -1874,6 +1930,10 @@ export default function GuestRecapPage({ userId, tripId, brand }: Props) {
           onCreateAccount={() => setIsDownloadOpen(true)}
         />
       )}
+
+      <ScrollToTopButton
+        scrollContainerRef={isLg ? leftScrollRef : undefined}
+      />
     </div>
   );
 }

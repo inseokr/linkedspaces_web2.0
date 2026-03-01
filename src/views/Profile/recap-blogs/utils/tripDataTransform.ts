@@ -155,13 +155,21 @@ function hasMonthText(label: string): boolean {
   return /\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\b/.test(label);
 }
 
-function tripSortKey(t: Trip): number {
-  // Prefer end date (most representative of “latest”), fallback to start date.
+export function tripSortKey(t: Trip): number {
+  // 1. Try ISO timestamps first (they preserve full year-month-day)
+  const endIso = parseIsoYmd((t as any)?.endTimestamp);
+  if (endIso) return Date.UTC(endIso.year, endIso.month - 1, endIso.day);
+  const startIso = parseIsoYmd((t as any)?.startTimestamp);
+  if (startIso)
+    return Date.UTC(startIso.year, startIso.month - 1, startIso.day);
+
+  // 2. Prefer end date from string, fallback to start date string.
   const end = parseTripYmdToEpoch((t as any)?.endTimeString);
   const start = parseTripYmdToEpoch((t as any)?.startTimeString);
   if (end != null) return end;
   if (start != null) return start;
 
+  // 3. Fallback to starting year if all else fails
   const y = Number((t as any)?.startingYear);
   if (Number.isFinite(y)) return Date.UTC(y, 0, 1);
   return 0;
