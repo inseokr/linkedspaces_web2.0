@@ -502,7 +502,7 @@ export default function DemoProfileView() {
               )}
             </div>
 
-            <div className="flex flex-col items-end gap-3 hidden sm:block">
+            <div className="hidden sm:flex flex-col items-end gap-3 text-right">
               <RecapYearTabs
                 value={selectedYear}
                 years={availableYears}
@@ -513,21 +513,19 @@ export default function DemoProfileView() {
         </div>
       </div>
 
-      {/* ── Mobile Year Filter ──────────────────────────────────────────────── */}
-      <div className="sm:hidden border-b border-black/5 bg-slate-50/50 px-4 py-3">
-        <div className="flex justify-center">
-          <RecapYearTabs
-            value={selectedYear}
-            years={availableYears}
-            onChange={setSelectedYear}
-          />
-        </div>
-      </div>
-
       {/* ── Content ─────────────────────────────────────────────────────────── */}
       {mode === "recap" ? (
         /* ── Recap grid ──────────────────────────────────────────────────── */
         <div className="mx-auto max-w-7xl w-full px-4 sm:px-6 lg:px-8 py-8">
+          {/* Mobile Year Filter in content */}
+          <div className="sm:hidden mb-8 flex justify-center">
+            <RecapYearTabs
+              value={selectedYear}
+              years={availableYears}
+              onChange={setSelectedYear}
+            />
+          </div>
+
           {/* Blog count badge */}
           <div className="mb-6 flex items-center gap-3">
             <h2 className="text-[15px] font-semibold text-black/80">
@@ -560,8 +558,17 @@ export default function DemoProfileView() {
             <div className="h-full rounded-2xl border border-black/10 bg-white overflow-hidden">
               <div
                 ref={mapListScrollRef}
-                className="h-full overflow-y-auto pr-2 px-4 pt-2 pb-4"
+                className="h-full overflow-y-auto pr-2 px-4 pt-4 pb-4"
               >
+                {/* Mobile Year Filter in content */}
+                <div className="sm:hidden mb-6 flex justify-center">
+                  <RecapYearTabs
+                    value={selectedYear}
+                    years={availableYears}
+                    onChange={setSelectedYear}
+                  />
+                </div>
+
                 {/* Country header */}
                 {selectedCountryName && (
                   <h2 className="py-3 text-[16px] font-bold text-[#5B5B5B] font-[Inter]">
