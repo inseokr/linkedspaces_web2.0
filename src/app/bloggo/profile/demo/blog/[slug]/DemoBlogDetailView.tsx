@@ -10,11 +10,12 @@ import {
 } from "react";
 import Link from "next/link";
 import { use } from "react";
-import { notFound } from "next/navigation";
+import { notFound, useRouter } from "next/navigation";
 
 import { getBlogBySlug } from "@/bloggo/lib/mock-data";
 
 // ── Reuse the exact same Trip-page components ─────────────────────────────────
+import RecapBlogTopBar from "@/views/Profile/Trip/section/RecapBlogTopBar";
 import RecapBlogHero from "@/views/Profile/Trip/component/RecapBlogTopImage";
 import { RecapBlogDaySection } from "@/views/Profile/Trip/component/RecapBlogPlace";
 import RecapDayTabs, {
@@ -47,6 +48,7 @@ function useIsDesktopLg() {
 }
 
 export default function DemoBlogDetailView({ params }: Props) {
+  const router = useRouter();
   const { slug } = use(params);
   const blog = getBlogBySlug(slug);
   if (!blog) notFound();
@@ -408,35 +410,13 @@ export default function DemoBlogDetailView({ params }: Props) {
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-[#F5F5F7]">
-      {/* Back link bar */}
-      <div className="sticky top-0 z-30 border-b border-black/10 bg-white/95 backdrop-blur-md">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex h-12 items-center gap-4">
-            <Link
-              href="/bloggo/profile/demo"
-              className="inline-flex items-center gap-1.5 text-sm font-medium text-sky-600 hover:text-sky-500 transition-colors"
-            >
-              <svg
-                className="h-4 w-4"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M15 19l-7-7 7-7"
-                />
-              </svg>
-              Back to profile
-            </Link>
-          </div>
-        </div>
-      </div>
+      <RecapBlogTopBar
+        title={blog.title}
+        onGoBack={() => router.push("/bloggo/profile/demo")}
+        brand="bloggo"
+      />
 
-      <div className="p-3 sm:p-4">
-        {/* Hero */}
+      <div className="p-3 sm:p-5">
         <RecapBlogHero {...hero} />
 
         {/* Mobile day tabs */}
