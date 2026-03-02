@@ -40,6 +40,8 @@ export type MarkerData = {
   visitIndex?: number; // 1-based order within active day
   visitTimeText?: string; // e.g. "9:30 AM" or "9:30–10:10 AM"
   externalUrl?: string; // when present, place is a concrete POI (not abstract)
+  /** Visual role of this place marker: start of day = green, end of day = orange, midpoint = blue */
+  markerRole?: "start" | "end" | "poi";
 };
 
 export interface CountryStat {
@@ -88,6 +90,9 @@ type Props = {
 
   /** Fired when the user clicks a built-in Mapbox POI label on the map. */
   onPoiClick?: (poi: PoiInfo) => void;
+
+  /** When true, render + / − zoom buttons in the bottom-right corner. */
+  showZoomControls?: boolean;
 };
 
 function PlaceMarker({
@@ -96,111 +101,172 @@ function PlaceMarker({
   isActive = false,
   visitIndex,
   visitTimeText,
+  markerRole = "poi",
 }: {
   imageUrl: string;
   size?: number;
   isActive?: boolean;
   visitIndex?: number;
   visitTimeText?: string;
+  markerRole?: "start" | "end" | "poi";
 }) {
+  // Role-based colors
+  const roleColor =
+    markerRole === "start"
+      ? { r: 34, g: 197, b: 94 } // green-500
+      : markerRole === "end"
+        ? { r: 249, g: 115, b: 22 } // orange-500
+        : { r: 59, g: 130, b: 246 }; // blue-500
+
+  const { r, g, b } = roleColor;
+  const solidColor = `rgb(${r}, ${g}, ${b})`;
+  const alphaColor32 = `rgba(${r}, ${g}, ${b}, 0.32)`;
+  const alphaColor16 = `rgba(${r}, ${g}, ${b}, 0.16)`;
+  const alphaColor98 = `rgba(${r}, ${g}, ${b}, 0.98)`;
+
   const baseShadow = "0 8px 20px rgba(0,0,0,0.18)";
   const activeRings = [
-    // crisp main ring
-    "0 0 0 3px rgba(249, 115, 22, 0.98)",
-    // soft outer rings
-    "0 0 0 8px rgba(249, 115, 22, 0.32)",
-    "0 0 0 14px rgba(249, 115, 22, 0.16)",
-    // subtle inner highlight for pop
+    `0 0 0 3px ${alphaColor98}`,
+    `0 0 0 8px ${alphaColor32}`,
+    `0 0 0 14px ${alphaColor16}`,
     "inset 0 0 0 1px rgba(255,255,255,0.55)",
   ].join(", ");
 
+  const roleLabel =
+    markerRole === "start" ? "Start" : markerRole === "end" ? "End" : null;
+
   return (
-    <div style={{ width: size, height: size, position: "relative" }}>
-      <div
-        style={{
-          position: "relative",
-          width: size,
-          height: size,
-          borderRadius: 9999,
-          overflow: "hidden",
-          border: isActive
-            ? "3px solid rgba(249, 115, 22, 0.98)" // orange-500
-            : "3px solid rgba(255,255,255,0.9)",
-          boxShadow: isActive ? `${baseShadow}, ${activeRings}` : baseShadow,
-          background: "rgba(0,0,0,0.05)",
-          transform: isActive ? "scale(1.03)" : "scale(1)",
-          transition:
-            "transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease",
-        }}
-      >
-        <Image
-          src={normalizeImageSrc(imageUrl).src}
-          alt=""
-          fill
-          unoptimized={normalizeImageSrc(imageUrl).unoptimized}
-          sizes={`${size ?? 80}px`}
-          style={{ objectFit: "cover" }}
-        />
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        gap: 4,
+        position: "relative",
+      }}
+    >
+      {/* Start / End label pill above the photo circle */}
+      {roleLabel && (
+        <div
+          style={{
+            background: solidColor,
+            color: "white",
+            fontWeight: 800,
+            fontSize: 11,
+            lineHeight: "16px",
+            letterSpacing: 0.3,
+            padding: "2px 8px",
+            borderRadius: 9999,
+            whiteSpace: "nowrap",
+            boxShadow: "0 2px 6px rgba(0,0,0,0.22)",
+            marginBottom: 15,
+            pointerEvents: "none",
+          }}
+        >
+          {roleLabel}
+        </div>
+      )}
+
+      {/* Photo circle */}
+      <div style={{ width: size, height: size, position: "relative" }}>
+        <div
+          style={{
+            position: "relative",
+            width: size,
+            height: size,
+            borderRadius: 9999,
+            overflow: "hidden",
+            border: isActive
+              ? `3px solid ${alphaColor98}`
+              : "3px solid rgba(255,255,255,0.9)",
+            boxShadow: isActive ? `${baseShadow}, ${activeRings}` : baseShadow,
+            background: "rgba(0,0,0,0.05)",
+            transform: isActive ? "scale(1.03)" : "scale(1)",
+            transition:
+              "transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease",
+          }}
+        >
+          <Image
+            src={normalizeImageSrc(imageUrl).src}
+            alt=""
+            fill
+            unoptimized={normalizeImageSrc(imageUrl).unoptimized}
+            sizes={`${size ?? 80}px`}
+            style={{ objectFit: "cover" }}
+          />
+        </div>
+
+        {typeof visitIndex === "number" && Number.isFinite(visitIndex) && (
+          <div
+            style={{
+              position: "absolute",
+              top: -8,
+              right: -8,
+              minWidth: 26,
+              height: 26,
+              padding: "0 8px",
+              borderRadius: 9999,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              background: solidColor,
+              color: "white",
+              fontWeight: 900,
+              fontSize: 12,
+              lineHeight: "12px",
+              letterSpacing: 0.2,
+              border: "2px solid rgba(255,255,255,0.95)",
+              boxShadow: "0 6px 14px rgba(0,0,0,0.18)",
+              pointerEvents: "none",
+            }}
+          >
+            {visitIndex}
+          </div>
+        )}
+
+        {!!visitTimeText && (
+          <div
+            style={{
+              position: "absolute",
+              left: "50%",
+              top: "100%",
+              marginTop: 4,
+              transform: "translateX(calc(-50% + 3px))",
+              background: "rgba(255,255,255,0.96)",
+              border: "1px solid rgba(0,0,0,0.12)",
+              boxShadow: "0 10px 24px rgba(0,0,0,0.16)",
+              borderRadius: 9999,
+              padding: "6px 10px",
+              maxWidth: 160,
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              fontSize: 12,
+              fontWeight: 800,
+              color: "rgba(0,0,0,0.78)",
+              pointerEvents: "none",
+              backdropFilter: "blur(6px)",
+            }}
+            title={visitTimeText}
+          >
+            {visitTimeText}
+          </div>
+        )}
       </div>
 
-      {typeof visitIndex === "number" && Number.isFinite(visitIndex) && (
-        <div
-          style={{
-            position: "absolute",
-            top: -8,
-            right: -8,
-            minWidth: 26,
-            height: 26,
-            padding: "0 8px",
-            borderRadius: 9999,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            background: "rgba(0, 0, 0, 0.88)",
-            color: "white",
-            fontWeight: 900,
-            fontSize: 12,
-            lineHeight: "12px",
-            letterSpacing: 0.2,
-            border: "2px solid rgba(255,255,255,0.95)",
-            boxShadow: "0 6px 14px rgba(0,0,0,0.18)",
-            pointerEvents: "none",
-          }}
-        >
-          {visitIndex}
-        </div>
-      )}
-
-      {!!visitTimeText && (
-        <div
-          style={{
-            position: "absolute",
-            left: "50%",
-            top: "100%",
-            marginTop: 4,
-            // Optical centering: the pill can read slightly left under the circle,
-            // so we nudge it a couple pixels to the right.
-            transform: "translateX(calc(-50% + 3px))",
-            background: "rgba(255,255,255,0.96)",
-            border: "1px solid rgba(0,0,0,0.12)",
-            boxShadow: "0 10px 24px rgba(0,0,0,0.16)",
-            borderRadius: 9999,
-            padding: "6px 10px",
-            maxWidth: 160,
-            whiteSpace: "nowrap",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            fontSize: 12,
-            fontWeight: 800,
-            color: "rgba(0,0,0,0.78)",
-            pointerEvents: "none",
-            backdropFilter: "blur(6px)",
-          }}
-          title={visitTimeText}
-        >
-          {visitTimeText}
-        </div>
-      )}
+      {/* Pin stem — triangle pointing down, anchors the marker to the coordinate */}
+      <div
+        style={{
+          width: 0,
+          height: 0,
+          borderLeft: "7px solid transparent",
+          borderRight: "7px solid transparent",
+          borderTop: `12px solid ${isActive ? alphaColor98 : "rgba(255,255,255,0.92)"}`,
+          filter: "drop-shadow(0 3px 4px rgba(0,0,0,0.22))",
+          marginTop: -1,
+          flexShrink: 0,
+        }}
+      />
     </div>
   );
 }
@@ -219,6 +285,7 @@ const POI_NUDGE_DEG = 0.0001;
 function computePlaceMarkerLayout(
   placeMarkers: MarkerData[],
   markerSizePx: number,
+  activeMarkerId?: string,
 ): Map<string, { lngLat: [number, number]; offset: [number, number] }> {
   const key = (lat: number, lng: number) =>
     `${lat.toFixed(5)},${lng.toFixed(5)}`;
@@ -241,8 +308,10 @@ function computePlaceMarkerLayout(
   const radiusPx = markerSizePx / 2 + 24;
 
   for (const g of groups.values()) {
-    const displayLng = g.baseLng + POI_NUDGE_DEG;
-    const displayLat = g.baseLat + POI_NUDGE_DEG;
+    // Skip the nudge for the active/staged marker so the pin points exactly at the POI
+    const hasActive = activeMarkerId && g.ids.includes(activeMarkerId);
+    const displayLng = hasActive ? g.baseLng : g.baseLng + POI_NUDGE_DEG;
+    const displayLat = hasActive ? g.baseLat : g.baseLat + POI_NUDGE_DEG;
     const n = g.ids.length;
 
     if (n === 1) {
@@ -292,6 +361,7 @@ export default function MapboxMap({
   showPlacePath = true,
   useSimpleMarkers = false,
   onPoiClick,
+  showZoomControls = false,
 }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<MapboxMapType | null>(null);
@@ -321,6 +391,7 @@ export default function MapboxMap({
   const syncMarkersRef = useRef<() => void>(() => {});
   const syncActiveMarkerStylesRef = useRef<() => void>(() => {});
   const syncHighlightLayersRef = useRef<() => void>(() => {});
+  const syncPlacePathRef = useRef<() => void>(() => {});
   const syncMarkersPendingRef = useRef(false); // guard against duplicate once("idle",...) stacking
 
   // "한 번이라도 entry로 포커스를 준 적 있는지"
@@ -562,9 +633,33 @@ export default function MapboxMap({
       return;
     }
 
-    const coords = placeMarkersRef.current
-      .filter((m) => Number.isFinite(m.lng) && Number.isFinite(m.lat))
-      .map((m) => [m.lng, m.lat]);
+    const isPlaceMode = modeRef.current === "place";
+    const useSimple = useSimpleMarkersRef.current;
+
+    let coords: number[][] = [];
+
+    if (isPlaceMode) {
+      // Calculate offsets using the same logic as syncMarkers
+      const simpleSize = 48;
+      const markerSizePx = useSimple ? simpleSize : 72;
+      const layout = computePlaceMarkerLayout(
+        placeMarkersRef.current,
+        markerSizePx,
+        activePlaceMarkerIdRef.current,
+      );
+
+      coords = placeMarkersRef.current
+        .filter((m) => Number.isFinite(m.lng) && Number.isFinite(m.lat))
+        .map((m) => {
+          const l = layout.get(m.id);
+          if (!l) return [m.lng, m.lat];
+          return [l.lngLat[0], l.lngLat[1]];
+        });
+    } else {
+      coords = placeMarkersRef.current
+        .filter((m) => Number.isFinite(m.lng) && Number.isFinite(m.lat))
+        .map((m) => [m.lng, m.lat]);
+    }
 
     if (coords.length < 2) {
       clearPlacePath();
@@ -600,10 +695,10 @@ export default function MapboxMap({
         source: PLACE_PATH_SOURCE_ID,
         layout: { "line-join": "round", "line-cap": "round" },
         paint: {
-          "line-color": "#F97316",
-          "line-width": 2,
+          "line-color": "#3B82F6",
+          "line-width": 4,
           "line-opacity": 0.9,
-          "line-dasharray": [2, 2],
+          "line-dasharray": [3, 2],
         },
       });
     }
@@ -650,6 +745,7 @@ export default function MapboxMap({
       const layout = computePlaceMarkerLayout(
         placeMarkersRef.current,
         markerSizePx,
+        activePlaceMarkerIdRef.current,
       );
 
       placeMarkersRef.current.forEach((m) => {
@@ -726,6 +822,7 @@ export default function MapboxMap({
               isActive={isActive}
               visitIndex={m.visitIndex}
               visitTimeText={m.externalUrl ? m.label : undefined}
+              markerRole={m.markerRole ?? "poi"}
             />,
           );
         };
@@ -736,7 +833,7 @@ export default function MapboxMap({
 
         const marker = new mapboxgl.Marker({
           element: el,
-          anchor: "center",
+          anchor: "bottom",
           offset: pos.offset,
         })
           .setLngLat(pos.lngLat)
@@ -752,7 +849,7 @@ export default function MapboxMap({
         });
       });
 
-      syncPlacePath();
+      syncPlacePathRef.current();
       // Globe projection can leave DOM marker transforms stale after camera
       // movement. Force a repaint now and again on the next frame so all
       // marker positions are re-projected correctly.
@@ -780,6 +877,7 @@ export default function MapboxMap({
             imageUrl={m.imageUrl}
             dateLabel={m.dateLabel}
             isActive={isActive}
+            onClick={() => onMarkerClickRef.current?.(m.id)}
           />,
         );
       };
@@ -803,11 +901,15 @@ export default function MapboxMap({
     });
     map.triggerRepaint();
     requestAnimationFrame(() => map.triggerRepaint());
-  }, [clearMarkers, syncPlacePath]);
+  }, [clearMarkers]);
 
   useEffect(() => {
     syncMarkersRef.current = syncMarkers;
   }, [syncMarkers]);
+
+  useEffect(() => {
+    syncPlacePathRef.current = syncPlacePath;
+  }, [syncPlacePath]);
 
   const syncActiveMarkerStyles = useCallback(() => {
     const activePlaceId = activePlaceMarkerIdRef.current;
@@ -1119,10 +1221,35 @@ export default function MapboxMap({
       markUserInteraction = () => {
         lastUserInteractionAtRef.current = Date.now();
       };
+
+      const onMoveOrInteraction = () => {
+        if (markUserInteraction) {
+          markUserInteraction();
+        }
+        // Use the ref so the event listener always dispatches to the latest syncPlacePath
+        // even though this closure was created once at effect init time.
+        if (mapRef.current?.isStyleLoaded()) {
+          syncPlacePathRef.current();
+        }
+      };
+
       map.on("dragstart", markUserInteraction);
       map.on("zoomstart", markUserInteraction);
       map.on("rotatestart", markUserInteraction);
       map.on("pitchstart", markUserInteraction);
+
+      // Continuously sync place path during movement.
+      map.on("move", onMoveOrInteraction);
+
+      // Also re-sync after the camera settles so the line is correct on initial load
+      // (the first syncPlacePath runs at zoom=1 before fitBounds completes; moveend ensures
+      //  we redraw with the actual final viewport position).
+      const onMoveEnd = () => {
+        if (mapRef.current?.isStyleLoaded()) {
+          syncPlacePathRef.current();
+        }
+      };
+      map.on("moveend", onMoveEnd);
 
       let resizeScheduled = false;
       const throttledResize = () => {
@@ -1147,6 +1274,7 @@ export default function MapboxMap({
         map.off("zoomstart", markUserInteraction);
         map.off("rotatestart", markUserInteraction);
         map.off("pitchstart", markUserInteraction);
+        // We cannot reliably turn off onMoveOrInteraction without a ref, but removing the map handles it.
       }
       clearMarkers();
       if (map) map.remove();
@@ -1427,6 +1555,54 @@ export default function MapboxMap({
               {overlayTopRight}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Controls Container */}
+      {showZoomControls && (
+        <div
+          style={{
+            position: "absolute",
+            top: 16,
+            right: 16,
+            display: "flex",
+            flexDirection: "column",
+            gap: 4,
+            pointerEvents: "auto",
+          }}
+        >
+          {(
+            [
+              { label: "+", action: () => mapRef.current?.zoomIn() },
+              { label: "−", action: () => mapRef.current?.zoomOut() },
+            ] as const
+          ).map(({ label, action }) => (
+            <button
+              key={label}
+              type="button"
+              onClick={action}
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 10,
+                background: "rgba(255,255,255,0.92)",
+                backdropFilter: "blur(8px)",
+                border: "1px solid rgba(0,0,0,0.10)",
+                boxShadow: "0 2px 8px rgba(0,0,0,0.14)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 20,
+                fontWeight: 500,
+                lineHeight: 1,
+                color: "rgba(0,0,0,0.75)",
+                cursor: "pointer",
+              }}
+              aria-label={label === "+" ? "Zoom in" : "Zoom out"}
+            >
+              {label}
+            </button>
+          ))}
         </div>
       )}
     </div>

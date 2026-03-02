@@ -29,8 +29,9 @@ export default function RecapDayTabs({
   return (
     <div
       className={[
-        "flex max-w-full items-center gap-2 overflow-x-auto",
-        "[-webkit-overflow-scrolling:touch]",
+        "flex max-w-full items-center gap-2 overflow-x-auto overflow-y-hidden",
+        "[-webkit-overflow-scrolling:touch] [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden",
+        "px-0.5 py-1", // small padding so scale/shadow isn't clipped
         className,
       ].join(" ")}
     >
@@ -43,12 +44,11 @@ export default function RecapDayTabs({
             type="button"
             onClick={() => onChange(t.id)}
             className={[
-              "shrink-0 rounded-full font-semibold",
+              "shrink-0 rounded-full font-bold transition-all duration-200",
               baseButton,
-              "transition-colors",
               active
-                ? "bg-[#0798FF] text-white shadow-sm"
-                : "bg-black/10 text-black/55 hover:bg-black/15",
+                ? "bg-blue-500 text-white shadow-md scale-[1.02]"
+                : "bg-black/[0.04] text-black/40 hover:bg-black/[0.08] hover:text-black/60",
             ].join(" ")}
             aria-pressed={active}
           >

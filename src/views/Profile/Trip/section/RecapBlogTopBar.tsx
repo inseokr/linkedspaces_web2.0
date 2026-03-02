@@ -5,8 +5,7 @@ import RecapDayTabs, {
   type DayTab,
 } from "@/views/Profile/Trip/component/RecapDayTabs";
 import Image from "next/image";
-import updateIcon from "@/assets/icons/update.svg";
-import { Check } from "lucide-react";
+import { Check, RefreshCw, SquareArrowUp } from "lucide-react";
 
 type Props = {
   title?: string;
@@ -113,8 +112,7 @@ export default function RecapBlogTopBar({
   return (
     <header
       className={[
-        "sticky top-[0px] z-50", // 필요에 맞게 px 조정
-        "w-full bg-white/85 backdrop-blur border-b border-black/10 relative",
+        "w-full bg-white backdrop-blur border-b border-black/10 relative",
         className,
       ].join(" ")}
     >
@@ -128,7 +126,7 @@ export default function RecapBlogTopBar({
         <Check className="h-4 w-4 text-emerald-400" />
         Blog link copied to share!
       </div>
-      <div className="w-full px-6 py-4">
+      <div className="w-full px-4 sm:px-6 lg:px-8 py-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           {/* Left: Go Back (bloggo) or Title (linkedspaces) */}
           <div className="min-w-0 flex items-center gap-3">
@@ -148,100 +146,98 @@ export default function RecapBlogTopBar({
           </div>
 
           {/* Right: Actions (Edit / Share / Go Back for linkedspaces) */}
-          <div className="flex items-center gap-2">
-            {mode === "edit" ? (
-              <>
-                <button
-                  type="button"
-                  onClick={onCloseEdit}
-                  className={secondaryButtonClass}
-                >
-                  Close
-                </button>
-
-                {onDiscardLocal && (
+          <div className="flex flex-wrap items-center justify-end gap-4 md:gap-6">
+            {mode === "edit" && dayTabs?.length && onDayChange && (
+              <RecapDayTabs
+                tabs={dayTabs}
+                activeId={activeDayId ?? dayTabs[0]?.id ?? "day-1"}
+                onChange={onDayChange}
+              />
+            )}
+            <div className="flex items-center gap-2">
+              {mode === "edit" ? (
+                <>
                   <button
                     type="button"
-                    onClick={discardDisabled ? undefined : onDiscardLocal}
-                    disabled={discardDisabled}
-                    className={
-                      discardDisabled
-                        ? disabledDestructiveButtonClass
-                        : destructiveButtonClass
-                    }
-                  >
-                    Discard local changes
-                  </button>
-                )}
-
-                <button
-                  type="button"
-                  onClick={updateDisabled ? undefined : onUpdate}
-                  disabled={updateDisabled}
-                  style={{
-                    backgroundColor: updateDisabled ? undefined : primaryColor,
-                  }}
-                  className={
-                    updateDisabled
-                      ? disabledPrimaryButtonClass
-                      : primaryButtonClass
-                  }
-                >
-                  <Image
-                    src={updateIcon}
-                    alt="Update"
-                    width={18}
-                    height={18}
-                    className={[
-                      "block shrink-0",
-                      updateDisabled ? "opacity-40" : "opacity-90",
-                    ].join(" ")}
-                  />
-                  Update
-                </button>
-              </>
-            ) : (
-              <>
-                <button
-                  type="button"
-                  onClick={() => onEditBlog?.()}
-                  className={secondaryButtonClass}
-                >
-                  Edit Blog
-                </button>
-
-                <button
-                  type="button"
-                  onClick={onShare ?? handleShare}
-                  className={secondaryButtonClass}
-                >
-                  Share
-                </button>
-
-                {/* Go Back only on the right for non-bloggo brands */}
-                {onGoBack && brand !== "bloggo" && (
-                  <button
-                    type="button"
-                    onClick={onGoBack}
+                    onClick={onCloseEdit}
                     className={secondaryButtonClass}
                   >
-                    Go Back
+                    Close
                   </button>
-                )}
-              </>
-            )}
+
+                  {onDiscardLocal && (
+                    <button
+                      type="button"
+                      onClick={discardDisabled ? undefined : onDiscardLocal}
+                      disabled={discardDisabled}
+                      className={
+                        discardDisabled
+                          ? disabledDestructiveButtonClass
+                          : destructiveButtonClass
+                      }
+                    >
+                      Discard local changes
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={updateDisabled ? undefined : onUpdate}
+                    disabled={updateDisabled}
+                    style={{
+                      backgroundColor: updateDisabled
+                        ? undefined
+                        : primaryColor,
+                    }}
+                    className={
+                      updateDisabled
+                        ? disabledPrimaryButtonClass
+                        : primaryButtonClass
+                    }
+                  >
+                    <RefreshCw
+                      className={[
+                        "w-[18px] h-[18px] shrink-0",
+                        updateDisabled ? "opacity-40" : "opacity-90",
+                      ].join(" ")}
+                    />
+                    Update
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => onEditBlog?.()}
+                    className={secondaryButtonClass}
+                  >
+                    Edit Blog
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={onShare ?? handleShare}
+                    className={secondaryButtonClass}
+                  >
+                    <SquareArrowUp className="w-[18px] h-[18px] opacity-90" />
+                    Share
+                  </button>
+
+                  {/* Go Back only on the right for non-bloggo brands */}
+                  {onGoBack && brand !== "bloggo" && (
+                    <button
+                      type="button"
+                      onClick={onGoBack}
+                      className={secondaryButtonClass}
+                    >
+                      Go Back
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
           </div>
         </div>
-
-        {mode === "edit" && dayTabs?.length && onDayChange && (
-          <div className="mt-4">
-            <RecapDayTabs
-              tabs={dayTabs}
-              activeId={activeDayId ?? dayTabs[0]?.id ?? "day-1"}
-              onChange={onDayChange}
-            />
-          </div>
-        )}
       </div>
     </header>
   );

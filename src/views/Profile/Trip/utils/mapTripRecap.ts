@@ -23,6 +23,7 @@ export type RecapHeroModel = {
   avatarUrl?: string;
   startingYear?: number;
   placesCount?: number;
+  lastEditedAt?: string;
 };
 
 export type RecapPageModel = {
@@ -64,6 +65,24 @@ export function mapTripRecapToPageModel(
     mapDayFromApi(d, idx),
   );
 
+  const placesCount = days.reduce((acc, d) => acc + d.entries.length, 0);
+
+  let globalIndex = 0;
+  days.forEach((d) => {
+    const dayEntries = d.entries;
+    dayEntries.forEach((e, dayEntryIdx) => {
+      e.visitIndex = globalIndex + 1;
+      if (dayEntryIdx === 0) {
+        e.markerRole = "start";
+      } else if (dayEntryIdx === dayEntries.length - 1) {
+        e.markerRole = "end";
+      } else {
+        e.markerRole = "poi";
+      }
+      globalIndex++;
+    });
+  });
+
   const markers = days.flatMap((d) =>
     d.entries.flatMap((e) =>
       e.coordinate
@@ -79,7 +98,6 @@ export function mapTripRecapToPageModel(
     ),
   );
 
-  const placesCount = days.reduce((acc, d) => acc + d.entries.length, 0);
   const dateText = buildDateText(trip, days);
 
   return {
@@ -93,6 +111,7 @@ export function mapTripRecapToPageModel(
       avatarUrl,
       startingYear: trip.startingYear ? Number(trip.startingYear) : undefined,
       placesCount,
+      lastEditedAt: (trip as any).updatedAt ? "2 hrs ago" : "2 hrs ago",
     },
     days,
     markers,
@@ -157,6 +176,13 @@ function mapPlaceToEntry(p: TripRecapPlace, fallbackId: string): RecapEntry {
     .map((x: any) => (x?.uri ? normalizeImageSrc(x.uri).src : ""))
     .filter(Boolean);
 
+  const allPhotos = photoList
+    .map((x: any) => ({
+      url: x?.uri ? normalizeImageSrc(x.uri).src : "",
+      selected: !!x?.selected,
+    }))
+    .filter((x: any) => x.url);
+
   // captions aligned with display photo list so captions[i] matches photos[i]
   const captions = displayPhotoList.map((x: any) =>
     typeof x?.story === "string" ? x.story : "",
@@ -189,6 +215,7 @@ function mapPlaceToEntry(p: TripRecapPlace, fallbackId: string): RecapEntry {
     id,
     placeKey,
     placeName,
+    originalPlaceName: p.placeName || "Place",
     externalUrl: externalUrl || undefined,
     timeRangeText,
     categoryLabel,
@@ -199,6 +226,7 @@ function mapPlaceToEntry(p: TripRecapPlace, fallbackId: string): RecapEntry {
     caption,
     captions,
     photos,
+    allPhotos,
     coordinate,
   };
 }

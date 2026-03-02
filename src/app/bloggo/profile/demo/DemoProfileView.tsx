@@ -14,6 +14,7 @@ import MapboxMap, {
   type MarkerData,
 } from "@/views/Profile/travel-stats/components/MapBoxMap";
 import { MapPin, Eye } from "lucide-react";
+import ScrollToTopButton from "@/components/ui/ScrollToTopButton";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Mode = "recap" | "mapView";
@@ -39,7 +40,7 @@ function RecapYearTabs({
   return (
     <div
       className={[
-        "inline-flex items-center gap-2 rounded-full bg-slate-100 p-1",
+        "inline-flex items-center gap-2 rounded-full bg-black/[0.03] p-1.5",
         className,
       ].join(" ")}
       role="tablist"
@@ -55,11 +56,11 @@ function RecapYearTabs({
             aria-selected={selected}
             onClick={() => onChange(opt)}
             className={[
-              "rounded-full px-5 py-2 text-[13px] font-semibold leading-none transition",
+              "rounded-full px-5 py-2.5 text-[14px] font-bold leading-none transition-all duration-200",
               selected
-                ? "bg-sky-600 text-white shadow-sm"
-                : "text-slate-400 hover:text-slate-700",
-              "focus:outline-none focus:ring-2 focus:ring-sky-400/40",
+                ? "bg-sky-500 text-white shadow-md shadow-sky-500/20 scale-[1.05]"
+                : "text-black/40 hover:text-black/70 hover:bg-black/5",
+              "focus:outline-none",
             ].join(" ")}
           >
             {opt}
@@ -473,7 +474,10 @@ export default function DemoProfileView() {
   }, [selectedCountry, countrySummaries]);
 
   return (
-    <div className="flex flex-col" style={{ minHeight: "calc(100vh - 64px)" }}>
+    <div
+      className="flex flex-col bg-[#F5F5F7]"
+      style={{ minHeight: "calc(100vh - 64px)" }}
+    >
       {/* ── Sticky Header ───────────────────────────────────────────────────── */}
       <div className="sticky top-0 z-50 border-b border-black/10 bg-white/95 shadow-[0_8px_24px_rgba(0,0,0,0.08)] backdrop-blur-md">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-5">
@@ -558,7 +562,7 @@ export default function DemoProfileView() {
             <div className="h-full rounded-2xl border border-black/10 bg-white overflow-hidden">
               <div
                 ref={mapListScrollRef}
-                className="h-full overflow-y-auto pr-2 px-4 pt-4 pb-4"
+                className="h-full overflow-y-auto pr-2 px-4 pt-2 pb-4 scrollbar-hide [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
               >
                 {/* Mobile Year Filter in content */}
                 <div className="sm:hidden mb-6 flex justify-center">
@@ -613,6 +617,7 @@ export default function DemoProfileView() {
           </section>
         </div>
       )}
+      <ScrollToTopButton scrollContainerRef={mapListScrollRef} />
     </div>
   );
 }

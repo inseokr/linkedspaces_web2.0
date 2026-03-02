@@ -51,50 +51,29 @@ export default function WebGLHelpPopup({
       title: "Open System Settings",
       desc: (
         <>
-          In <strong>{browserName}</strong>, click the three-dot menu (
-          <strong>&#8942;</strong>) at the top-right corner, then select{" "}
-          <strong>Settings</strong>. From the left sidebar choose{" "}
-          <strong>System</strong>.
+          In <strong>{browserName}</strong>, go to{" "}
+          <strong>Settings &gt; System</strong>.
           <br />
-          <span
-            style={{
-              fontSize: 12,
-              color: "rgba(0,0,0,0.4)",
-              fontFamily: "monospace",
-            }}
-          >
-            Or paste into your address bar:&nbsp;{settingsUrl}
+          <span style={{ fontSize: 13, color: "rgba(0,0,0,0.5)" }}>
+            Or paste this into your address bar: <strong>{settingsUrl}</strong>
           </span>
         </>
       ),
     },
     {
       num: "2",
-      title: 'Toggle on "Use graphics acceleration when available"',
+      title: "Enable Graphics Acceleration",
       desc: (
         <>
-          Look for the toggle labeled{" "}
-          <strong>&quot;Use graphics acceleration when available&quot;</strong>.
-          Make sure it is turned <strong>ON</strong>. If it was already on, try
-          toggling it off, waiting a few seconds, then turning it back on.
+          Turn <strong>ON</strong> {'"'}Use graphics acceleration when available
+          {'"'}.
         </>
       ),
     },
     {
       num: "3",
-      title: "Relaunch your browser",
-      desc: (
-        <>
-          A <strong>&quot;Relaunch&quot;</strong> button will appear next to the
-          toggle. Click it &mdash; or fully quit and reopen your browser. The
-          setting won&apos;t take effect until the browser restarts.
-        </>
-      ),
-    },
-    {
-      num: "4",
-      title: "Come back to this page",
-      desc: "After relaunching, navigate back here. The map should load normally.",
+      title: "Relaunch & Reload",
+      desc: "Click Relaunch to restart your browser, then reload this page.",
     },
   ];
 
@@ -184,8 +163,7 @@ export default function WebGLHelpPopup({
               color: "rgba(0,0,0,0.55)",
             }}
           >
-            The interactive map needs your browser&apos;s graphics acceleration
-            to render. It only takes a minute to turn it on:
+            Enable graphics acceleration to render the interactive map:
           </p>
 
           {/* Steps */}
@@ -262,11 +240,9 @@ export default function WebGLHelpPopup({
                 color: "rgba(0,0,0,0.55)",
               }}
             >
-              <strong style={{ color: "rgba(0,0,0,0.7)" }}>Brave users:</strong>{" "}
-              If the map still doesn&apos;t load after relaunching, click the{" "}
-              <strong>Shields icon</strong> (lion) in the address bar for this
-              site and set <strong>Block fingerprinting</strong> to{" "}
-              <strong>Allow</strong>, then reload.
+              <strong style={{ color: "rgba(0,0,0,0.7)" }}>Still blank?</strong>{" "}
+              Click the <strong>Shields icon</strong> (lion) and set{" "}
+              <strong>Block fingerprinting</strong> to <strong>Allow</strong>.
             </div>
           )}
 

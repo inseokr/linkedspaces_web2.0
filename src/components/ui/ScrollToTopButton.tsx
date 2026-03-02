@@ -81,7 +81,7 @@ export default function ScrollToTopButton({
 
   return (
     <div
-      className="fixed bottom-6 right-6 z-40 flex transition-all duration-200 ease-out"
+      className="fixed bottom-6 left-6 z-40 flex transition-all duration-200 ease-out"
       style={{
         opacity: visible ? 1 : 0,
         transform: visible ? "translateY(0)" : "translateY(8px)",
@@ -93,7 +93,7 @@ export default function ScrollToTopButton({
         type="button"
         onClick={scrollToTop}
         tabIndex={visible ? 0 : -1}
-        className="flex h-11 w-11 items-center justify-center rounded-full border border-[var(--card-border)] bg-[var(--card-bg)] text-[var(--card-text)] shadow-[0_4px_14px_rgba(0,0,0,0.12)] transition-colors hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-[var(--color-main)] focus:ring-offset-2 focus:ring-offset-white active:scale-[0.98]"
+        className="flex h-11 w-11 items-center justify-center rounded-full bg-gray-500 text-white shadow-[0_4px_14px_rgba(0,0,0,0.12)] transition-colors hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-[var(--color-main)] focus:ring-offset-2 focus:ring-offset-white active:scale-[0.98]"
         aria-label="Scroll back to top"
       >
         <ArrowUp className="h-5 w-5" aria-hidden />
