@@ -951,8 +951,12 @@ function ResolvedImage({ src, alt }: { src: string; alt: string }) {
 
   if (!resolved) return <div className="h-full w-full bg-black/10" />;
 
-  //  blob은 img로 (안전)
-  if (resolved.startsWith("blob:")) {
+  // blob / S3 signed URLs: use plain img to avoid /_next/image (proxy breaks signed URLs)
+  const usePlainImg =
+    resolved.startsWith("blob:") ||
+    resolved.includes("amazonaws.com") ||
+    resolved.includes("X-Amz-");
+  if (usePlainImg) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
       <img
@@ -963,7 +967,7 @@ function ResolvedImage({ src, alt }: { src: string; alt: string }) {
     );
   }
 
-  //  일반 url은 next/image
+  // 일반 url은 next/image
   return (
     <Image
       src={resolved}
