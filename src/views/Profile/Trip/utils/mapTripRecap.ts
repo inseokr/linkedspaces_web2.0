@@ -176,6 +176,13 @@ function mapPlaceToEntry(p: TripRecapPlace, fallbackId: string): RecapEntry {
     .map((x: any) => (x?.uri ? normalizeImageSrc(x.uri).src : ""))
     .filter(Boolean);
 
+  const allPhotos = photoList
+    .map((x: any) => ({
+      url: x?.uri ? normalizeImageSrc(x.uri).src : "",
+      selected: !!x?.selected,
+    }))
+    .filter((x: any) => x.url);
+
   // captions aligned with display photo list so captions[i] matches photos[i]
   const captions = displayPhotoList.map((x: any) =>
     typeof x?.story === "string" ? x.story : "",
@@ -219,6 +226,7 @@ function mapPlaceToEntry(p: TripRecapPlace, fallbackId: string): RecapEntry {
     caption,
     captions,
     photos,
+    allPhotos,
     coordinate,
   };
 }

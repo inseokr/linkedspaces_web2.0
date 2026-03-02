@@ -391,6 +391,7 @@ export default function MapboxMap({
   const syncMarkersRef = useRef<() => void>(() => {});
   const syncActiveMarkerStylesRef = useRef<() => void>(() => {});
   const syncHighlightLayersRef = useRef<() => void>(() => {});
+  const syncPlacePathRef = useRef<() => void>(() => {});
   const syncMarkersPendingRef = useRef(false); // guard against duplicate once("idle",...) stacking
 
   // "한 번이라도 entry로 포커스를 준 적 있는지"
@@ -651,36 +652,8 @@ export default function MapboxMap({
         .filter((m) => Number.isFinite(m.lng) && Number.isFinite(m.lat))
         .map((m) => {
           const l = layout.get(m.id);
-          if (l) {
-            // Unproject the screen offset back to lngLat if needed. However, since Mapbox adds lines based on lngLat,
-            // the exact marker position incorporates `POI_NUDGE_DEG` for base offset, which is l.lngLat.
-            let [lng, lat] = l.lngLat;
-
-            // To be perfectly centered on the start/end markers, we would ideally project -> offset -> unproject,
-            // but Mapbox lines don't natively take pixel offsets. An approximation in degrees roughly based on zoom.
-            const zoom = map.getZoom();
-            // pixels to degrees approximation at equador: 1px ~ 360 / (256 * 2^zoom)
-            // scale it by cos(lat)
-            const degPerPxLng = 360 / (256 * Math.pow(2, zoom));
-            const degPerPxLat =
-              (360 / (256 * Math.pow(2, zoom))) *
-              Math.cos((lat * Math.PI) / 180);
-
-            // Add the layout offset (circle spreading)
-            lng += l.offset[0] * degPerPxLng;
-            // Subtract y offset because screen y grows down, lat grows up
-            lat -= l.offset[1] * degPerPxLat;
-
-            // Add the anchor offset
-            // Simple markers use "center" anchor, full markers use "bottom" anchor and the photo center is higher up.
-            if (!useSimple) {
-              // the PlaceMarker is ~109px tall (72px photo + stem + label). The center of the 72px photo is about 48px from bottom
-              lat += 48 * degPerPxLat;
-            }
-
-            return [lng, lat];
-          }
-          return [m.lng, m.lat];
+          if (!l) return [m.lng, m.lat];
+          return [l.lngLat[0], l.lngLat[1]];
         });
     } else {
       coords = placeMarkersRef.current
@@ -722,10 +695,10 @@ export default function MapboxMap({
         source: PLACE_PATH_SOURCE_ID,
         layout: { "line-join": "round", "line-cap": "round" },
         paint: {
-          "line-color": "#F97316",
-          "line-width": 2,
+          "line-color": "#3B82F6",
+          "line-width": 4,
           "line-opacity": 0.9,
-          "line-dasharray": [2, 2],
+          "line-dasharray": [3, 2],
         },
       });
     }
@@ -876,7 +849,7 @@ export default function MapboxMap({
         });
       });
 
-      syncPlacePath();
+      syncPlacePathRef.current();
       // Globe projection can leave DOM marker transforms stale after camera
       // movement. Force a repaint now and again on the next frame so all
       // marker positions are re-projected correctly.
@@ -928,11 +901,15 @@ export default function MapboxMap({
     });
     map.triggerRepaint();
     requestAnimationFrame(() => map.triggerRepaint());
-  }, [clearMarkers, syncPlacePath]);
+  }, [clearMarkers]);
 
   useEffect(() => {
     syncMarkersRef.current = syncMarkers;
   }, [syncMarkers]);
+
+  useEffect(() => {
+    syncPlacePathRef.current = syncPlacePath;
+  }, [syncPlacePath]);
 
   const syncActiveMarkerStyles = useCallback(() => {
     const activePlaceId = activePlaceMarkerIdRef.current;
@@ -1249,8 +1226,10 @@ export default function MapboxMap({
         if (markUserInteraction) {
           markUserInteraction();
         }
+        // Use the ref so the event listener always dispatches to the latest syncPlacePath
+        // even though this closure was created once at effect init time.
         if (mapRef.current?.isStyleLoaded()) {
-          syncPlacePath();
+          syncPlacePathRef.current();
         }
       };
 
@@ -1259,9 +1238,18 @@ export default function MapboxMap({
       map.on("rotatestart", markUserInteraction);
       map.on("pitchstart", markUserInteraction);
 
-      // We need to continuously sync place path during movement to keep the line connected properly
-      // since the pixel-to-degree offset depends on zoom/pitch/rotation
+      // Continuously sync place path during movement.
       map.on("move", onMoveOrInteraction);
+
+      // Also re-sync after the camera settles so the line is correct on initial load
+      // (the first syncPlacePath runs at zoom=1 before fitBounds completes; moveend ensures
+      //  we redraw with the actual final viewport position).
+      const onMoveEnd = () => {
+        if (mapRef.current?.isStyleLoaded()) {
+          syncPlacePathRef.current();
+        }
+      };
+      map.on("moveend", onMoveEnd);
 
       let resizeScheduled = false;
       const throttledResize = () => {
