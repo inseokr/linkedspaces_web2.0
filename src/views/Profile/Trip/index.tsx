@@ -1064,7 +1064,21 @@ function OwnerTripRecapView({
       if (!pinnedNow) return;
 
       const mapWrap = mapContainerRef.current;
-      const isOnMap = !!(mapWrap && mapWrap.contains(e.target as Node));
+      // Use position-based hit-test in addition to DOM contains() — Mapbox's canvas
+      // or internal overlay elements may not be descendants of mapContainerRef, so
+      // contains() alone is unreliable. If the cursor is physically over the map
+      // bounding box, let Mapbox handle the wheel event to zoom in/out freely.
+      const isOnMap = (() => {
+        if (!mapWrap) return false;
+        if (mapWrap.contains(e.target as Node)) return true;
+        const r = mapWrap.getBoundingClientRect();
+        return (
+          e.clientX >= r.left &&
+          e.clientX <= r.right &&
+          e.clientY >= r.top &&
+          e.clientY <= r.bottom
+        );
+      })();
 
       // If hovering over the map, do not hijack the scroll event.
       // Let Mapbox handle the wheel event to zoom in/out freely.

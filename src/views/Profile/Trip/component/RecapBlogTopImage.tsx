@@ -305,6 +305,41 @@ export function RecapBlogCoverImage({
   );
 }
 
+/** Standalone author row — place just above Day 1 */
+export function AuthorRow({
+  name,
+  postedLabel,
+  avatarUrl,
+}: {
+  name: string;
+  postedLabel: string;
+  avatarUrl?: string;
+}) {
+  return (
+    <div className="flex items-center gap-3 px-1">
+      <div className="relative h-9 w-9 overflow-hidden rounded-full border border-black/10 bg-black/5 shrink-0">
+        {avatarUrl ? (
+          <Image
+            src={avatarUrl}
+            alt={name}
+            fill
+            unoptimized
+            className="object-cover"
+          />
+        ) : (
+          <div className="grid h-full w-full place-items-center text-xs font-semibold text-black/70">
+            {name.slice(0, 1).toUpperCase()}
+          </div>
+        )}
+      </div>
+      <div className="leading-tight">
+        <div className="text-sm font-semibold text-black">{name}</div>
+        <div className="text-xs text-black/50">{postedLabel}</div>
+      </div>
+    </div>
+  );
+}
+
 /** 3) 배경 이미지 + 제목 + 메타 + 작성자 (Hero 섹션) */
 export default function RecapBlogHero({
   coverImageUrl,
@@ -329,49 +364,68 @@ export default function RecapBlogHero({
 }) {
   return (
     <>
-      {/* Mobile: Use background tone to frame header if no image */}
-      <section className="w-full sm:hidden">
-        <div className="rounded-[32px] border border-black/5 bg-white p-6 pb-4 shadow-[0_4px_20px_rgba(0,0,0,0.03)] flex flex-col items-center">
-          <RecapBlogHeader
-            title={title}
-            dateText={dateText}
-            locationText={locationText}
-            authorName={authorName}
-            postedLabel={postedLabel}
-            avatarUrl={avatarUrl}
-            placesCount={placesCount}
-            lastEditedAt={lastEditedAt}
-            tone="onLight"
-          />
-          <button
-            onClick={() => {
-              const dayEl = document.querySelector('[data-day-id="day-1"]');
-              if (dayEl) {
-                dayEl.scrollIntoView({ behavior: "smooth", block: "start" });
-              } else {
-                window.scrollBy({ top: 300, behavior: "smooth" });
-              }
-            }}
-            className="group mt-10 flex flex-col items-center gap-1 text-black/40 hover:text-black/60 transition-colors"
-          >
-            <span className="text-[12px] font-bold uppercase tracking-widest">
-              Read
-            </span>
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={2.5}
-              stroke="currentColor"
-              className="w-5 h-5 animate-bounce"
+      {/* Mobile: Cover photo with text anchored to bottom */}
+      <section
+        className="relative w-full overflow-hidden rounded-[28px] border border-black/5 sm:hidden"
+        style={{ aspectRatio: "4/5" }}
+      >
+        <CoverImage coverImageUrl={coverImageUrl} title={title} showGradient />
+
+        <div className="pointer-events-none absolute inset-0 flex flex-col justify-end z-20">
+          <div className="pb-5 px-6 text-center">
+            <h1
+              className="!text-[28px] !leading-[1.1] font-extrabold tracking-tighter text-white"
+              style={{ textShadow: "0 2px 12px rgba(0,0,0,0.4)" }}
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M19.5 8.25l-7.5 7.5-7.5-7.5"
-              />
-            </svg>
-          </button>
+              {title}
+            </h1>
+
+            <div className="mt-3 flex flex-wrap items-center justify-center gap-x-2 gap-y-1">
+              {dateText?.trim() && (
+                <span className="text-[13px] font-medium text-white/90 uppercase tracking-wide">
+                  {dateText}
+                </span>
+              )}
+              {dateText?.trim() && locationText?.trim() && (
+                <span className="text-white/60">•</span>
+              )}
+              {locationText?.trim() && (
+                <span className="text-[13px] font-medium text-white/90 uppercase tracking-wide">
+                  {locationText}
+                </span>
+              )}
+            </div>
+
+            <button
+              className="pointer-events-auto mt-5 flex flex-col items-center gap-1 text-white/70 hover:text-white transition-colors mx-auto"
+              onClick={() => {
+                const dayEl = document.querySelector('[data-day-id="day-1"]');
+                if (dayEl) {
+                  dayEl.scrollIntoView({ behavior: "smooth", block: "start" });
+                } else {
+                  window.scrollBy({ top: 300, behavior: "smooth" });
+                }
+              }}
+            >
+              <span className="text-[11px] font-bold uppercase tracking-widest">
+                Read
+              </span>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={2.5}
+                stroke="currentColor"
+                className="w-4 h-4 animate-bounce"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M19.5 8.25l-7.5 7.5-7.5-7.5"
+                />
+              </svg>
+            </button>
+          </div>
         </div>
       </section>
 
@@ -383,14 +437,6 @@ export default function RecapBlogHero({
           <div className="flex-1" />
 
           <div className="pb-4 text-center w-full max-w-4xl mx-auto">
-            <div className="pointer-events-auto flex items-center justify-center mb-6 w-full">
-              <AuthorBadge
-                name={authorName}
-                postedLabel={postedLabel}
-                avatarUrl={avatarUrl}
-                tone="onDark"
-              />
-            </div>
             <h1
               className="!text-5xl !leading-[1.1] font-extrabold tracking-tighter text-white md:!text-6xl lg:!text-7xl"
               style={{ textShadow: "0 2px 12px rgba(0,0,0,0.3)" }}

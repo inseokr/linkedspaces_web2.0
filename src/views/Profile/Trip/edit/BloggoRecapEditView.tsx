@@ -256,6 +256,14 @@ export default function BloggoRecapEditView({
     );
   }, [draft?.days]);
 
+  const [activeDayId, setActiveDayId] = useState<string | null>(null);
+  // Keep activeDayId in sync when tabs first load
+  useEffect(() => {
+    if (!activeDayId && dayTabs.length > 0) {
+      setActiveDayId(dayTabs[0].id);
+    }
+  }, [dayTabs, activeDayId]);
+
   /** 4) scroll to day */
   const scrollToDay = (dayId: string) => {
     const el = daySectionRefs.current[dayId];
@@ -836,8 +844,11 @@ export default function BloggoRecapEditView({
         brand="bloggo"
         title="Recap Blog"
         dayTabs={dayTabs}
-        activeDayId={dayTabs[0]?.id ?? "day-1"} // edit에선 단순 표시용
-        onDayChange={(id: string) => scrollToDay(id)}
+        activeDayId={activeDayId ?? dayTabs[0]?.id ?? "day-1"}
+        onDayChange={(id: string) => {
+          setActiveDayId(id);
+          scrollToDay(id);
+        }}
         onGoBack={() => window.history.back()}
         onCloseEdit={handleClose}
         onDiscardLocal={handleDiscardLocal}
@@ -846,6 +857,13 @@ export default function BloggoRecapEditView({
         updateDisabled={!hasLocalChanges || loading}
         className="sticky top-[64px] z-50 border-b border-black/10"
       />
+
+      {/* Edit mode banner */}
+      <div className="sticky top-[121px] z-40 flex items-center justify-center gap-2 bg-sky-500/10 border-b border-sky-500/20 px-4 py-2">
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-sky-100 px-3 py-1 text-[12px] font-bold text-sky-700">
+          ✏️ Edit Mode — make sure to update your changes
+        </span>
+      </div>
 
       {/* ── Hero Zone: Cover + Title ─────────────────────────── */}
       <div className="mx-auto max-w-[1200px] px-4 sm:px-6 pt-6 pb-2">
@@ -867,6 +885,9 @@ export default function BloggoRecapEditView({
 
         {/* Blog title — transparent, centered, hero-sized */}
         <div className="mt-6 pb-6 border-b border-slate-200">
+          <p className="text-[11px] font-bold uppercase tracking-widest text-black/30 mb-3 text-center">
+            Blog Title
+          </p>
           <TextRow
             value={draft.recapTitle}
             variant="title"

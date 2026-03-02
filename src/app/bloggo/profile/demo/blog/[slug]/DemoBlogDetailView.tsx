@@ -8,7 +8,6 @@ import {
   useRef,
   useState,
 } from "react";
-import Link from "next/link";
 import { use } from "react";
 import { notFound, useRouter } from "next/navigation";
 
@@ -16,8 +15,11 @@ import { getBlogBySlug } from "@/bloggo/lib/mock-data";
 
 // ── Reuse the exact same Trip-page components ─────────────────────────────────
 import RecapBlogTopBar from "@/views/Profile/Trip/section/RecapBlogTopBar";
-import RecapBlogHero from "@/views/Profile/Trip/component/RecapBlogTopImage";
+import RecapBlogHero, {
+  AuthorRow,
+} from "@/views/Profile/Trip/component/RecapBlogTopImage";
 import { RecapBlogDaySection } from "@/views/Profile/Trip/component/RecapBlogPlace";
+import RestoreHiddenPlacesModal from "@/views/Profile/Trip/edit/components/RestoreHiddenPlacesModal";
 import RecapDayTabs, {
   type DayTab,
 } from "@/views/Profile/Trip/component/RecapDayTabs";
@@ -115,10 +117,203 @@ export default function DemoBlogDetailView({ params }: Props) {
 
   const [days, setDays] = useState(computedDays);
 
+  // ── Edit-place-name dialog ─────────────────────────────────────────────────
+  const [editingPlaceId, setEditingPlaceId] = useState<string | null>(null);
+  const [editingPlaceName, setEditingPlaceName] = useState("");
+
+  const openPlaceNameEditor = useCallback(
+    (entryId: string) => {
+      let currentName = "";
+      for (const day of days) {
+        const entry = day.entries.find((e) => e.id === entryId);
+        if (entry) {
+          currentName = entry.placeName;
+          break;
+        }
+      }
+      setEditingPlaceName(currentName);
+      setEditingPlaceId(entryId);
+    },
+    [days],
+  );
+
+  const commitPlaceNameEdit = useCallback(() => {
+    if (!editingPlaceId) return;
+    const trimmed = editingPlaceName.trim();
+    if (!trimmed) {
+      setEditingPlaceId(null);
+      return;
+    }
+    setDays((prev) =>
+      prev.map((day) => ({
+        ...day,
+        entries: day.entries.map((e) =>
+          e.id === editingPlaceId ? { ...e, placeName: trimmed } : e,
+        ),
+        title: day.entries
+          .map((e) => (e.id === editingPlaceId ? trimmed : e.placeName))
+          .join(" & "),
+      })),
+    );
+    setEditingPlaceId(null);
+  }, [editingPlaceId, editingPlaceName]);
+
+  const handlePlaceNameChange = useCallback((entryId: string, next: string) => {
+    setDays((prev) =>
+      prev.map((day) => ({
+        ...day,
+        entries: day.entries.map((e) =>
+          e.id === entryId ? { ...e, placeName: next } : e,
+        ),
+        title: day.entries
+          .map((e) => (e.id === entryId ? next : e.placeName))
+          .join(" & "),
+      })),
+    );
+  }, []);
+
   // Sync state if blog changes (e.g. navigation)
   useEffect(() => {
     setDays(computedDays);
   }, [computedDays]);
+
+  // ── Edit mode state ─────────────────────────────────────────────────────────
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editableTitle, setEditableTitle] = useState(blog.title);
+
+  // Reset editable title when blog changes (navigation)
+  useEffect(() => {
+    setEditableTitle(blog.title);
+    setIsEditMode(false);
+  }, [blog.title]);
+
+  const handleEditBlog = () => setIsEditMode(true);
+  const handleCloseEdit = () => setIsEditMode(false);
+  const handleUpdate = () => setIsEditMode(false); // changes already in state
+  const handleDiscardLocal = () => {
+    setDays(computedDays);
+    setEditableTitle(blog.title);
+    setIsEditMode(false);
+  };
+
+  const handlePlaceStoryChange = useCallback(
+    (entryId: string, next: string) => {
+      setDays((prev) =>
+        prev.map((day) => ({
+          ...day,
+          entries: day.entries.map((entry) =>
+            entry.id === entryId
+              ? { ...entry, placeStory: next, caption: next }
+              : entry,
+          ),
+        })),
+      );
+    },
+    [],
+  );
+
+  // ── Restore hidden places modal ─────────────────────────────────────────────
+  const [restoreDayId, setRestoreDayId] = useState<string | null>(null);
+
+  // ── Hide / Restore photo ────────────────────────────────────────────────────
+  const handleHidePhoto = useCallback((entryId: string, photoIndex: number) => {
+    setDays((prev) =>
+      prev.map((day) => ({
+        ...day,
+        entries: day.entries.map((entry) => {
+          if (entry.id !== entryId) return entry;
+          const hidden = Array.from(
+            new Set([...((entry as any).hiddenPhotoIndices ?? []), photoIndex]),
+          );
+          return { ...entry, hiddenPhotoIndices: hidden } as any;
+        }),
+      })),
+    );
+  }, []);
+
+  const handleRestorePhoto = useCallback(
+    (entryId: string, originalPhotoIndex: number) => {
+      setDays((prev) =>
+        prev.map((day) => ({
+          ...day,
+          entries: day.entries.map((entry) => {
+            if (entry.id !== entryId) return entry;
+            const hidden = ((entry as any).hiddenPhotoIndices ?? []).filter(
+              (i: number) => i !== originalPhotoIndex,
+            );
+            return { ...entry, hiddenPhotoIndices: hidden } as any;
+          }),
+        })),
+      );
+    },
+    [],
+  );
+
+  // ── Hide / Restore place ────────────────────────────────────────────────────
+  const handleTogglePlaceHide = useCallback((entryId: string) => {
+    setDays((prev) =>
+      prev.map((day) => {
+        const index = day.entries.findIndex((e) => e.id === entryId);
+        if (index === -1) return day;
+        const entry = day.entries[index];
+        const isHidden = (entry as any).status === "hidden";
+        const newEntries = [...day.entries];
+        if (!isHidden) {
+          // Hide: find anchors for restore ordering
+          let beforeId: string | undefined;
+          for (let i = index - 1; i >= 0; i--) {
+            if ((day.entries[i] as any).status !== "hidden") {
+              beforeId = day.entries[i].id;
+              break;
+            }
+          }
+          let afterId: string | undefined;
+          for (let i = index + 1; i < day.entries.length; i++) {
+            if ((day.entries[i] as any).status !== "hidden") {
+              afterId = day.entries[i].id;
+              break;
+            }
+          }
+          newEntries[index] = {
+            ...entry,
+            status: "hidden",
+            originalIndex: index,
+            anchorBeforeId: beforeId,
+            anchorAfterId: afterId,
+          } as any;
+        } else {
+          // Restore: insert back near original position
+          const toRestore = {
+            ...entry,
+            status: "saved",
+            isHidden: false,
+          } as any;
+          newEntries.splice(index, 1);
+          let insertIndex = newEntries.length;
+          const bIdx = toRestore.anchorBeforeId
+            ? newEntries.findIndex(
+                (e) =>
+                  e.id === toRestore.anchorBeforeId &&
+                  (e as any).status !== "hidden",
+              )
+            : -1;
+          const aIdx = toRestore.anchorAfterId
+            ? newEntries.findIndex(
+                (e) =>
+                  e.id === toRestore.anchorAfterId &&
+                  (e as any).status !== "hidden",
+              )
+            : -1;
+          if (bIdx !== -1) insertIndex = bIdx + 1;
+          else if (aIdx !== -1) insertIndex = aIdx;
+          else if (toRestore.originalIndex !== undefined)
+            insertIndex = Math.min(toRestore.originalIndex, newEntries.length);
+          newEntries.splice(insertIndex, 0, toRestore);
+        }
+        return { ...day, entries: newEntries };
+      }),
+    );
+  }, []);
 
   const dayTabs: DayTab[] = useMemo(
     () =>
@@ -425,48 +620,82 @@ export default function DemoBlogDetailView({ params }: Props) {
   return (
     <div className="min-h-screen bg-[#F5F5F7]">
       <RecapBlogTopBar
-        title={blog.title}
+        title={editableTitle}
         onGoBack={() => router.push("/bloggo/profile/demo")}
         brand="bloggo"
+        mode={isEditMode ? "edit" : "view"}
+        dayTabs={dayTabs}
+        activeDayId={activeDayId}
+        onDayChange={(id) => handleDayChange(id)}
+        onEditBlog={handleEditBlog}
+        onCloseEdit={handleCloseEdit}
+        onUpdate={handleUpdate}
+        onDiscardLocal={handleDiscardLocal}
+        discardDisabled={false}
+        updateDisabled={false}
       />
 
-      <div className="p-3 sm:p-5">
-        <RecapBlogHero {...hero} />
+      {/* Edit-mode banner */}
+      {isEditMode && (
+        <div className="sticky top-[57px] z-40 flex items-center justify-center gap-2 bg-sky-500/10 border-b border-sky-500/20 px-4 py-2">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-sky-100 px-3 py-1 text-[12px] font-bold text-sky-700">
+            ✏️ Demo Edit Mode — edits reset when you leave this page
+          </span>
+        </div>
+      )}
 
-        {/* Mobile day tabs */}
-        {!isLg && (
-          <div className="sticky top-[48px] z-20 border-b border-black/10 bg-white/80 backdrop-blur-md">
-            <div className="w-full px-3 py-2">
-              <RecapDayTabs
-                tabs={dayTabs}
-                activeId={activeDayId}
-                onChange={(id) => handleDayChange(id)}
-                size="sm"
-                className="max-w-full"
+      {/* ═══════════════════════════════════════════════════════════════════
+          EDIT MODE — full-width single column, no map (matches owner view)
+          ═══════════════════════════════════════════════════════════════════ */}
+      {isEditMode ? (
+        /* ═══════════════════════════════════════════════════════════════════
+           EDIT MODE — matches BloggoRecapEditView (no map, page scroll)
+           ═══════════════════════════════════════════════════════════════════ */
+        <>
+          {/* Cover photo — bare image + ImageFieldEditor-style hover overlay */}
+          <div className="mx-auto max-w-[1200px] px-4 sm:px-6 pt-6">
+            <div className="group relative w-full overflow-hidden rounded-2xl aspect-[21/7] cursor-default">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={hero.coverImageUrl}
+                alt="cover"
+                className="h-full w-full object-cover"
+              />
+              {/* Dark scrim + Change Cover pill (matches ImageFieldEditor) */}
+              <div className="absolute inset-0 flex items-center justify-center bg-black/25 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                <div
+                  className="rounded-full bg-white px-5 py-2 text-sm font-semibold text-slate-500 shadow-md border border-slate-200 cursor-not-allowed"
+                  title="Cover photo is fixed in the demo"
+                >
+                  Change Cover
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Editable title */}
+          <div className="mx-auto max-w-[1200px] px-4 sm:px-6 pb-2">
+            <div className="mt-6 pb-6 border-b border-slate-200">
+              <p className="text-[11px] font-bold uppercase tracking-widest text-black/30 mb-3 text-center">
+                Blog Title
+              </p>
+              <textarea
+                value={editableTitle}
+                onChange={(e) => {
+                  setEditableTitle(e.target.value);
+                  e.target.style.height = "auto";
+                  e.target.style.height = `${e.target.scrollHeight}px`;
+                }}
+                rows={2}
+                className="w-full resize-none overflow-hidden bg-transparent px-2 py-1 text-center text-[32px] sm:text-[48px] font-extrabold tracking-tighter text-black placeholder:text-black/20 outline-none focus:outline-none transition"
+                placeholder="Blog title…"
               />
             </div>
           </div>
-        )}
-      </div>
 
-      {/* Body: left scroll + right sticky map */}
-      <div className="flex flex-col gap-4 p-3 sm:p-4 lg:flex-row lg:items-start">
-        {/* Left: scrollable day/place list */}
-        <section
-          className="min-w-0 flex-1 lg:sticky lg:self-start"
-          style={{ top: TOPBAR_OFFSET_PX }}
-        >
-          <div
-            ref={leftScrollRef}
-            className="w-full overflow-y-auto overscroll-contain touch-pan-y rounded-2xl scrollbar-hide [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
-            style={{
-              height: isLg ? PANEL_HEIGHT : "auto",
-              maxHeight: isLg ? undefined : "none",
-              scrollBehavior: "auto",
-              overflowAnchor: "none",
-            }}
-          >
-            <div className="space-y-12 p-4">
+          {/* Itinerary content */}
+          <div className="mx-auto max-w-[1200px] px-4 sm:px-6 pb-24">
+            <div className="mt-10 space-y-20">
               {days.map((d) => {
                 const id = `day-${d.dayIndex}`;
                 return (
@@ -476,15 +705,55 @@ export default function DemoBlogDetailView({ params }: Props) {
                     ref={(el) => {
                       daySectionRefs.current[id] = el;
                     }}
-                    style={{ scrollMarginTop: 12 }}
+                    style={{ scrollMarginTop: TOPBAR_OFFSET_PX + 12 }}
                   >
                     <RecapBlogDaySection
                       dayIndex={d.dayIndex}
                       title={d.title}
-                      entries={d.entries as any}
+                      entries={d.entries
+                        .filter((e) => (e as any).status !== "hidden")
+                        .map((e) => {
+                          const hiddenIndices =
+                            (e as any).hiddenPhotoIndices ?? [];
+                          const allPhotos =
+                            (e as any).allPhotos ??
+                            e.photos.map((url: string) => ({
+                              url,
+                              selected: true,
+                            }));
+                          const hiddenPhotos = hiddenIndices
+                            .map((origIdx: number) => ({
+                              url: e.photos[origIdx] ?? "",
+                              caption: "",
+                              originalIndex: origIdx,
+                            }))
+                            .filter((h: any) => !!h.url);
+                          return {
+                            ...e,
+                            photos: e.photos.filter(
+                              (_: any, i: number) => !hiddenIndices.includes(i),
+                            ),
+                            hiddenPhotos,
+                            allPhotos,
+                          } as any;
+                        })}
+                      mode="edit"
+                      hiddenCount={
+                        d.entries.filter((e) => (e as any).status === "hidden")
+                          .length
+                      }
+                      onOpenHiddenPlaces={() =>
+                        setRestoreDayId(`day-${d.dayIndex}`)
+                      }
+                      onPlaceStoryChange={handlePlaceStoryChange}
                       onEntryMount={(entryId, el) => {
                         entryRefs.current[entryId] = el;
                       }}
+                      onOpenPlaceMapEditor={openPlaceNameEditor}
+                      onPlaceNameChange={handlePlaceNameChange}
+                      onTogglePlaceHide={handleTogglePlaceHide}
+                      onHidePhoto={handleHidePhoto}
+                      onRestorePhoto={handleRestorePhoto}
                       onManagePhotosConfirm={(
                         entryId: string,
                         selectedUrls: string[],
@@ -513,45 +782,225 @@ export default function DemoBlogDetailView({ params }: Props) {
               })}
             </div>
           </div>
-        </section>
+        </>
+      ) : (
+        /* ════════════════════════════════════════════════════════════════
+           VIEW MODE — original split-layout: left blog + right map
+           ════════════════════════════════════════════════════════════════ */
+        <>
+          <div className="p-3 sm:p-5">
+            <RecapBlogHero {...hero} title={editableTitle} />
 
-        {/* Right: sticky map */}
-        <section
-          ref={(el) => {
-            mapStickyRef.current = el;
-          }}
-          className="min-w-0 flex-1 hidden lg:block lg:sticky lg:self-start"
-          style={{ top: TOPBAR_OFFSET_PX }}
-        >
-          {/* Map container — position:relative so day tabs can overlay */}
-          <div
-            className="relative w-full overflow-hidden rounded-2xl border border-black/10"
-            style={{ height: PANEL_HEIGHT }}
-          >
-            <MapboxMap
-              mode="place"
-              focusLatLng={focusLatLng}
-              placeMarkers={allMarkers}
-              onPlaceMarkerClick={onMarkerClick}
-              activePlaceMarkerId={activeEntryId ?? undefined}
-              useSimpleMarkers
-              overlayTopRight={
-                <div className="rounded-full bg-white/70 backdrop-blur-md border border-white/50 px-2 py-2 shadow-sm">
+            {/* Mobile day tabs */}
+            {!isLg && (
+              <div className="sticky top-[48px] z-20 border-b border-black/10 bg-white/80 backdrop-blur-md">
+                <div className="w-full px-3 py-2">
                   <RecapDayTabs
                     tabs={dayTabs}
                     activeId={activeDayId}
                     onChange={(id) => handleDayChange(id)}
-                    className="max-w-[min(72vw,420px)] [&>button]:!h-7 [&>button]:!px-3 [&>button]:!text-[13px]"
+                    size="sm"
+                    className="max-w-full"
                   />
                 </div>
-              }
-            />
+              </div>
+            )}
           </div>
-        </section>
-      </div>
+
+          {/* Body: left scroll + right sticky map */}
+          <div className="flex flex-col gap-4 p-3 sm:p-4 lg:flex-row lg:items-start">
+            {/* Left: scrollable day/place list */}
+            <section
+              className="min-w-0 flex-1 lg:sticky lg:self-start"
+              style={{ top: TOPBAR_OFFSET_PX }}
+            >
+              <div
+                ref={leftScrollRef}
+                className="w-full overflow-y-auto overscroll-contain touch-pan-y rounded-2xl scrollbar-hide [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+                style={{
+                  height: isLg ? PANEL_HEIGHT : "auto",
+                  maxHeight: isLg ? undefined : "none",
+                  scrollBehavior: "auto",
+                  overflowAnchor: "none",
+                }}
+              >
+                {/* Author row - only visible on mobile, right above Day 1 */}
+                <div className="sm:hidden px-4 pt-4 pb-2">
+                  <AuthorRow
+                    name={hero.authorName}
+                    postedLabel={hero.postedLabel}
+                    avatarUrl={hero.avatarUrl}
+                  />
+                </div>
+                <div className="space-y-12 p-4">
+                  {days.map((d) => {
+                    const id = `day-${d.dayIndex}`;
+                    return (
+                      <div
+                        key={id}
+                        data-day-id={id}
+                        ref={(el) => {
+                          daySectionRefs.current[id] = el;
+                        }}
+                        style={{ scrollMarginTop: 12 }}
+                      >
+                        <RecapBlogDaySection
+                          dayIndex={d.dayIndex}
+                          title={d.title}
+                          entries={d.entries as any}
+                          mode="view"
+                          onEntryMount={(entryId, el) => {
+                            entryRefs.current[entryId] = el;
+                          }}
+                          onOpenPlaceMapEditor={openPlaceNameEditor}
+                          onPlaceNameChange={handlePlaceNameChange}
+                          onManagePhotosConfirm={(
+                            entryId: string,
+                            selectedUrls: string[],
+                          ) => {
+                            setDays((prev) =>
+                              prev.map((day) => ({
+                                ...day,
+                                entries: day.entries.map((entry) =>
+                                  entry.id === entryId
+                                    ? {
+                                        ...entry,
+                                        photos: selectedUrls,
+                                        allPhotos: entry.allPhotos?.map(
+                                          (p) => ({
+                                            ...p,
+                                            selected: selectedUrls.includes(
+                                              p.url,
+                                            ),
+                                          }),
+                                        ),
+                                      }
+                                    : entry,
+                                ),
+                              })),
+                            );
+                          }}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </section>
+
+            {/* Right: sticky map */}
+            <section
+              ref={(el) => {
+                mapStickyRef.current = el;
+              }}
+              className="min-w-0 flex-1 hidden lg:block lg:sticky lg:self-start"
+              style={{ top: TOPBAR_OFFSET_PX }}
+            >
+              <div
+                className="relative w-full overflow-hidden rounded-2xl border border-black/10"
+                style={{ height: PANEL_HEIGHT }}
+              >
+                <MapboxMap
+                  mode="place"
+                  focusLatLng={focusLatLng}
+                  placeMarkers={allMarkers}
+                  onPlaceMarkerClick={onMarkerClick}
+                  activePlaceMarkerId={activeEntryId ?? undefined}
+                  overlayTopRight={
+                    <div className="rounded-full bg-white/70 backdrop-blur-md border border-white/50 px-2 py-2 shadow-sm">
+                      <RecapDayTabs
+                        tabs={dayTabs}
+                        activeId={activeDayId}
+                        onChange={(id) => handleDayChange(id)}
+                        className="max-w-[min(72vw,420px)] [&>button]:!h-7 [&>button]:!px-3 [&>button]:!text-[13px]"
+                      />
+                    </div>
+                  }
+                />
+              </div>
+            </section>
+          </div>
+        </>
+      )}
       <ScrollToTopButton
         scrollContainerRef={isLg ? leftScrollRef : undefined}
       />
+
+      {/* ── Inline Place Name Edit Dialog ───────────────────────────────── */}
+      {/* Restore hidden places modal */}
+      {restoreDayId &&
+        (() => {
+          const dayIndex = Number(restoreDayId.replace("day-", ""));
+          const day = days.find((d) => d.dayIndex === dayIndex);
+          if (!day) return null;
+          const hiddenPlaces = day.entries
+            .filter((e) => (e as any).status === "hidden")
+            .map(
+              (e) =>
+                ({
+                  id: e.id,
+                  placeName: e.placeName,
+                  status: "hidden" as const,
+                  photos: e.photos,
+                  timeRangeText: e.timeRangeText ?? "",
+                }) as any,
+            );
+          return (
+            <RestoreHiddenPlacesModal
+              hiddenPlaces={hiddenPlaces}
+              onRestorePlace={(placeId) => handleTogglePlaceHide(placeId)}
+              onRestoreAll={() => {
+                hiddenPlaces.forEach((p) => handleTogglePlaceHide(p.id));
+                setRestoreDayId(null);
+              }}
+              onClose={() => setRestoreDayId(null)}
+            />
+          );
+        })()}
+
+      {editingPlaceId && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+          onClick={() => setEditingPlaceId(null)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm mx-4 space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="text-[20px] font-extrabold text-black tracking-tight">
+              Edit Place Name
+            </h2>
+            <input
+              autoFocus
+              type="text"
+              value={editingPlaceName}
+              onChange={(e) => setEditingPlaceName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") commitPlaceNameEdit();
+                if (e.key === "Escape") setEditingPlaceId(null);
+              }}
+              className="w-full rounded-xl border border-slate-200 px-4 py-3 text-[16px] font-semibold text-black outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20 transition"
+              placeholder="Place name…"
+            />
+            <div className="flex gap-3 justify-end">
+              <button
+                type="button"
+                onClick={() => setEditingPlaceId(null)}
+                className="px-5 py-2.5 rounded-xl text-[14px] font-bold text-black/60 hover:bg-black/5 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={commitPlaceNameEdit}
+                className="px-5 py-2.5 rounded-xl bg-black text-white text-[14px] font-bold hover:bg-black/80 transition-colors"
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

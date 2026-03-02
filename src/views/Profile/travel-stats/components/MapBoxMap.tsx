@@ -759,6 +759,9 @@ export default function MapboxMap({
         const handleClick = (e: MouseEvent) => {
           e.stopPropagation();
           onPlaceMarkerClickRef.current?.(m.id);
+          // Open Google Maps search for this place in a new tab
+          const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(m.label)}&center=${m.lat},${m.lng}`;
+          window.open(mapsUrl, "_blank", "noopener,noreferrer");
           // Zoom in to POI level on marker click (use actual POI coords)
           const map = mapRef.current;
           if (map) {
