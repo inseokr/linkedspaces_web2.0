@@ -1,4 +1,5 @@
 "use client";
+import React from "react";
 import { getBlogImageResolved } from "@/views/Profile/Trip/edit/utils/blogImageCache";
 import Image from "next/image";
 
@@ -81,21 +82,21 @@ export function TripMeta({
   const isOnDark = tone === "onDark";
 
   const divider = (
-    <span className={isOnDark ? "text-white/40" : "text-black/30"}>•</span>
+    <span className={isOnDark ? "text-white/60" : "text-black/30"}>•</span>
   );
 
   return (
     <div
       className={[
         "mt-5 flex flex-wrap items-center justify-center gap-x-3 gap-y-2 text-center",
-        isOnDark ? "text-white/80" : "text-black/60",
+        isOnDark ? "text-white" : "text-black/60",
       ].join(" ")}
     >
       {hasDate && (
         <span
           className={[
             "text-[15px] font-medium tracking-wide uppercase",
-            isOnDark ? "text-white/90" : "text-black/70",
+            isOnDark ? "text-white" : "text-black/70",
           ].join(" ")}
         >
           {dateText}
@@ -108,7 +109,7 @@ export function TripMeta({
         <span
           className={[
             "text-[15px] font-medium tracking-wide uppercase",
-            isOnDark ? "text-white/90" : "text-black/70",
+            isOnDark ? "text-white" : "text-black/70",
           ].join(" ")}
         >
           {placesCount} Place{placesCount === 1 ? "" : "s"}
@@ -121,7 +122,7 @@ export function TripMeta({
         <span
           className={[
             "text-[15px] font-medium tracking-wide uppercase",
-            isOnDark ? "text-white/90" : "text-black/70",
+            isOnDark ? "text-white" : "text-black/70",
           ].join(" ")}
         >
           {locationText}
@@ -157,6 +158,15 @@ export function RecapBlogHeader({
 
   return (
     <div className="w-full flex flex-col items-center">
+      <div className="pointer-events-auto flex items-center justify-center mb-6">
+        <AuthorBadge
+          name={authorName}
+          postedLabel={postedLabel}
+          avatarUrl={avatarUrl}
+          tone={tone}
+        />
+      </div>
+
       <div className="text-center w-full max-w-3xl mx-auto">
         <h1
           className={[
@@ -176,15 +186,6 @@ export function RecapBlogHeader({
           />
         </div>
       </div>
-
-      <div className="pointer-events-auto flex items-center justify-center mt-6">
-        <AuthorBadge
-          name={authorName}
-          postedLabel={postedLabel}
-          avatarUrl={avatarUrl}
-          tone={tone}
-        />
-      </div>
     </div>
   );
 }
@@ -202,26 +203,68 @@ function CoverImage({
   console.log("[Hero props coverImageUrl]", coverImageUrl);
   console.log("[Hero final src]", src, "unoptimized:", unoptimized);
 
+  // Parallax refs
+  const containerRef = React.useRef<HTMLDivElement>(null);
+  const imgRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    const container = containerRef.current;
+    const img = imgRef.current;
+    if (!container || !img) return;
+
+    const PARALLAX_STRENGTH = 0.6; // Higher value moves it out of view faster
+
+    const onScroll = () => {
+      const rect = container.getBoundingClientRect();
+      // rect.top is negative once we've scrolled past the top of the element
+      // By using a negative multiplier on scrolledPast, the image translates upwards
+      const scrolledPast = -rect.top;
+      // When scrolledPast > 0 (scrolling down), offset becomes negative, shifting image UP
+      const offset = scrolledPast > 0 ? -(scrolledPast * PARALLAX_STRENGTH) : 0;
+      img.style.transform = `translateY(${offset}px)`;
+    };
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+    onScroll(); // initialise
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
   return (
-    <div className="relative w-full aspect-[4/3] sm:aspect-[16/7] md:aspect-[21/9]">
-      {src ? (
-        <Image
-          src={src}
-          alt={title}
-          fill
-          unoptimized={unoptimized}
-          priority
-          className="object-cover"
-          sizes="(max-width: 768px) 100vw, 1200px"
-        />
-      ) : (
-        <div className="absolute inset-0 flex h-full w-full items-center justify-center bg-black/5 text-sm text-black/50">
-          No image
-        </div>
-      )}
+    // Outer container: fixed height, clips the overflowing image
+    <div
+      ref={containerRef}
+      className="relative w-full overflow-hidden"
+      style={{ aspectRatio: "16/7" }}
+    >
+      {/* Inner wrapper: taller than container so parallax has room to travel */}
+      <div
+        ref={imgRef}
+        className="absolute inset-x-0 will-change-transform"
+        style={{
+          // Give it more room at the bottom so it can travel upwards without showing empty space
+          top: "0%",
+          bottom: "-60%",
+        }}
+      >
+        {src ? (
+          <Image
+            src={src}
+            alt={title}
+            fill
+            unoptimized={unoptimized}
+            priority
+            className="object-cover"
+            sizes="(max-width: 768px) 100vw, 1200px"
+          />
+        ) : (
+          <div className="absolute inset-0 flex h-full w-full items-center justify-center bg-black/5 text-sm text-black/50">
+            No image
+          </div>
+        )}
+      </div>
 
       {showGradient && (
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent z-10" />
       )}
     </div>
   );
@@ -302,40 +345,67 @@ export default function RecapBlogHero({
       <section className="relative hidden w-full overflow-hidden rounded-[32px] shadow-sm sm:block">
         <CoverImage coverImageUrl={coverImageUrl} title={title} showGradient />
 
-        <div className="pointer-events-none absolute inset-0 flex flex-col p-8 sm:p-12">
+        <div className="pointer-events-none absolute inset-0 flex flex-col p-8 sm:px-12 sm:pt-16 sm:pb-8 z-20">
           <div className="flex-1" />
 
-          <div className="pb-6 text-center w-full max-w-4xl mx-auto">
-            <h1 className="!text-5xl !leading-[1.1] font-extrabold tracking-tighter text-white md:!text-6xl lg:!text-7xl">
+          <div className="pb-4 text-center w-full max-w-4xl mx-auto">
+            <div className="pointer-events-auto flex items-center justify-center mb-6 w-full">
+              <AuthorBadge
+                name={authorName}
+                postedLabel={postedLabel}
+                avatarUrl={avatarUrl}
+                tone="onDark"
+              />
+            </div>
+            <h1
+              className="!text-5xl !leading-[1.1] font-extrabold tracking-tighter text-white md:!text-6xl lg:!text-7xl"
+              style={{ textShadow: "0 2px 12px rgba(0,0,0,0.3)" }}
+            >
               {title}
             </h1>
-            <div className="mt-4 flex flex-col items-center justify-center gap-6 w-full shadow-black">
+            <div className="mt-4 flex flex-col items-center justify-center gap-6 w-full mb-8">
               <TripMeta
                 dateText={dateText}
                 locationText={locationText}
                 placesCount={placesCount}
                 tone="onDark"
               />
-              <div className="pointer-events-auto">
-                <AuthorBadge
-                  name={authorName}
-                  postedLabel={postedLabel}
-                  avatarUrl={avatarUrl}
-                  tone="onDark"
-                />
-              </div>
             </div>
+          </div>
+
+          <div className="pointer-events-auto mt-16 flex justify-center pb-2">
+            <button
+              onClick={() => {
+                const dayEl = document.querySelector('[data-day-id="day-1"]');
+                if (dayEl) {
+                  dayEl.scrollIntoView({ behavior: "smooth", block: "start" });
+                } else {
+                  window.scrollBy({ top: 500, behavior: "smooth" });
+                }
+              }}
+              className="group flex flex-col items-center gap-1 text-white hover:text-white/80 transition-colors"
+            >
+              <span className="text-[13px] font-bold uppercase tracking-widest">
+                Read
+              </span>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={2.5}
+                stroke="currentColor"
+                className="w-5 h-5 animate-bounce"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M19.5 8.25l-7.5 7.5-7.5-7.5"
+                />
+              </svg>
+            </button>
           </div>
         </div>
       </section>
-
-      {lastEditedAt && (
-        <div className="mt-8 mb-4 px-4 sm:px-6 lg:px-8 text-left">
-          <div className="text-[13px] font-bold text-black/30 tracking-[0.2em] uppercase">
-            Last Edited {lastEditedAt}
-          </div>
-        </div>
-      )}
     </>
   );
 }

@@ -30,8 +30,13 @@ const nextConfig: NextConfig = {
     };
   },
   images: {
-    // 프로필 사진이 오는 외부 도메인 허용
+    // 프로필 사진이 오는 외부 도메인 허용 (path-style and virtual-hosted S3)
     remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "s3.us-west-1.amazonaws.com",
+        pathname: "/linkedspaces.fs/**",
+      },
       {
         protocol: "https",
         hostname: "s3-us-west-1.amazonaws.com",

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { apiFetch } from "@/api/client";
 import {
   updateTripCoverPhoto,
@@ -57,6 +57,7 @@ export default function TripRecapEditView({
 
   // day scroll refs
   const daySectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const entryRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   const draftFingerprint = (d: RecapEditDraft) => {
     // Exclude `updatedAt` (it changes on every keystroke), but include actual editable fields.
@@ -167,13 +168,27 @@ export default function TripRecapEditView({
     return mapTripRecapToPageModel(recapData);
   }, [recapData]);
 
-  /** 2) init draft */
   useEffect(() => {
     if (!pageModel) return;
-
     const base = draftFromPageModel(pageModel);
     setDraft(base);
   }, [pageModel, userId, tripId]);
+
+  /** 2.1) auto-scroll to entry if requested */
+  const searchParams = useSearchParams();
+  const scrollToTarget = searchParams.get("scrollTo");
+  const scrolledToTargetRef = useRef(false);
+
+  useEffect(() => {
+    if (!scrollToTarget || scrolledToTargetRef.current || loading) return;
+    const el = entryRefs.current[scrollToTarget];
+    if (!el) return;
+
+    scrolledToTargetRef.current = true;
+    const y =
+      el.getBoundingClientRect().top + window.scrollY - TOPBAR_OFFSET_PX - 12;
+    window.scrollTo({ top: y, behavior: "smooth" });
+  }, [scrollToTarget, loading, draft]);
 
   // Initialize baseline captions once (first time draft becomes available).
   useEffect(() => {
@@ -556,7 +571,7 @@ export default function TripRecapEditView({
         <div className="flex justify-between">
           <div className="text-3xl font-bold">Recap Blog Settings</div>
         </div>
-        <div className="mt-6 flex gap-10 pl-0 p-4">
+        <div className="mt-6 hidden gap-10 pl-0 p-4">
           <div className="font-bold text-2xl">Shared with friends</div>
           <label className="relative inline-flex cursor-pointer">
             <input
@@ -572,18 +587,22 @@ export default function TripRecapEditView({
               }
             />
             <span
-              className={[
-                "h-[29px] w-[56px] rounded-full transition-colors",
-                draft.sharedWithFriends ? "bg-[#0798FF]" : "bg-black/20",
-              ].join(" ")}
+              className={
+                [
+                  "h-[29px] w-[56px] rounded-full transition-colors",
+                  draft.sharedWithFriends ? "bg-[#0798FF]" : "bg-black/20",
+                ].join(" ")!
+              }
             />
             <span
-              className={[
-                "absolute left-[3px] top-[3px] h-[23px] w-[23px] rounded-full bg-white shadow-sm transition-transform",
-                draft.sharedWithFriends
-                  ? "translate-x-[27px]"
-                  : "translate-x-0",
-              ].join(" ")}
+              className={
+                [
+                  "absolute left-[3px] top-[3px] h-[23px] w-[23px] rounded-full bg-white shadow-sm transition-transform",
+                  draft.sharedWithFriends
+                    ? "translate-x-[27px]"
+                    : "translate-x-0",
+                ].join(" ")!
+              }
             />
           </label>
         </div>
@@ -659,6 +678,9 @@ export default function TripRecapEditView({
                 onRemovePhoto={(entryId, photoIndex) =>
                   onRemovePhoto(d.id, entryId, photoIndex)
                 }
+                onEntryMount={(entryId, el) => {
+                  entryRefs.current[entryId] = el;
+                }}
               />
             </div>
           ))}

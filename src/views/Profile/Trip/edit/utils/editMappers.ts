@@ -50,6 +50,8 @@ export function draftFromPageModel(pageModel: any): RecapEditDraft {
           id: e.id,
           placeKey: String(e.placeKey ?? e.digitizedTime ?? e.id ?? ""),
           placeName: e.placeName ?? e.label ?? "",
+          originalPlaceName:
+            e.originalPlaceName ?? e.placeName ?? e.label ?? "",
           timeRangeText: e.timeRangeText ?? e.time ?? "",
           categoryLabel: e.categoryLabel ?? e.category ?? undefined,
           placeStory:
@@ -65,6 +67,8 @@ export function draftFromPageModel(pageModel: any): RecapEditDraft {
           // 호환용: 첫 번째 캡션을 caption으로도 유지
           caption: captions[0] ?? e.caption ?? "",
           coordinate: e.coordinate,
+          visitIndex: e.visitIndex,
+          markerRole: e.markerRole,
         };
       }),
     };

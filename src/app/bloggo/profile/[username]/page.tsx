@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef, useMemo } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { MapPin } from "lucide-react";
 import { assetUrl } from "@/api/assets";
@@ -9,7 +9,10 @@ import { apiFetch, ApiError } from "@/api/client";
 import MapboxMap, {
   type MarkerData,
 } from "@/views/Profile/travel-stats/components/MapBoxMap";
-import { resolveTripCoverUrl } from "@/views/Profile/recap-blogs/utils/tripDataTransform";
+import {
+  resolveTripCoverUrl,
+  tripSortKey,
+} from "@/views/Profile/recap-blogs/utils/tripDataTransform";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Mode = "recap" | "mapView";
@@ -20,6 +23,7 @@ interface CountrySummary {
   coverImage: string | undefined;
   years: number[];
   latestDate: string;
+  latestTripSortKey: number;
   blogCount: number;
 }
 
@@ -36,6 +40,7 @@ interface BlogEntry {
   countryCode?: string;
   countryName?: string;
   coordinate?: { lat: number; lng: number; label?: string };
+  tripSortKey?: number;
 }
 
 interface ProfileData {
@@ -137,7 +142,7 @@ function CountryRecapCard({
     "November",
     "December",
   ];
-  const lastVisitedText = `Last visited ${monthNames[latestDate.getMonth()]} ${latestDate.getFullYear()}`;
+  const lastVisitedText = `Last visited ${monthNames[latestDate.getUTCMonth()]} ${latestDate.getUTCFullYear()}`;
 
   return (
     <button
@@ -353,7 +358,7 @@ function ProfileSkeleton() {
   return (
     <div className="flex flex-col" style={{ minHeight: "calc(100vh - 64px)" }}>
       {/* Sticky header skeleton */}
-      <div className="sticky top-0 z-50 border-b border-black/10 bg-white/95 shadow-[0_8px_24px_rgba(0,0,0,0.08)] backdrop-blur-md">
+      <div className="sticky top-0 z-50 border-b border-black/10 bg-white shadow-[0_8px_24px_rgba(0,0,0,0.08)] backdrop-blur-md">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-center justify-between gap-6">
             <div className="flex items-center gap-4">
@@ -449,7 +454,10 @@ function ResponsiveGrid<T>({
 export default function ProfilePage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const username = (params?.username as string) ?? "";
+
+  const urlCountry = searchParams?.get("country") || null;
 
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [status, setStatus] = useState<
@@ -476,8 +484,10 @@ export default function ProfilePage() {
     undefined,
   );
   const [imgError, setImgError] = useState(false);
-  const [mode, setMode] = useState<Mode>("recap");
-  const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
+
+  // State derived from URL
+  const selectedCountry = urlCountry;
+  const mode: Mode = selectedCountry ? "mapView" : "recap";
 
   const gridRef = useRef<HTMLDivElement | null>(null);
   const mapListScrollRef = useRef<HTMLDivElement | null>(null);
@@ -559,6 +569,7 @@ export default function ProfilePage() {
                 countryName: inferredCountryName,
                 coordinate:
                   lat != null && lng != null ? { lat, lng } : undefined,
+                tripSortKey: tripSortKey(trip as any),
               };
             });
 
@@ -657,13 +668,17 @@ export default function ProfilePage() {
       const year = match ? Number(match[0]) : new Date().getFullYear();
 
       const dateStr = blog.createdAt || new Date().toISOString();
+      const sortKeyTime = blog.tripSortKey || 0;
 
       const existing = map.get(countryCode);
       if (existing) {
         existing.blogCount += 1;
         if (!existing.years.includes(year)) existing.years.push(year);
-        if (dateStr > existing.latestDate) {
-          existing.latestDate = dateStr;
+
+        const existingSortKey = existing.latestTripSortKey || 0;
+        if (sortKeyTime > existingSortKey) {
+          existing.latestDate = new Date(sortKeyTime).toISOString();
+          existing.latestTripSortKey = sortKeyTime;
           if (blog.coverPhotoUrl) existing.coverImage = blog.coverPhotoUrl;
         }
       } else {
@@ -672,24 +687,28 @@ export default function ProfilePage() {
           countryName,
           coverImage: blog.coverPhotoUrl,
           years: [year],
-          latestDate: dateStr,
+          latestDate: sortKeyTime
+            ? new Date(sortKeyTime).toISOString()
+            : dateStr,
+          latestTripSortKey: sortKeyTime,
           blogCount: 1,
         });
       }
     }
-    return Array.from(map.values()).sort((a, b) =>
-      b.latestDate.localeCompare(a.latestDate),
+    return Array.from(map.values()).sort(
+      (a, b) => (b.latestTripSortKey || 0) - (a.latestTripSortKey || 0),
     );
   }, [filteredBlogs]);
 
-  // ── Blogs for the selected country (map view left list) ────────────────────
   const countryBlogs = useMemo(() => {
     if (!selectedCountry) return [];
-    return filteredBlogs.filter((b) => {
-      const name = b.countryName || b.countryCode || "Other Destinations";
-      const code = b.countryCode || name;
-      return code === selectedCountry;
-    });
+    return filteredBlogs
+      .filter((b) => {
+        const name = b.countryName || b.countryCode || "Other Destinations";
+        const code = b.countryCode || name;
+        return code === selectedCountry;
+      })
+      .sort((a, b) => (b.tripSortKey || 0) - (a.tripSortKey || 0));
   }, [filteredBlogs, selectedCountry]);
 
   // ── Map markers from countryBlogs ──────────────────────────────────────────
@@ -761,14 +780,14 @@ export default function ProfilePage() {
   };
 
   const handleCountrySelect = (countryCode: string) => {
-    setSelectedCountry(countryCode);
-    setMode("mapView");
+    router.push(
+      `/bloggo/profile/${username}?country=${encodeURIComponent(countryCode)}`,
+    );
     setActiveBlogId(undefined);
   };
 
   const handleGoBack = () => {
-    setSelectedCountry(null);
-    setMode("recap");
+    router.push(`/bloggo/profile/${username}`);
     setActiveBlogId(undefined);
   };
 
@@ -847,7 +866,7 @@ export default function ProfilePage() {
   return (
     <div className="flex flex-col" style={{ minHeight: "calc(100vh - 64px)" }}>
       {/* ── Sticky Header ───────────────────────────────────────────────────── */}
-      <div className="sticky top-0 z-50 border-b border-black/10 bg-white/95 shadow-[0_8px_24px_rgba(0,0,0,0.08)] backdrop-blur-md">
+      <div className="sticky top-0 z-50 border-b border-black/10 bg-white shadow-[0_8px_24px_rgba(0,0,0,0.08)] backdrop-blur-md">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-5">
           <div className="flex items-center justify-between gap-6">
             {/* Left: profile info (recap mode) or header action (map mode) */}
@@ -934,7 +953,7 @@ export default function ProfilePage() {
             <div className="h-full rounded-2xl border border-black/10 bg-white overflow-hidden">
               <div
                 ref={mapListScrollRef}
-                className="h-full overflow-y-auto pr-2 px-4 pt-2 pb-4"
+                className="h-full overflow-y-auto pr-2 px-4 pt-2 pb-4 scrollbar-hide [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
               >
                 {/* Country header */}
                 {selectedCountryName && (
@@ -969,11 +988,19 @@ export default function ProfilePage() {
 
           {/* Right: Mapbox map */}
           <section className="min-w-0 flex-1 h-full">
-            <div className="h-full w-full overflow-hidden rounded-2xl border border-black/10 relative">
+            <div
+              className="h-full w-full overflow-hidden rounded-2xl border border-black/10 relative"
+              onWheel={(e) => e.stopPropagation()}
+            >
               <MapboxMap
                 countryCode={selectedCountry ?? undefined}
                 markers={mapMarkers}
-                onMarkerClick={scrollToBlog}
+                onMarkerClick={(id) => {
+                  setActiveBlogId(id);
+                  router.push(
+                    `/bloggo/trip/${encodeURIComponent(username)}/${id}`,
+                  );
+                }}
                 activeMarkerId={activeBlogId}
                 overlayTopRight={undefined}
               />

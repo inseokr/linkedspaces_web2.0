@@ -13,7 +13,8 @@ export function normalizeImageSrc(src?: string) {
 
   // 이미 절대 주소(http...)인 경우 그대로 반환
   // NOTE: Next/Image blocks remote SVG unless explicitly allowed. Treat SVG (and dicebear avatars)
-  // as unoptimized to avoid dev/runtime errors.
+  // as unoptimized to avoid dev/runtime errors. S3/signed URLs must be unoptimized so the
+  // browser fetches directly (avoids /_next/image proxy and signature/expiry issues).
   if (/^https?:\/\//i.test(src)) {
     const lower = src.toLowerCase();
     const isSvg =
@@ -21,7 +22,9 @@ export function normalizeImageSrc(src?: string) {
       lower.includes(".svg?") ||
       lower.includes(".svg#");
     const isDicebear = lower.includes("dicebear.com");
-    return { src, unoptimized: isSvg || isDicebear };
+    const isS3OrSigned =
+      lower.includes("amazonaws.com") || src.includes("X-Amz-");
+    return { src, unoptimized: isSvg || isDicebear || isS3OrSigned };
   }
 
   let normalized = src;

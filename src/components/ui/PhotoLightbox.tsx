@@ -10,6 +10,9 @@ type Props = {
   photos: string[];
   initialIndex?: number;
   title?: string;
+  dateTime?: string;
+  captions?: string[];
+  caption?: string;
   /** When provided, show a "select" action for the active photo. */
   onSelect?: (photo: string, index: number) => void;
   selectLabel?: string;
@@ -116,6 +119,9 @@ export default function PhotoLightbox({
   photos,
   initialIndex = 0,
   title,
+  dateTime,
+  captions,
+  caption,
   onSelect,
   selectLabel = "Use this photo",
   onClose,
@@ -375,14 +381,7 @@ export default function PhotoLightbox({
       >
         {/* Header */}
         <div className="flex items-center justify-between gap-3 px-2 pb-2">
-          <div className="min-w-0">
-            <div className="truncate text-sm font-semibold text-white/90">
-              {title ?? "Photo"}
-            </div>
-            <div className="text-xs text-white/70">
-              {total ? `${activeIdx + 1} / ${total}` : ""}
-            </div>
-          </div>
+          <div className="min-w-0 flex-1"></div>
 
           <div className="flex items-center gap-2">
             {onSelect && total > 0 && (
@@ -721,6 +720,32 @@ export default function PhotoLightbox({
                 </button>
               </>
             )}
+
+            {/* Bottom info overlay: place name, timestamp, caption */}
+            <div className="absolute bottom-0 left-0 right-0 min-h-[120px] bg-gradient-to-t from-black/80 via-black/50 to-transparent backdrop-blur-md px-4 pt-8 pb-6 flex flex-col items-center justify-end z-[50] pointer-events-none">
+              <h2 className="text-center text-lg font-semibold text-white leading-tight">
+                {title ?? "Photo"}
+              </h2>
+              {dateTime && (
+                <p className="text-center text-sm text-white/80 mt-0.5">
+                  {dateTime}
+                </p>
+              )}
+              {(() => {
+                const currentCaption =
+                  captions?.[activeIdx] ??
+                  (activeIdx === 0 ? caption : null) ??
+                  caption;
+                if (!currentCaption?.trim()) return null;
+                return (
+                  <div className="mt-3 w-full min-h-[2.5rem] flex items-center justify-center px-2">
+                    <p className="text-center text-sm text-white/95 leading-relaxed max-w-full line-clamp-4 pointer-events-auto">
+                      {currentCaption}
+                    </p>
+                  </div>
+                );
+              })()}
+            </div>
           </div>
         </div>
 

@@ -52,6 +52,11 @@ export default function BloggoHeader() {
   const menuId = useId();
   const rootRef = useRef<HTMLDivElement | null>(null);
 
+  // On shared blog detail pages, hide the mobile nav dropdown
+  const isSharedBlogPage = /^\/bloggo\/profile\/[^/]+\/blog\//.test(
+    pathname ?? "",
+  );
+
   const [imgError, setImgError] = useState(false);
 
   // Close dropdown on outside click or Escape
@@ -120,8 +125,13 @@ export default function BloggoHeader() {
   };
 
   return (
-    <header className="sticky top-0 z-[100] border-b border-[var(--bloggo-border)] bg-[var(--bloggo-bg)]/80 backdrop-blur-xl">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+    <header className="sticky top-0 z-[100] border-b border-[var(--bloggo-border)] bg-[var(--bloggo-bg)] backdrop-blur-xl">
+      <div
+        className={[
+          "w-full px-4 sm:px-6 lg:px-8",
+          !isBloggoUser ? "max-w-7xl mx-auto" : "",
+        ].join(" ")}
+      >
         <div className="flex h-16 items-center justify-between">
           <div className="flex items-center gap-8">
             <Link
@@ -247,27 +257,29 @@ export default function BloggoHeader() {
                         </button>
 
                         {/* Additional Nav Links in Menu */}
-                        {navLinks.map((link) => (
-                          <Link
-                            key={link.href}
-                            href={link.href}
-                            onClick={() => setMenuOpen(false)}
-                            className="block rounded-xl px-3 py-2.5 text-[15px] font-semibold w-full text-left transition"
-                            style={{
-                              color: "#111827",
-                            }}
-                            onMouseEnter={(e) =>
-                              (e.currentTarget.style.backgroundColor =
-                                "var(--user-menu-item-hover)")
-                            }
-                            onMouseLeave={(e) =>
-                              (e.currentTarget.style.backgroundColor =
-                                "transparent")
-                            }
-                          >
-                            {link.label}
-                          </Link>
-                        ))}
+                        {navLinks
+                          .filter((link) => link.label !== "Features")
+                          .map((link) => (
+                            <Link
+                              key={link.href}
+                              href={link.href}
+                              onClick={() => setMenuOpen(false)}
+                              className="block rounded-xl px-3 py-2.5 text-[15px] font-semibold w-full text-left transition"
+                              style={{
+                                color: "#111827",
+                              }}
+                              onMouseEnter={(e) =>
+                                (e.currentTarget.style.backgroundColor =
+                                  "var(--user-menu-item-hover)")
+                              }
+                              onMouseLeave={(e) =>
+                                (e.currentTarget.style.backgroundColor =
+                                  "transparent")
+                              }
+                            >
+                              {link.label}
+                            </Link>
+                          ))}
                       </div>
 
                       <div
@@ -309,40 +321,42 @@ export default function BloggoHeader() {
             )}
           </div>
 
-          <button
-            aria-label={mobileOpen ? "Close menu" : "Open menu"}
-            aria-expanded={mobileOpen}
-            aria-controls="bloggo-mobile-menu"
-            onClick={() => setMobileOpen((v) => !v)}
-            className="md:hidden p-2 rounded-lg text-[var(--bloggo-text-secondary)] hover:text-[var(--bloggo-text-primary)] hover:bg-black/5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
-          >
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              aria-hidden="true"
+          {!isSharedBlogPage && (
+            <button
+              aria-label={mobileOpen ? "Close menu" : "Open menu"}
+              aria-expanded={mobileOpen}
+              aria-controls="bloggo-mobile-menu"
+              onClick={() => setMobileOpen((v) => !v)}
+              className="md:hidden p-2 rounded-lg text-[var(--bloggo-text-secondary)] hover:text-[var(--bloggo-text-primary)] hover:bg-black/5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
             >
-              {mobileOpen ? (
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              ) : (
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M4 6h16M4 12h16M4 18h16"
-                />
-              )}
-            </svg>
-          </button>
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                aria-hidden="true"
+              >
+                {mobileOpen ? (
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                ) : (
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 6h16M4 12h16M4 18h16"
+                  />
+                )}
+              </svg>
+            </button>
+          )}
         </div>
 
-        {mobileOpen && (
+        {!isSharedBlogPage && mobileOpen && (
           <nav
             id="bloggo-mobile-menu"
             aria-label="Mobile navigation"

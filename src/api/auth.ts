@@ -31,3 +31,32 @@ export function loginWithJwt(username: string, password: string) {
     body: { username, password },
   });
 }
+
+export type ForgotPasswordResponse =
+  | { ok: true; message?: string }
+  | { ok: false; message: string };
+
+export type ForgotPasswordPayload = {
+  username?: string;
+  email?: string;
+};
+
+/**
+ * Request a password reset email.
+ * Backend: pocketverse POST /auth/request-reset with { email?, username? }.
+ * Sends both when provided; backend finds user by either or both.
+ */
+export async function requestPasswordReset(
+  payload: ForgotPasswordPayload,
+): Promise<ForgotPasswordResponse> {
+  const raw = await apiFetch<{
+    result?: string;
+    message?: string;
+    reason?: string;
+  }>("/auth/request-reset", { method: "POST", body: payload });
+  if (raw?.result === "OK") return { ok: true, message: raw.message };
+  return {
+    ok: false,
+    message: raw?.reason || raw?.message || "Request failed.",
+  };
+}

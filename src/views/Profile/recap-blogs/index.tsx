@@ -469,7 +469,10 @@ export default function ProfileRecapBlogsView() {
 
           {/* Right: map */}
           <section className="min-w-0 flex-1 h-full">
-            <div className="h-full w-full overflow-hidden rounded-2xl border border-black/10">
+            <div
+              className="h-full w-full overflow-hidden rounded-2xl border border-black/10"
+              onWheel={(e) => e.stopPropagation()}
+            >
               <MapboxMap
                 countryCode={normalizedSelectedCountry ?? undefined}
                 markers={mapMarkers}

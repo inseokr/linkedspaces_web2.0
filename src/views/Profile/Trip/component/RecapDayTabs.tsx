@@ -47,7 +47,7 @@ export default function RecapDayTabs({
               "shrink-0 rounded-full font-bold transition-all duration-200",
               baseButton,
               active
-                ? "bg-black text-white shadow-md scale-[1.02]"
+                ? "bg-blue-500 text-white shadow-md scale-[1.02]"
                 : "bg-black/[0.04] text-black/40 hover:bg-black/[0.08] hover:text-black/60",
             ].join(" ")}
             aria-pressed={active}

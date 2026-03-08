@@ -20,11 +20,13 @@ export default function BloggoFooter() {
   const pathname = usePathname();
   const { isAuthenticated } = useAuth();
 
+  const isSupportPage = pathname === "/bloggo/support";
+
   if (
     pathname === "/bloggo/recap" ||
     pathname.startsWith("/bloggo/profile/") ||
     pathname.startsWith("/bloggo/trip/") ||
-    isAuthenticated
+    (isAuthenticated && !isSupportPage)
   )
     return null;
 
