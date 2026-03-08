@@ -269,20 +269,32 @@ export default function RecapBlogHero({
 }) {
   return (
     <>
-      {/* Mobile: Use background tone to frame header if no image */}
-      <section className="w-full sm:hidden">
-        <div className="rounded-[32px] border border-black/5 bg-white p-6 shadow-[0_4px_20px_rgba(0,0,0,0.03)]">
-          <RecapBlogHeader
-            title={title}
-            dateText={dateText}
-            locationText={locationText}
-            authorName={authorName}
-            postedLabel={postedLabel}
-            avatarUrl={avatarUrl}
-            placesCount={placesCount}
-            lastEditedAt={lastEditedAt}
-            tone="onLight"
-          />
+      {/* Mobile: Cover photo with text overlay */}
+      <section className="relative w-full overflow-hidden rounded-[32px] sm:hidden">
+        <CoverImage coverImageUrl={coverImageUrl} title={title} showGradient />
+        <div className="pointer-events-none absolute inset-0 flex flex-col p-6">
+          <div className="flex-1" />
+          <div className="pb-4 text-center w-full">
+            <h1 className="!text-3xl !leading-[1.1] font-extrabold tracking-tighter text-white">
+              {title}
+            </h1>
+            <div className="mt-4 flex flex-col items-center justify-center gap-4 w-full">
+              <TripMeta
+                dateText={dateText}
+                locationText={locationText}
+                placesCount={placesCount}
+                tone="onDark"
+              />
+              <div className="pointer-events-auto">
+                <AuthorBadge
+                  name={authorName}
+                  postedLabel={postedLabel}
+                  avatarUrl={avatarUrl}
+                  tone="onDark"
+                />
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
