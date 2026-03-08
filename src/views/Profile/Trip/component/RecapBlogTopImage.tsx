@@ -338,6 +338,37 @@ export default function RecapBlogHero({
               </div>
             </div>
           </div>
+          <div className="pointer-events-auto mt-6 flex justify-center pb-2">
+            <button
+              onClick={() => {
+                const dayEl = document.querySelector('[data-day-id="day-1"]');
+                if (dayEl) {
+                  dayEl.scrollIntoView({ behavior: "smooth", block: "start" });
+                } else {
+                  window.scrollBy({ top: 300, behavior: "smooth" });
+                }
+              }}
+              className="group flex flex-col items-center gap-1 text-white hover:text-white/80 transition-colors"
+            >
+              <span className="text-[12px] font-bold uppercase tracking-widest">
+                Read
+              </span>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={2.5}
+                stroke="currentColor"
+                className="w-5 h-5 animate-bounce"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M19.5 8.25l-7.5 7.5-7.5-7.5"
+                />
+              </svg>
+            </button>
+          </div>
         </div>
       </section>
 
