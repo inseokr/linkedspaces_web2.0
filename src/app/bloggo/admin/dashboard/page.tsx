@@ -9,8 +9,10 @@ import { isAdminUsername } from "@/lib/admin";
 import {
   fetchStorageCost,
   fetchAwsCost,
+  fetchMongoStorage,
   type StorageCostResponse,
   type AwsCostResponse,
+  type MongoStorageResponse,
 } from "@/api/admin-dashboard";
 
 import {
@@ -26,6 +28,7 @@ import { CostDashboard } from "./components/CostDashboard";
 import { CostProjectionModel } from "./components/CostProjectionModel";
 
 const STORAGE_SERVICE = "AWS S3 (Storage)";
+const MONGO_SERVICE = "MongoDB Atlas";
 
 function getStorageCostData(
   res: StorageCostResponse,
@@ -109,6 +112,22 @@ function mergeStorageCostIntoItems(
       };
     }
     return item;
+  });
+}
+
+function mergeMongoStorageIntoItems(
+  items: CostItem[],
+  res: MongoStorageResponse,
+): CostItem[] {
+  if (res.result !== "OK" || res.totalStorageMB == null) return items;
+  const sizeGb = res.totalStorageMB / 1024;
+  return items.map((item) => {
+    if (item.service !== MONGO_SERVICE) return item;
+    return {
+      ...item,
+      currentUsage: `${sizeGb.toFixed(2)} GB`,
+      notes: `From db.stats() (${res.totalStorageMB} MB). ` + item.notes,
+    };
   });
 }
 
@@ -227,7 +246,7 @@ export default function BloggoAdminDashboard() {
     setCostError(null);
     const { start, end } = getAwsCostPeriod();
     try {
-      const [storageRes, awsCostRes] = await Promise.all([
+      const [storageRes, awsCostRes, mongoRes] = await Promise.all([
         fetchStorageCost(days),
         fetchAwsCost({
           start,
@@ -235,28 +254,40 @@ export default function BloggoAdminDashboard() {
           granularity: "MONTHLY",
           service: "Amazon Simple Storage Service",
         }),
+        fetchMongoStorage(),
       ]);
       console.log(
         "[Cost Dashboard] AWS storage/cost API response:",
         storageRes,
       );
       console.log("[Cost Dashboard] AWS cost API response:", awsCostRes);
-      const items = mergeStorageCostIntoItems(
+      console.log("[Cost Dashboard] MongoDB storage API response:", mongoRes);
+
+      let items = mergeStorageCostIntoItems(
         MOCK_COST_DASHBOARD.items,
         storageRes,
       );
+      items = mergeMongoStorageIntoItems(items, mongoRes);
       setCostData({ items });
       const breakdown = getAwsCostBreakdownForDisplay(awsCostRes);
       setAwsCostBreakdown(breakdown ?? null);
 
       const data = getStorageCostData(storageRes);
       const storageGb = getStorageUsedGbFromResponse(storageRes);
-      if (storageGb != null) {
-        setServiceUsage((prev) => ({
-          ...prev,
-          aws: { ...prev.aws, storageUsedGb: storageGb },
-        }));
-      }
+
+      const mongoGb =
+        mongoRes.result === "OK" && mongoRes.totalStorageMB != null
+          ? mongoRes.totalStorageMB / 1024
+          : null;
+
+      setServiceUsage((prev) => ({
+        ...prev,
+        ...(storageGb != null
+          ? { aws: { ...prev.aws, storageUsedGb: storageGb } }
+          : {}),
+        ...(mongoGb != null ? { mongodb: { storageUsedGb: mongoGb } } : {}),
+      }));
+
       const growth = data?.storageGrowth;
       if (growth?.growthPct != null) {
         setAwsStorageGrowth({
@@ -356,11 +387,13 @@ export default function BloggoAdminDashboard() {
               <code className="rounded bg-amber-100 px-1">
                 /admin/dashboard/storage/cost
               </code>{" "}
-              for S3 storage and{" "}
+              for S3 storage,{" "}
               <code className="rounded bg-amber-100 px-1">
                 /admin/dashboard/aws/cost
               </code>{" "}
-              for S3 bandwidth (Data Transfer) cost. Other metrics are mock.
+              for S3 bandwidth (Data Transfer) cost, and{" "}
+              <code className="rounded bg-amber-100 px-1">/storage/mongo</code>{" "}
+              for MongoDB storage. Other metrics are mock.
             </p>
           </div>
 

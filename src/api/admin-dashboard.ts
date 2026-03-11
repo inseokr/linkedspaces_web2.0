@@ -759,6 +759,34 @@ export async function fetchStorageCost(
   return apiFetch<StorageCostResponse>(path, { method: "GET", token });
 }
 
+// --- MongoDB storage (Bloggo admin Cost Dashboard) ---
+// GET /LS_API/storage/mongo – returns { result, totalStorageBytes, totalStorageMB }
+
+export type MongoStorageResponse = {
+  result?: string;
+  reason?: string;
+  totalStorageBytes?: number;
+  totalStorageMB?: number;
+};
+
+/**
+ * Fetch MongoDB storage size for admin Cost Dashboard.
+ * GET /LS_API/storage/mongo (JWT + admin-only).
+ */
+export async function fetchMongoStorage(): Promise<MongoStorageResponse> {
+  const token = getAuthToken();
+  // let's add query parameter called debug
+  // so that backend can log more details about the MongoDB query and aggregation it performs to calculate the storage size. This can help us troubleshoot if the MongoDB storage size is unexpectedly large or small.
+  const params = new URLSearchParams();
+  params.set("debug", "1");
+  const query = params.toString();
+  const path = `/admin/dashboard/storage/mongo${query ? `?${query}` : ""}`;
+  return apiFetch<MongoStorageResponse>(path, {
+    method: "GET",
+    token,
+  });
+}
+
 // --- AWS Cost Explorer (admin Cost Dashboard – S3 bandwidth/usage) ---
 
 export type AwsCostBreakdownItem = {
