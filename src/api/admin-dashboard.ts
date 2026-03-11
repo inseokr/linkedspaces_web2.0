@@ -693,3 +693,116 @@ export async function fetchUserDetails(
     };
   }
 }
+
+// --- Storage cost (Bloggo admin Cost Dashboard) ---
+// API returns { bucket, data: { storage, estimatedMonthlyCost, storageGrowth, history } }
+
+export type StorageCostStorage = {
+  objectCount?: number;
+  totalSizeBytes?: number;
+  /** Size in GB as string (e.g. "8.60") */
+  totalSizeGB?: string;
+};
+
+export type StorageCostEstimatedMonthlyCost = {
+  storageCost?: number;
+  pricePerGBMonth?: number;
+  pricePutPer1K?: number;
+  priceGetPer1K?: number;
+  priceDataOutPerGB?: number;
+};
+
+export type StorageCostGrowth = {
+  growthGB?: number;
+  growthPct?: number;
+  periodDays?: number;
+};
+
+export type StorageCostHistoryPoint = {
+  date?: string;
+  value?: number;
+  [key: string]: unknown;
+};
+
+export type StorageCostData = {
+  storage?: StorageCostStorage;
+  estimatedMonthlyCost?: number | StorageCostEstimatedMonthlyCost;
+  storageGrowth?: StorageCostGrowth;
+  history?: {
+    bucketSizeBytes?: StorageCostHistoryPoint[];
+    objectCount?: StorageCostHistoryPoint[];
+  };
+};
+
+export type StorageCostResponse = {
+  bucket?: string;
+  data?: StorageCostData;
+  // Allow flattened shape for backwards compatibility
+  storage?: StorageCostStorage;
+  estimatedMonthlyCost?: number | StorageCostEstimatedMonthlyCost;
+  storageGrowth?: StorageCostGrowth;
+  history?: StorageCostData["history"];
+};
+
+/**
+ * Fetch S3 storage cost metrics for admin Cost Dashboard.
+ * GET /LS_API/admin/dashboard/storage/cost?days=30 (JWT + admin-only).
+ */
+export async function fetchStorageCost(
+  days: number = 30,
+): Promise<StorageCostResponse> {
+  const token = getAuthToken();
+  const params = new URLSearchParams();
+  if (days >= 1 && days <= 90) params.set("days", String(days));
+  const query = params.toString();
+  const path = `/admin/dashboard/storage/cost${query ? `?${query}` : ""}`;
+  return apiFetch<StorageCostResponse>(path, { method: "GET", token });
+}
+
+// --- AWS Cost Explorer (admin Cost Dashboard – S3 bandwidth/usage) ---
+
+export type AwsCostBreakdownItem = {
+  usageType?: string;
+  cost?: number;
+  usageQuantity?: number;
+  unit?: string;
+};
+
+export type AwsCostDailyGroup = {
+  start?: string;
+  end?: string;
+  groups?: AwsCostBreakdownItem[];
+  estimated?: boolean;
+};
+
+export type AwsCostResponse = {
+  result?: string;
+  service?: string;
+  period?: { start?: string; end?: string };
+  granularity?: string;
+  totalCost?: number;
+  breakdown?: AwsCostBreakdownItem[];
+  daily?: AwsCostDailyGroup[];
+};
+
+/**
+ * Fetch AWS Cost Explorer data for S3 (bandwidth/usage cost).
+ * GET /LS_API/admin/dashboard/aws/cost (JWT + admin-only).
+ * Params: start (YYYY-MM-DD), end (YYYY-MM-DD), granularity (DAILY|MONTHLY), service.
+ */
+export async function fetchAwsCost(params?: {
+  start?: string;
+  end?: string;
+  granularity?: "DAILY" | "MONTHLY";
+  service?: string;
+}): Promise<AwsCostResponse> {
+  const token = getAuthToken();
+  const search = new URLSearchParams();
+  if (params?.start) search.set("start", params.start);
+  if (params?.end) search.set("end", params.end);
+  if (params?.granularity) search.set("granularity", params.granularity);
+  if (params?.service) search.set("service", params.service);
+  const query = search.toString();
+  const path = `/admin/dashboard/aws/cost${query ? `?${query}` : ""}`;
+  return apiFetch<AwsCostResponse>(path, { method: "GET", token });
+}

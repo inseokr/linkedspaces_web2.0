@@ -1,6 +1,30 @@
 import { ServiceUsage as ServiceUsageType } from "../types";
 
-export function ServiceUsage({ data }: { data: ServiceUsageType }) {
+type AwsStorageGrowth = {
+  growthPct: number;
+  growthGB: number;
+  periodDays: number;
+};
+
+export function ServiceUsage({
+  data,
+  awsStorageGrowth = null,
+}: {
+  data: ServiceUsageType;
+  awsStorageGrowth?: AwsStorageGrowth | null;
+}) {
+  const awsMetrics = [
+    { label: "Storage Used", value: `${data.aws.storageUsedGb} GB` },
+    ...(awsStorageGrowth != null
+      ? [
+          {
+            label: "Storage Growth",
+            value: `${awsStorageGrowth.growthPct.toFixed(1)}% over ${awsStorageGrowth.periodDays}d`,
+          },
+        ]
+      : []),
+  ];
+
   return (
     <section className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm mt-8">
       <h2 className="text-xl font-semibold text-gray-900 mb-4">
@@ -11,18 +35,7 @@ export function ServiceUsage({ data }: { data: ServiceUsageType }) {
       </p>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <ProviderCard
-          title="Amazon Web Services"
-          metrics={[
-            { label: "S3 Uploads", value: data.aws.s3Uploads.toLocaleString() },
-            { label: "Storage Used", value: `${data.aws.storageUsedGb} GB` },
-            { label: "Bandwidth Used", value: `${data.aws.bandwidthGb} GB` },
-            {
-              label: "Request Count",
-              value: data.aws.requestCount.toLocaleString(),
-            },
-          ]}
-        />
+        <ProviderCard title="Amazon Web Services" metrics={awsMetrics} />
         <ProviderCard
           title="Mapbox"
           metrics={[

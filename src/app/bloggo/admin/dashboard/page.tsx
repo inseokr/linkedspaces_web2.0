@@ -1,26 +1,296 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
 import { getCachedUser } from "@/api/user";
 import { isAdminUsername } from "@/lib/admin";
+import {
+  fetchStorageCost,
+  fetchAwsCost,
+  type StorageCostResponse,
+  type AwsCostResponse,
+} from "@/api/admin-dashboard";
 
 import {
   MOCK_OBSERVABILITY_METRICS,
   MOCK_SERVICE_USAGE,
   MOCK_COST_DASHBOARD,
 } from "./mockData";
+import type { CostDashboardMetrics, CostItem } from "./types";
+import type { ServiceUsage as ServiceUsageType } from "./types";
 import { ObservabilityOverview } from "./components/ObservabilityOverview";
 import { ServiceUsage } from "./components/ServiceUsage";
 import { CostDashboard } from "./components/CostDashboard";
 import { CostProjectionModel } from "./components/CostProjectionModel";
 
+const STORAGE_SERVICE = "AWS S3 (Storage)";
+
+function getStorageCostData(
+  res: StorageCostResponse,
+): StorageCostResponse["data"] | null {
+  if (res.data) return res.data;
+  if (
+    res.storage ??
+    res.estimatedMonthlyCost ??
+    res.storageGrowth ??
+    res.history
+  ) {
+    return {
+      storage: res.storage,
+      estimatedMonthlyCost: res.estimatedMonthlyCost,
+      storageGrowth: res.storageGrowth,
+      history: res.history,
+    };
+  }
+  return null;
+}
+
+/** Extract storage used in GB from the storage/cost API response. */
+function getStorageUsedGbFromResponse(res: StorageCostResponse): number | null {
+  const data = getStorageCostData(res);
+  const storage = data?.storage;
+  if (!storage) return null;
+  const sizeGbStr = storage.totalSizeGB;
+  if (sizeGbStr != null && sizeGbStr !== "") {
+    const n = Number.parseFloat(sizeGbStr);
+    return Number.isFinite(n) ? n : null;
+  }
+  if (typeof storage.totalSizeBytes === "number") {
+    return storage.totalSizeBytes / (1024 * 1024 * 1024);
+  }
+  return null;
+}
+
+function mergeStorageCostIntoItems(
+  items: CostItem[],
+  res: StorageCostResponse,
+): CostItem[] {
+  const data = getStorageCostData(res);
+  if (!data) return items;
+
+  const storage = data.storage;
+  const costRaw = data.estimatedMonthlyCost;
+  const storageCost =
+    typeof costRaw === "number"
+      ? costRaw
+      : ((costRaw as { storageCost?: number } | undefined)?.storageCost ??
+        null);
+
+  const sizeGbStr = storage?.totalSizeGB;
+  const sizeGbNum =
+    sizeGbStr != null && sizeGbStr !== ""
+      ? Number.parseFloat(sizeGbStr)
+      : typeof storage?.totalSizeBytes === "number"
+        ? storage.totalSizeBytes / (1024 * 1024 * 1024)
+        : null;
+  const growth = data.storageGrowth;
+  const growthNote =
+    growth?.growthGB != null && growth?.growthPct != null
+      ? ` Growth: ${growth.growthGB.toFixed(2)} GB (${growth.growthPct.toFixed(1)}%) over ${growth.periodDays ?? 30}d.`
+      : "";
+
+  return items.map((item) => {
+    if (item.service === STORAGE_SERVICE) {
+      const currentUsage =
+        sizeGbNum != null && !Number.isNaN(sizeGbNum)
+          ? `${sizeGbNum.toFixed(2)} GB`
+          : item.currentUsage;
+      return {
+        ...item,
+        currentUsage,
+        estimatedMonthlyCost:
+          storageCost != null ? storageCost : item.estimatedMonthlyCost,
+        notes:
+          (storageCost != null
+            ? "From S3 CloudWatch (BucketSizeBytes, NumberOfObjects); pricing from env/rate card."
+            : item.notes) + growthNote,
+      };
+    }
+    return item;
+  });
+}
+
+/** Get YYYY-MM-DD for first day of current month and for tomorrow (for AWS cost period). */
+function getAwsCostPeriod(): { start: string; end: string } {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth(), 1);
+  const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+  return {
+    start: start.toISOString().slice(0, 10),
+    end: end.toISOString().slice(0, 10),
+  };
+}
+
+/** Match usage types that are data transfer / egress (Out-Bytes, DataTransfer-Out, AWS-Out). */
+function isDataTransferUsageType(usageType: string): boolean {
+  return (
+    /Out-Bytes|DataTransfer-Out|DataTransfer.*Out|AWS-Out/i.test(usageType) &&
+    !/In-Bytes|DataTransfer-In/i.test(usageType)
+  );
+}
+
+/** Match usage types that are storage (TimedStorage, ByteHrs). */
+function isStorageUsageType(usageType: string): boolean {
+  return /TimedStorage|ByteHrs|Storage-ByteHrs/i.test(usageType);
+}
+
+/** Match usage types that are requests (Tier1, Tier2, Requests). */
+function isRequestsUsageType(usageType: string): boolean {
+  return /Requests-Tier|Requests\.Tier/i.test(usageType);
+}
+
+/** Sum cost from breakdown items matching a predicate. */
+function sumBreakdownCost(
+  breakdown: AwsCostResponse["breakdown"],
+  predicate: (usageType: string) => boolean,
+): number {
+  if (!breakdown?.length) return 0;
+  return breakdown
+    .filter((b) => b.usageType && predicate(b.usageType))
+    .reduce((sum, b) => sum + (Number.isFinite(b.cost) ? b.cost! : 0), 0);
+}
+
+/** Extract data-transfer (bandwidth) cost from AWS cost breakdown (sum all Out/transfer) and scale to estimated monthly. */
+function getBandwidthCostFromAwsResponse(res: AwsCostResponse): number | null {
+  if (res.result !== "OK" || !res.breakdown?.length) return null;
+  const cost = sumBreakdownCost(res.breakdown, isDataTransferUsageType);
+  const period = res.period;
+  if (!period?.start || !period?.end) return cost;
+  const start = new Date(period.start);
+  const end = new Date(period.end);
+  const days = Math.max(
+    1,
+    (end.getTime() - start.getTime()) / (24 * 60 * 60 * 1000),
+  );
+  return (cost / days) * 30;
+}
+
+/** Build a simple S3 cost breakdown for display (storage, requests, data transfer). */
+function getAwsCostBreakdownForDisplay(res: AwsCostResponse): {
+  period: { start: string; end: string };
+  totalCost: number;
+  storageCost: number;
+  requestsCost: number;
+  dataTransferCost: number;
+  periodDays: number;
+  estimatedMonthlyTotal: number;
+} | null {
+  if (
+    res.result !== "OK" ||
+    !res.breakdown?.length ||
+    !res.period?.start ||
+    !res.period?.end
+  )
+    return null;
+  const start = new Date(res.period.start);
+  const end = new Date(res.period.end);
+  const periodDays = Math.max(
+    1,
+    (end.getTime() - start.getTime()) / (24 * 60 * 60 * 1000),
+  );
+  const storageCost = sumBreakdownCost(res.breakdown, isStorageUsageType);
+  const requestsCost = sumBreakdownCost(res.breakdown, isRequestsUsageType);
+  const dataTransferCost = sumBreakdownCost(
+    res.breakdown,
+    isDataTransferUsageType,
+  );
+  const totalCost =
+    res.totalCost ?? storageCost + requestsCost + dataTransferCost;
+  const estimatedMonthlyTotal = (totalCost / periodDays) * 30;
+  return {
+    period: { start: res.period.start, end: res.period.end },
+    totalCost,
+    storageCost,
+    requestsCost,
+    dataTransferCost,
+    periodDays: Math.round(periodDays),
+    estimatedMonthlyTotal,
+  };
+}
+
+const COST_DAYS_DEFAULT = 30;
+
 export default function BloggoAdminDashboard() {
   const router = useRouter();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [allowed, setAllowed] = useState<boolean | null>(null);
+  const [costData, setCostData] =
+    useState<CostDashboardMetrics>(MOCK_COST_DASHBOARD);
+  const [serviceUsage, setServiceUsage] =
+    useState<ServiceUsageType>(MOCK_SERVICE_USAGE);
+  const [awsStorageGrowth, setAwsStorageGrowth] = useState<{
+    growthPct: number;
+    growthGB: number;
+    periodDays: number;
+  } | null>(null);
+  const [awsCostBreakdown, setAwsCostBreakdown] = useState<{
+    period: { start: string; end: string };
+    totalCost: number;
+    storageCost: number;
+    requestsCost: number;
+    dataTransferCost: number;
+    periodDays: number;
+    estimatedMonthlyTotal: number;
+  } | null>(null);
+  const [costLoading, setCostLoading] = useState(true);
+  const [costError, setCostError] = useState<string | null>(null);
+
+  const loadCosts = useCallback(async (days: number = COST_DAYS_DEFAULT) => {
+    setCostLoading(true);
+    setCostError(null);
+    const { start, end } = getAwsCostPeriod();
+    try {
+      const [storageRes, awsCostRes] = await Promise.all([
+        fetchStorageCost(days),
+        fetchAwsCost({
+          start,
+          end,
+          granularity: "MONTHLY",
+          service: "Amazon Simple Storage Service",
+        }),
+      ]);
+      console.log(
+        "[Cost Dashboard] AWS storage/cost API response:",
+        storageRes,
+      );
+      console.log("[Cost Dashboard] AWS cost API response:", awsCostRes);
+      const items = mergeStorageCostIntoItems(
+        MOCK_COST_DASHBOARD.items,
+        storageRes,
+      );
+      setCostData({ items });
+      const breakdown = getAwsCostBreakdownForDisplay(awsCostRes);
+      setAwsCostBreakdown(breakdown ?? null);
+
+      const data = getStorageCostData(storageRes);
+      const storageGb = getStorageUsedGbFromResponse(storageRes);
+      if (storageGb != null) {
+        setServiceUsage((prev) => ({
+          ...prev,
+          aws: { ...prev.aws, storageUsedGb: storageGb },
+        }));
+      }
+      const growth = data?.storageGrowth;
+      if (growth?.growthPct != null) {
+        setAwsStorageGrowth({
+          growthPct: growth.growthPct,
+          growthGB: growth.growthGB ?? 0,
+          periodDays: growth.periodDays ?? COST_DAYS_DEFAULT,
+        });
+      } else {
+        setAwsStorageGrowth(null);
+      }
+    } catch (e) {
+      const message =
+        e instanceof Error ? e.message : "Failed to load cost data";
+      setCostError(message);
+      setCostData(MOCK_COST_DASHBOARD);
+    } finally {
+      setCostLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     if (authLoading) return;
@@ -33,9 +303,14 @@ export default function BloggoAdminDashboard() {
       router.replace("/bloggo");
       return;
     }
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+     
     setAllowed(true);
   }, [authLoading, isAuthenticated, router]);
+
+  useEffect(() => {
+    if (!allowed) return;
+    loadCosts(COST_DAYS_DEFAULT);
+  }, [allowed, loadCosts]);
 
   if (authLoading || allowed === null) {
     return (
@@ -90,18 +365,32 @@ export default function BloggoAdminDashboard() {
               />
             </svg>
             <p className="text-sm text-amber-800">
-              <strong>Notice:</strong> The backend is not yet emitting precise
-              Bloggo-specific analytics (e.g. Mapbox map loads, photo uploads
-              specific to blogs). The Observability, Service Usage, and Cost
-              Dashboard sections currently display structurally sound{" "}
-              <strong>mock data</strong>. The Cost Projection Model is fully
-              functional interactively.
+              <strong>Notice:</strong> Observability uses mock data.{" "}
+              <strong>Service Usage</strong> and <strong>Cost Dashboard</strong>{" "}
+              use{" "}
+              <code className="rounded bg-amber-100 px-1">
+                /admin/dashboard/storage/cost
+              </code>{" "}
+              for S3 storage and{" "}
+              <code className="rounded bg-amber-100 px-1">
+                /admin/dashboard/aws/cost
+              </code>{" "}
+              for S3 bandwidth (Data Transfer) cost. Other metrics are mock.
             </p>
           </div>
 
           <ObservabilityOverview data={MOCK_OBSERVABILITY_METRICS} />
-          <ServiceUsage data={MOCK_SERVICE_USAGE} />
-          <CostDashboard data={MOCK_COST_DASHBOARD} />
+          <ServiceUsage
+            data={serviceUsage}
+            awsStorageGrowth={awsStorageGrowth}
+          />
+          <CostDashboard
+            data={costData}
+            loading={costLoading}
+            error={costError}
+            onRefresh={() => loadCosts(COST_DAYS_DEFAULT)}
+            awsCostBreakdown={awsCostBreakdown}
+          />
           <CostProjectionModel />
         </div>
       </div>

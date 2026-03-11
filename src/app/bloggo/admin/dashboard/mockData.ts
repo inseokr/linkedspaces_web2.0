@@ -49,14 +49,6 @@ export const MOCK_COST_DASHBOARD: CostDashboardMetrics = {
       notes: "$0.023 per GB after free tier",
     },
     {
-      service: "AWS S3 (Bandwidth)",
-      currentUsage: "512.5 GB",
-      freeTierLimit: "100 GB",
-      estimatedMonthlyCost: 37.12,
-      riskLevel: "Medium",
-      notes: "$0.09 per GB out after 100GB",
-    },
-    {
       service: "Mapbox Maps",
       currentUsage: "145,000 loads",
       freeTierLimit: "50,000 loads",
