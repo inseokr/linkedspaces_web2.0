@@ -2,37 +2,117 @@
 
 import { useState } from "react";
 
-export function CostProjectionModel() {
+export function CostProjectionModel({
+  awsCostBreakdown,
+  storageUsedGb,
+  currentMau,
+  photoCount,
+}: {
+  awsCostBreakdown?: {
+    storageCost: number;
+    dataTransferCost: number;
+    requestsCost: number;
+    estimatedMonthlyTotal: number;
+  } | null;
+  storageUsedGb?: number | null;
+  currentMau?: number;
+  photoCount?: number | null;
+}) {
+  // Baseline: 354 loads in 2 months = 177/month.
+  const baselineMonthlyLoads = 177;
+  const initialMapLoadsPerUser =
+    currentMau && currentMau > 0
+      ? Math.round((baselineMonthlyLoads / currentMau) * 10) / 10
+      : 12;
+
   const [users, setUsers] = useState(10000);
   const [blogsPerUser, setBlogsPerUser] = useState(1.5);
   const [photosPerBlog, setPhotosPerBlog] = useState(25);
   const [percentCloudPublish, setPercentCloudPublish] = useState(40);
-  const [mapLoadsPerUser, setMapLoadsPerUser] = useState(12);
+  const [mapLoadsPerUser, setMapLoadsPerUser] = useState(
+    initialMapLoadsPerUser,
+  );
   const [searchesPerUser, setSearchesPerUser] = useState(4);
 
   // Simple pricing formulas based on standard industry averages
   const cloudUsers = users * (percentCloudPublish / 100);
   const totalPhotos = cloudUsers * blogsPerUser * photosPerBlog;
 
-  // AWS Cost: $0.023/GB for storage (avg 2MB/photo),
-  // bandwidth $0.09/GB (avg 5 views per photo per month)
-  const storageGb = totalPhotos * 0.002;
-  const storageCost = Math.max(0, storageGb - 5) * 0.023;
-  const bandwidthGb = storageGb * 5;
-  const bandwidthCost = Math.max(0, bandwidthGb - 100) * 0.09;
-  const projAwsCost = storageCost + bandwidthCost;
+  // Real baseline calculation for AWS costs
+  // Use actual S3 object count (photoCount) as the primary baseline if available.
+  // This is the most accurate multiplier baseline because those photos drove the actual bill we see.
+  const baselinePhotos =
+    photoCount && photoCount > 0
+      ? photoCount
+      : storageUsedGb && storageUsedGb > 0
+        ? storageUsedGb / 0.002
+        : 10000 * 0.4 * 1.5 * 25;
 
-  // Mapbox: $4 per 1k map loads over 50k
+  const photoScale = baselinePhotos > 0 ? totalPhotos / baselinePhotos : 0;
+
+  let projAwsCost = 0;
+
+  if (awsCostBreakdown) {
+    // Make accurate projection based on actual real-world billing extrapolated to a month
+    // storageCost is exact storage pricing currently used, dataTransfer/requests is exact bandwidth/requests.
+    // Multiply by scale.
+    const scaledStorage = awsCostBreakdown.storageCost * photoScale;
+    const scaledBandwidthAndRequests =
+      (awsCostBreakdown.dataTransferCost + awsCostBreakdown.requestsCost) *
+      photoScale;
+    projAwsCost = scaledStorage + scaledBandwidthAndRequests;
+  } else {
+    // Fallback simple pricing formulas if real data is absent
+    const storageGb = totalPhotos * 0.002;
+    const storageCost = Math.max(0, storageGb - 5) * 0.023;
+    const bandwidthGb = storageGb * 5;
+    const bandwidthCost = Math.max(0, bandwidthGb - 100) * 0.09;
+    projAwsCost = storageCost + bandwidthCost;
+  }
+
+  // Mapbox: Tiered pricing for GL JS v2+ ($5.00, $4.00, $3.00 tiers)
   const totalMapLoads = users * mapLoadsPerUser;
-  const projMapboxCost = Math.max(0, (totalMapLoads - 50000) / 1000) * 4;
+  const projMapboxCost = (() => {
+    if (totalMapLoads <= 50000) return 0;
+    let remaining = totalMapLoads - 50000;
+    let cost = 0;
 
-  // Mongo: $65 for base M10 cluster + $0.20/GB over limit
+    // Tier 1: 50,001 - 100,000 loads ($5.00/1k)
+    const tier1 = Math.min(remaining, 50000);
+    cost += (tier1 / 1000) * 5;
+    remaining -= tier1;
+    if (remaining <= 0) return cost;
+
+    // Tier 2: 100,001 - 200,000 loads ($4.00/1k)
+    const tier2 = Math.min(remaining, 100000);
+    cost += (tier2 / 1000) * 4;
+    remaining -= tier2;
+    if (remaining <= 0) return cost;
+
+    // Tier 3: 200,001+ loads ($3.00/1k)
+    cost += (remaining / 1000) * 3;
+    return cost;
+  })();
+
+  // Mongo Atlas: Tiered pricing (M10, M20, M30) + $0.25/GB for extra storage
   // (estimating 0.5MB db storage per user)
   const schemaGb = users * 0.0005;
-  const projMongoCost = 65 + Math.max(0, schemaGb - 10) * 0.2;
+  const projMongoCost = (() => {
+    if (schemaGb <= 10) return 57; // M10 Base
+    if (schemaGb <= 20) return 144; // M20 Base
+    if (schemaGb <= 40) return 389; // M30 Base
+    // Scale M30 with additional storage overage
+    return 389 + (schemaGb - 40) * 0.25;
+  })();
 
-  // Heroku: Baseline $50 fixed scaling model depending on users (very simplistic: +$25 every 2500 users)
-  const projHerokuCost = 50 + Math.floor(users / 2500) * 25;
+  // Heroku: Scaling dynos based on traffic load (1 dyno per 50k users, min 2)
+  // Tiers: Standard-1X ($25), Standard-2X ($50), Performance-M ($250)
+  const dynoCount = Math.max(2, Math.ceil(users / 50000));
+  const projHerokuCost = (() => {
+    if (users < 50000) return dynoCount * 25; // Standard-1X
+    if (users < 200000) return dynoCount * 50; // Standard-2X
+    return dynoCount * 250; // Performance-M (Dedicated)
+  })();
 
   const totalMonthlyCost =
     projAwsCost + projMapboxCost + projMongoCost + projHerokuCost;
@@ -90,8 +170,8 @@ export function CostProjectionModel() {
             label="Map Loads Per User"
             value={mapLoadsPerUser}
             onChange={setMapLoadsPerUser}
-            min={1}
-            max={100}
+            min={0}
+            max={1000}
             step={1}
           />
           <SliderInput

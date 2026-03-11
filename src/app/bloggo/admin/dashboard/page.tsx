@@ -274,6 +274,7 @@ export default function BloggoAdminDashboard() {
 
       const data = getStorageCostData(storageRes);
       const storageGb = getStorageUsedGbFromResponse(storageRes);
+      const objectCount = data?.storage?.objectCount;
 
       const mongoGb =
         mongoRes.result === "OK" && mongoRes.totalStorageMB != null
@@ -282,9 +283,11 @@ export default function BloggoAdminDashboard() {
 
       setServiceUsage((prev) => ({
         ...prev,
-        ...(storageGb != null
-          ? { aws: { ...prev.aws, storageUsedGb: storageGb } }
-          : {}),
+        aws: {
+          ...prev.aws,
+          storageUsedGb: storageGb ?? prev.aws.storageUsedGb,
+          s3Uploads: objectCount ?? prev.aws.s3Uploads,
+        },
         ...(mongoGb != null ? { mongodb: { storageUsedGb: mongoGb } } : {}),
       }));
 
@@ -409,7 +412,12 @@ export default function BloggoAdminDashboard() {
             onRefresh={() => loadCosts(COST_DAYS_DEFAULT)}
             awsCostBreakdown={awsCostBreakdown}
           />
-          <CostProjectionModel />
+          <CostProjectionModel
+            awsCostBreakdown={awsCostBreakdown}
+            storageUsedGb={serviceUsage.aws?.storageUsedGb}
+            currentMau={MOCK_OBSERVABILITY_METRICS.activeUsers}
+            photoCount={serviceUsage.aws?.s3Uploads}
+          />
         </div>
       </div>
     </div>
