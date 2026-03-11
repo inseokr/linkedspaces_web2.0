@@ -18,14 +18,22 @@ function getAuthToken(): string | undefined {
 type OkResult = { result: "OK" } & Record<string, unknown>;
 
 function assertOkResult<T extends OkResult>(res: T): T {
+  if (!res) throw new Error("Empty response");
   const r = (res as any)?.result;
   if (typeof r === "string" && r.toUpperCase() === "OK") return res;
-  const msg =
-    (res as any)?.reason ??
-    (res as any)?.message ??
-    (res as any)?.error ??
-    `Unexpected result: ${String(r ?? "unknown")}`;
-  throw new Error(String(msg));
+  if (typeof r === "string" && r.toUpperCase() === "FAIL") {
+    const msg =
+      (res as any)?.reason ??
+      (res as any)?.message ??
+      (res as any)?.error ??
+      "API request failed";
+    throw new Error(String(msg));
+  }
+  if ((res as any)?.error || (res as any)?.reason) {
+    const err = (res as any)?.error ?? (res as any)?.reason ?? "Unknown error";
+    throw new Error(String(err));
+  }
+  return res;
 }
 
 export type ProfileSummary = {

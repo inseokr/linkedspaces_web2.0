@@ -9,6 +9,7 @@ import { isAdminUsername } from "@/lib/admin";
 import {
   fetchDashboardAnalytics,
   fetchUserDetails,
+  fetchApiUsageMetrics,
 } from "@/api/admin-dashboard";
 import type {
   BackendDashboardAnalytics,
@@ -29,7 +30,7 @@ import {
   mapToPerUserMetrics,
 } from "./dataMapper";
 import { getMockApiUsageMetrics, getMockPerUserMetrics } from "./mockData";
-import type { DashboardFilters as Filters } from "./types";
+import type { DashboardFilters as Filters, ApiUsageMetrics } from "./types";
 
 const DEFAULT_DATE_END = new Date().toISOString().slice(0, 10);
 const DEFAULT_DATE_START = (() => {
@@ -44,6 +45,9 @@ export default function AdminDashboardPage() {
   const [allowed, setAllowed] = useState<boolean | null>(null);
 
   const [analytics, setAnalytics] = useState<BackendDashboardAnalytics | null>(
+    null,
+  );
+  const [apiUsageData, setApiUsageData] = useState<ApiUsageMetrics | null>(
     null,
   );
   const [loading, setLoading] = useState(true);
@@ -68,6 +72,16 @@ export default function AdminDashboardPage() {
     try {
       const data = await fetchDashboardAnalytics();
       setAnalytics(data);
+
+      const usageData = await fetchApiUsageMetrics().catch((err) => {
+        console.warn(
+          "Failed to load api usage metrics, falling back to mock",
+          err,
+        );
+        return null;
+      });
+      setApiUsageData(usageData);
+
       setUseMockData(false);
     } catch (err: unknown) {
       const apiErr = err as {
@@ -86,6 +100,7 @@ export default function AdminDashboardPage() {
               : apiErr?.message || "Failed to load dashboard data.";
       setError(message);
       setAnalytics(null);
+      setApiUsageData(null);
       setUseMockData(true);
     } finally {
       setLoading(false);
@@ -163,7 +178,8 @@ export default function AdminDashboardPage() {
   const activity = mapToActivityMetrics(effectiveAnalytics);
   const performance = mapToPerformanceMetrics(effectiveAnalytics);
   const geo = mapToGeoMetrics(effectiveAnalytics);
-  const apiUsage = getMockApiUsageMetrics();
+  const apiUsage =
+    useMockData || !apiUsageData ? getMockApiUsageMetrics() : apiUsageData;
 
   const perUserDetail = (() => {
     if (!selectedUsername) return null;

@@ -124,6 +124,52 @@ Base path: same as existing API (e.g. `LS_API` or your API prefix).
 
 ---
 
+## 3. GET /admin/dashboard-api-usage
+
+**Purpose:** Metrics for infrastructure dashboard (API Usage & Cost Tracking).
+
+**Auth:** Bearer token required. Admin-only.
+
+**Response 200:** JSON body:
+
+```json
+{
+  "totalByService": {
+    "google": 120500,
+    "openai": 45000,
+    "unsplash": 8000,
+    "osmCityName": 1500,
+    "osmAddress": 2500
+  },
+  "costPerUserAvgUsd": 0.45,
+  "perUserBreakdown": [
+    {
+      "userId": "usr_123",
+      "username": "travel_jane",
+      "placesSaved": 1240,
+      "friends": 85,
+      "highlights": 12,
+      "recapBlogs": 3,
+      "itineraries": 5
+    }
+  ]
+}
+```
+
+**Implementation notes:**
+
+- Requires tracking or simulating API calls globally and per-user in the backend.
+- `totalByService`: an object mapping service types (`google`, `openai`, `unsplash`, `osmCityName`, `osmAddress`) to totals. Unused ones should default to `0`.
+- `costPerUserAvgUsd`: Estimated cost averaged over active users.
+- `perUserBreakdown`: Detailed statistics for top demanding users.
+
+**Errors:**
+
+- **403:** Not an admin user.
+- **500:** Server error.
+
+---
+
 ## Security checklist
 
 1. Verify JWT (or session) and load current user.

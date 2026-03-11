@@ -1,0 +1,102 @@
+C:\Users\yoobi\LinkedSpacesWeb\linkedspaces_web2.0\src\legacy-blog\pages\Highlight.js
+Line 45: Error: This value cannot be modified
+
+Modifying a value returned from 'useState()', which should not be modified directly. Use the setter function to update instead.
+
+  43 |         if (playingAudio && playingAudio.src === fileServer + audioUrl) {
+  44 |             playingAudio.pause();
+> 45 |             playingAudio.currentTime = 0;
+     |             ^^^^^^^^^^^^ `playingAudio` cannot be modified
+  46 |             playingAudio.removeEventListener('ended', handleAudioEnd);
+  47 |             playingAudio.src = '';
+  48 |             setPlayingAudio(null);
+
+C:\Users\yoobi\LinkedSpacesWeb\linkedspaces_web2.0\src\legacy-blog\pages\TripRecap.js
+Line 61: Error: This value cannot be modified
+
+Modifying a value returned from 'useState()', which should not be modified directly. Use the setter function to update instead.
+
+  59 |     if (playingAudio && playingAudio.src === fullAudioUrl) {
+  60 |       playingAudio.pause();
+> 61 |       playingAudio.currentTime = 0;
+     |       ^^^^^^^^^^^^ `playingAudio` cannot be modified
+  62 |       playingAudio.removeEventListener('ended', handleAudioEnd);
+  63 |       playingAudio.src = '';
+  64 |       setPlayingAudio(null);
+Line 90: Error: This value cannot be modified
+
+This modifies a variable that React considers immutable.
+
+  88 |       console.error('Error playing audio:', error);
+  89 |       // Clean up on error
+> 90 |       audio.src = '';
+     |       ^^^^^ value cannot be modified
+  91 |     }
+  92 |   };
+  93 |
+Line 108: Error: This value cannot be modified
+
+Modifying a value returned from 'useState()', which should not be modified directly. Use the setter function to update instead.
+
+  106 |       playingAudio.pause();
+  107 |       playingAudio.removeEventListener('ended', handleAudioEnd);
+> 108 |       playingAudio.src = '';
+      |       ^^^^^^^^^^^^ `playingAudio` cannot be modified
+  109 |       setPlayingAudio(null);
+  110 |       setIsPlaying(false);
+  111 |     }
+Line 125: Error: This value cannot be modified
+
+This modifies a variable that React considers immutable.
+
+  123 |       console.error('Error playing hover audio:', error);
+  124 |       // Clean up on error
+> 125 |       audio.src = '';
+      |       ^^^^^ value cannot be modified
+  126 |     }
+  127 |   };
+  128 |
+Line 133: Error: This value cannot be modified
+
+Modifying a value returned from 'useState()', which should not be modified directly. Use the setter function to update instead.
+
+  131 |       playingAudio.pause();
+  132 |       playingAudio.removeEventListener('ended', handleAudioEnd);
+> 133 |       playingAudio.src = ''; // Clear src to free memory
+      |       ^^^^^^^^^^^^ `playingAudio` cannot be modified
+  134 |       setPlayingAudio(null);
+  135 |       setIsPlaying(false);
+  136 |     }
+Line 158: Error: This value cannot be modified
+
+Modifying a value returned from 'useState()', which should not be modified directly. Use the setter function to update instead.
+
+  156 |       playingStoryAudio.pause();
+  157 |       playingStoryAudio.removeEventListener('ended', handleStoryAudioEnd);
+> 158 |       playingStoryAudio.src = ''; // Clear src to free memory
+      |       ^^^^^^^^^^^^^^^^^ `playingStoryAudio` cannot be modified
+  159 |       setPlayingStoryAudio(null);
+  160 |       return;
+  161 |     }
+Line 183: Error: This value cannot be modified
+
+This modifies a variable that React considers immutable.
+
+  181 |     } catch (error) {
+  182 |       console.error('Error playing story audio:', error);
+> 183 |       audio.src = ''; // Clean up on error
+      |       ^^^^^ value cannot be modified
+  184 |       setPlayingStoryAudio(null);
+  185 |     }
+  186 |   };
+Line 192: Error: This value cannot be modified
+
+Modifying a value returned from 'useState()', which should not be modified directly. Use the setter function to update instead.
+
+  190 |       playingStoryAudio.removeEventListener('ended', handleStoryAudioEnd);
+  191 |       playingStoryAudio.removeEventListener('pause', handleStoryAudioEnd);
+> 192 |       playingStoryAudio.src = ''; // Clear src to free memory
+      |       ^^^^^^^^^^^^^^^^^ `playingStoryAudio` cannot be modified
+  193 |       setPlayingStoryAudio(null);
+  194 |     }
+  195 |   };

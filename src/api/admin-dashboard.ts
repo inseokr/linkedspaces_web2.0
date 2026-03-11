@@ -12,6 +12,7 @@ import {
   fetchProfileSummary,
   type ProfileSummary,
 } from "@/api/mynetwork";
+import type { ApiUsageMetrics } from "@/app/admin/dashboard/types";
 
 function asNumber(v: unknown): number {
   if (typeof v === "number" && Number.isFinite(v)) return v;
@@ -360,6 +361,93 @@ function normalizeRealPerUserToLegacy(
     audioCaptionPercentage: String(e.photosWithAudioPct ?? "0"),
     avgStoryLength: asNumber(e.averageStoryLengthChars),
   };
+}
+
+type RealApiUsageResponse = {
+  result?: "OK" | "FAIL" | string;
+  data?: {
+    totalByService?: {
+      google?: number;
+      openai?: number;
+      unsplash?: number;
+      osmCityName?: number;
+      osmAddress?: number;
+    };
+    costPerUserAvgUsd?: number;
+    perUserBreakdown?: any[];
+  };
+  totalByService?: {
+    google?: number;
+    openai?: number;
+    unsplash?: number;
+    osmCityName?: number;
+    osmAddress?: number;
+  };
+  costPerUserAvgUsd?: number;
+  perUserBreakdown?: any[];
+  message?: string;
+  reason?: string;
+  error?: string;
+};
+
+function normalizeRealApiUsageToLegacy(
+  res: RealApiUsageResponse,
+): ApiUsageMetrics {
+  const result = String(res?.result ?? "").toUpperCase();
+  if (res?.result && result !== "OK") {
+    const msg =
+      res?.reason ??
+      res?.message ??
+      res?.error ??
+      `Unexpected result: ${result}`;
+    throw new Error(String(msg));
+  }
+
+  const data = res?.data ?? res;
+  const t = data.totalByService ?? {};
+
+  const perUserBreakdown = Array.isArray(data.perUserBreakdown)
+    ? data.perUserBreakdown.map((u: any) => ({
+        userId: String(u.userId ?? ""),
+        username: String(u.username ?? ""),
+        placesSaved: asNumber(u.placesSaved),
+        friends: asNumber(u.friends),
+        highlights: asNumber(u.highlights),
+        recapBlogs: asNumber(u.recapBlogs),
+        itineraries: asNumber(u.itineraries),
+      }))
+    : [];
+
+  return {
+    totalByService: {
+      google: asNumber(t.google),
+      openai: asNumber(t.openai),
+      unsplash: asNumber(t.unsplash),
+      osmCityName: asNumber(t.osmCityName),
+      osmAddress: asNumber(t.osmAddress),
+    },
+    costPerUserAvgUsd: asNumber(data.costPerUserAvgUsd),
+    perUserBreakdown,
+  };
+}
+
+/**
+ * Fetch dashboard API usage. Returns 403 if not admin.
+ */
+export async function fetchApiUsageMetrics(): Promise<ApiUsageMetrics> {
+  const token = getAuthToken();
+  try {
+    const res = await apiFetch<RealApiUsageResponse>(
+      "/admin/dashboard/api-usage",
+      {
+        method: "GET",
+        token,
+      },
+    );
+    return normalizeRealApiUsageToLegacy(res);
+  } catch (e: unknown) {
+    throw e;
+  }
 }
 
 /**

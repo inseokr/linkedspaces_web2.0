@@ -8,6 +8,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { getCachedUser } from "@/api/user";
 import { assertBloggoUser } from "@/lib/bloggo";
 import { assetUrl } from "@/api/assets";
+import { isAdminUsername } from "@/lib/admin";
 
 const BASE = "/bloggo";
 
@@ -280,6 +281,67 @@ export default function BloggoHeader() {
                               {link.label}
                             </Link>
                           ))}
+
+                        <Link
+                          href="/dashboard"
+                          onClick={() => setMenuOpen(false)}
+                          className="block rounded-xl px-3 py-2.5 text-[15px] font-semibold w-full text-left transition"
+                          style={{
+                            color: "#111827",
+                          }}
+                          onMouseEnter={(e) =>
+                            (e.currentTarget.style.backgroundColor =
+                              "var(--user-menu-item-hover)")
+                          }
+                          onMouseLeave={(e) =>
+                            (e.currentTarget.style.backgroundColor =
+                              "transparent")
+                          }
+                        >
+                          Dashboard
+                        </Link>
+
+                        {isAdminUsername(user?.username) && (
+                          <>
+                            <Link
+                              href="/admin/dashboard"
+                              onClick={() => setMenuOpen(false)}
+                              className="block rounded-xl px-3 py-2.5 text-[15px] font-semibold w-full text-left transition"
+                              style={{
+                                color: "#111827",
+                              }}
+                              onMouseEnter={(e) =>
+                                (e.currentTarget.style.backgroundColor =
+                                  "var(--user-menu-item-hover)")
+                              }
+                              onMouseLeave={(e) =>
+                                (e.currentTarget.style.backgroundColor =
+                                  "transparent")
+                              }
+                            >
+                              Admin Dashboard
+                            </Link>
+
+                            <Link
+                              href="/bloggo/admin/dashboard"
+                              onClick={() => setMenuOpen(false)}
+                              className="block rounded-xl px-3 py-2.5 text-[15px] font-semibold w-full text-left transition"
+                              style={{
+                                color: "#111827",
+                              }}
+                              onMouseEnter={(e) =>
+                                (e.currentTarget.style.backgroundColor =
+                                  "var(--user-menu-item-hover)")
+                              }
+                              onMouseLeave={(e) =>
+                                (e.currentTarget.style.backgroundColor =
+                                  "transparent")
+                              }
+                            >
+                              Bloggo Admin
+                            </Link>
+                          </>
+                        )}
                       </div>
 
                       <div

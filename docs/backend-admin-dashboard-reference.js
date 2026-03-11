@@ -11,6 +11,7 @@
  */
 
 // const User = require('../models/User'); // your User model
+// const ApiUsageLog = require('../models/ApiUsageLog'); // your ApiUsageLog model
 // const { verifyAuth } = require('../middleware/auth'); // ensure req.user is set
 
 const ADMIN_USERNAMES = ["inseo", "yoobin"];
@@ -302,14 +303,117 @@ function calculateUserMetrics(user) {
   };
 }
 
+/**
+ * GET /admin/dashboard-api-usage
+ */
+async function getApiUsageMetrics(req, res) {
+  try {
+    const defaultServices = {
+      google: 0,
+      openai: 0,
+      unsplash: 0,
+      osmCityName: 0,
+      osmAddress: 0,
+    };
+
+    // Aggregate calls per service
+    const serviceTotals = await ApiUsageLog.aggregate([
+      {
+        $group: {
+          _id: "$service",
+          count: { $sum: 1 },
+          costUsd: { $sum: "$costUsd" },
+        },
+      },
+      {
+        $sort: { count: -1 },
+      },
+    ]);
+
+    const totalByService = { ...defaultServices };
+    let totalCostUsd = 0;
+
+    serviceTotals.forEach((doc) => {
+      const { _id: service, count, costUsd } = doc;
+      if (totalByService[service] !== undefined) {
+        totalByService[service] = count;
+      } else {
+        totalByService[service] = count;
+      }
+      totalCostUsd += costUsd || 0;
+    });
+
+    // Aggregate by user
+    const userBreakdowns = await ApiUsageLog.aggregate([
+      {
+        $group: {
+          _id: "$userId",
+          calls: { $sum: 1 },
+          costUsd: { $sum: "$costUsd" },
+        },
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "_id",
+          foreignField: "_id",
+          as: "user",
+        },
+      },
+      { $unwind: "$user" },
+      { $sort: { calls: -1 } },
+    ]);
+
+    let totalUsersFound = 0;
+    const perUserBreakdown = [];
+
+    // Map to expected frontend format, but since we don't have all "placesSaved", "friends" etc
+    // in ApiUsageLog, we will need to query users or estimate from user document.
+    // For reference implementation, we provide the basic layout and they can join what they need.
+    userBreakdowns.forEach((ub) => {
+      if (!ub.user) return;
+      totalUsersFound++;
+
+      const pc = ub.user.placeVisitHistory
+        ? ub.user.placeVisitHistory.length
+        : 0;
+      const fc = Array.isArray(ub.user.friends) ? ub.user.friends.length : 0;
+
+      perUserBreakdown.push({
+        userId: String(ub._id),
+        username: ub.user.username,
+        placesSaved: pc,
+        friends: fc,
+        highlights: 0,
+        recapBlogs: 0,
+        itineraries: 0,
+      });
+    });
+
+    const costPerUserAvgUsd =
+      totalUsersFound > 0 ? totalCostUsd / totalUsersFound : 0;
+
+    res.json({
+      totalByService,
+      costPerUserAvgUsd,
+      perUserBreakdown,
+    });
+  } catch (error) {
+    console.error("Dashboard API usage error:", error);
+    res.status(500).json({ error: "Failed to fetch API usage metrics" });
+  }
+}
+
 // Example route registration (Express):
 // router.get('/admin/dashboard-analytics', verifyAuth, verifyAdmin, getDashboardAnalytics);
 // router.get('/admin/user-details/:username', verifyAuth, verifyAdmin, getUserDetails);
+// router.get('/admin/dashboard-api-usage', verifyAuth, verifyAdmin, getApiUsageMetrics);
 
 module.exports = {
   verifyAdmin,
   getDashboardAnalytics,
   getUserDetails,
+  getApiUsageMetrics,
   calculateAnalytics,
   calculateUserMetrics,
 };

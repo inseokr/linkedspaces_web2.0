@@ -12,6 +12,7 @@ import {
   type ProfileSummary,
 } from "@/api/mynetwork";
 import { fetchNotifications, type NotificationItem } from "@/api/notifications";
+import { isAdminUsername } from "@/lib/admin";
 
 function asString(v: unknown): string | null {
   if (typeof v === "string") return v;
@@ -66,10 +67,22 @@ export default function DashboardPage() {
     });
 
     Promise.all([
-      fetchMyProfileSummary(),
-      fetchNetworkInfo(),
-      fetchFriendList(),
-      fetchNotifications(),
+      fetchMyProfileSummary().catch((e) => {
+        console.warn("Dashboard profile summary failed:", e);
+        return null; // fallback
+      }),
+      fetchNetworkInfo().catch((e) => {
+        console.warn("Dashboard network info failed:", e);
+        return {} as Record<string, unknown>; // fallback
+      }),
+      fetchFriendList().catch((e) => {
+        console.warn("Dashboard friend list failed:", e);
+        return [] as unknown[]; // fallback
+      }),
+      fetchNotifications().catch((e) => {
+        console.warn("Dashboard notifications failed:", e);
+        return [] as NotificationItem[]; // fallback
+      }),
     ])
       .then(([ps, ni, fl, noti]) => {
         if (cancelled) return;
@@ -137,6 +150,22 @@ export default function DashboardPage() {
             >
               Back to app
             </Link>
+            {isAdminUsername(username) && (
+              <>
+                <Link
+                  href="/admin/dashboard"
+                  className="rounded-lg border border-sky-300 bg-sky-50 px-3 py-2 text-sm font-medium text-sky-700 hover:bg-sky-100"
+                >
+                  Admin
+                </Link>
+                <Link
+                  href="/bloggo/admin/dashboard"
+                  className="rounded-lg border border-indigo-300 bg-indigo-50 px-3 py-2 text-sm font-medium text-indigo-700 hover:bg-indigo-100"
+                >
+                  Bloggo Admin
+                </Link>
+              </>
+            )}
             <button
               type="button"
               onClick={() => router.refresh()}
