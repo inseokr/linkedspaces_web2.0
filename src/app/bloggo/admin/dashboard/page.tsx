@@ -152,21 +152,6 @@ function sumBreakdownCost(
     .reduce((sum, b) => sum + (Number.isFinite(b.cost) ? b.cost! : 0), 0);
 }
 
-/** Extract data-transfer (bandwidth) cost from AWS cost breakdown (sum all Out/transfer) and scale to estimated monthly. */
-function getBandwidthCostFromAwsResponse(res: AwsCostResponse): number | null {
-  if (res.result !== "OK" || !res.breakdown?.length) return null;
-  const cost = sumBreakdownCost(res.breakdown, isDataTransferUsageType);
-  const period = res.period;
-  if (!period?.start || !period?.end) return cost;
-  const start = new Date(period.start);
-  const end = new Date(period.end);
-  const days = Math.max(
-    1,
-    (end.getTime() - start.getTime()) / (24 * 60 * 60 * 1000),
-  );
-  return (cost / days) * 30;
-}
-
 /** Build a simple S3 cost breakdown for display (storage, requests, data transfer). */
 function getAwsCostBreakdownForDisplay(res: AwsCostResponse): {
   period: { start: string; end: string };
@@ -303,7 +288,7 @@ export default function BloggoAdminDashboard() {
       router.replace("/bloggo");
       return;
     }
-     
+
     setAllowed(true);
   }, [authLoading, isAuthenticated, router]);
 
