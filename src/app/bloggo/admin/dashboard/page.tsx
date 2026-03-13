@@ -14,6 +14,9 @@ import {
   type AwsCostResponse,
   type MongoStorageResponse,
 } from "@/api/admin-dashboard";
+import { fetchWaitlist, fetchPremiumUserCount } from "@/api/waitlist";
+import type { WaitlistEntry } from "@/api/waitlist";
+import DashboardWaitlist from "@/app/admin/dashboard/components/DashboardWaitlist";
 
 import {
   MOCK_OBSERVABILITY_METRICS,
@@ -241,6 +244,30 @@ export default function BloggoAdminDashboard() {
   const [costLoading, setCostLoading] = useState(true);
   const [costError, setCostError] = useState<string | null>(null);
 
+  const [waitlist, setWaitlist] = useState<WaitlistEntry[]>([]);
+  const [premiumCount, setPremiumCount] = useState(0);
+  const [waitlistLoading, setWaitlistLoading] = useState(false);
+  const [waitlistError, setWaitlistError] = useState<string | null>(null);
+
+  const loadWaitlist = useCallback(async () => {
+    setWaitlistLoading(true);
+    setWaitlistError(null);
+    try {
+      const [list, count] = await Promise.all([
+        fetchWaitlist(),
+        fetchPremiumUserCount().catch(() => 0),
+      ]);
+      setWaitlist(list);
+      setPremiumCount(count);
+    } catch (err: unknown) {
+      const msg =
+        err instanceof Error ? err.message : "Failed to load waitlist";
+      setWaitlistError(msg);
+    } finally {
+      setWaitlistLoading(false);
+    }
+  }, []);
+
   const loadCosts = useCallback(async (days: number = COST_DAYS_DEFAULT) => {
     setCostLoading(true);
     setCostError(null);
@@ -329,7 +356,8 @@ export default function BloggoAdminDashboard() {
   useEffect(() => {
     if (!allowed) return;
     loadCosts(COST_DAYS_DEFAULT);
-  }, [allowed, loadCosts]);
+    loadWaitlist();
+  }, [allowed, loadCosts, loadWaitlist]);
 
   if (authLoading || allowed === null) {
     return (
@@ -400,6 +428,13 @@ export default function BloggoAdminDashboard() {
             </p>
           </div>
 
+          <DashboardWaitlist
+            waitlist={waitlist}
+            premiumCount={premiumCount}
+            loading={waitlistLoading}
+            error={waitlistError}
+            onRefresh={loadWaitlist}
+          />
           <ObservabilityOverview data={MOCK_OBSERVABILITY_METRICS} />
           <ServiceUsage
             data={serviceUsage}

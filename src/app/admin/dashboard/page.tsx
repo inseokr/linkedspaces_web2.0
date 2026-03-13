@@ -22,6 +22,9 @@ import DashboardGeo from "./components/DashboardGeo";
 import DashboardPerUser from "./components/DashboardPerUser";
 import DashboardApiUsage from "./components/DashboardApiUsage";
 import DashboardFilters from "./components/DashboardFilters";
+import DashboardWaitlist from "./components/DashboardWaitlist";
+import { fetchWaitlist, fetchPremiumUserCount } from "@/api/waitlist";
+import type { WaitlistEntry } from "@/api/waitlist";
 import {
   mapToOverviewMetrics,
   mapToActivityMetrics,
@@ -65,6 +68,30 @@ export default function AdminDashboardPage() {
   const [filters, setFilters] = useState<Filters>({
     dateRange: { start: DEFAULT_DATE_START, end: DEFAULT_DATE_END },
   });
+
+  const [waitlist, setWaitlist] = useState<WaitlistEntry[]>([]);
+  const [premiumCount, setPremiumCount] = useState(0);
+  const [waitlistLoading, setWaitlistLoading] = useState(false);
+  const [waitlistError, setWaitlistError] = useState<string | null>(null);
+
+  const loadWaitlist = useCallback(async () => {
+    setWaitlistLoading(true);
+    setWaitlistError(null);
+    try {
+      const [list, count] = await Promise.all([
+        fetchWaitlist(),
+        fetchPremiumUserCount().catch(() => 0),
+      ]);
+      setWaitlist(list);
+      setPremiumCount(count);
+    } catch (err: unknown) {
+      const msg =
+        err instanceof Error ? err.message : "Failed to load waitlist";
+      setWaitlistError(msg);
+    } finally {
+      setWaitlistLoading(false);
+    }
+  }, []);
 
   const loadAnalytics = useCallback(async () => {
     setLoading(true);
@@ -124,7 +151,8 @@ export default function AdminDashboardPage() {
   useEffect(() => {
     if (!allowed) return;
     loadAnalytics();
-  }, [allowed, loadAnalytics]);
+    loadWaitlist();
+  }, [allowed, loadAnalytics, loadWaitlist]);
 
   useEffect(() => {
     if (!selectedUsername) {
@@ -352,6 +380,13 @@ export default function AdminDashboardPage() {
             perUserError={userDetailsError}
             perUserDebug={userDetailsDebug}
             onExport={exportPerUserCsv}
+          />
+          <DashboardWaitlist
+            waitlist={waitlist}
+            premiumCount={premiumCount}
+            loading={waitlistLoading}
+            error={waitlistError}
+            onRefresh={loadWaitlist}
           />
           <DashboardApiUsage data={apiUsage} />
         </div>
