@@ -1,5 +1,6 @@
 /**
  * Waitlist API client.
+ * POST /LS_API/waitlist                         — join premium waitlist (public)
  * GET  /LS_API/waitlist                         — fetch waitlist (any logged-in user)
  * GET  /LS_API/admin/dashboard/premium-users    — premium user count (admin only)
  * POST /LS_API/admin/dashboard/user/level       — upgrade / downgrade a user (admin only)
@@ -50,9 +51,31 @@ type UpdateUserLevelResponse = {
   reason?: string;
 };
 
+type JoinWaitlistResponse = {
+  result: string;
+  reason?: string;
+};
+
 // ---------------------------------------------------------------------------
 // API functions
 // ---------------------------------------------------------------------------
+
+/**
+ * Join the premium-service waitlist (public, no auth).
+ * Persists email and optional name to the backend so they appear in the admin waitlist.
+ */
+export async function joinWaitlist(
+  email: string,
+  userName?: string,
+): Promise<void> {
+  const res = await apiFetch<JoinWaitlistResponse>("/waitlist", {
+    method: "POST",
+    body: { email, userName: userName || email.split("@")[0] || "Guest" },
+  });
+  if (res.result !== "OK") {
+    throw new Error(res.reason ?? "Failed to join waitlist");
+  }
+}
 
 /** Fetch the premium-service waitlist (sorted oldest-first by backend). */
 export async function fetchWaitlist(): Promise<WaitlistEntry[]> {

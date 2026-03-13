@@ -257,6 +257,7 @@ export default function BloggoAdminDashboard() {
         fetchWaitlist(),
         fetchPremiumUserCount().catch(() => 0),
       ]);
+      console.log("[Waitlist] Fetch waitlist API response:", list);
       setWaitlist(list);
       setPremiumCount(count);
     } catch (err: unknown) {

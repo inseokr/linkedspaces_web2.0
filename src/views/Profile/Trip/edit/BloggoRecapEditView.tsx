@@ -6,6 +6,7 @@ import { apiFetch } from "@/api/client";
 import {
   updateTripCoverPhoto,
   updateTripTitle,
+  updateDayStory,
   type TripRecapResponse,
 } from "@/api/trips";
 import { mapTripRecapToPageModel } from "@/views/Profile/Trip/utils/mapTripRecap";
@@ -71,6 +72,7 @@ export default function BloggoRecapEditView({
     string,
     { name: string; status: string }
   > | null>(null);
+  const baselineDayStoriesRef = useRef<Map<string, string>>(new Map());
   const baselineInitializedRef = useRef(false);
   const baselineDraftFingerprintRef = useRef<string | null>(null);
   const baselineTitleRef = useRef<string | null>(null);
@@ -92,6 +94,7 @@ export default function BloggoRecapEditView({
         id: day.id,
         dayIndex: day.dayIndex,
         title: day.title,
+        dayStory: day.dayStory ?? "",
         places: (day.places ?? []).map((p) => ({
           id: p.id,
           placeKey: p.placeKey,
@@ -169,6 +172,14 @@ export default function BloggoRecapEditView({
     return metaMap;
   };
 
+  const buildBaselineDayStories = (d: RecapEditDraft) => {
+    const map = new Map<string, string>();
+    for (const day of d.days ?? []) {
+      map.set(day.id, day.dayStory ?? "");
+    }
+    return map;
+  };
+
   /** 1) Fetch */
   useEffect(() => {
     let cancelled = false;
@@ -237,6 +248,7 @@ export default function BloggoRecapEditView({
     baselineCaptionsRef.current = buildBaselineCaptions(draft);
     baselinePlaceStoriesRef.current = buildBaselinePlaceStories(draft);
     baselinePlaceMetaRef.current = buildBaselinePlaceMeta(draft);
+    baselineDayStoriesRef.current = buildBaselineDayStories(draft);
     baselineDraftFingerprintRef.current = draftFingerprint(draft);
     baselineTitleRef.current = draft.recapTitle;
     baselineInitializedRef.current = true;
@@ -293,6 +305,18 @@ export default function BloggoRecapEditView({
     }> = [];
     const placeStoryUpdates: Array<{ placeKey: string; storyText: string }> =
       [];
+    const dayStoryUpdates: Array<{ dateKey: number; story: string }> = [];
+    const baselineDayStories = baselineDayStoriesRef.current ?? new Map();
+    for (const day of draft.days ?? []) {
+      const prev = baselineDayStories.get(day.id) ?? "";
+      const next = day.dayStory ?? "";
+      if (next !== prev) {
+        dayStoryUpdates.push({
+          dateKey: day.dayIndex - 1,
+          story: next,
+        });
+      }
+    }
     const placeMetaUpdates: Array<{
       placeKey: string;
       name?: string;
@@ -357,7 +381,13 @@ export default function BloggoRecapEditView({
     setError(null);
     try {
       const tasks: Array<{
-        kind: "title" | "caption" | "placeStory" | "placeMeta" | "placeStatus";
+        kind:
+          | "title"
+          | "caption"
+          | "placeStory"
+          | "placeMeta"
+          | "placeStatus"
+          | "dayStory";
         promise: Promise<any>;
       }> = [];
 
@@ -388,6 +418,17 @@ export default function BloggoRecapEditView({
             placeKey: u.placeKey,
             storyText: u.storyText,
             photoIndexType: "filtered",
+          }),
+        });
+      }
+
+      for (const u of dayStoryUpdates) {
+        tasks.push({
+          kind: "dayStory",
+          promise: updateDayStory({
+            blogKey,
+            dateKey: u.dateKey,
+            story: u.story,
           }),
         });
       }
@@ -433,6 +474,9 @@ export default function BloggoRecapEditView({
 
       if (failedKinds.length > 0) {
         const titleFailed = failedKinds.includes("title");
+        const dayStoryFailedCount = failedKinds.filter(
+          (k) => k === "dayStory",
+        ).length;
         const captionFailedCount = failedKinds.filter(
           (k) => k === "caption",
         ).length;
@@ -442,14 +486,21 @@ export default function BloggoRecapEditView({
 
         if (
           titleFailed &&
-          (captionFailedCount > 0 || placeStoryFailedCount > 0)
+          (dayStoryFailedCount > 0 ||
+            captionFailedCount > 0 ||
+            placeStoryFailedCount > 0)
         ) {
           throw new Error(
-            `Failed to update title and ${captionFailedCount} caption(s) and ${placeStoryFailedCount} place story(ies).`,
+            `Failed to update title and ${dayStoryFailedCount} day story(ies), ${captionFailedCount} caption(s), ${placeStoryFailedCount} place story(ies).`,
           );
         }
         if (titleFailed) {
           throw new Error("Failed to update title.");
+        }
+        if (dayStoryFailedCount > 0) {
+          throw new Error(
+            `Failed to update ${dayStoryFailedCount} day story(ies).`,
+          );
         }
         if (captionFailedCount > 0 && placeStoryFailedCount > 0) {
           throw new Error(
@@ -468,6 +519,7 @@ export default function BloggoRecapEditView({
       baselineCaptionsRef.current = buildBaselineCaptions(draft);
       baselinePlaceStoriesRef.current = buildBaselinePlaceStories(draft);
       baselinePlaceMetaRef.current = buildBaselinePlaceMeta(draft);
+      baselineDayStoriesRef.current = buildBaselineDayStories(draft);
       baselineDraftFingerprintRef.current = draftFingerprint(draft);
       baselineTitleRef.current = draft.recapTitle;
 
@@ -506,6 +558,19 @@ export default function BloggoRecapEditView({
         ...prev,
         updatedAt: Date.now(),
         days: prev.days.map((d) => (d.id === dayId ? { ...d, title } : d)),
+      };
+    });
+  };
+
+  const setDayStory = (dayId: string, story: string) => {
+    setDraft((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        updatedAt: Date.now(),
+        days: prev.days.map((d) =>
+          d.id === dayId ? { ...d, dayStory: story } : d,
+        ),
       };
     });
   };
@@ -948,7 +1013,9 @@ export default function BloggoRecapEditView({
               <RecapBlogDaySection
                 dayIndex={d.dayIndex}
                 title={d.title}
+                story={d.dayStory ?? ""}
                 mode="edit"
+                onDayStoryChange={(next) => setDayStory(d.id, next)}
                 hiddenCount={
                   d.places.filter((p) => p.status === "hidden").length
                 }

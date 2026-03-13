@@ -1,5 +1,6 @@
 "use client";
 import SignUpButton from "../views/Home/components/SignUpButton";
+import { joinWaitlist } from "@/api/waitlist";
 import { useRef, useState } from "react";
 
 export default function BetaSignupSection() {
@@ -8,26 +9,40 @@ export default function BetaSignupSection() {
   const [email, setEmail] = useState("");
   const [firstName, setFirstName] = useState("");
   const [emailError, setEmailError] = useState<string>("");
+  const [submitting, setSubmitting] = useState(false);
+  const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const validateEmail = () => {
     if (!email.trim()) return "Enter an email address like example@mysite.com.";
-    // check if it is validate email form
     const ok = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
     if (!ok) return "Enter an email address like example@mysite.com.";
     return "";
   };
 
-  const onSubmit = (e: React.FormEvent) => {
-    console.log("onSubmit fired");
+  const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: API 연동
     const msg = validateEmail();
     setEmailError(msg);
+    setSubmitError(null);
 
     if (msg) return;
 
-    // TODO: API 연동
-    console.log({ email, firstName });
+    setSubmitting(true);
+    try {
+      await joinWaitlist(email.trim(), firstName.trim() || undefined);
+      setSubmitSuccess(true);
+      setEmail("");
+      setFirstName("");
+    } catch (err) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : "Something went wrong. Please try again.";
+      setSubmitError(message);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -112,8 +127,22 @@ export default function BetaSignupSection() {
               <p>Only available on IOS</p>
             </div>
 
+            {/* Success / error feedback */}
+            {submitSuccess && (
+              <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
+                You&apos;re on the list! We&apos;ll be in touch.
+              </div>
+            )}
+            {submitError && (
+              <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                {submitError}
+              </div>
+            )}
+
             {/* CTA */}
-            <SignUpButton type="submit">Sign Up Now</SignUpButton>
+            <SignUpButton type="submit" disabled={submitting}>
+              {submitting ? "Submitting…" : "Sign Up Now"}
+            </SignUpButton>
           </form>
         </div>
       </div>

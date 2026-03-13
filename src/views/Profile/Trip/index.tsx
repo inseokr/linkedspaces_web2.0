@@ -1242,6 +1242,7 @@ function OwnerTripRecapView({
                       <RecapBlogDaySection
                         dayIndex={d.dayIndex}
                         title={d.title}
+                        story={d.story}
                         entries={d.entries as any}
                         onEntryMount={(entryId, el) => {
                           entryRefs.current[entryId] = el;
