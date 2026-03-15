@@ -237,19 +237,20 @@ const CustomPolyline = ({ places, onSegmentClick }) => {
     return `${months[parseInt(month) - 1]} ${parseInt(day)}, ${year}`;
   };
 
-  // Check if we have a valid Map ID (not the demo placeholder)
-  const hasValidMapId = envVars.REACT_APP_GOOGLE_MAPS_MAP_ID && 
-                       envVars.REACT_APP_GOOGLE_MAPS_MAP_ID !== 'DEMO_MAP_ID';
+  // AdvancedMarker requires a mapId to intercept click events.
+  // Fall back to DEMO_MAP_ID so markers always work even without a custom map ID configured.
+  const mapId = envVars.REACT_APP_GOOGLE_MAPS_MAP_ID || 'DEMO_MAP_ID';
 
   return (
     <div className={`google-map-container ${className}`}>
       <APIProvider apiKey={envVars.REACT_APP_GOOGLE_MAPS_API_KEY}>
         <Map
-          {...(hasValidMapId && { mapId: envVars.REACT_APP_GOOGLE_MAPS_MAP_ID })}
+          mapId={mapId}
           defaultCenter={center}
           defaultZoom={15}
           styles={mapStyles}
           gestureHandling="greedy"
+          clickableIcons={false}
           disableDefaultUI={false}
           zoomControl={true}
           mapTypeControl={false}
@@ -290,11 +291,10 @@ const CustomPolyline = ({ places, onSegmentClick }) => {
                   lat: place.coordinate.latitude,
                   lng: place.coordinate.longitude
                 }}
-                title={place.placeName}
                 onClick={(e) => {
-                  if (e && typeof e.stopPropagation === 'function') {
-                    e.stopPropagation();
-                  }
+                  e?.stop?.();
+                  e?.domEvent?.stopPropagation();
+                  e?.domEvent?.preventDefault();
                   handleMarkerClick(place, index);
                 }}
               >
@@ -370,17 +370,17 @@ const CustomPolyline = ({ places, onSegmentClick }) => {
                 {/* Visit date */}
                 <p className="popup-date">Visited: {formatDate(selectedPlace.place.digitizedTime)}</p>
                 
-                {/* Photos */}
+                {/* Photos (max 3) */}
                 {selectedPlace.place.photoList && selectedPlace.place.photoList.length > 0 && (
                   <div className="popup-photos">
-                    {selectedPlace.place.photoList.map((photo, idx) => (
-                      <div 
+                    {selectedPlace.place.photoList.slice(0, 3).map((photo, idx) => (
+                      <div
                         key={idx}
                         className="popup-photo-container"
                         onClick={() => handleImageClick(fileServer + photo.uri)}
                       >
-                        <img 
-                          src={fileServer + photo.uri} 
+                        <img
+                          src={fileServer + photo.uri}
                           alt={`Photo ${idx + 1}`}
                           className="popup-photo"
                         />
@@ -397,11 +397,30 @@ const CustomPolyline = ({ places, onSegmentClick }) => {
                   </div>
                 )}
                 
-                {/* External link */}
+                {/* Action buttons */}
+                <div className="popup-actions">
+                  <button
+                    className="popup-action-btn popup-action-details"
+                    onClick={() => {
+                      onMarkerClick && onMarkerClick(selectedPlace.place, selectedPlace.index);
+                      closePopup();
+                    }}
+                  >
+                    View Details
+                  </button>
+                  <a
+                    href={`https://www.google.com/maps/search/?api=1&query=${selectedPlace.place.coordinate.latitude},${selectedPlace.place.coordinate.longitude}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="popup-action-btn popup-action-maps"
+                  >
+                    Open in Maps
+                  </a>
+                </div>
                 {selectedPlace.place.externalUrl && (
-                  <a 
-                    href={selectedPlace.place.externalUrl} 
-                    target="_blank" 
+                  <a
+                    href={selectedPlace.place.externalUrl}
+                    target="_blank"
                     rel="noopener noreferrer"
                     className="popup-link"
                   >

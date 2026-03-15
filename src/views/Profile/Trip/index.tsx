@@ -1020,6 +1020,7 @@ function OwnerTripRecapView({
 
   /** 13) marker click: focus + jump to day */
   const focusByMarkerId = (markerId: string) => {
+    console.warn("Marker clicked, focusing to entryId:", markerId);
     activeEntryIdRef.current = markerId;
     setActiveEntryId(markerId);
     focusToEntryId(markerId);
