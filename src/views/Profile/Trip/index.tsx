@@ -309,6 +309,9 @@ function OwnerTripRecapView({
     targetEntryId: string;
   } | null>(null);
   const [poiSaving, setPoiSaving] = useState(false);
+  const [poiNameUpdatedToast, setPoiNameUpdatedToast] = useState<string | null>(
+    null,
+  );
   const [editorOpenEntryId, setEditorOpenEntryId] = useState<string | null>(
     null,
   );
@@ -865,7 +868,7 @@ function OwnerTripRecapView({
       return `https://www.google.com/maps/search/?api=1&query=${query}`;
     })();
 
-    // 1) Optimistic local update
+    // 1) Optimistic local update — preserve original GPS coordinate, update name only
     setRecapData((prev) => {
       if (!prev) return prev;
       const nextDays = prev.days.map((day, di) => {
@@ -877,7 +880,7 @@ function OwnerTripRecapView({
             return {
               ...place,
               placeName: poi.name,
-              coordinate: { latitude: poi.lat, longitude: poi.lng },
+              // Keep the original GPS coordinate — do NOT move it to the POI center
               categories: poi.category ? [poi.category] : place.categories,
               externalUrl: mapsUrl,
             };
@@ -889,13 +892,20 @@ function OwnerTripRecapView({
 
     setPendingPoi(null);
 
-    // 2) Persist to backend
+    // Show toast confirming name update
+    setPoiNameUpdatedToast(poi.name);
+    setTimeout(() => setPoiNameUpdatedToast(null), 3500);
+
+    // 2) Persist to backend — send original coordinate, not POI center
     setPoiSaving(true);
     try {
       await updatePlaceInfo({
         placeKey,
         placeName: poi.name,
-        coordinate: { latitude: poi.lat, longitude: poi.lng },
+        coordinate: {
+          latitude: targetPlace.coordinate?.latitude ?? 0,
+          longitude: targetPlace.coordinate?.longitude ?? 0,
+        },
         categories: poi.category ? [poi.category] : undefined,
         externalUrl: mapsUrl,
       });
@@ -974,7 +984,7 @@ function OwnerTripRecapView({
         return `https://www.google.com/maps/search/?api=1&query=${query}`;
       })();
 
-      // 1) Optimistic local update
+      // 1) Optimistic local update — preserve original GPS coordinate, update name only
       setRecapData((prev) => {
         if (!prev) return prev;
         const nextDays = prev.days.map((day, di) => {
@@ -986,7 +996,7 @@ function OwnerTripRecapView({
               return {
                 ...place,
                 placeName: poi.name,
-                coordinate: { latitude: poi.lat, longitude: poi.lng },
+                // Keep the original GPS coordinate — do NOT move it to the POI center
                 categories: poi.category ? [poi.category] : place.categories,
                 externalUrl: mapsUrl,
               };
@@ -996,7 +1006,11 @@ function OwnerTripRecapView({
         return { ...prev, days: nextDays };
       });
 
-      // 2) Persist to backend
+      // Show toast confirming name update
+      setPoiNameUpdatedToast(poi.name);
+      setTimeout(() => setPoiNameUpdatedToast(null), 3500);
+
+      // 2) Persist to backend — send original coordinate, not POI center
       setPoiSaving(true);
       try {
         const targetEntry = effectiveModel?.days
@@ -1005,7 +1019,10 @@ function OwnerTripRecapView({
         await updatePlaceInfo({
           placeKey: targetEntry?.placeKey || entryId,
           placeName: poi.name,
-          coordinate: { latitude: poi.lat, longitude: poi.lng },
+          coordinate: {
+            latitude: targetEntry?.coordinate?.latitude ?? 0,
+            longitude: targetEntry?.coordinate?.longitude ?? 0,
+          },
           categories: poi.category ? [poi.category] : undefined,
           externalUrl: mapsUrl,
         });
@@ -1343,6 +1360,28 @@ function OwnerTripRecapView({
             />
           );
         })()}
+
+      {/* Place name updated toast */}
+      {poiNameUpdatedToast && (
+        <div className="fixed bottom-8 left-1/2 z-[400] -translate-x-1/2 pointer-events-none">
+          <div className="flex items-center gap-2 rounded-full bg-slate-900 px-5 py-3 text-sm font-medium text-white shadow-2xl animate-in slide-in-from-bottom-4 duration-300">
+            <svg
+              className="h-4 w-4 text-emerald-400 shrink-0"
+              viewBox="0 0 16 16"
+              fill="currentColor"
+            >
+              <path
+                fillRule="evenodd"
+                d="M12.416 3.376a.75.75 0 0 1 .208 1.04l-5 7.5a.75.75 0 0 1-1.154.114l-3-3a.75.75 0 0 1 1.06-1.06l2.353 2.353 4.493-6.74a.75.75 0 0 1 1.04-.207Z"
+                clipRule="evenodd"
+              />
+            </svg>
+            <span>
+              Place name updated to &ldquo;{poiNameUpdatedToast}&rdquo;
+            </span>
+          </div>
+        </div>
+      )}
 
       <ScrollToTopButton
         scrollContainerRef={isLg ? leftScrollRef : undefined}

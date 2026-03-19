@@ -799,7 +799,7 @@ export default function BloggoRecapEditView({
     const { dayId } = editorOpen;
     const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${poi.name} ${poi.lat},${poi.lng}`)}`;
 
-    // 1) Update draft optimistically
+    // 1) Update draft optimistically — preserve original GPS coordinate, update name only
     updatePlaceInDay(
       dayId,
       entryId,
@@ -807,12 +807,12 @@ export default function BloggoRecapEditView({
         ({
           ...p,
           placeName: poi.name,
-          coordinate: { latitude: poi.lat, longitude: poi.lng },
+          // Keep the original GPS coordinate — do NOT move it to the POI center
           externalUrl: mapsUrl,
         }) as any,
     );
 
-    // 2) Persist to server
+    // 2) Persist to server — send original coordinate, not POI center
     const place = draft.days
       .find((d) => d.id === dayId)
       ?.places.find((p) => p.id === entryId);
@@ -822,7 +822,10 @@ export default function BloggoRecapEditView({
         await updatePlaceInfo({
           placeKey,
           placeName: poi.name,
-          coordinate: { latitude: poi.lat, longitude: poi.lng },
+          coordinate: {
+            latitude: place.coordinate?.latitude ?? 0,
+            longitude: place.coordinate?.longitude ?? 0,
+          },
           categories: poi.category ? [poi.category] : undefined,
           externalUrl: mapsUrl,
         });
