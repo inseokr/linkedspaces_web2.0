@@ -856,14 +856,14 @@ export type EventAnalyticsResponse = {
 
 /**
  * Fetch event-stream analytics for the admin dashboard.
- * GET /LS_API/admin/dashboard/analytics/events?days=N (admin-only)
+ * GET /LS_API/admin/dashboard/activity/stream?days=N (admin-only)
  */
 export async function fetchEventAnalytics(
   days = 30,
 ): Promise<EventAnalyticsResponse> {
   const token = getAuthToken();
   return apiFetch<EventAnalyticsResponse>(
-    `/admin/dashboard/analytics/events?days=${days}`,
+    `/admin/dashboard/activity/stream?days=${days}`,
     { method: "GET", token },
   );
 }

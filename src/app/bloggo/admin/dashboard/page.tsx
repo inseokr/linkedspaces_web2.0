@@ -386,7 +386,7 @@ export default function BloggoAdminDashboard() {
     loadCosts(COST_DAYS_DEFAULT);
     loadWaitlist();
     loadEventAnalytics(eventDays);
-  }, [allowed, loadCosts, loadWaitlist, loadEventAnalytics, eventDays]);
+  }, [allowed, loadCosts, loadWaitlist, loadEventAnalytics]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (authLoading || allowed === null) {
     return (
@@ -469,7 +469,10 @@ export default function BloggoAdminDashboard() {
             loading={eventLoading}
             error={eventError}
             days={eventDays}
-            onChangeDays={(d) => setEventDays(d)}
+            onChangeDays={(d) => {
+              setEventDays(d);
+              loadEventAnalytics(d);
+            }}
           />
           <ObservabilityOverview data={MOCK_OBSERVABILITY_METRICS} />
           <ServiceUsage
