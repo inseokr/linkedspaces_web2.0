@@ -1,14 +1,43 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import VideoGuideModal from "@/views/SignIn/components/VideoModal";
 import { GoogleOAuthProvider, GoogleLogin } from "@react-oauth/google";
 import { useRouter } from "next/navigation";
 import { notifyAuthChanged } from "@/hooks/useAuth";
-import { loginWithGoogle, loginWithJwt, isLoginSuccess } from "@/api/auth";
+import {
+  loginWithGoogle,
+  loginWithApple,
+  loginWithJwt,
+  isLoginSuccess,
+} from "@/api/auth";
 import { setCachedUser } from "@/api/user";
 import { assertBloggoUser } from "@/lib/bloggo";
+
+// Apple Sign in with Apple JS SDK type declarations
+declare global {
+  interface Window {
+    AppleID?: {
+      auth: {
+        init: (config: {
+          clientId: string;
+          scope: string;
+          redirectURI: string;
+          usePopup: boolean;
+        }) => void;
+        signIn: () => Promise<{
+          authorization: { id_token: string; code: string };
+          user?: { name?: { firstName?: string; lastName?: string } };
+        }>;
+      };
+    };
+  }
+}
+
+const APPLE_CLIENT_ID = "com.bloggo.bloggo";
+const APPLE_REDIRECT_URI =
+  "https://bloggo.linkedspaces.com/auth/apple/callback";
 
 export default function BloggoSignInSection() {
   const [openGuide, setOpenGuide] = useState(false);
@@ -16,7 +45,29 @@ export default function BloggoSignInSection() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [appleReady, setAppleReady] = useState(false);
   const router = useRouter();
+
+  // Load Apple Sign-in JS SDK
+  useEffect(() => {
+    const script = document.createElement("script");
+    script.src =
+      "https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/en_US/appleid.auth.js";
+    script.async = true;
+    script.onload = () => {
+      window.AppleID?.auth.init({
+        clientId: APPLE_CLIENT_ID,
+        scope: "name email",
+        redirectURI: APPLE_REDIRECT_URI,
+        usePopup: true,
+      });
+      setAppleReady(true);
+    };
+    document.body.appendChild(script);
+    return () => {
+      document.body.removeChild(script);
+    };
+  }, []);
 
   // ── Token storage (localStorage → sessionStorage fallback) ──────────────────
   const persistTokenBestEffort = (token: string) => {
@@ -107,6 +158,40 @@ export default function BloggoSignInSection() {
     }
   };
 
+  // ── Apple login ───────────────────────────────────────────────────────────────
+  const handleAppleLogin = async () => {
+    setError(null);
+    setIsLoading(true);
+    try {
+      const response = await window.AppleID!.auth.signIn();
+      const idToken = response.authorization?.id_token;
+      if (!idToken) {
+        setError("Failed to log in with Apple.");
+        return;
+      }
+      const firstName = response.user?.name?.firstName ?? "";
+      const lastName = response.user?.name?.lastName ?? "";
+      const fullName =
+        [firstName, lastName].filter(Boolean).join(" ") || undefined;
+
+      const data = await loginWithApple(idToken, fullName);
+      if (isLoginSuccess(data)) {
+        handleAuthSuccess(data.token, data.user);
+      } else {
+        setError("Failed to log in with Apple.");
+      }
+    } catch (e) {
+      // User cancelled popup — no error shown
+      const err = e as { error?: string };
+      if (err?.error !== "popup_closed_by_user") {
+        console.error("[bloggo-login] apple failed", e);
+        setError("Failed to log in with Apple. Please try again.");
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // ── JWT login ─────────────────────────────────────────────────────────────────
   const handleLogin = async () => {
     setError(null);
@@ -157,6 +242,25 @@ export default function BloggoSignInSection() {
                 />
               </div>
             </GoogleOAuthProvider>
+
+            <div className="mt-3 flex justify-center">
+              <button
+                type="button"
+                onClick={handleAppleLogin}
+                disabled={!appleReady || isLoading}
+                className="flex h-[40px] w-[380px] items-center justify-center gap-2 rounded-full border border-black/20 bg-black px-4 text-[14px] font-medium text-white hover:opacity-90 active:opacity-80 transition disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 814 1000"
+                  className="h-5 w-5 fill-white"
+                  aria-hidden="true"
+                >
+                  <path d="M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.3 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76 0-103.7 40.8-165.9 40.8s-105-57.8-155.5-127.4C46 523 26.3 321.3 81.3 203.9c13.4-28.8 41.3-63.8 93.4-105.1C245.8 38.7 335.9 6.5 422.5 5.8c.2 0 .2 0 .3 0 1.5 0 3 .1 4.5.2l-.1.1c58.2 1.8 111.6 28.2 150.3 55.7 36.2 25.9 63 55.8 68.7 64.4l-.1-.1c13.7 21.4 17 23.1 11.9 40.8z" />
+                </svg>
+                Sign in with Apple
+              </button>
+            </div>
 
             <div className="my-6 flex items-center gap-4">
               <div className="h-px flex-1 border-t border-dashed border-black/30" />

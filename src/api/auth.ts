@@ -25,6 +25,13 @@ export function loginWithGoogle(idToken: string) {
   });
 }
 
+export function loginWithApple(idToken: string, fullName?: string) {
+  return apiFetch<LoginResponse>("/oauth/apple", {
+    method: "POST",
+    body: { id_token: idToken, full_name: fullName, userType: "bloggo" },
+  });
+}
+
 export function loginWithJwt(username: string, password: string) {
   return apiFetch<LoginResponse>("/jwt_login_v1", {
     method: "POST",
