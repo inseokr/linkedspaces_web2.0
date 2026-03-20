@@ -226,6 +226,7 @@ export default function BloggoSignInSection() {
               </Link>
             </div>
 
+            {/* Temporarily hidden — "New to Bloggo?" sign-up prompt
             <div className="mt-6 text-[12px] text-black/70">
               <div className="font-medium">New to Bloggo?</div>
 
@@ -237,6 +238,7 @@ export default function BloggoSignInSection() {
                 Create an account in our app
               </button>
             </div>
+            */}
           </div>
         </div>
       </div>

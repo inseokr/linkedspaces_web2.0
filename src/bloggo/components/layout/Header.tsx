@@ -282,6 +282,7 @@ export default function BloggoHeader() {
                             </Link>
                           ))}
 
+                        {/* Temporarily hidden — Dashboard link
                         <Link
                           href="/dashboard"
                           onClick={() => setMenuOpen(false)}
@@ -300,6 +301,7 @@ export default function BloggoHeader() {
                         >
                           Dashboard
                         </Link>
+                        */}
 
                         {isAdminUsername(user?.username) && (
                           <>
@@ -319,7 +321,7 @@ export default function BloggoHeader() {
                                   "transparent")
                               }
                             >
-                              Admin Dashboard
+                              LinkedSpaces Admin
                             </Link>
 
                             <Link

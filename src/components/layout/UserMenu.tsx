@@ -202,6 +202,7 @@ export default function UserMenu({ displayName, avatarSrc, className }: Props) {
                 Account Settings
               </button>
 
+              {/* Temporarily hidden — Dashboard link
               <Link
                 href="/dashboard"
                 role="menuitem"
@@ -214,6 +215,7 @@ export default function UserMenu({ displayName, avatarSrc, className }: Props) {
               >
                 Dashboard
               </Link>
+              */}
 
               {isAdminUsername(user?.username) && (
                 <Link
@@ -226,7 +228,7 @@ export default function UserMenu({ displayName, avatarSrc, className }: Props) {
                   style={{ color: "var(--foreground)" }}
                   onClick={() => setOpen(false)}
                 >
-                  Admin Dashboard
+                  LinkedSpaces Admin
                 </Link>
               )}
             </div>
