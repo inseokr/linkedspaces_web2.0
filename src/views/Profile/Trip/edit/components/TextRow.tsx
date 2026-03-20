@@ -31,16 +31,46 @@ export default function TextRow({
         <div className="mb-2 text-sm font-semibold">{label}</div>
       ) : null}
 
-      <FieldTag
-        className={[
-          baseField,
-          multiline ? "min-h-[150px] resize-none" : "",
-        ].join(" ")}
-        value={value}
-        placeholder={placeholder}
-        rows={multiline ? 3 : undefined}
-        onChange={(e: any) => onChange(e.target.value)}
-      />
+      {multiline ? (
+        <div className="relative">
+          <FieldTag
+            className={[baseField, "min-h-[150px] resize-y overflow-auto"].join(
+              " ",
+            )}
+            value={value}
+            placeholder={placeholder}
+            rows={3}
+            onChange={(e: any) => onChange(e.target.value)}
+          />
+          {/* Visual resize-grip hint — sits on top of the browser's native resize handle */}
+          <span
+            className="pointer-events-none absolute bottom-[5px] right-[5px] flex flex-col gap-[3px] opacity-30"
+            aria-hidden="true"
+          >
+            {[0, 1, 2].map((i) => (
+              <span
+                key={i}
+                className="flex gap-[3px]"
+                style={{ marginLeft: i * 3 }}
+              >
+                {Array.from({ length: 3 - i }).map((_, j) => (
+                  <span
+                    key={j}
+                    className="block h-[2.5px] w-[2.5px] rounded-full bg-slate-500"
+                  />
+                ))}
+              </span>
+            ))}
+          </span>
+        </div>
+      ) : (
+        <FieldTag
+          className={baseField}
+          value={value}
+          placeholder={placeholder}
+          onChange={(e: any) => onChange(e.target.value)}
+        />
+      )}
     </div>
   );
 }

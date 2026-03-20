@@ -197,13 +197,34 @@ export function RecapBlogDaySection({
               <p className="text-[11px] font-bold uppercase tracking-widest text-black/40 mb-2">
                 Day story
               </p>
-              <textarea
-                value={story ?? ""}
-                onChange={(e) => onDayStoryChange(e.target.value)}
-                placeholder="What happened this day? (optional)"
-                className="min-h-[80px] w-full resize-y rounded-lg border border-black/10 bg-white px-3 py-2 text-[15px] text-black placeholder:text-black/40 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
-                rows={3}
-              />
+              <div className="relative">
+                <textarea
+                  value={story ?? ""}
+                  onChange={(e) => onDayStoryChange(e.target.value)}
+                  placeholder="What happened this day? (optional)"
+                  className="min-h-[80px] w-full resize-y overflow-auto rounded-lg border border-black/10 bg-white px-3 py-2 text-[15px] text-black placeholder:text-black/40 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                  rows={3}
+                />
+                <span
+                  className="pointer-events-none absolute bottom-[5px] right-[5px] flex flex-col gap-[3px] opacity-30"
+                  aria-hidden="true"
+                >
+                  {[0, 1, 2].map((i) => (
+                    <span
+                      key={i}
+                      className="flex gap-[3px]"
+                      style={{ marginLeft: i * 3 }}
+                    >
+                      {Array.from({ length: 3 - i }).map((_, j) => (
+                        <span
+                          key={j}
+                          className="block h-[2.5px] w-[2.5px] rounded-full bg-slate-500"
+                        />
+                      ))}
+                    </span>
+                  ))}
+                </span>
+              </div>
             </div>
           ) : (
             <p className="text-[15px] text-black/80 leading-relaxed whitespace-pre-wrap">
@@ -349,7 +370,7 @@ function RecapPlaceBlock({
 }) {
   const placeStoryTrimmed = (entry.placeStory ?? "").trim();
   const [placeStoryExpanded, setPlaceStoryExpanded] = useState(false);
-  const canTogglePlaceStory = placeStoryTrimmed.length > 160;
+  const canTogglePlaceStory = placeStoryTrimmed.length > 0;
 
   const [menuOpen, setMenuOpen] = useState(false);
   const [isManagePhotosPopupOpen, setIsManagePhotosPopupOpen] = useState(false);
@@ -450,7 +471,7 @@ function RecapPlaceBlock({
           <div className="flex items-center gap-4 shrink-0">
             <button
               type="button"
-              className="inline-flex items-center text-black/70 hover:text-black mt-[1px]"
+              className="inline-flex h-8 w-8 shrink-0 items-center justify-center text-black/70 hover:text-black"
               aria-label="Open place link"
               onClick={() => {
                 const targetUrl =
@@ -559,38 +580,53 @@ function RecapPlaceBlock({
           </div>
         </div>
 
+        {/* Category label — shown above place story */}
+        {entry.categoryLabel && (
+          <span className="inline-flex items-center rounded-full bg-sky-100 px-3 py-1 text-[13px] font-bold text-sky-600 shadow-sm">
+            {entry.categoryLabel}
+          </span>
+        )}
+
         {/* Place Story Section */}
         {mode === "edit" ? (
           <div className="w-full">
-            <textarea
-              value={entry.placeStory ?? ""}
-              placeholder="Write a story for this place..."
-              rows={3}
-              onChange={(e) => onPlaceStoryChange?.(entry.id, e.target.value)}
-              className="w-full resize-none rounded-xl border border-slate-200 bg-transparent px-4 py-3 text-lg leading-relaxed text-slate-800 placeholder:text-slate-400 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20 transition min-h-[80px]"
-            />
+            <div className="relative">
+              <textarea
+                value={entry.placeStory ?? ""}
+                placeholder="Write a story for this place..."
+                rows={3}
+                onChange={(e) => onPlaceStoryChange?.(entry.id, e.target.value)}
+                className="w-full resize-y overflow-auto rounded-xl border border-slate-200 bg-transparent px-4 py-3 text-lg leading-relaxed text-slate-800 placeholder:text-slate-400 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20 transition min-h-[80px]"
+              />
+              {/* Visual resize-grip hint */}
+              <span
+                className="pointer-events-none absolute bottom-[5px] right-[5px] flex flex-col gap-[3px] opacity-30"
+                aria-hidden="true"
+              >
+                {[0, 1, 2].map((i) => (
+                  <span
+                    key={i}
+                    className="flex gap-[3px]"
+                    style={{ marginLeft: i * 3 }}
+                  >
+                    {Array.from({ length: 3 - i }).map((_, j) => (
+                      <span
+                        key={j}
+                        className="block h-[2.5px] w-[2.5px] rounded-full bg-slate-500"
+                      />
+                    ))}
+                  </span>
+                ))}
+              </span>
+            </div>
           </div>
         ) : (
           placeStoryTrimmed && (
             <div className="w-full max-w-[920px] 2xl:max-w-[1100px]">
               <div className="rounded-2xl bg-black/5 px-6 py-5">
-                <p
-                  className={[
-                    "text-[20px] leading-[1.55] text-black/80",
-                    placeStoryExpanded ? "" : "line-clamp-3",
-                  ].join(" ")}
-                >
+                <p className="text-[24px] font-medium leading-[1.3] text-black font-['Inter'] tracking-tight">
                   {placeStoryTrimmed}
                 </p>
-                {canTogglePlaceStory && (
-                  <button
-                    type="button"
-                    onClick={() => setPlaceStoryExpanded((v) => !v)}
-                    className="mt-3 text-[16px] font-extrabold text-black hover:opacity-80"
-                  >
-                    {expanded ? "See Less" : "See More"}
-                  </button>
-                )}
               </div>
             </div>
           )
@@ -683,27 +719,19 @@ function RecapPhotoCarousel({
   return (
     <div className="relative w-full mx-auto max-w-full lg:max-w-[920px] 2xl:max-w-[1100px]">
       {/* Category and Start/End labels pill above the first photo */}
-      {(entryRole !== "poi" || entry.categoryLabel) && (
+      {entryRole !== "poi" && (
         <div className="mb-4 flex items-center gap-2">
-          {entryRole !== "poi" && (
-            <span
-              className="inline-flex items-center rounded-full px-3 py-1 text-[13px] font-bold text-white"
-              style={{
-                background:
-                  entryRole === "start"
-                    ? "rgb(34, 197, 94)" /* green-500 */
-                    : "rgb(249, 115, 22)" /* orange-500 */,
-              }}
-            >
-              {entryRole === "start" ? "Start" : "End"}
-            </span>
-          )}
-
-          {entry.categoryLabel && (
-            <span className="inline-flex items-center rounded-full bg-sky-100 px-3 py-1 text-[13px] font-bold text-sky-600 shadow-sm">
-              {entry.categoryLabel}
-            </span>
-          )}
+          <span
+            className="inline-flex items-center rounded-full px-3 py-1 text-[13px] font-bold text-white"
+            style={{
+              background:
+                entryRole === "start"
+                  ? "rgb(34, 197, 94)"
+                  : "rgb(249, 115, 22)",
+            }}
+          >
+            {entryRole === "start" ? "Start" : "End"}
+          </span>
         </div>
       )}
 
@@ -853,7 +881,11 @@ function RecapPhotoCard({
     return () => ro.disconnect();
   }, [captionEl, measureTruncation]);
 
-  const canToggle = captionTrimmed.length > 0 && (expanded || isTruncated);
+  // Show See More when text is long enough to likely exceed 3 lines at 24px.
+  // We avoid scrollHeight measurement because line-clamp + overflow:hidden causes
+  // scrollHeight === clientHeight in most browsers, making detection unreliable.
+  const CLAMP_CHAR_THRESHOLD = 120;
+  const canToggle = captionTrimmed.length > CLAMP_CHAR_THRESHOLD || expanded;
   const [lightboxOpen, setLightboxOpen] = useState(false);
   return (
     <>
@@ -893,36 +925,13 @@ function RecapPhotoCard({
 
         {captionTrimmed && (
           <div className="pt-3 pb-1">
-            <div className="flex flex-col gap-2 rounded-2xl bg-slate-50 p-4 sm:flex-row sm:items-end sm:justify-between sm:gap-6">
-              <div className="relative min-w-0 flex-1">
-                <p
-                  ref={setCaptionEl}
-                  onClick={() => setLightboxOpen(true)}
-                  className={[
-                    "text-[24px] font-medium leading-[1.3] text-black font-['Inter'] tracking-tight cursor-pointer",
-                    expanded ? "" : collapsedClampClass,
-                  ].join(" ")}
-                >
-                  {captionTrimmed}
-                </p>
-
-                {!expanded && isTruncated && (
-                  <div
-                    aria-hidden
-                    className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-slate-50 via-slate-50/70 to-transparent"
-                  />
-                )}
-              </div>
-
-              {mode === "view" && canToggle && (
-                <button
-                  type="button"
-                  onClick={onToggleExpanded}
-                  className="self-end shrink-0 text-[18px] font-extrabold text-black hover:opacity-80"
-                >
-                  {expanded ? "See Less" : "See More"}
-                </button>
-              )}
+            <div className="rounded-2xl bg-slate-50 p-4">
+              <p
+                onClick={() => setLightboxOpen(true)}
+                className="text-[24px] font-medium leading-[1.3] text-black font-['Inter'] tracking-tight cursor-pointer"
+              >
+                {captionTrimmed}
+              </p>
             </div>
           </div>
         )}
@@ -1108,13 +1117,35 @@ function PhotoCaptionRow({
       </div>
 
       <div className="w-full">
-        <textarea
-          value={caption}
-          placeholder="Write a caption"
-          rows={2}
-          onChange={(e) => onCaptionChange?.(entryId, index, e.target.value)}
-          className="w-full resize-none rounded-xl border border-slate-200 bg-transparent px-4 py-3 text-base leading-relaxed text-slate-800 placeholder:text-slate-400 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20 transition"
-        />
+        <div className="relative">
+          <textarea
+            value={caption}
+            placeholder="Write a caption"
+            rows={2}
+            onChange={(e) => onCaptionChange?.(entryId, index, e.target.value)}
+            className="w-full resize-y overflow-auto rounded-xl border border-slate-200 bg-transparent px-4 py-3 text-base leading-relaxed text-slate-800 placeholder:text-slate-400 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20 transition"
+          />
+          {/* Visual resize-grip hint */}
+          <span
+            className="pointer-events-none absolute bottom-[5px] right-[5px] flex flex-col gap-[3px] opacity-30"
+            aria-hidden="true"
+          >
+            {[0, 1, 2].map((i) => (
+              <span
+                key={i}
+                className="flex gap-[3px]"
+                style={{ marginLeft: i * 3 }}
+              >
+                {Array.from({ length: 3 - i }).map((_, j) => (
+                  <span
+                    key={j}
+                    className="block h-[2.5px] w-[2.5px] rounded-full bg-slate-500"
+                  />
+                ))}
+              </span>
+            ))}
+          </span>
+        </div>
       </div>
     </div>
   );
