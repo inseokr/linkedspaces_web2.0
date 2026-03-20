@@ -146,12 +146,14 @@ function buildDateText(trip: TripRecapResponse["trip"], days: RecapDay[]) {
 function mapDayFromApi(d: TripRecapDay, idx: number): RecapDay {
   const dayIndex = idx + 1;
   const title = formatTripDateLabel(d.date) || `Day ${dayIndex}`;
+  const story =
+    typeof (d as any).story === "string" ? (d as any).story.trim() : "";
 
   const entries: RecapEntry[] = (d.places ?? []).map((p, i) =>
     mapPlaceToEntry(p, `${dayIndex}-${i}`),
   );
 
-  return { dayIndex, title, entries };
+  return { dayIndex, title, entries, story: story || undefined };
 }
 
 function mapPlaceToEntry(p: TripRecapPlace, fallbackId: string): RecapEntry {

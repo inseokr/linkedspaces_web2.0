@@ -217,9 +217,6 @@ function CoverImage({
   showGradient?: boolean;
 }) {
   const { src, unoptimized } = getBlogImageResolved(coverImageUrl);
-  console.log("[Hero props coverImageUrl]", coverImageUrl);
-  console.log("[Hero final src]", src, "unoptimized:", unoptimized);
-
   // Parallax refs
   const containerRef = React.useRef<HTMLDivElement>(null);
   const imgRef = React.useRef<HTMLDivElement>(null);

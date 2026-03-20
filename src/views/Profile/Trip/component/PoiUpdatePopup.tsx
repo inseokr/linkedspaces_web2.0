@@ -94,6 +94,11 @@ export default function PoiUpdatePopup({
 
           {/* Action Area */}
           <div className="w-full flex flex-col items-center gap-3">
+            {/* Clarification note */}
+            <p className="text-[12px] text-gray-400 text-center leading-relaxed px-2">
+              Your GPS location will be preserved — only the place name will be
+              updated.
+            </p>
             <button
               type="button"
               onClick={onConfirm}
@@ -103,10 +108,10 @@ export default function PoiUpdatePopup({
               {saving ? (
                 <span className="flex items-center justify-center gap-2">
                   <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  Setting Location...
+                  Updating Name...
                 </span>
               ) : (
-                "Confirm Location"
+                "Update Place Name"
               )}
             </button>
 

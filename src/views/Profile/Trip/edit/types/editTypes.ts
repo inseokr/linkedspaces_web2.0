@@ -33,6 +33,8 @@ export type DayDraft = {
   id: string; // "day-1"
   dayIndex: number;
   title: string;
+  /** Day-level story (from trip-recap API, editable via POST /trips/day-story). */
+  dayStory?: string;
   places: PlaceDraft[];
 };
 

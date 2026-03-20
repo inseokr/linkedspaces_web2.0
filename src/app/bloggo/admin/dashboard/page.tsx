@@ -10,6 +10,7 @@ import {
   fetchStorageCost,
   fetchAwsCost,
   fetchMongoStorage,
+  fetchEventAnalytics,
   type StorageCostResponse,
   type AwsCostResponse,
   type MongoStorageResponse,
@@ -29,6 +30,8 @@ import { ObservabilityOverview } from "./components/ObservabilityOverview";
 import { ServiceUsage } from "./components/ServiceUsage";
 import { CostDashboard } from "./components/CostDashboard";
 import { CostProjectionModel } from "./components/CostProjectionModel";
+import { DashboardEventFunnel } from "./components/DashboardEventFunnel";
+import type { EventAnalytics } from "./types";
 
 const STORAGE_SERVICE = "AWS S3 (Storage)";
 const MONGO_SERVICE = "MongoDB Atlas";
@@ -249,6 +252,30 @@ export default function BloggoAdminDashboard() {
   const [waitlistLoading, setWaitlistLoading] = useState(false);
   const [waitlistError, setWaitlistError] = useState<string | null>(null);
 
+  const [eventData, setEventData] = useState<EventAnalytics | null>(null);
+  const [eventDays, setEventDays] = useState(30);
+  const [eventLoading, setEventLoading] = useState(false);
+  const [eventError, setEventError] = useState<string | null>(null);
+
+  const loadEventAnalytics = useCallback(async (days: number) => {
+    setEventLoading(true);
+    setEventError(null);
+    try {
+      const res = await fetchEventAnalytics(days);
+      if (res.result === "OK") {
+        setEventData({ periodDays: res.periodDays, ...res.data });
+      } else {
+        setEventError("Failed to load event analytics");
+      }
+    } catch (e) {
+      setEventError(
+        e instanceof Error ? e.message : "Failed to load event analytics",
+      );
+    } finally {
+      setEventLoading(false);
+    }
+  }, []);
+
   const loadWaitlist = useCallback(async () => {
     setWaitlistLoading(true);
     setWaitlistError(null);
@@ -257,6 +284,7 @@ export default function BloggoAdminDashboard() {
         fetchWaitlist(),
         fetchPremiumUserCount().catch(() => 0),
       ]);
+      console.log("[Waitlist] Fetch waitlist API response:", list);
       setWaitlist(list);
       setPremiumCount(count);
     } catch (err: unknown) {
@@ -357,7 +385,8 @@ export default function BloggoAdminDashboard() {
     if (!allowed) return;
     loadCosts(COST_DAYS_DEFAULT);
     loadWaitlist();
-  }, [allowed, loadCosts, loadWaitlist]);
+    loadEventAnalytics(eventDays);
+  }, [allowed, loadCosts, loadWaitlist, loadEventAnalytics]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (authLoading || allowed === null) {
     return (
@@ -434,6 +463,16 @@ export default function BloggoAdminDashboard() {
             loading={waitlistLoading}
             error={waitlistError}
             onRefresh={loadWaitlist}
+          />
+          <DashboardEventFunnel
+            data={eventData}
+            loading={eventLoading}
+            error={eventError}
+            days={eventDays}
+            onChangeDays={(d) => {
+              setEventDays(d);
+              loadEventAnalytics(d);
+            }}
           />
           <ObservabilityOverview data={MOCK_OBSERVABILITY_METRICS} />
           <ServiceUsage

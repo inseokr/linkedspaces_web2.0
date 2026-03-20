@@ -73,6 +73,8 @@ export type RecapEntry = {
 export type RecapDay = {
   dayIndex: number;
   title: string;
+  /** Day-level story (shown above places for this day). */
+  story?: string;
   entries: RecapEntry[];
 };
 
@@ -96,9 +98,13 @@ type Mode = "view" | "edit";
 type Props = {
   dayIndex: number;
   title: string;
+  /** Day-level story (from trip-recap API). */
+  story?: string;
   entries: RecapEntry[];
   mode?: Mode;
 
+  /** Edit mode: change day story */
+  onDayStoryChange?: (next: string) => void;
   onPlaceStoryChange?: (entryId: string, next: string) => void;
   onPlaceNameChange?: (entryId: string, next: string) => void;
   onTogglePlaceHide?: (entryId: string) => void;
@@ -130,8 +136,10 @@ const collapsedClampClass = "line-clamp-3 sm:line-clamp-4";
 export function RecapBlogDaySection({
   dayIndex,
   title,
+  story,
   entries,
   mode = "view",
+  onDayStoryChange,
   onPlaceStoryChange,
   onPlaceNameChange,
   onTogglePlaceHide,
@@ -179,6 +187,31 @@ export function RecapBlogDaySection({
         </div>
         <div className="mt-4 h-[1px] w-12 bg-black/10" />
       </div>
+
+      {/* Day story: view or edit */}
+      {(story != null && story !== "") ||
+      (mode === "edit" && onDayStoryChange) ? (
+        <div className="w-full">
+          {mode === "edit" && onDayStoryChange ? (
+            <div className="rounded-xl border border-black/10 bg-black/[0.02] p-4">
+              <p className="text-[11px] font-bold uppercase tracking-widest text-black/40 mb-2">
+                Day story
+              </p>
+              <textarea
+                value={story ?? ""}
+                onChange={(e) => onDayStoryChange(e.target.value)}
+                placeholder="What happened this day? (optional)"
+                className="min-h-[80px] w-full resize-y rounded-lg border border-black/10 bg-white px-3 py-2 text-[15px] text-black placeholder:text-black/40 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                rows={3}
+              />
+            </div>
+          ) : (
+            <p className="text-[15px] text-black/80 leading-relaxed whitespace-pre-wrap">
+              {story}
+            </p>
+          )}
+        </div>
+      ) : null}
 
       <div className="flex flex-col w-full gap-2 sm:gap-4">
         {entries.map((entry, idx) => {

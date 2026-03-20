@@ -44,3 +44,33 @@ export type CostItem = {
 export type CostDashboardMetrics = {
   items: CostItem[];
 };
+
+// --- Event-stream analytics (from /admin/dashboard/analytics/events) ---
+
+export type FunnelStep = {
+  eventName: string;
+  uniqueUsers: number;
+  dropoffPct?: number; // computed on client
+};
+
+export type DailyTrendRow = {
+  date: string;
+  [eventName: string]: number | string; // date + arbitrary event counts
+};
+
+export type TopEvent = {
+  eventName: string;
+  count: number;
+};
+
+export type EventAnalytics = {
+  periodDays: number;
+  funnel: FunnelStep[];
+  dailyTrend: DailyTrendRow[];
+  topEvents: TopEvent[];
+  identity: {
+    anonymous: number;
+    authenticated: number;
+    uniqueDevices: number;
+  };
+};

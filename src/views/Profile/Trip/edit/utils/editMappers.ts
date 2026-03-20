@@ -41,6 +41,7 @@ export function draftFromPageModel(pageModel: any): RecapEditDraft {
       id,
       dayIndex: Number(d.dayIndex ?? 1),
       title: d.title ?? `Day ${d.dayIndex ?? 1}`,
+      dayStory: typeof d?.story === "string" ? d.story : (d?.dayStory ?? ""),
 
       //  여기서 place에 photos/captions까지 넣어줘야 edit UI에 썸네일이 뜸
       places: (d.entries ?? []).map((e: any) => {
@@ -112,6 +113,7 @@ export function applyDraftToPageModel(pageModel: any, draft: RecapEditDraft) {
     // 네가 “day title은 수정 불가”로 갈 거면,
     // 여기 d.title = dd.title 이 라인만 빼면 됨.
     d.title = dd.title;
+    if (typeof dd.dayStory === "string") d.story = dd.dayStory;
 
     const placeById = new Map(dd.places.map((p: any) => [p.id, p]));
 

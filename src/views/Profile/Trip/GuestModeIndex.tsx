@@ -1708,6 +1708,7 @@ export default function GuestRecapPage({ userId, tripId, brand }: Props) {
                       <RecapBlogDaySection
                         dayIndex={d.dayIndex}
                         title={d.title}
+                        story={d.story}
                         entries={d.entries as any}
                         onEntryMount={(entryId, el) => {
                           entryRefs.current[entryId] = el;
@@ -1808,6 +1809,7 @@ export default function GuestRecapPage({ userId, tripId, brand }: Props) {
                   <RecapBlogDaySection
                     dayIndex={d.dayIndex}
                     title={d.title}
+                    story={d.story}
                     entries={d.entries as any}
                     onEntryMount={(entryId, el) => {
                       entryRefs.current[entryId] = el;

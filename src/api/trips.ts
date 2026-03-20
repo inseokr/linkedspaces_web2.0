@@ -95,6 +95,8 @@ export type TripRecapPlace = {
 /** days 원소 */
 export type TripRecapDay = {
   date: string; // "2024:11:09"
+  /** Day-level story (from trip-recap API). */
+  story?: string;
   places: TripRecapPlace[];
 };
 
@@ -129,6 +131,17 @@ export type UpdateTripCoverPhotoRequest = {
 export type UpdateTripTitleRequest = {
   blogKey: number;
   title: string;
+};
+
+/**
+ * Set or update the story for a specific day within a trip/blog.
+ * - dateKey: array index of the day within the trip (0-based).
+ * - story: string (use '' to clear the day story).
+ */
+export type UpdateDayStoryRequest = {
+  blogKey: number;
+  dateKey: number;
+  story: string;
 };
 
 /**
@@ -200,5 +213,38 @@ export async function updateTripTitle(body: UpdateTripTitleRequest) {
 
   if (!res || res.result !== "OK") {
     throw new Error(res?.reason || "Failed to update title");
+  }
+}
+
+/**
+ * Update day story (server-side).
+ * Backend expects: POST /trips/day-story, body: { blogKey, dateKey, story }
+ */
+export async function updateDayStory(body: UpdateDayStoryRequest) {
+  const token =
+    typeof window !== "undefined"
+      ? (() => {
+          try {
+            const t = window.localStorage.getItem("token");
+            if (t) return t;
+          } catch {
+            // ignore and try sessionStorage
+          }
+          try {
+            return window.sessionStorage.getItem("token") ?? undefined;
+          } catch {
+            return undefined;
+          }
+        })()
+      : undefined;
+
+  const res = await apiFetch<SimpleResult>(`/trips/day-story`, {
+    method: "POST",
+    body,
+    token,
+  });
+
+  if (!res || res.result !== "OK") {
+    throw new Error(res?.reason || "Failed to update day story");
   }
 }

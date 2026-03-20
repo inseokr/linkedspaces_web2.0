@@ -6,6 +6,7 @@ import { apiFetch } from "@/api/client";
 import {
   updateTripCoverPhoto,
   updateTripTitle,
+  updateDayStory,
   type TripRecapResponse,
 } from "@/api/trips";
 import { mapTripRecapToPageModel } from "@/views/Profile/Trip/utils/mapTripRecap";
@@ -51,6 +52,7 @@ export default function TripRecapEditView({
   );
   // Baseline place stories keyed by placeKey -> story.
   const baselinePlaceStoriesRef = useRef<Map<string, string> | null>(null);
+  const baselineDayStoriesRef = useRef<Map<string, string>>(new Map());
   const baselineInitializedRef = useRef(false);
   const baselineDraftFingerprintRef = useRef<string | null>(null);
   const baselineTitleRef = useRef<string | null>(null);
@@ -70,6 +72,7 @@ export default function TripRecapEditView({
         id: day.id,
         dayIndex: day.dayIndex,
         title: day.title,
+        dayStory: day.dayStory ?? "",
         places: (day.places ?? []).map((p) => ({
           id: p.id,
           placeKey: p.placeKey,
@@ -129,6 +132,14 @@ export default function TripRecapEditView({
       }
     }
     return placeToStory;
+  };
+
+  const buildBaselineDayStories = (d: RecapEditDraft) => {
+    const map = new Map<string, string>();
+    for (const day of d.days ?? []) {
+      map.set(day.id, day.dayStory ?? "");
+    }
+    return map;
   };
 
   /** 1) Fetch */
@@ -196,6 +207,7 @@ export default function TripRecapEditView({
     if (baselineInitializedRef.current) return;
     baselineCaptionsRef.current = buildBaselineCaptions(draft);
     baselinePlaceStoriesRef.current = buildBaselinePlaceStories(draft);
+    baselineDayStoriesRef.current = buildBaselineDayStories(draft);
     baselineDraftFingerprintRef.current = draftFingerprint(draft);
     baselineTitleRef.current = draft.recapTitle;
     baselineInitializedRef.current = true;
@@ -244,6 +256,15 @@ export default function TripRecapEditView({
     }> = [];
     const placeStoryUpdates: Array<{ placeKey: string; storyText: string }> =
       [];
+    const dayStoryUpdates: Array<{ dateKey: number; story: string }> = [];
+    const baselineDayStories = baselineDayStoriesRef.current ?? new Map();
+    for (const day of draft.days ?? []) {
+      const prev = baselineDayStories.get(day.id) ?? "";
+      const next = day.dayStory ?? "";
+      if (next !== prev) {
+        dayStoryUpdates.push({ dateKey: day.dayIndex - 1, story: next });
+      }
+    }
 
     for (const day of draft.days ?? []) {
       for (const place of day.places ?? []) {
@@ -286,7 +307,7 @@ export default function TripRecapEditView({
     setError(null);
     try {
       const tasks: Array<{
-        kind: "title" | "caption" | "placeStory";
+        kind: "title" | "caption" | "placeStory" | "dayStory";
         promise: Promise<any>;
       }> = [];
 
@@ -321,6 +342,17 @@ export default function TripRecapEditView({
         });
       }
 
+      for (const u of dayStoryUpdates) {
+        tasks.push({
+          kind: "dayStory",
+          promise: updateDayStory({
+            blogKey,
+            dateKey: u.dateKey,
+            story: u.story,
+          }),
+        });
+      }
+
       const results = await Promise.allSettled(tasks.map((t) => t.promise));
 
       const failedKinds = tasks
@@ -333,6 +365,9 @@ export default function TripRecapEditView({
 
       if (failedKinds.length > 0) {
         const titleFailed = failedKinds.includes("title");
+        const dayStoryFailedCount = failedKinds.filter(
+          (k) => k === "dayStory",
+        ).length;
         const captionFailedCount = failedKinds.filter(
           (k) => k === "caption",
         ).length;
@@ -342,14 +377,21 @@ export default function TripRecapEditView({
 
         if (
           titleFailed &&
-          (captionFailedCount > 0 || placeStoryFailedCount > 0)
+          (dayStoryFailedCount > 0 ||
+            captionFailedCount > 0 ||
+            placeStoryFailedCount > 0)
         ) {
           throw new Error(
-            `Failed to update title and ${captionFailedCount} caption(s) and ${placeStoryFailedCount} place story(ies).`,
+            `Failed to update title and ${dayStoryFailedCount} day story(ies), ${captionFailedCount} caption(s), ${placeStoryFailedCount} place story(ies).`,
           );
         }
         if (titleFailed) {
           throw new Error("Failed to update title.");
+        }
+        if (dayStoryFailedCount > 0) {
+          throw new Error(
+            `Failed to update ${dayStoryFailedCount} day story(ies).`,
+          );
         }
         if (captionFailedCount > 0 && placeStoryFailedCount > 0) {
           throw new Error(
@@ -367,6 +409,7 @@ export default function TripRecapEditView({
       // Refresh baseline with the saved captions so repeated "Update" doesn't resend.
       baselineCaptionsRef.current = buildBaselineCaptions(draft);
       baselinePlaceStoriesRef.current = buildBaselinePlaceStories(draft);
+      baselineDayStoriesRef.current = buildBaselineDayStories(draft);
       baselineDraftFingerprintRef.current = draftFingerprint(draft);
       baselineTitleRef.current = draft.recapTitle;
 
@@ -405,6 +448,19 @@ export default function TripRecapEditView({
         ...prev,
         updatedAt: Date.now(),
         days: prev.days.map((d) => (d.id === dayId ? { ...d, title } : d)),
+      };
+    });
+  };
+
+  const setDayStory = (dayId: string, story: string) => {
+    setDraft((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        updatedAt: Date.now(),
+        days: prev.days.map((d) =>
+          d.id === dayId ? { ...d, dayStory: story } : d,
+        ),
       };
     });
   };
@@ -653,7 +709,9 @@ export default function TripRecapEditView({
               <RecapBlogDaySection
                 dayIndex={d.dayIndex}
                 title={d.title}
+                story={d.dayStory ?? ""}
                 mode="edit"
+                onDayStoryChange={(next) => setDayStory(d.id, next)}
                 entries={d.places.map((p) => ({
                   id: p.id,
                   placeKey: p.placeKey,

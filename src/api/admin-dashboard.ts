@@ -834,3 +834,36 @@ export async function fetchAwsCost(params?: {
   const path = `/admin/dashboard/aws/cost${query ? `?${query}` : ""}`;
   return apiFetch<AwsCostResponse>(path, { method: "GET", token });
 }
+
+// ---------------------------------------------------------------------------
+// Event-stream analytics
+// ---------------------------------------------------------------------------
+
+export type EventAnalyticsResponse = {
+  result: "OK" | "FAIL";
+  periodDays: number;
+  data: {
+    funnel: { eventName: string; uniqueUsers: number }[];
+    dailyTrend: ({ date: string } & Record<string, number>)[];
+    topEvents: { eventName: string; count: number }[];
+    identity: {
+      anonymous: number;
+      authenticated: number;
+      uniqueDevices: number;
+    };
+  };
+};
+
+/**
+ * Fetch event-stream analytics for the admin dashboard.
+ * GET /LS_API/admin/dashboard/activity/stream?days=N (admin-only)
+ */
+export async function fetchEventAnalytics(
+  days = 30,
+): Promise<EventAnalyticsResponse> {
+  const token = getAuthToken();
+  return apiFetch<EventAnalyticsResponse>(
+    `/admin/dashboard/activity/stream?days=${days}`,
+    { method: "GET", token },
+  );
+}
