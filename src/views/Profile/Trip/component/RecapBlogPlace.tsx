@@ -130,6 +130,10 @@ type Props = {
 // - sm+: 4 lines
 const collapsedClampClass = "line-clamp-3 sm:line-clamp-4";
 
+/** Day story, place story, and photo captions — shared readable blog-scale type */
+const recapBlogProseClass =
+  "font-sans text-[1.125rem] sm:text-[1.25rem] md:text-[1.5rem] font-medium leading-[1.55] sm:leading-[1.5] tracking-[-0.015em] text-black/[0.9] antialiased max-w-[65ch]";
+
 /** ----------------------------
  *  Day section
  *  ---------------------------- */
@@ -166,12 +170,12 @@ export function RecapBlogDaySection({
 
   return (
     <section className="space-y-8">
-      <div className="flex flex-col items-start gap-1 w-full">
-        <span className="text-[14px] font-bold text-black/30 tracking-[0.2em] uppercase">
+      <div className="flex flex-col items-start gap-1.5 w-full">
+        <span className="text-[15px] sm:text-base font-semibold text-black/45 tracking-[0.16em] uppercase">
           Day {dayIndex}
         </span>
         <div className="flex items-center justify-between w-full">
-          <h2 className='text-black font-["Inter"] text-[32px] sm:text-[44px] font-extrabold tracking-tight leading-[1.1]'>
+          <h2 className="text-black font-sans text-[32px] sm:text-[44px] font-extrabold tracking-tight leading-[1.1]">
             {title}
           </h2>
           {mode === "edit" && (hiddenCount ?? 0) > 0 && (
@@ -202,7 +206,7 @@ export function RecapBlogDaySection({
                   value={story ?? ""}
                   onChange={(e) => onDayStoryChange(e.target.value)}
                   placeholder="What happened this day? (optional)"
-                  className="min-h-[80px] w-full resize-y overflow-auto rounded-lg border border-black/10 bg-white px-3 py-2 text-[15px] text-black placeholder:text-black/40 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                  className="min-h-[88px] w-full resize-y overflow-auto rounded-lg border border-black/10 bg-white px-3 py-2.5 text-base sm:text-lg leading-relaxed text-black placeholder:text-black/40 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
                   rows={3}
                 />
                 <span
@@ -227,9 +231,13 @@ export function RecapBlogDaySection({
               </div>
             </div>
           ) : (
-            <p className="text-[15px] text-black/80 leading-relaxed whitespace-pre-wrap">
-              {story}
-            </p>
+            <div className="w-full max-w-[920px] 2xl:max-w-[1100px]">
+              <div className="rounded-2xl bg-black/[0.04] px-5 py-5 sm:px-6 sm:py-5 border border-black/[0.06]">
+                <p className={`${recapBlogProseClass} whitespace-pre-wrap`}>
+                  {story}
+                </p>
+              </div>
+            </div>
           )}
         </div>
       ) : null}
@@ -258,7 +266,7 @@ export function RecapBlogDaySection({
                   {distanceMiles !== null && distanceMiles > 0 ? (
                     <div className="flex items-center gap-3">
                       <div className="w-[2px] h-6 bg-black/10 rounded-full ml-3" />
-                      <span className="text-[14px] font-bold text-black/30 tracking-[0.2em] uppercase">
+                      <span className="text-[15px] sm:text-base font-semibold text-black/45 tracking-[0.16em] uppercase">
                         {distanceMiles < 0.1
                           ? "<0.1"
                           : distanceMiles.toFixed(1)}{" "}
@@ -460,7 +468,7 @@ function RecapPlaceBlock({
               {(!entry.photos || entry.photos.length === 0) &&
                 !!entry.timeRangeText?.trim() && (
                   <div
-                    className={`text-[14px] font-bold text-black/30 tracking-tight ${typeof entry.visitIndex === "number" ? "pl-10 sm:pl-12" : ""}`}
+                    className={`text-[15px] sm:text-base font-semibold text-black/45 tracking-tight ${typeof entry.visitIndex === "number" ? "pl-10 sm:pl-12" : ""}`}
                   >
                     {entry.timeRangeText}
                   </div>
@@ -596,7 +604,7 @@ function RecapPlaceBlock({
                 placeholder="Write a story for this place..."
                 rows={3}
                 onChange={(e) => onPlaceStoryChange?.(entry.id, e.target.value)}
-                className="w-full resize-y overflow-auto rounded-xl border border-slate-200 bg-transparent px-4 py-3 text-lg leading-relaxed text-slate-800 placeholder:text-slate-400 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20 transition min-h-[80px]"
+                className="w-full resize-y overflow-auto rounded-xl border border-slate-200 bg-transparent px-4 py-3 text-lg sm:text-xl leading-relaxed text-slate-800 placeholder:text-slate-400 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20 transition min-h-[88px]"
               />
               {/* Visual resize-grip hint */}
               <span
@@ -623,8 +631,8 @@ function RecapPlaceBlock({
         ) : (
           placeStoryTrimmed && (
             <div className="w-full max-w-[920px] 2xl:max-w-[1100px]">
-              <div className="rounded-2xl bg-black/5 px-6 py-5">
-                <p className="text-[24px] font-medium leading-[1.3] text-black font-['Inter'] tracking-tight">
+              <div className="rounded-2xl bg-black/[0.04] px-5 py-5 sm:px-6 sm:py-5 border border-black/[0.06]">
+                <p className={`${recapBlogProseClass} whitespace-pre-wrap`}>
                   {placeStoryTrimmed}
                 </p>
               </div>
@@ -925,10 +933,10 @@ function RecapPhotoCard({
 
         {captionTrimmed && (
           <div className="pt-3 pb-1">
-            <div className="rounded-2xl bg-slate-50 p-4">
+            <div className="rounded-2xl border border-slate-100 bg-slate-50/90 px-5 py-4 sm:px-6 sm:py-5">
               <p
                 onClick={() => setLightboxOpen(true)}
-                className="text-[24px] font-medium leading-[1.3] text-black font-['Inter'] tracking-tight cursor-pointer"
+                className={`${recapBlogProseClass} cursor-pointer hover:text-black transition-colors`}
               >
                 {captionTrimmed}
               </p>
@@ -1123,7 +1131,7 @@ function PhotoCaptionRow({
             placeholder="Write a caption"
             rows={2}
             onChange={(e) => onCaptionChange?.(entryId, index, e.target.value)}
-            className="w-full resize-y overflow-auto rounded-xl border border-slate-200 bg-transparent px-4 py-3 text-base leading-relaxed text-slate-800 placeholder:text-slate-400 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20 transition"
+            className="w-full resize-y overflow-auto rounded-xl border border-slate-200 bg-transparent px-4 py-3 text-base sm:text-lg leading-relaxed text-slate-800 placeholder:text-slate-400 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20 transition"
           />
           {/* Visual resize-grip hint */}
           <span
@@ -1227,11 +1235,11 @@ export function ManagePhotosModal({
                     <div className="flex items-center justify-between gap-4 mt-1">
                       <div className="flex-1 min-w-0">
                         {photo.caption ? (
-                          <p className="line-clamp-2 text-sm font-medium text-black/70">
+                          <p className="line-clamp-2 text-base leading-snug font-medium text-black/80">
                             {photo.caption}
                           </p>
                         ) : (
-                          <p className="truncate text-sm font-medium text-black/30 italic">
+                          <p className="truncate text-base font-medium text-black/35 italic">
                             No caption
                           </p>
                         )}
