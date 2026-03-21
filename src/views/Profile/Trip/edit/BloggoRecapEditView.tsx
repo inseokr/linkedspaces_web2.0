@@ -927,7 +927,7 @@ export default function BloggoRecapEditView({
       />
 
       {/* Edit mode banner */}
-      <div className="sticky top-[121px] z-40 flex items-center justify-center gap-2 bg-sky-500/10 border-b border-sky-500/20 px-4 py-2">
+      <div className="sticky top-[132px] z-[45] flex items-center justify-center gap-2 bg-sky-500/10 border-b border-sky-500/20 px-4 py-2">
         <span className="inline-flex items-center gap-1.5 rounded-full bg-sky-100 px-3 py-1 text-[12px] font-bold text-sky-700">
           ✏️ Edit Mode — make sure to update your changes
         </span>
