@@ -104,6 +104,11 @@ type RealDashboardAnalyticsResponse = {
       placesAdded: number;
       photosAdded: number;
       joinedDate: string;
+      homeLocation?: {
+        city: string | null;
+        state: string | null;
+        country: string | null;
+      };
     }>;
     engagement?: {
       photosWithStoryPct?: string | number;
@@ -177,6 +182,13 @@ function normalizeRealAnalyticsToLegacy(
           placesAdded: asNumber(u.placesAdded),
           photosAdded: asNumber(u.photosAdded),
           joinedDate: String(u.joinedDate ?? ""),
+          homeLocation: u.homeLocation
+            ? {
+                city: u.homeLocation.city ?? null,
+                state: u.homeLocation.state ?? null,
+                country: u.homeLocation.country ?? null,
+              }
+            : undefined,
         }))
       : [],
     engagement: {
@@ -239,6 +251,11 @@ export type BackendTopActiveUser = {
   placesAdded: number;
   photosAdded: number;
   joinedDate: string;
+  homeLocation?: {
+    city: string | null;
+    state: string | null;
+    country: string | null;
+  };
 };
 
 export type BackendEngagement = {
@@ -270,6 +287,11 @@ export type BackendUserDetails = {
   audioCaptionPercentage: string;
   avgStoryLength: number;
   friendCount: number;
+  homeLocation?: {
+    city: string | null;
+    state: string | null;
+    country: string | null;
+  };
 };
 
 type RealPerUserDashboardResponse = {
@@ -281,6 +303,11 @@ type RealPerUserDashboardResponse = {
       totalPlaces?: number;
       totalPhotos?: number;
       friendCount?: number;
+      homeLocation?: {
+        city: string | null;
+        state: string | null;
+        country: string | null;
+      };
     };
     geography?: {
       placesByCountry?: Array<{ country: string; count: number }>;
@@ -360,6 +387,13 @@ function normalizeRealPerUserToLegacy(
     photosWithStoryPercentage: String(e.photosWithStoryPct ?? "0"),
     audioCaptionPercentage: String(e.photosWithAudioPct ?? "0"),
     avgStoryLength: asNumber(e.averageStoryLengthChars),
+    homeLocation: o.homeLocation
+      ? {
+          city: o.homeLocation.city ?? null,
+          state: o.homeLocation.state ?? null,
+          country: o.homeLocation.country ?? null,
+        }
+      : undefined,
   };
 }
 
@@ -694,6 +728,96 @@ export async function fetchUserDetails(
   }
 }
 
+// ---------------------------------------------------------------------------
+// Observability metrics (Bloggo admin Observability Overview)
+// ---------------------------------------------------------------------------
+
+type RealObservabilityResponse = {
+  result: "OK" | "FAIL" | string;
+  data?: {
+    overview?: {
+      totalUsers?: number;
+      totalPhotos?: number;
+      totalTrips?: number;
+      tripsSaved?: number;
+      tripsCompleted?: number;
+      totalPublishedTrips?: number;
+      blogsWithShareLink?: number;
+      blogsWithShareLinkPct?: number;
+      photosWithCaptionPct?: number;
+      activeUsers30d?: number;
+      newBlogsLast1d?: number;
+      newBlogsLast7d?: number;
+      newBlogsLast30d?: number;
+    };
+  };
+  message?: string;
+  reason?: string;
+  error?: string;
+};
+
+export type ObservabilityMetricsData = {
+  totalUsers: number;
+  activeUsers: number;
+  cloudPublishes: number;
+  photosUploaded: number;
+  blogsCreated: { day: number; week: number; month: number };
+  avgBlogsPerUser: number;
+  avgUploadsPerUser: number;
+  avgPhotosPerBlog: number;
+  blogLifecycle: { saved: number; completed: number; published: number };
+  blogsWithShareLink: number;
+  blogsWithShareLinkPct: number;
+  photosWithCaptionPct: number;
+};
+
+/**
+ * Fetch Bloggo observability KPIs from the analytics endpoint.
+ * GET /LS_API/admin/dashboard/analytics/bloggo (admin-only)
+ */
+export async function fetchObservabilityMetrics(): Promise<ObservabilityMetricsData> {
+  const token = getAuthToken();
+  const res = await apiFetch<RealObservabilityResponse>(
+    "/admin/dashboard/analytics/bloggo",
+    { method: "GET", token },
+  );
+  const result = String(res?.result ?? "").toUpperCase();
+  if (result !== "OK") {
+    throw new Error(
+      res?.reason ??
+        res?.message ??
+        res?.error ??
+        `Unexpected result: ${result}`,
+    );
+  }
+  const o = res.data?.overview ?? {};
+  const totalUsers = asNumber(o.totalUsers);
+  const totalTrips = asNumber(o.totalTrips);
+  const totalPhotos = asNumber(o.totalPhotos);
+  return {
+    totalUsers,
+    activeUsers: asNumber(o.activeUsers30d),
+    cloudPublishes: asNumber(o.totalPublishedTrips),
+    photosUploaded: totalPhotos,
+    blogsCreated: {
+      day: asNumber(o.newBlogsLast1d),
+      week: asNumber(o.newBlogsLast7d),
+      month: asNumber(o.newBlogsLast30d),
+    },
+    avgBlogsPerUser: totalUsers > 0 ? totalTrips / totalUsers : 0,
+    avgUploadsPerUser: totalUsers > 0 ? totalPhotos / totalUsers : 0,
+    avgPhotosPerBlog: totalTrips > 0 ? totalPhotos / totalTrips : 0,
+    blogLifecycle: {
+      saved: asNumber(o.tripsSaved),
+      completed: asNumber(o.tripsCompleted),
+      published: asNumber(o.totalPublishedTrips),
+    },
+    blogsWithShareLink: asNumber(o.blogsWithShareLink),
+    blogsWithShareLinkPct: asNumber(o.blogsWithShareLinkPct),
+    photosWithCaptionPct: asNumber(o.photosWithCaptionPct),
+  };
+}
+
 // --- Storage cost (Bloggo admin Cost Dashboard) ---
 // API returns { bucket, data: { storage, estimatedMonthlyCost, storageGrowth, history } }
 
@@ -864,6 +988,96 @@ export async function fetchEventAnalytics(
   const token = getAuthToken();
   return apiFetch<EventAnalyticsResponse>(
     `/admin/dashboard/activity/stream?days=${days}`,
+    { method: "GET", token },
+  );
+}
+
+export type EventUsersResponse = {
+  result: "OK" | "FAIL";
+  periodDays: number;
+  total: number;
+  users: {
+    anonymousId: string;
+    userId: string | null;
+    username: string | null;
+    firstSeen: string;
+    recentActivity: string;
+    eventCount: number;
+    platforms: string[];
+    appVersions: string[];
+    homeLocation?: {
+      city: string | null;
+      state: string | null;
+      country: string | null;
+    };
+  }[];
+  stats?: {
+    minEventCount: number;
+    maxEventCount: number;
+    avgEventCount: number;
+  };
+};
+
+export type PerUserEventAnalyticsResponse = {
+  result: "OK" | "FAIL";
+  periodDays: number;
+  anonymousId: string;
+  userId: string | null;
+  username: string | null;
+  homeLocation?: {
+    city: string | null;
+    state: string | null;
+    country: string | null;
+  };
+  meta: {
+    firstSeen: string;
+    recentActivity: string;
+    totalEvents: number;
+    platforms: string[];
+    appVersions: string[];
+  } | null;
+  data: {
+    funnel: { eventName: string; count: number }[];
+    dailyTrend: ({ date: string } & Record<string, number>)[];
+    topEvents: { eventName: string; count: number }[];
+  };
+  eventStats?: { minDaily: number; maxDaily: number; avgDaily: number };
+  placeStats?: {
+    totalPlaces: number;
+    totalBlogs: number;
+    avgDaysPerBlog: number | null;
+    minDaysPerBlog: number | null;
+    maxDaysPerBlog: number | null;
+  };
+};
+
+/**
+ * Fetch list of users (anonymous IDs) who have events in the given period.
+ * GET /LS_API/admin/dashboard/activity/stream/users?days=N (admin-only)
+ */
+export async function fetchEventUsers(days = 30): Promise<EventUsersResponse> {
+  const token = getAuthToken();
+  return apiFetch<EventUsersResponse>(
+    `/admin/dashboard/activity/stream/users?days=${days}`,
+    { method: "GET", token },
+  );
+}
+
+/**
+ * Fetch per-identity event analytics for a (anonymousId, userId) pair.
+ * GET /LS_API/admin/dashboard/activity/stream/user?anonymousId=X&userId=Y&days=N
+ * Omit userId (or pass null) for anonymous sessions.
+ */
+export async function fetchUserEventAnalytics(
+  anonymousId: string,
+  userId: string | null,
+  days = 30,
+): Promise<PerUserEventAnalyticsResponse> {
+  const token = getAuthToken();
+  const params = new URLSearchParams({ anonymousId, days: String(days) });
+  if (userId) params.set("userId", userId);
+  return apiFetch<PerUserEventAnalyticsResponse>(
+    `/admin/dashboard/activity/stream/user?${params}`,
     { method: "GET", token },
   );
 }

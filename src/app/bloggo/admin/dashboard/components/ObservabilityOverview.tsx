@@ -2,17 +2,31 @@ import { ObservabilityMetrics } from "../types";
 
 export function ObservabilityOverview({
   data,
+  loading,
+  error,
 }: {
   data: ObservabilityMetrics;
+  loading?: boolean;
+  error?: string | null;
 }) {
   return (
     <section className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-      <h2 className="text-xl font-semibold text-gray-900 mb-4">
-        1. Observability Overview
-      </h2>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-xl font-semibold text-gray-900">
+          1. Observability Overview
+        </h2>
+        {loading && (
+          <div className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-sky-600" />
+        )}
+      </div>
       <p className="text-sm text-gray-500 mb-6">
         High-level product engagement and activity metrics.
       </p>
+      {error && (
+        <p className="mb-4 rounded bg-red-50 px-3 py-2 text-sm text-red-700">
+          {error}
+        </p>
+      )}
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <KPIBox title="Total Users" value={data.totalUsers.toLocaleString()} />
@@ -37,6 +51,10 @@ export function ObservabilityOverview({
           title="Avg Uploads/User"
           value={data.avgUploadsPerUser.toFixed(1)}
         />
+        <KPIBox
+          title="Avg Photos/Blog"
+          value={data.avgPhotosPerBlog.toFixed(1)}
+        />
       </div>
 
       <div className="mt-8 border-t pt-6">
@@ -55,6 +73,54 @@ export function ObservabilityOverview({
           <SubKPI
             title="This Month"
             value={data.blogsCreated.month.toLocaleString()}
+          />
+        </div>
+      </div>
+
+      <div className="mt-8 border-t pt-6">
+        <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-4">
+          Blog Lifecycle
+        </h3>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <SubKPI
+            title="Saved (draft)"
+            value={data.blogLifecycle.saved.toLocaleString()}
+          />
+          <SubKPI
+            title="Completed"
+            value={data.blogLifecycle.completed.toLocaleString()}
+          />
+          <SubKPI
+            title="Published (public)"
+            value={data.blogLifecycle.published.toLocaleString()}
+          />
+          <SubKPI
+            title="Publish rate"
+            value={
+              data.blogLifecycle.completed > 0
+                ? `${((data.blogLifecycle.published / (data.blogLifecycle.saved + data.blogLifecycle.completed)) * 100).toFixed(1)}%`
+                : "—"
+            }
+          />
+        </div>
+      </div>
+
+      <div className="mt-8 border-t pt-6">
+        <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-4">
+          Engagement
+        </h3>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          <SubKPI
+            title="Photos with caption"
+            value={`${data.photosWithCaptionPct.toFixed(1)}%`}
+          />
+          <SubKPI
+            title="Blogs shared"
+            value={data.blogsWithShareLink.toLocaleString()}
+          />
+          <SubKPI
+            title="Share rate"
+            value={`${data.blogsWithShareLinkPct.toFixed(1)}%`}
           />
         </div>
       </div>
