@@ -74,9 +74,13 @@ export default function BloggoHomePage() {
                 Demo Profile
               </Button>
             </Link>
-            <Link href={`${BASE}/sign-in`}>
+            <Link
+              href="https://testflight.apple.com/join/RMzfPzCf"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
               <Button size="lg" variant="primary">
-                Try Today
+                Join Beta
                 <svg
                   className="w-4 h-4"
                   fill="none"
