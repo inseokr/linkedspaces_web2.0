@@ -79,20 +79,16 @@ export function CostProjectionModel({
   // Total DB storage in GB at year 1
   const schemaGb = (users * docSizeKb(1)) / (1024 * 1024);
 
-  const projMongoCost = (() => {
-    if (schemaGb <= 10) return 57; // M10
-    if (schemaGb <= 20) return 144; // M20
-    if (schemaGb <= 40) return 389; // M30
-    return 389 + (schemaGb - 40) * 0.25;
-  })();
+  // Atlas independent storage scaling:
+  // Stay on M10 ($57/mo) and add ~$0.10/GB for storage over 10 GB.
+  // Upgrade to M20 only when RAM pressure demands it (~100 GB+ working set).
+  // Upgrade to M30 at ~300 GB+.
+  const projMongoCost = atlasCostEstimate(schemaGb);
 
-  // Heroku Dynos (unchanged — scaled by traffic)
-  const dynoCount = Math.max(2, Math.ceil(users / 50000));
-  const projHerokuCost = (() => {
-    if (users < 50000) return dynoCount * 25; // Standard-1X
-    if (users < 200000) return dynoCount * 50; // Standard-2X
-    return dynoCount * 250; // Performance-M
-  })();
+  // Heroku Dynos — RPS-based sizing (Little's Law)
+  // Default params: 5% peak concurrency, 3 API calls/min/user, 300ms avg response
+  const defaultHerokuSizing = herokuSizing(users, 5, 3, 300, 350, 3);
+  const projHerokuCost = defaultHerokuSizing.monthlyCost;
 
   const totalMonthlyCost =
     projStorageCost +
@@ -233,13 +229,13 @@ export function CostProjectionModel({
               <CostRow
                 label="MongoDB Atlas"
                 amount={projMongoCost}
-                note={`${schemaGb.toFixed(2)} GB schema (Year 1) — tiered cluster pricing`}
+                note={`${schemaGb.toFixed(2)} GB schema (Year 1) — M10 + $0.10/GB independent storage scaling`}
                 muted
               />
               <CostRow
                 label="Heroku Dynos"
                 amount={projHerokuCost}
-                note={`${dynoCount} dyno(s) (unchanged)`}
+                note={`${defaultHerokuSizing.dynoCount}× ${defaultHerokuSizing.dynoType} — ${defaultHerokuSizing.peakRps.toFixed(0)} peak RPS`}
                 muted
               />
             </div>
@@ -279,6 +275,8 @@ export function CostProjectionModel({
           </div>
         </div>
       </div>
+      {/* ── Heroku Dyno Analysis ──────────────────────────────────────── */}
+      <HerokuDynoAnalysis users={users} />
       {/* ── MongoDB Document Analysis ─────────────────────────────────── */}
       <MongoDBDocumentAnalysis
         users={users}
@@ -330,21 +328,13 @@ function MongoDBDocumentAnalysis({
   const toGb = (count: number, yr: number) =>
     (count * docSizeKb(yr)) / (1024 * 1024);
 
-  // Atlas monthly cost from GB
-  const atlasCost = (gb: number) => {
-    if (gb <= 10) return 57;
-    if (gb <= 20) return 144;
-    if (gb <= 40) return 389;
-    return 389 + (gb - 40) * 0.25;
-  };
-
   const fmtGb = (gb: number) =>
     gb >= 1000
       ? `${(gb / 1024).toFixed(1)} TB`
       : `${gb.toFixed(gb >= 10 ? 0 : 1)} GB`;
 
   const fmtCost = (gb: number) => {
-    const c = atlasCost(gb);
+    const c = atlasCostEstimate(gb);
     return c >= 1000 ? `$${(c / 1000).toFixed(1)}K` : `$${Math.round(c)}`;
   };
 
@@ -505,10 +495,13 @@ function MongoDBDocumentAnalysis({
             <p className="font-semibold text-gray-600 uppercase tracking-wide text-[10px]">
               Atlas Tier Reference
             </p>
-            <p>M10 · ≤10 GB · $57/mo</p>
-            <p>M20 · ≤20 GB · $144/mo</p>
-            <p>M30 · ≤40 GB · $389/mo</p>
-            <p>M30+ · $389 + $0.25/GB over 40 GB</p>
+            <p>M10 · $57/mo · 2 GB RAM · 10 GB storage included</p>
+            <p>M20 · $144/mo · 4 GB RAM · 20 GB storage included</p>
+            <p>M30 · $389/mo · 8 GB RAM · 40 GB storage included</p>
+            <p className="text-gray-400 italic">
+              Storage scales independently at ~$0.10/GB — stay on M10 until
+              RAM/IOPS demand a tier upgrade (~100 GB working set).
+            </p>
             <p className="text-gray-400 mt-1">
               Current estimate: {fmtGb(schemaGb)} →{" "}
               <span className="font-semibold text-gray-600">
@@ -522,7 +515,388 @@ function MongoDBDocumentAnalysis({
   );
 }
 
+// ── Heroku sizing model ───────────────────────────────────────────────────────
+
+const DYNO_TYPES = [
+  { name: "Standard-1X", price: 25, ramMb: 512 },
+  { name: "Standard-2X", price: 50, ramMb: 1024 },
+  { name: "Performance-M", price: 250, ramMb: 2560 },
+  { name: "Performance-L", price: 500, ramMb: 14336 },
+] as const;
+
+type DynoOption = {
+  dynoType: string;
+  dynoPrice: number;
+  dynoCount: number;
+  monthlyCost: number;
+  peakRps: number;
+  rpsCapacityPerDyno: number;
+  maxConcurrentPerDyno: number;
+};
+
+function herokuSizing(
+  activeUsers: number,
+  peakConcurrentPct: number,
+  apiCallsPerMin: number,
+  avgResponseMs: number,
+  baseAppMemoryMb: number,
+  memPerRequestMb: number,
+): DynoOption {
+  const peakConcurrentUsers = activeUsers * (peakConcurrentPct / 100);
+  const peakRps = (peakConcurrentUsers * apiCallsPerMin) / 60;
+
+  let best: DynoOption | null = null;
+  for (const dyno of DYNO_TYPES) {
+    const usableRam = dyno.ramMb * 0.85 - baseAppMemoryMb;
+    if (usableRam <= 0) continue;
+    const maxConcurrentPerDyno = usableRam / memPerRequestMb;
+    const rpsCapacityPerDyno = maxConcurrentPerDyno / (avgResponseMs / 1000);
+    const dynoCount = Math.max(
+      2,
+      Math.ceil(peakRps / Math.max(rpsCapacityPerDyno, 0.1)),
+    );
+    const monthlyCost = dynoCount * dyno.price;
+    if (!best || monthlyCost < best.monthlyCost) {
+      best = {
+        dynoType: dyno.name,
+        dynoPrice: dyno.price,
+        dynoCount,
+        monthlyCost,
+        peakRps,
+        rpsCapacityPerDyno,
+        maxConcurrentPerDyno,
+      };
+    }
+  }
+  return best!;
+}
+
+// ── Heroku Dyno Analysis Panel ────────────────────────────────────────────────
+
+const APP_PROFILES = [
+  {
+    id: "lightweight",
+    label: "Lightweight API",
+    description: "Express.js, simple REST, no SSR",
+    baseAppMemoryMb: 150,
+    memPerRequestMb: 1,
+  },
+  {
+    id: "standard",
+    label: "Standard Node.js",
+    description: "Express + Mongoose + middleware",
+    baseAppMemoryMb: 250,
+    memPerRequestMb: 2,
+  },
+  {
+    id: "nextjs",
+    label: "Next.js Full-stack",
+    description: "SSR + API routes + Mongoose (this app)",
+    baseAppMemoryMb: 350,
+    memPerRequestMb: 3,
+  },
+  {
+    id: "heavy",
+    label: "Heavy Full-stack",
+    description: "Next.js + image processing / AI calls",
+    baseAppMemoryMb: 500,
+    memPerRequestMb: 6,
+  },
+] as const;
+
+type AppProfileId = (typeof APP_PROFILES)[number]["id"];
+
+function HerokuDynoAnalysis({ users }: { users: number }) {
+  const [peakConcurrentPct, setPeakConcurrentPct] = useState(5);
+  const [apiCallsPerMin, setApiCallsPerMin] = useState(3);
+  const [avgResponseMs, setAvgResponseMs] = useState(300);
+  const [profileId, setProfileId] = useState<AppProfileId>("nextjs");
+
+  const profile = APP_PROFILES.find((p) => p.id === profileId)!;
+  const { baseAppMemoryMb, memPerRequestMb } = profile;
+
+  const recommended = herokuSizing(
+    users,
+    peakConcurrentPct,
+    apiCallsPerMin,
+    avgResponseMs,
+    baseAppMemoryMb,
+    memPerRequestMb,
+  );
+
+  // All options for comparison table
+  const allOptions: DynoOption[] = DYNO_TYPES.map((dyno) => {
+    const usableRam = dyno.ramMb * 0.85 - baseAppMemoryMb;
+    const maxConcurrentPerDyno = Math.max(usableRam, 0) / memPerRequestMb;
+    const rpsCapacityPerDyno = maxConcurrentPerDyno / (avgResponseMs / 1000);
+    const dynoCount = Math.max(
+      2,
+      Math.ceil(recommended.peakRps / Math.max(rpsCapacityPerDyno, 0.1)),
+    );
+    return {
+      dynoType: dyno.name,
+      dynoPrice: dyno.price,
+      dynoCount,
+      monthlyCost: dynoCount * dyno.price,
+      peakRps: recommended.peakRps,
+      rpsCapacityPerDyno,
+      maxConcurrentPerDyno,
+    };
+  });
+
+  const USER_COUNTS = [1_000, 10_000, 100_000, 1_000_000];
+
+  return (
+    <div className="mt-8 rounded-2xl border border-emerald-100 bg-white p-5 shadow-sm">
+      <h3 className="text-base font-semibold text-gray-900 mb-1">
+        Heroku Dyno Sizing Analysis
+      </h3>
+      <p className="text-xs text-gray-500 mb-5">
+        Little&apos;s Law model — dyno count driven by peak RPS and memory per
+        in-flight request, not user count directly.
+      </p>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* ── Inputs ── */}
+        <div className="space-y-4">
+          <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+            Traffic Parameters
+          </p>
+          <SliderInput
+            label="Peak concurrent % of active users"
+            value={peakConcurrentPct}
+            onChange={setPeakConcurrentPct}
+            min={1}
+            max={30}
+            step={1}
+            suffix="%"
+          />
+          <SliderInput
+            label="API calls per user/min (while active)"
+            value={apiCallsPerMin}
+            onChange={setApiCallsPerMin}
+            min={1}
+            max={20}
+            step={1}
+          />
+          <SliderInput
+            label="Avg API response time"
+            value={avgResponseMs}
+            onChange={setAvgResponseMs}
+            min={50}
+            max={3000}
+            step={50}
+            suffix="ms"
+          />
+
+          {/* App profile selector */}
+          <div>
+            <p className="text-sm font-medium text-gray-700 mb-2">
+              App Profile
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              {APP_PROFILES.map((p) => (
+                <button
+                  key={p.id}
+                  onClick={() => setProfileId(p.id)}
+                  className={`text-left rounded-lg border px-3 py-2 text-xs transition-colors ${
+                    profileId === p.id
+                      ? "border-emerald-400 bg-emerald-50 text-emerald-800"
+                      : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"
+                  }`}
+                >
+                  <p className="font-semibold">{p.label}</p>
+                  <p className="text-[10px] mt-0.5 opacity-75">
+                    {p.description}
+                  </p>
+                </button>
+              ))}
+            </div>
+            <div className="mt-2 rounded-lg bg-gray-50 border border-gray-100 px-3 py-2 text-xs text-gray-500 flex gap-4">
+              <span>
+                Base process:{" "}
+                <strong className="text-gray-700">{baseAppMemoryMb} MB</strong>
+              </span>
+              <span>
+                Per request:{" "}
+                <strong className="text-gray-700">{memPerRequestMb} MB</strong>
+              </span>
+            </div>
+          </div>
+
+          {/* Derived summary */}
+          <div className="rounded-lg bg-gray-50 border border-gray-100 p-3 text-xs text-gray-600 space-y-1">
+            <p className="font-semibold text-gray-700 mb-1 uppercase tracking-wide text-[10px]">
+              Derived (at {users.toLocaleString()} active users)
+            </p>
+            <Row
+              label="Peak concurrent users"
+              value={Math.round(
+                (users * peakConcurrentPct) / 100,
+              ).toLocaleString()}
+            />
+            <Row label="Peak RPS" value={recommended.peakRps.toFixed(1)} />
+            <Row
+              label="Max concurrent req/dyno"
+              value={`${recommended.maxConcurrentPerDyno.toFixed(0)} (${recommended.dynoType})`}
+            />
+            <Row
+              label="RPS capacity/dyno"
+              value={recommended.rpsCapacityPerDyno.toFixed(0)}
+            />
+          </div>
+        </div>
+
+        {/* ── Options table ── */}
+        <div className="space-y-4">
+          <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+            Dyno Options at Current User Count
+          </p>
+          <div className="rounded-lg border border-gray-100 overflow-hidden text-xs">
+            <table className="w-full">
+              <thead>
+                <tr className="bg-gray-50 text-[10px] text-gray-500 uppercase">
+                  <th className="text-left px-3 py-2">Type</th>
+                  <th className="text-right px-2 py-2">RAM</th>
+                  <th className="text-right px-2 py-2">RPS/dyno</th>
+                  <th className="text-right px-2 py-2">Count</th>
+                  <th className="text-right px-2 py-2">Cost/mo</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {allOptions.map((opt) => {
+                  const dynoSpec = DYNO_TYPES.find(
+                    (d) => d.name === opt.dynoType,
+                  )!;
+                  const isRecommended =
+                    opt.monthlyCost === recommended.monthlyCost &&
+                    opt.dynoType === recommended.dynoType;
+                  const isOom = dynoSpec.ramMb * 0.85 - baseAppMemoryMb <= 0;
+                  return (
+                    <tr
+                      key={opt.dynoType}
+                      className={
+                        isRecommended
+                          ? "bg-emerald-50"
+                          : isOom
+                            ? "opacity-40"
+                            : ""
+                      }
+                    >
+                      <td className="px-3 py-2 font-medium text-gray-700">
+                        {opt.dynoType}
+                        {isRecommended && (
+                          <span className="ml-1 text-[9px] text-emerald-600 font-bold uppercase">
+                            ✓ cheapest
+                          </span>
+                        )}
+                        {isOom && (
+                          <span className="ml-1 text-[9px] text-red-500">
+                            OOM
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-2 py-2 text-right text-gray-500">
+                        {dynoSpec.ramMb >= 1024
+                          ? `${(dynoSpec.ramMb / 1024).toFixed(1)} GB`
+                          : `${dynoSpec.ramMb} MB`}
+                      </td>
+                      <td className="px-2 py-2 text-right text-gray-700">
+                        {isOom ? "—" : opt.rpsCapacityPerDyno.toFixed(0)}
+                      </td>
+                      <td className="px-2 py-2 text-right text-gray-700">
+                        {isOom ? "—" : opt.dynoCount}
+                      </td>
+                      <td className="px-2 py-2 text-right font-semibold text-gray-900">
+                        ${opt.monthlyCost}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Scale projection */}
+          <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide mt-4">
+            Recommended Config by User Scale
+          </p>
+          <div className="rounded-lg border border-gray-100 overflow-hidden text-xs">
+            <table className="w-full">
+              <thead>
+                <tr className="bg-gray-50 text-[10px] text-gray-500 uppercase">
+                  <th className="text-left px-3 py-2">Users</th>
+                  <th className="text-right px-2 py-2">Peak RPS</th>
+                  <th className="text-right px-2 py-2">Config</th>
+                  <th className="text-right px-2 py-2">Cost/mo</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {USER_COUNTS.map((count) => {
+                  const s = herokuSizing(
+                    count,
+                    peakConcurrentPct,
+                    apiCallsPerMin,
+                    avgResponseMs,
+                    baseAppMemoryMb,
+                    memPerRequestMb,
+                  );
+                  const isCurrentScale =
+                    users >= count * 0.5 && users < count * 5;
+                  return (
+                    <tr
+                      key={count}
+                      className={isCurrentScale ? "bg-emerald-50" : ""}
+                    >
+                      <td className="px-3 py-2 font-medium text-gray-700">
+                        {count.toLocaleString()}
+                        {isCurrentScale && (
+                          <span className="ml-1 text-[9px] text-emerald-500 font-bold uppercase">
+                            ←now
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-2 py-2 text-right text-gray-600">
+                        {s.peakRps.toFixed(0)}
+                      </td>
+                      <td className="px-2 py-2 text-right text-gray-700">
+                        {s.dynoCount}× {s.dynoType}
+                      </td>
+                      <td className="px-2 py-2 text-right font-semibold text-gray-900">
+                        ${s.monthlyCost.toLocaleString()}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          <p className="text-[11px] text-gray-400 italic">
+            Minimum 2 dynos enforced for zero-downtime deploys. Upgrade tier
+            only when Standard-1X count exceeds ~8–10 dynos (operational
+            overhead). Autoscaling available on Performance tiers.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
+
+/**
+ * Atlas independent storage scaling model (AWS us-east-1):
+ * - M10 ($57/mo, 2 GB RAM) handles most storage needs — scale disk independently at ~$0.10/GB over 10 GB.
+ * - Upgrade to M20 ($144/mo) only when RAM pressure demands it (~100 GB+ working set).
+ * - Upgrade to M30 ($389/mo) at ~300 GB+.
+ * Additional storage beyond each tier's default: ~$0.10/GB.
+ */
+function atlasCostEstimate(gb: number): number {
+  if (gb <= 100) return 57 + Math.max(0, gb - 10) * 0.1; // M10 + extra storage
+  if (gb <= 300) return 144 + Math.max(0, gb - 20) * 0.1; // M20 + extra storage
+  return 389 + Math.max(0, gb - 40) * 0.1; // M30 + extra storage
+}
 
 function fmt(n: number) {
   return Math.round(n).toLocaleString("en-US");
