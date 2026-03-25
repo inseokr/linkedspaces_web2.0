@@ -18,10 +18,20 @@ export function isLoginSuccess(res: LoginResponse): res is LoginSuccess {
   return res.message === "ok";
 }
 
-export function loginWithGoogle(idToken: string) {
+export type LoginWithGoogleOptions = {
+  userType?: "bloggo" | "linkedspaces";
+};
+
+export function loginWithGoogle(
+  idToken: string,
+  options?: LoginWithGoogleOptions,
+) {
   return apiFetch<LoginResponse>("/oauth/google", {
     method: "POST",
-    body: { idToken },
+    body: {
+      idToken,
+      ...(options?.userType ? { userType: options.userType } : {}),
+    },
   });
 }
 

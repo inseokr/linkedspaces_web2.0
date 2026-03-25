@@ -144,7 +144,7 @@ export default function BloggoSignInSection() {
       const idToken = response.credential || response.tokenId;
       if (!idToken) return;
 
-      const data = await loginWithGoogle(idToken);
+      const data = await loginWithGoogle(idToken, { userType: "bloggo" });
 
       if (isLoginSuccess(data)) {
         handleAuthSuccess(data.token, data.user);

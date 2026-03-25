@@ -1900,7 +1900,9 @@ export default function GuestRecapPage({ userId, tripId, brand }: Props) {
           onClose={closeSignIn}
           onGoogleSignIn={async (credential) => {
             try {
-              const data = await loginWithGoogle(credential);
+              const data = await loginWithGoogle(credential, {
+                userType: "bloggo",
+              });
               if (isLoginSuccess(data)) {
                 const result = assertBloggoUser(data.user);
                 if (!result.ok) {
