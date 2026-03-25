@@ -14,6 +14,7 @@ import {
 } from "@/api/auth";
 import { setCachedUser } from "@/api/user";
 import { assertBloggoUser } from "@/lib/bloggo";
+import { getGoogleOAuthWebClientId } from "@/config/googleOAuthWeb";
 import { SiApple } from "react-icons/si";
 
 // Apple Sign in with Apple JS SDK type declarations
@@ -231,7 +232,7 @@ export default function BloggoSignInSection() {
               </Link>
             </h1>
 
-            <GoogleOAuthProvider clientId="365835568807-9s56gicbdaj9vkn3kkbkvs2crt8k764e.apps.googleusercontent.com">
+            <GoogleOAuthProvider clientId={getGoogleOAuthWebClientId("bloggo")}>
               <div className="mt-8 flex justify-center">
                 <GoogleLogin
                   onSuccess={handleGoogleLogin}
