@@ -20,7 +20,9 @@ export function ObservabilityOverview({
         )}
       </div>
       <p className="text-sm text-gray-500 mb-6">
-        High-level product engagement and activity metrics.
+        Cumulative product health — what exists in the database right now. For
+        funnel behavior and blog creation trends, see Event Stream Analytics
+        above.
       </p>
       {error && (
         <p className="mb-4 rounded bg-red-50 px-3 py-2 text-sm text-red-700">
@@ -55,54 +57,6 @@ export function ObservabilityOverview({
           title="Avg Photos/Blog"
           value={data.avgPhotosPerBlog.toFixed(1)}
         />
-      </div>
-
-      <div className="mt-8 border-t pt-6">
-        <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-4">
-          Blogs Created
-        </h3>
-        <div className="grid grid-cols-3 gap-4">
-          <SubKPI
-            title="Today"
-            value={data.blogsCreated.day.toLocaleString()}
-          />
-          <SubKPI
-            title="This Week"
-            value={data.blogsCreated.week.toLocaleString()}
-          />
-          <SubKPI
-            title="This Month"
-            value={data.blogsCreated.month.toLocaleString()}
-          />
-        </div>
-      </div>
-
-      <div className="mt-8 border-t pt-6">
-        <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-4">
-          Blog Lifecycle
-        </h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <SubKPI
-            title="Saved (draft)"
-            value={data.blogLifecycle.saved.toLocaleString()}
-          />
-          <SubKPI
-            title="Completed"
-            value={data.blogLifecycle.completed.toLocaleString()}
-          />
-          <SubKPI
-            title="Published (public)"
-            value={data.blogLifecycle.published.toLocaleString()}
-          />
-          <SubKPI
-            title="Publish rate"
-            value={
-              data.blogLifecycle.completed > 0
-                ? `${((data.blogLifecycle.published / (data.blogLifecycle.saved + data.blogLifecycle.completed)) * 100).toFixed(1)}%`
-                : "—"
-            }
-          />
-        </div>
       </div>
 
       <div className="mt-8 border-t pt-6">

@@ -51,8 +51,12 @@ export function CostProjectionModel({
   // Photo Storage: $0.023/GB (first 50 TB = 51,200 GB)
   const projStorageCost = Math.min(storageGb, 50 * 1024) * 0.023;
 
-  // Photo Consumption (bandwidth): $0.09/GB (first 10 TB = 10,240 GB)
-  const billableBandwidthGb = Math.min(monthlyBandwidthGb, 10 * 1024);
+  // Photo Consumption (bandwidth): 500 GB free/month, then $0.09/GB (up to 10 TB)
+  const FREE_BANDWIDTH_GB = 500;
+  const billableBandwidthGb = Math.min(
+    Math.max(0, monthlyBandwidthGb - FREE_BANDWIDTH_GB),
+    10 * 1024,
+  );
   const projBandwidthCost = billableBandwidthGb * 0.09;
 
   // Mapbox: 50K free, then $0.005 per load
@@ -203,9 +207,13 @@ export function CostProjectionModel({
             <CostRow
               label="Photo Consumption (Bandwidth)"
               amount={projBandwidthCost}
-              note={`${monthlyBandwidthGb.toFixed(1)} GB × $0.09/GB`}
-              warn={monthlyBandwidthGb > 10240}
-              warnNote="exceeds 10 TB free tier"
+              note={
+                monthlyBandwidthGb <= FREE_BANDWIDTH_GB
+                  ? `${monthlyBandwidthGb.toFixed(1)} GB — within 500 GB free tier`
+                  : `${billableBandwidthGb.toFixed(1)} GB billable (${monthlyBandwidthGb.toFixed(1)} GB − 500 GB free) × $0.09/GB`
+              }
+              warn={monthlyBandwidthGb > 10 * 1024 + FREE_BANDWIDTH_GB}
+              warnNote="exceeds 10 TB billable tier"
             />
             <CostRow
               label="Mapbox (Map Loads)"
@@ -269,7 +277,7 @@ export function CostProjectionModel({
               Pricing Reference
             </p>
             <p>Photo Storage · $0.023/GB (first 50 TB)</p>
-            <p>Photo Bandwidth · $0.09/GB (first 10 TB)</p>
+            <p>Photo Bandwidth · 500 GB free/mo, then $0.09/GB (up to 10 TB)</p>
             <p>Mapbox · 50K free, then $0.005/load</p>
             <p>Search Autocomplete · 100K free/mo, then $0.75/1K</p>
           </div>
