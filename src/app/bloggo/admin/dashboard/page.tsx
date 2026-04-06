@@ -14,6 +14,7 @@ import {
   fetchEventUsers,
   fetchUserEventAnalytics,
   fetchObservabilityMetrics,
+  fetchActivitySnapshots,
   type StorageCostResponse,
   type AwsCostResponse,
   type MongoStorageResponse,
@@ -40,7 +41,8 @@ import { ServiceUsage } from "./components/ServiceUsage";
 import { CostDashboard } from "./components/CostDashboard";
 import { CostProjectionModel } from "./components/CostProjectionModel";
 import { DashboardEventFunnel } from "./components/DashboardEventFunnel";
-import type { EventAnalytics } from "./types";
+import { ActivityMetricsDashboard } from "./components/ActivityMetricsDashboard";
+import type { EventAnalytics, ActivitySnapshot } from "./types";
 
 const STORAGE_SERVICE = "AWS S3 (Storage)";
 const MONGO_SERVICE = "MongoDB Atlas";
@@ -285,6 +287,13 @@ export default function BloggoAdminDashboard() {
   const [perUserLoading, setPerUserLoading] = useState(false);
   const [perUserError, setPerUserError] = useState<string | null>(null);
 
+  const [activitySnapshots, setActivitySnapshots] = useState<
+    ActivitySnapshot[]
+  >([]);
+  const [activityDays, setActivityDays] = useState(30);
+  const [activityLoading, setActivityLoading] = useState(false);
+  const [activityError, setActivityError] = useState<string | null>(null);
+
   const loadObservability = useCallback(async () => {
     setObservabilityLoading(true);
     setObservabilityError(null);
@@ -501,6 +510,24 @@ export default function BloggoAdminDashboard() {
     }
   }, [serviceUsage.aws?.storageUsedGb]);
 
+  const loadActivitySnapshots = useCallback(async (days: number = 30) => {
+    setActivityLoading(true);
+    setActivityError(null);
+    try {
+      const res = await fetchActivitySnapshots(days);
+      if (res.result === "OK") {
+        setActivitySnapshots(res.snapshots ?? []);
+        setActivityDays(res.days ?? days);
+      }
+    } catch (e) {
+      setActivityError(
+        e instanceof Error ? e.message : "Failed to load activity data",
+      );
+    } finally {
+      setActivityLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (!allowed) return;
     loadObservability();
@@ -508,6 +535,7 @@ export default function BloggoAdminDashboard() {
     loadWaitlist();
     loadEventAnalytics(eventDays);
     loadEventUsers(eventDays);
+    loadActivitySnapshots(30);
   }, [
     allowed,
     loadObservability,
@@ -515,7 +543,8 @@ export default function BloggoAdminDashboard() {
     loadWaitlist,
     loadEventAnalytics,
     loadEventUsers,
-  ]);  
+    loadActivitySnapshots,
+  ]);
 
   if (authLoading || allowed === null) {
     return (
@@ -597,6 +626,42 @@ export default function BloggoAdminDashboard() {
             error={waitlistError}
             onRefresh={loadWaitlist}
           />
+          {/* BLOGGO-355 Activity Metrics */}
+          <section className="bg-gray-50 border border-gray-200 rounded-xl p-5">
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="text-base font-semibold text-gray-800">
+                User Activity Metrics
+              </h2>
+              <div className="flex gap-2">
+                {([7, 30, 90] as const).map((d) => (
+                  <button
+                    key={d}
+                    onClick={() => loadActivitySnapshots(d)}
+                    className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
+                      activityDays === d
+                        ? "bg-blue-600 text-white border-blue-600"
+                        : "bg-white text-gray-600 border-gray-300 hover:border-blue-400"
+                    }`}
+                  >
+                    {d}d
+                  </button>
+                ))}
+              </div>
+            </div>
+            {activityLoading ? (
+              <p className="text-sm text-gray-400 py-6 text-center">Loading…</p>
+            ) : activityError ? (
+              <p className="text-sm text-red-500 py-6 text-center">
+                {activityError}
+              </p>
+            ) : (
+              <ActivityMetricsDashboard
+                snapshots={activitySnapshots}
+                days={activityDays}
+              />
+            )}
+          </section>
+
           <DashboardEventFunnel
             data={eventData}
             loading={eventLoading}

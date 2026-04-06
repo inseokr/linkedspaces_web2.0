@@ -1081,3 +1081,27 @@ export async function fetchUserEventAnalytics(
     { method: "GET", token },
   );
 }
+
+// ---------------------------------------------------------------------------
+// Activity snapshots (BLOGGO-355 pre-computed daily metrics)
+// ---------------------------------------------------------------------------
+
+export type ActivitySnapshotsResponse = {
+  result: "OK" | "FAIL";
+  days: number;
+  snapshots: import("@/app/bloggo/admin/dashboard/types").ActivitySnapshot[];
+};
+
+/**
+ * Fetch pre-computed daily activity snapshots.
+ * GET /LS_API/admin/dashboard/activity/snapshots?days=N (admin-only)
+ */
+export async function fetchActivitySnapshots(
+  days = 30,
+): Promise<ActivitySnapshotsResponse> {
+  const token = getAuthToken();
+  return apiFetch<ActivitySnapshotsResponse>(
+    `/admin/dashboard/activity/snapshots?days=${days}`,
+    { method: "GET", token },
+  );
+}

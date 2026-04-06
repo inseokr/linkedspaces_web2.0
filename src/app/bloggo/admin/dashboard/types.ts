@@ -100,6 +100,47 @@ export type UserStreamEntry = {
   homeLocation?: HomeLocation;
 };
 
+// --- Activity snapshots (pre-computed daily metrics from BLOGGO-355) ---
+
+export type ActivitySnapshot = {
+  date: string; // ISO date string, UTC midnight
+  // App-level
+  appOpens: number;
+  newSessions: number;
+  uniqueUsers: number;
+  uniqueDevices: number;
+  // Blog lifecycle
+  blogScans: number;
+  blogSaves: number;
+  blogDeletes: number;
+  blogSharesPDF: number;
+  blogSharesNearby: number;
+  blogSlideshowPlays: number;
+  blogSplits: number;
+  blogMerges: number;
+  // Place actions
+  placeRenames: number;
+  placeRenamesPoi: number;
+  placeRenamesCustom: number;
+  placeRenamesAutoComplete: number;
+  placeManagePhoto: number;
+  // Stories
+  placeStories: number;
+  photoStories: number;
+  dayStories: number;
+  blogStories: number;
+  aiStories: number;
+  sentimentAdjustments: number;
+  // MoreMemories
+  moreMemoriesClicks: number;
+  moreMemoriesBlogs: number;
+  // In-app camera
+  inAppCameraOpens: number;
+  inAppPhotosTaken: number;
+  inAppPhotosVibeOn: number;
+  inAppPhotosCaption: number;
+};
+
 export type PerUserEventAnalytics = {
   anonymousId: string;
   userId: string | null;
