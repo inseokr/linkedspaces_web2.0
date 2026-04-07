@@ -1105,3 +1105,186 @@ export async function fetchActivitySnapshots(
     { method: "GET", token },
   );
 }
+
+// ---------------------------------------------------------------------------
+// Delayed push notification rules (admin-defined APNs)
+// ---------------------------------------------------------------------------
+
+export type PushNotificationRuleDTO = {
+  _id: string;
+  name: string;
+  enabled: boolean;
+  triggerEvent: string;
+  delayMs: number;
+  titleTemplate: string;
+  bodyTemplate: string;
+  userType: string;
+  cancelEventNames: string[];
+  correlationProperty: string | null;
+  deepLinkPayload?: Record<string, unknown>;
+  deliveryWindowEnabled: boolean;
+  deliveryWindowStartHour: number;
+  deliveryWindowEndHour: number;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type PushRulesListResponse = {
+  result: "OK" | "FAIL";
+  rules: PushNotificationRuleDTO[];
+};
+
+export async function fetchPushRules(): Promise<PushRulesListResponse> {
+  const token = getAuthToken();
+  return apiFetch<PushRulesListResponse>(`/admin/dashboard/push-rules`, {
+    method: "GET",
+    token,
+  });
+}
+
+export type CreatePushRuleBody = {
+  name: string;
+  triggerEvent: string;
+  delayMs: number;
+  titleTemplate: string;
+  bodyTemplate: string;
+  userType?: string;
+  cancelEventNames?: string[];
+  correlationProperty?: string | null;
+  enabled?: boolean;
+  deepLinkPayload?: Record<string, unknown>;
+  deliveryWindowEnabled?: boolean;
+  deliveryWindowStartHour?: number;
+  deliveryWindowEndHour?: number;
+};
+
+export async function createPushRule(
+  body: CreatePushRuleBody,
+): Promise<{ result: "OK" | "FAIL"; rule: PushNotificationRuleDTO }> {
+  const token = getAuthToken();
+  return apiFetch(`/admin/dashboard/push-rules`, {
+    method: "POST",
+    token,
+    body,
+  });
+}
+
+export async function updatePushRule(
+  id: string,
+  body: Partial<CreatePushRuleBody> & { enabled?: boolean },
+): Promise<{ result: "OK" | "FAIL"; rule: PushNotificationRuleDTO }> {
+  const token = getAuthToken();
+  return apiFetch(`/admin/dashboard/push-rules/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    token,
+    body,
+  });
+}
+
+export type PushRuleUserStatsRow = {
+  userId: string;
+  username: string | null;
+  pending: number;
+  sent: number;
+  failed: number;
+  cancelled: number;
+  total: number;
+};
+
+export type PushRuleStatsByRuleRow = {
+  ruleId: string;
+  name: string | null;
+  triggerEvent: string | null;
+  enabled: boolean | null;
+  userType: string | null;
+  delayMs: number | null;
+  windowDays: number;
+  since: string;
+  counts: {
+    pending: number;
+    sent: number;
+    failed: number;
+    cancelled: number;
+  };
+  total: number;
+  nextSendAt: string | null;
+  nextRemainingMs: number | null;
+  uniqueUsersPending: number;
+  topUsers: PushRuleUserStatsRow[];
+};
+
+export type PushRuleStatsByEventRow = {
+  triggerEvent: string;
+  windowDays: number;
+  since: string;
+  counts: {
+    pending: number;
+    sent: number;
+    failed: number;
+    cancelled: number;
+  };
+  total: number;
+  nextSendAt: string | null;
+  nextRemainingMs: number | null;
+  uniqueUsersPending: number;
+  topUsers: PushRuleUserStatsRow[];
+};
+
+export type PushRulesStatsResponse = {
+  result: "OK" | "FAIL";
+  days: number;
+  since: string;
+  now: string;
+  rules: PushRuleStatsByRuleRow[];
+  events: PushRuleStatsByEventRow[];
+};
+
+/**
+ * Scheduled push job stats (from `scheduled_pushes`), grouped by rule and by trigger event.
+ * GET /LS_API/admin/dashboard/push-rules/stats?days=30&userLimit=10
+ */
+export async function fetchPushRulesStats(params?: {
+  days?: number;
+  userLimit?: number;
+}): Promise<PushRulesStatsResponse> {
+  const token = getAuthToken();
+  const search = new URLSearchParams();
+  if (params?.days != null) search.set("days", String(params.days));
+  if (params?.userLimit != null)
+    search.set("userLimit", String(params.userLimit));
+  const q = search.toString();
+  return apiFetch<PushRulesStatsResponse>(
+    `/admin/dashboard/push-rules/stats${q ? `?${q}` : ""}`,
+    { method: "GET", token },
+  );
+}
+
+export type PurgeAnalyticsEventsBody = {
+  beforeDays?: number;
+  eventName?: string;
+  userId?: string;
+  dryRun?: boolean;
+};
+
+export type PurgeAnalyticsEventsResponse = {
+  result: "OK" | "FAIL";
+  dryRun: boolean;
+  matched: number;
+  deleted: number;
+  filter: Record<string, unknown>;
+  reason?: string;
+};
+
+/**
+ * Delete analytics events matching filters (admin-only, destructive).
+ * POST /LS_API/admin/dashboard/analytics/purge
+ */
+export async function purgeAnalyticsEvents(
+  body: PurgeAnalyticsEventsBody,
+): Promise<PurgeAnalyticsEventsResponse> {
+  const token = getAuthToken();
+  return apiFetch<PurgeAnalyticsEventsResponse>(
+    `/admin/dashboard/analytics/purge`,
+    { method: "POST", token, body },
+  );
+}

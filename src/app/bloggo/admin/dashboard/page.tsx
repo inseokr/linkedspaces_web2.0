@@ -37,6 +37,7 @@ import type {
 } from "./types";
 import type { ServiceUsage as ServiceUsageType } from "./types";
 import { ObservabilityOverview } from "./components/ObservabilityOverview";
+import DashboardPushRules from "./components/DashboardPushRules";
 import { ServiceUsage } from "./components/ServiceUsage";
 import { CostDashboard } from "./components/CostDashboard";
 import { CostProjectionModel } from "./components/CostProjectionModel";
@@ -626,6 +627,9 @@ export default function BloggoAdminDashboard() {
             error={waitlistError}
             onRefresh={loadWaitlist}
           />
+
+          <DashboardPushRules />
+
           {/* BLOGGO-355 Activity Metrics */}
           <section className="bg-gray-50 border border-gray-200 rounded-xl p-5">
             <div className="flex items-center justify-between mb-2">
