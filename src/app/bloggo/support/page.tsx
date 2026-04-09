@@ -7,6 +7,7 @@ import Badge from "@/bloggo/components/ui/Badge";
 import SectionHeader from "@/bloggo/components/ui/SectionHeader";
 import Input from "@/bloggo/components/ui/Input";
 import Button from "@/bloggo/components/ui/Button";
+import FormSubmittingIndicator from "@/bloggo/components/ui/FormSubmittingIndicator";
 import Accordion from "@/bloggo/components/ui/Accordion";
 import { submitSupportContact } from "@/api/supportContact";
 
@@ -20,28 +21,15 @@ const faqItems = [
       "Go to the login page and click 'Forgot password'. Enter your email address and we'll send you a reset link within a few minutes. Check your spam folder if you don't see it.",
   },
   {
-    id: "billing",
-    question: "How do I cancel my subscription?",
-    answer:
-      "You can cancel your subscription at any time from your account settings under Billing. Your access will continue until the end of your current billing period.",
-  },
-  {
-    id: "domain",
-    question: "How do I connect a custom domain?",
-    answer:
-      "From your blog settings, go to Domain and enter your custom domain. Then add a CNAME record pointing to blogs.bloggo.app in your DNS provider. Changes can take up to 48 hours to propagate.",
+    id: "export",
+    question: "Can I backup my blogs?",
+    answer: "Yes! Go to Account Settings > Blog backup",
   },
   {
     id: "export",
-    question: "Can I export my blog posts?",
+    question: "Is Bloggo only for travels?",
     answer:
-      "Yes! Go to Settings > Export and download all your posts in Markdown, JSON, or HTML format. Your data is always yours.",
-  },
-  {
-    id: "images",
-    question: "What image formats are supported?",
-    answer:
-      "Bloggo supports JPEG, PNG, WebP, GIF, and SVG. Images are automatically optimized and served via CDN. Maximum file size is 10 MB per image.",
+      "No, you could use Bloggo for any purpose you want. It's not limited to travels.",
   },
 ];
 
@@ -191,6 +179,7 @@ export default function SupportPage() {
                   onSubmit={handleSubmit}
                   noValidate
                   className="flex flex-col gap-5"
+                  aria-busy={loading ? true : undefined}
                 >
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                     <Input
@@ -256,6 +245,7 @@ export default function SupportPage() {
                     type="submit"
                     variant="primary"
                     loading={loading}
+                    loadingLabel="Sending…"
                     disabled={
                       !formState.name ||
                       !formState.email ||
@@ -265,6 +255,7 @@ export default function SupportPage() {
                   >
                     Send Message
                   </Button>
+                  <FormSubmittingIndicator active={loading} />
                   {submitError ? (
                     <p
                       className="text-sm text-red-400 text-center"

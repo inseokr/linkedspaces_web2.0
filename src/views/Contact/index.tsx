@@ -9,6 +9,7 @@ import Badge from "@/bloggo/components/ui/Badge";
 import SectionHeader from "@/bloggo/components/ui/SectionHeader";
 import Input from "@/bloggo/components/ui/Input";
 import Button from "@/bloggo/components/ui/Button";
+import FormSubmittingIndicator from "@/bloggo/components/ui/FormSubmittingIndicator";
 import Accordion from "@/bloggo/components/ui/Accordion";
 import { submitSupportContact } from "@/api/supportContact";
 
@@ -194,6 +195,7 @@ export default function ContactView() {
                   onSubmit={handleSubmit}
                   noValidate
                   className="flex flex-col gap-5"
+                  aria-busy={loading ? true : undefined}
                 >
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                     <Input
@@ -259,6 +261,7 @@ export default function ContactView() {
                     type="submit"
                     variant="primary"
                     loading={loading}
+                    loadingLabel="Sending…"
                     disabled={
                       !formState.name ||
                       !formState.email ||
@@ -268,6 +271,7 @@ export default function ContactView() {
                   >
                     Send Message
                   </Button>
+                  <FormSubmittingIndicator active={loading} />
                   {submitError ? (
                     <p
                       className="text-sm text-red-500 text-center"

@@ -9,6 +9,8 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: Variant;
   size?: Size;
   loading?: boolean;
+  /** When set and `loading` is true, replaces `children` (e.g. "Sending…"). */
+  loadingLabel?: string;
 }
 
 const variantClasses: Record<Variant, string> = {
@@ -34,6 +36,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       variant = "primary",
       size = "md",
       loading = false,
+      loadingLabel,
       children,
       className = "",
       disabled,
@@ -41,10 +44,14 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     },
     ref,
   ) => {
+    const content =
+      loading && loadingLabel !== undefined ? loadingLabel : children;
+
     return (
       <button
         ref={ref}
         disabled={disabled || loading}
+        aria-busy={loading || undefined}
         className={[
           "inline-flex items-center justify-center gap-2 font-medium transition-all duration-200",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bloggo-bg)]",
@@ -79,7 +86,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
             />
           </svg>
         )}
-        {children}
+        {content}
       </button>
     );
   },
