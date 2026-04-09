@@ -57,28 +57,28 @@ export default function BloggoHomePage() {
   return (
     <>
       <BloggoHomeRedirect />
-      <section className="relative pt-32 pb-24 overflow-hidden">
-        <Container className="flex flex-col items-center text-center gap-8">
-          <Badge variant="violet">🚀 Photo-First Blogging</Badge>
-          <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black leading-[1.05] tracking-tight max-w-4xl">
+      <section className="relative overflow-hidden pt-28 pb-24 sm:pt-32 sm:pb-28">
+        <Container
+          size="md"
+          className="relative z-10 flex flex-col items-center gap-8 text-center"
+        >
+          <Badge variant="violet" size="lg">
+            Photo-First Blogging
+          </Badge>
+          <h1 className="text-balance text-5xl font-black leading-[1.08] tracking-tight text-[var(--bloggo-text-primary)] sm:text-6xl lg:text-7xl">
             Turn Trip Photos into{" "}
             <span className="gradient-text">Blogs. Fast.</span>
           </h1>
-          <p className="text-lg sm:text-xl text-[var(--bloggo-text-secondary)] max-w-2xl leading-relaxed">
+          <p className="max-w-2xl text-lg leading-relaxed text-[var(--bloggo-text-secondary)] sm:text-xl">
             Bloggo eliminates blank page anxiety. Turn your camera roll into a
             blog draft in seconds.
           </p>
-          <div className="flex flex-wrap gap-4 justify-center mt-4">
-            <Link href={`${BASE}/profile/demo`}>
-              <Button size="lg" variant="secondary">
-                Demo Profile
-              </Button>
-            </Link>
-            <Link href={`${BASE}/sign-in`}>
+          <div className="mt-2 flex flex-wrap justify-center gap-4">
+            <Link href={`${BASE}/features`}>
               <Button size="lg" variant="primary">
-                Try Today
+                Explore features
                 <svg
-                  className="w-4 h-4"
+                  className="h-4 w-4"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -97,11 +97,11 @@ export default function BloggoHomePage() {
         </Container>
 
         <div
-          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full pointer-events-none opacity-50"
+          className="pointer-events-none absolute left-1/2 top-1/2 h-[min(100vw,600px)] w-[min(100vw,600px)] -translate-x-1/2 -translate-y-1/2 rounded-full opacity-50"
           aria-hidden="true"
           style={{
             background:
-              "radial-gradient(circle, rgba(124,58,237,0.1) 0%, transparent 70%)",
+              "radial-gradient(circle, rgba(124,58,237,0.12) 0%, transparent 70%)",
           }}
         />
       </section>

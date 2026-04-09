@@ -133,44 +133,36 @@ export default function BloggoHeader() {
           !isBloggoUser ? "max-w-7xl mx-auto" : "",
         ].join(" ")}
       >
-        <div className="flex h-16 items-center justify-between">
-          <div className="flex items-center gap-8">
-            <Link
-              href={
-                isBloggoUser && user?.username
-                  ? `${BASE}/profile/${user.username}`
-                  : BASE
-              }
-              className="flex items-center gap-2 font-bold text-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 rounded-lg"
-            >
-              <span className="gradient-text">Bloggo</span>
-            </Link>
+        <div className="flex h-16 w-full min-w-0 items-center justify-between gap-6">
+          <Link
+            href={
+              isBloggoUser && user?.username
+                ? `${BASE}/profile/${user.username}`
+                : BASE
+            }
+            className="shrink-0 flex items-center gap-2 font-bold text-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 rounded-lg"
+          >
+            <span className="gradient-text">Bloggo</span>
+          </Link>
 
+          <div className="flex min-w-0 items-center justify-end gap-4 sm:gap-6">
             {!isBloggoUser && (
-              <nav className="hidden md:flex items-center gap-6">
+              <nav
+                className="hidden md:flex items-center gap-8"
+                aria-label="Primary"
+              >
                 {navLinks.map((link) => (
                   <Link
                     key={link.href}
                     href={link.href}
-                    className="text-sm font-semibold text-[var(--bloggo-text-secondary)] hover:text-[var(--bloggo-text-primary)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 rounded-lg px-2 py-1"
+                    className="text-sm font-semibold text-[var(--bloggo-text-secondary)] hover:text-[var(--bloggo-text-primary)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 rounded-lg px-1 py-1"
                   >
                     {link.label}
                   </Link>
                 ))}
               </nav>
             )}
-          </div>
-
-          <div className="hidden md:flex items-center gap-3">
-            {!isBloggoUser && (
-              <Link
-                href={`${BASE}/profile/demo`}
-                className="text-sm font-semibold text-[var(--bloggo-text-secondary)] hover:text-[var(--bloggo-text-primary)] transition-colors px-3 py-2 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
-              >
-                Demo Profile
-              </Link>
-            )}
-            {showUserMenu ? (
+            {showUserMenu && (
               /* ─── Unified avatar + username + chevron pill (like LinkedSpaces) ─── */
               <div ref={rootRef} className="relative inline-flex">
                 <button
@@ -375,49 +367,41 @@ export default function BloggoHeader() {
                   </div>
                 </div>
               </div>
-            ) : (
-              <Link
-                href="/bloggo/sign-in"
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium bg-sky-600 hover:bg-sky-500 text-white transition-all shadow-lg shadow-sky-900/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+            )}
+            {!isSharedBlogPage && (
+              <button
+                aria-label={mobileOpen ? "Close menu" : "Open menu"}
+                aria-expanded={mobileOpen}
+                aria-controls="bloggo-mobile-menu"
+                onClick={() => setMobileOpen((v) => !v)}
+                className="shrink-0 md:hidden p-2 rounded-lg text-[var(--bloggo-text-secondary)] hover:text-[var(--bloggo-text-primary)] hover:bg-black/5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
               >
-                Sign In
-              </Link>
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  aria-hidden="true"
+                >
+                  {mobileOpen ? (
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  ) : (
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4 6h16M4 12h16M4 18h16"
+                    />
+                  )}
+                </svg>
+              </button>
             )}
           </div>
-
-          {!isSharedBlogPage && (
-            <button
-              aria-label={mobileOpen ? "Close menu" : "Open menu"}
-              aria-expanded={mobileOpen}
-              aria-controls="bloggo-mobile-menu"
-              onClick={() => setMobileOpen((v) => !v)}
-              className="md:hidden p-2 rounded-lg text-[var(--bloggo-text-secondary)] hover:text-[var(--bloggo-text-primary)] hover:bg-black/5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
-            >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                aria-hidden="true"
-              >
-                {mobileOpen ? (
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                ) : (
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M4 6h16M4 12h16M4 18h16"
-                  />
-                )}
-              </svg>
-            </button>
-          )}
         </div>
 
         {!isSharedBlogPage && mobileOpen && (
@@ -442,17 +426,8 @@ export default function BloggoHeader() {
                 {link.label}
               </Link>
             ))}
-            <div className="mt-3 pt-3 border-t border-[var(--bloggo-border)] flex flex-col gap-2">
-              {!isBloggoUser && (
-                <Link
-                  href={`${BASE}/profile/demo`}
-                  onClick={() => setMobileOpen(false)}
-                  className="px-4 py-2.5 rounded-lg text-sm text-[var(--bloggo-text-secondary)] hover:text-[var(--bloggo-text-primary)] hover:bg-black/5 transition-colors"
-                >
-                  Demo Profile
-                </Link>
-              )}
-              {showUserMenu ? (
+            {showUserMenu && (
+              <div className="mt-3 pt-3 border-t border-[var(--bloggo-border)] flex flex-col gap-2">
                 <div className="flex flex-col gap-2">
                   <Link
                     href={
@@ -478,16 +453,8 @@ export default function BloggoHeader() {
                     Log out
                   </button>
                 </div>
-              ) : (
-                <Link
-                  href="/bloggo/sign-in"
-                  onClick={() => setMobileOpen(false)}
-                  className="px-4 py-2.5 rounded-xl text-sm font-medium bg-sky-600 hover:bg-sky-500 text-white text-center transition-all"
-                >
-                  Sign In
-                </Link>
-              )}
-            </div>
+              </div>
+            )}
           </nav>
         )}
       </div>

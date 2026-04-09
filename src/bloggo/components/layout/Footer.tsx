@@ -13,7 +13,6 @@ const footerLinks = {
     { href: `${BASE}/privacy`, label: "Privacy Policy" },
     { href: `${BASE}/terms`, label: "Terms of Service" },
   ],
-  Demo: [{ href: `${BASE}/profile/demo`, label: "Demo Profile" }],
 };
 
 export default function BloggoFooter() {
@@ -33,7 +32,7 @@ export default function BloggoFooter() {
   return (
     <footer className="border-t border-[var(--bloggo-border)] bg-[var(--bloggo-bg-card)]/50 mt-24">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-8">
           <div className="col-span-2 md:col-span-1 flex flex-col gap-4">
             <Link
               href={BASE}

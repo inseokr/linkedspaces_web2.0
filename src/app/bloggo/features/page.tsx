@@ -40,9 +40,10 @@ const smartFeatures = [
     icon: "✍️",
   },
   {
-    title: "Share Anywhere",
-    description: "Available to view on any platform",
-    icon: "🚀",
+    title: "Share",
+    description:
+      "Exported PDF with non-bloggo users or QR code with bloggo users.",
+    icon: "📤",
   },
 ];
 
@@ -105,11 +106,8 @@ export default function FeaturesPage() {
             Try Bloggo today.
           </p>
           <div className="flex gap-3">
-            <Link href={`${BASE}/profile/demo`}>
-              <Button variant="secondary">Demo Profile</Button>
-            </Link>
             <Link href={`${BASE}/sign-in`}>
-              <Button variant="primary">Sign In</Button>
+              <Button variant="primary">Download Bloggo</Button>
             </Link>
           </div>
         </Container>
