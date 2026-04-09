@@ -20,6 +20,11 @@ export function middleware(request: NextRequest) {
   if (isBloggoHost(hostname)) {
     console.log(`[middleware] bloggo host detected: ${hostname}${pathname}`);
 
+    // Next.js API routes live at /api/*, not under /bloggo — avoid rewriting them.
+    if (pathname.startsWith("/api")) {
+      return NextResponse.next();
+    }
+
     // If the path already starts with /bloggo (e.g. from a client-side Link like
     // <Link href="/bloggo/sign-in">), redirect to strip the prefix so the URL
     // stays clean: bloggo.localhost/bloggo/sign-in → bloggo.localhost/sign-in

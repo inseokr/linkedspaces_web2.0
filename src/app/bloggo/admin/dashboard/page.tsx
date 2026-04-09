@@ -38,6 +38,7 @@ import type {
 import type { ServiceUsage as ServiceUsageType } from "./types";
 import { ObservabilityOverview } from "./components/ObservabilityOverview";
 import DashboardPushRules from "./components/DashboardPushRules";
+import DashboardManualPush from "./components/DashboardManualPush";
 import { ServiceUsage } from "./components/ServiceUsage";
 import { CostDashboard } from "./components/CostDashboard";
 import { CostProjectionModel } from "./components/CostProjectionModel";
@@ -629,6 +630,8 @@ export default function BloggoAdminDashboard() {
           />
 
           <DashboardPushRules />
+
+          <DashboardManualPush />
 
           {/* BLOGGO-355 Activity Metrics */}
           <section className="bg-gray-50 border border-gray-200 rounded-xl p-5">

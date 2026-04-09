@@ -8,6 +8,7 @@ import SectionHeader from "@/bloggo/components/ui/SectionHeader";
 import Input from "@/bloggo/components/ui/Input";
 import Button from "@/bloggo/components/ui/Button";
 import Accordion from "@/bloggo/components/ui/Accordion";
+import { submitSupportContact } from "@/api/supportContact";
 
 const SUPPORT_EMAIL = "bloggo@linkedspaces.com";
 
@@ -53,13 +54,22 @@ export default function SupportPage() {
   });
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitError(null);
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 1200));
+    const result = await submitSupportContact({
+      name: formState.name.trim(),
+      email: formState.email.trim(),
+      subject: formState.subject.trim(),
+      message: formState.message.trim(),
+      source: "bloggo",
+    });
     setLoading(false);
-    setSubmitted(true);
+    if (result.ok) setSubmitted(true);
+    else setSubmitError(result.message);
   };
 
   return (
@@ -163,6 +173,7 @@ export default function SupportPage() {
                   size="sm"
                   onClick={() => {
                     setSubmitted(false);
+                    setSubmitError(null);
                     setFormState({
                       name: "",
                       email: "",
@@ -254,6 +265,14 @@ export default function SupportPage() {
                   >
                     Send Message
                   </Button>
+                  {submitError ? (
+                    <p
+                      className="text-sm text-red-400 text-center"
+                      role="alert"
+                    >
+                      {submitError}
+                    </p>
+                  ) : null}
                   <p className="text-xs text-[var(--bloggo-text-muted)] text-center">
                     Or email us directly at{" "}
                     <a

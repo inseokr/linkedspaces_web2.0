@@ -1259,6 +1259,74 @@ export async function fetchPushRulesStats(params?: {
   );
 }
 
+// ---------------------------------------------------------------------------
+// Manual push (admin → selected users with iosPushToken)
+// ---------------------------------------------------------------------------
+
+export type ManualPushRecipient = {
+  userId: string;
+  username: string | null;
+  email: string | null;
+};
+
+export type ManualPushRecipientsResponse = {
+  result: "OK" | "FAIL";
+  users: ManualPushRecipient[];
+  reason?: string;
+};
+
+export async function fetchManualPushRecipients(params?: {
+  q?: string;
+  limit?: number;
+}): Promise<ManualPushRecipientsResponse> {
+  const token = getAuthToken();
+  const search = new URLSearchParams();
+  if (params?.q != null && params.q.trim()) search.set("q", params.q.trim());
+  if (params?.limit != null) search.set("limit", String(params.limit));
+  const qs = search.toString();
+  return apiFetch<ManualPushRecipientsResponse>(
+    `/admin/dashboard/push/manual/recipients${qs ? `?${qs}` : ""}`,
+    { method: "GET", token },
+  );
+}
+
+export type SendManualPushBody = {
+  userIds: string[];
+  title: string;
+  body: string;
+  schedule: "immediate" | "scheduled";
+  localDate?: string;
+  localTime?: string;
+  timezone?: string;
+  deliveryWindowEnabled?: boolean;
+  deliveryWindowStartHour?: number;
+  deliveryWindowEndHour?: number;
+  pushData?: Record<string, unknown>;
+};
+
+export type SendManualPushResponse = {
+  result: "OK" | "FAIL";
+  schedule?: "immediate" | "scheduled";
+  sent?: number;
+  scheduled?: number;
+  sendAt?: string;
+  timezone?: string;
+  targeted?: number;
+  skippedNoToken?: number;
+  reason?: string;
+};
+
+export async function sendManualPush(
+  body: SendManualPushBody,
+): Promise<SendManualPushResponse> {
+  const token = getAuthToken();
+  return apiFetch<SendManualPushResponse>(`/admin/dashboard/push/manual`, {
+    method: "POST",
+    token,
+    body,
+  });
+}
+
 export type PurgeAnalyticsEventsBody = {
   beforeDays?: number;
   eventName?: string;
