@@ -38,17 +38,17 @@ export default function TermsPage() {
           whether as a guest or with a registered account, you agree to follow
           and be bound by the Terms. We may update the Terms from time to time.
           The current Terms are available within the App. We and our third party
-          service providers may change features, services, or pricing related to
-          the App without notice. Bloggo is a travel journaling app; your blog
-          content and photos are stored locally on your device and are not
-          uploaded to our servers as part of normal app operation, except as
-          described in our Privacy Policy (for example, account information you
-          provide and limited technical or usage data). Certain parts of the
-          Terms may be clarified by additional notices we show in the App. The
-          App is not intended for children under 13 years of age. If you are
-          under 13, do not create an account; you may use limited guest features
-          only as described in these Terms. If you do not agree with the Terms,
-          do not use the App.
+          service providers may change features, services related to the App
+          without notice. Bloggo is a travel journaling app; your blog content
+          and photos are stored locally on your device and are not uploaded to
+          our servers as part of normal app operation, except as described in
+          our Privacy Policy (for example, account information you provide and
+          limited technical or usage data). Certain parts of the Terms may be
+          clarified by additional notices we show in the App. The App is not
+          intended for children under 13 years of age. If you are under 13, do
+          not create an account; you may use limited guest features only as
+          described in these Terms. If you do not agree with the Terms, do not
+          use the App.
         </p>
         <p>
           BY CONTINUING TO USE THE APP, YOU INDICATE YOUR AGREEMENT TO THE TERMS
