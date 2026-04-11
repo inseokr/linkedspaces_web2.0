@@ -26,7 +26,7 @@ export default function TermsPage() {
         </p>
       </div>
 
-      <div className="prose-bloggo flex flex-col gap-2">
+      <div className="prose-bloggo flex flex-col gap-2 pb-10">
         <h2>1. Acceptance of Terms</h2>
         <p>
           The Bloggo mobile application and the features and services available
@@ -38,17 +38,27 @@ export default function TermsPage() {
           whether as a guest or with a registered account, you agree to follow
           and be bound by the Terms. We may update the Terms from time to time.
           The current Terms are available within the App. We and our third party
-          service providers may change features, services related to the App
+          service providers may change features, services, related to the App
           without notice. Bloggo is a travel journaling app; your blog content
           and photos are stored locally on your device and are not uploaded to
           our servers as part of normal app operation, except as described in
           our Privacy Policy (for example, account information you provide and
           limited technical or usage data). Certain parts of the Terms may be
-          clarified by additional notices we show in the App. The App is not
-          intended for children under 13 years of age. If you are under 13, do
-          not create an account; you may use limited guest features only as
-          described in these Terms. If you do not agree with the Terms, do not
-          use the App.
+          clarified by additional notices we show in the App.
+        </p>
+        <p>
+          Bloggo is offered on the Apple App Store with a 4+ age rating. That
+          rating describes the general suitability of the Bloggo app for a wide
+          audience when used as designed. Registering for a Bloggo account is
+          separate: it involves providing personal information and using our
+          authentication and account services. You must be at least 13 years old
+          to create an account (or the minimum age required in your jurisdiction
+          for you to consent to our collection and use of your personal
+          information online, if that age is higher). If you are under that age,
+          you must not register; you may use Bloggo only as a guest, within the
+          limits described in these Terms. Parents and guardians are responsible
+          for deciding whether guest use is appropriate for minors in their
+          care. If you do not agree with the Terms, do not use the App.
         </p>
         <p>
           BY CONTINUING TO USE THE APP, YOU INDICATE YOUR AGREEMENT TO THE TERMS
@@ -87,7 +97,11 @@ export default function TermsPage() {
         </ul>
 
         <h2>3. Guest Users and Registered Accounts</h2>
-        <p>Bloggo can be used with or without a registered account:</p>
+        <p>
+          Bloggo can be used with or without a registered account. The App Store
+          4+ rating applies to the app overall; account registration is reserved
+          for users who meet the age requirement in Section 4.
+        </p>
         <ul>
           <li>
             Guest Users: Guests may create and export one (1) blog. Guest data
@@ -97,7 +111,9 @@ export default function TermsPage() {
           <li>
             Registered Users: Creating a Bloggo account allows you to save and
             manage unlimited blog drafts and export as many blogs as you like.
-            Registered accounts require a valid email address.
+            Registered accounts require a valid email address and that you are
+            at least 13 years old (or the applicable age of digital consent in
+            your jurisdiction, if higher).
           </li>
         </ul>
         <p>
@@ -112,11 +128,19 @@ export default function TermsPage() {
           that occur under your account. Please notify us immediately of any
           unauthorized use.
         </p>
+        <p>
+          Eligibility. You must be at least 13 years of age to create a Bloggo
+          account, or the minimum age required in your country or region for you
+          to agree to our processing of your personal data without parental
+          consent, whichever is greater. By registering, you represent and
+          warrant that you satisfy this requirement. If you do not, you must not
+          create an account and may use Bloggo only as a guest.
+        </p>
         <ul>
-          <li>You must be at least 13 years old to create a Bloggo account.</li>
           <li>
-            If you are under 13, you may use Bloggo only as a guest (without
-            creating an account).
+            Users under the applicable minimum age may use Bloggo without an
+            account only, subject to guest limits described elsewhere in these
+            Terms.
           </li>
           <li>Only one account may be created per email address.</li>
           <li>
