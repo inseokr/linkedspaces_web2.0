@@ -1,12 +1,9 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import Container from "@/bloggo/components/ui/Container";
 import Card from "@/bloggo/components/ui/Card";
 import Badge from "@/bloggo/components/ui/Badge";
 import SectionHeader from "@/bloggo/components/ui/SectionHeader";
 import Button from "@/bloggo/components/ui/Button";
-
-const BASE = "/bloggo";
 
 export const metadata: Metadata = {
   title: "Features",
@@ -44,6 +41,12 @@ const smartFeatures = [
     description:
       "Exported PDF with non-bloggo users or QR code with bloggo users.",
     icon: "📤",
+  },
+  {
+    title: "Blog on the go",
+    description:
+      "Use Bloggo's in-app camera while you travel so new photos flow straight into your drafted blog, without waiting until you're home.",
+    icon: "📷",
   },
 ];
 
@@ -106,9 +109,14 @@ export default function FeaturesPage() {
             Try Bloggo today.
           </p>
           <div className="flex gap-3">
-            <Link href={`${BASE}/sign-in`}>
-              <Button variant="primary">Download Bloggo</Button>
-            </Link>
+            <Button
+              size="lg"
+              variant="primary"
+              className="px-8 opacity-50 cursor-not-allowed"
+              disabled
+            >
+              Coming Soon
+            </Button>
           </div>
         </Container>
       </section>

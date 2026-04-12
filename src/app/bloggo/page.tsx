@@ -37,19 +37,22 @@ const howItWorks = [
 
 const privateByDefaultFeatures = [
   {
-    title: "Unlimited on your phone.",
-    description: "Create and edit as many blogs as you want.",
-    icon: "📱",
-  },
-  {
-    title: "Write faster on desktop.",
-    description: "Upload up to five blogs to edit on your computer.",
-    icon: "💻",
-  },
-  {
-    title: "You decide what gets shared.",
-    description: "Nothing is published unless you choose.",
+    title: "Local first, private by default.",
+    description:
+      "Your blog drafts live on your device until you export or publish. Nothing is shared unless you choose.",
     icon: "🔒",
+  },
+  {
+    title: "Try it as a guest.",
+    description:
+      "No account needed to get started. Guests can save one blog and export once; both stay on your device.",
+    icon: "👤",
+  },
+  {
+    title: "Unlimited with a free account.",
+    description:
+      "Sign in to save and export as many blogs as you like, with the same local first privacy and no guest caps.",
+    icon: "✨",
   },
 ];
 
@@ -143,7 +146,7 @@ export default function BloggoHomePage() {
           <SectionHeader
             eyebrow="Privacy First"
             title="Private by default"
-            subtitle="Your blogs are stored locally on your device. No account required."
+            subtitle="Your trip blogs stay on your phone until you export or publish. Try Bloggo as a guest, or sign in when you're ready for unlimited saves and exports."
           />
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {privateByDefaultFeatures.map((feature) => (
@@ -197,7 +200,7 @@ export default function BloggoHomePage() {
                   className="w-full sm:w-auto px-8 opacity-50 cursor-not-allowed"
                   disabled
                 >
-                  Start Building Now
+                  Coming Soon
                 </Button>
               </div>
             </div>
