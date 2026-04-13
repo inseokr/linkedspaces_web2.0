@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Container from "@/bloggo/components/ui/Container";
 import Badge from "@/bloggo/components/ui/Badge";
+import { getLegalDocLastUpdated } from "@/bloggo/lib/legalDocLastUpdated";
 
 export const metadata: Metadata = {
   title: "Privacy Policy",
@@ -8,9 +9,9 @@ export const metadata: Metadata = {
     "Bloggo Privacy Policy — how we collect, use, and protect your data.",
 };
 
-const LAST_UPDATED = "April 8, 2026";
-
 export default function BloggoPrivacyPage() {
+  const lastUpdated = getLegalDocLastUpdated("src/app/bloggo/privacy/page.tsx");
+
   return (
     <Container size="md" className="py-16">
       <div className="flex flex-col gap-6 mb-12">
@@ -19,7 +20,7 @@ export default function BloggoPrivacyPage() {
           Privacy Policy
         </h1>
         <p className="text-sm text-[var(--bloggo-text-muted)]">
-          Last updated: {LAST_UPDATED}
+          Last updated: {lastUpdated}
         </p>
         <p className="text-[var(--bloggo-text-secondary)] leading-relaxed">
           This policy describes how LinkedSpaces LLC (&quot;LinkedSpaces,&quot;

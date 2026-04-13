@@ -8,6 +8,17 @@ import BloggoHomeRedirect from "@/bloggo/components/BloggoHomeRedirect";
 
 const BASE = "/bloggo";
 
+const BETA_TESTFLIGHT_URL = "https://testflight.apple.com/join/QTvGbGK2";
+
+/** Matches Button primary + lg for an external link (valid HTML; no button inside anchor). */
+const betaCtaClassName = [
+  "inline-flex items-center justify-center gap-2 font-medium transition-all duration-200",
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bloggo-bg)]",
+  "active:scale-[0.98]",
+  "bg-sky-600 hover:bg-sky-500 text-white shadow-lg shadow-sky-900/40 border border-sky-500/30",
+  "px-7 py-3.5 text-base rounded-xl",
+].join(" ");
+
 const howItWorks = [
   {
     step: "1",
@@ -77,8 +88,20 @@ export default function BloggoHomePage() {
             blog draft in seconds.
           </p>
           <div className="mt-2 flex flex-wrap justify-center gap-4">
+            <a
+              href={BETA_TESTFLIGHT_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={betaCtaClassName}
+            >
+              Try Beta
+            </a>
             <Link href={`${BASE}/features`}>
-              <Button size="lg" variant="primary">
+              <Button
+                size="lg"
+                variant="secondary"
+                className="text-black hover:text-black"
+              >
                 Explore features
                 <svg
                   className="h-4 w-4"

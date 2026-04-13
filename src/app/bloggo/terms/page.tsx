@@ -1,15 +1,16 @@
 import type { Metadata } from "next";
 import Container from "@/bloggo/components/ui/Container";
 import Badge from "@/bloggo/components/ui/Badge";
+import { getLegalDocLastUpdated } from "@/bloggo/lib/legalDocLastUpdated";
 
 export const metadata: Metadata = {
   title: "Terms of Service",
   description: "Bloggo Terms of Service — the rules for using our platform.",
 };
 
-const LAST_UPDATED = "April 7, 2026";
-
 export default function TermsPage() {
+  const lastUpdated = getLegalDocLastUpdated("src/app/bloggo/terms/page.tsx");
+
   return (
     <Container size="md" className="py-16">
       <div className="flex flex-col gap-6 mb-12">
@@ -18,7 +19,7 @@ export default function TermsPage() {
           Terms of Service
         </h1>
         <p className="text-sm text-[var(--bloggo-text-muted)]">
-          Last updated: {LAST_UPDATED}
+          Last updated: {lastUpdated}
         </p>
         <p className="text-[var(--bloggo-text-secondary)] leading-relaxed">
           These Terms of Service govern your use of the Bloggo mobile
