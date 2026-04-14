@@ -40,6 +40,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       children,
       className = "",
       disabled,
+      type = "button",
       ...props
     },
     ref,
@@ -50,13 +51,14 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     return (
       <button
         ref={ref}
+        type={type}
         disabled={disabled || loading}
         aria-busy={loading || undefined}
         className={[
           "inline-flex items-center justify-center gap-2 font-medium transition-all duration-200",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bloggo-bg)]",
-          "disabled:opacity-50 disabled:cursor-not-allowed",
-          "active:scale-[0.98]",
+          "disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed",
+          "active:scale-[0.98] disabled:active:scale-100",
           variantClasses[variant],
           sizeClasses[size],
           className,

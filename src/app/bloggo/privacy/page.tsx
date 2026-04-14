@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Container from "@/bloggo/components/ui/Container";
 import Badge from "@/bloggo/components/ui/Badge";
+import { getLegalDocLastUpdated } from "@/bloggo/lib/legalDocLastUpdated";
 
 export const metadata: Metadata = {
   title: "Privacy Policy",
@@ -8,9 +9,9 @@ export const metadata: Metadata = {
     "Bloggo Privacy Policy — how we collect, use, and protect your data.",
 };
 
-const LAST_UPDATED = "April 8, 2026";
-
 export default function BloggoPrivacyPage() {
+  const lastUpdated = getLegalDocLastUpdated("src/app/bloggo/privacy/page.tsx");
+
   return (
     <Container size="md" className="py-16">
       <div className="flex flex-col gap-6 mb-12">
@@ -19,7 +20,7 @@ export default function BloggoPrivacyPage() {
           Privacy Policy
         </h1>
         <p className="text-sm text-[var(--bloggo-text-muted)]">
-          Last updated: {LAST_UPDATED}
+          Last updated: {lastUpdated}
         </p>
         <p className="text-[var(--bloggo-text-secondary)] leading-relaxed">
           This policy describes how LinkedSpaces LLC (&quot;LinkedSpaces,&quot;
@@ -39,10 +40,11 @@ export default function BloggoPrivacyPage() {
           We also collect limited technical and usage data to improve the app
           and diagnose issues. For example, the app may send product analytics
           events to our servers (including an anonymous identifier stored on
-          your device, app version, timezone, and non-content contextual fields
-          such as feature or screen names). Crash or diagnostic data may be
-          included depending on your device settings. This category of data is
-          not a full copy of your blog text or photo library.
+          your device, app version, timezone, and contextual fields such as
+          feature or screen names that do not include the text of your blogs or
+          your photo library). Crash or diagnostic data may be included
+          depending on your device settings. This category of data is not a full
+          copy of your blog text or photo library.
         </p>
 
         <h2>2. Your Blog Content Stays on Your Device</h2>
@@ -55,13 +57,13 @@ export default function BloggoPrivacyPage() {
           Whether you use Bloggo as a guest or with an account, your blog
           material stays on your device unless you export it yourself (for
           example, as a PDF or zip file). If you create an account, we store the
-          information needed to sign you in and operate your account—such as
-          username and email—on our systems. That account information is
+          information needed to sign you in and operate your account on our
+          systems, such as username and email. That account information is
           separate from your blog files, which remain on your device.
         </p>
         <ul>
           <li>
-            Blog generation that uses on-device AI runs on your device. Your
+            Blog generation uses AI that runs entirely on your device. Your
             photos are not sent to external AI services for that processing.
           </li>
         </ul>
@@ -96,14 +98,13 @@ export default function BloggoPrivacyPage() {
             QR code: You can use a QR code to hand off a blog to another Bloggo
             user in person (for example, so they can open it in Bloggo on their
             device), or for your own convenience. That flow is designed for
-            direct, user-initiated sharing—not for us to host or publish your
-            blog online.
+            direct, user initiated sharing; it is not for us to host or publish
+            your blog online.
           </li>
           <li>
-            Zip export: You can export your blog as a zip file (or similar
-            archive) for your own backup or to move it between your devices.
-            Those files stay under your control unless you choose to send them
-            somewhere else.
+            Zip export: You can export your blog as a zip file for your own
+            backup or to move it between your devices. Those files stay under
+            your control unless you choose to send them somewhere else.
           </li>
         </ul>
 
@@ -141,12 +142,28 @@ export default function BloggoPrivacyPage() {
           </li>
           <li>
             Registered users: Users with a Bloggo account can save and export
-            blogs according to the limits shown in the app. Account creation
-            requires a valid email address.
+            blogs without limits on how many they create or export. Account
+            creation requires a valid email address.
           </li>
+        </ul>
+        <p>
+          Age and accounts. Bloggo is listed on the Apple App Store with a 4+
+          age rating. That rating reflects the general suitability of the app
+          for download and everyday use, including when you use Bloggo without
+          registering. Creating a Bloggo account is different: it requires you
+          to provide personal information (such as an email address) that we
+          process on our systems. For that reason, you must be at least 13 years
+          old to create an account. If you are not yet 13, you may not register;
+          you may still use Bloggo as a guest within the limits shown in the
+          app, without submitting the information we collect for registered
+          users.
+        </p>
+        <ul>
           <li>
-            You must be at least 13 years old to create an account. If you are
-            under 13, you may use Bloggo only as a guest.
+            By creating an account, you represent that you are at least 13 years
+            of age, or the minimum age required in your jurisdiction to consent
+            to the collection of your personal information online, whichever is
+            higher.
           </li>
           <li>Only one account may be created per email address.</li>
         </ul>
@@ -182,7 +199,7 @@ export default function BloggoPrivacyPage() {
         <h2>9. Data Security</h2>
         <p>
           We implement security measures consistent with industry practice. Data
-          sent between the app and our servers for account sign-in and related
+          sent between the app and our servers for account sign in and related
           services is encrypted in transit (HTTPS/TLS). Your blog content itself
           is not uploaded to our servers under this policy. No method of storage
           or transmission is perfectly secure; we encourage you to use a strong,

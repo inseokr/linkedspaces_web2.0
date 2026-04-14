@@ -233,29 +233,34 @@ export default function BloggoSignInSection() {
             </h1>
 
             <GoogleOAuthProvider clientId={getGoogleOAuthWebClientId("bloggo")}>
-              <div className="mt-8 flex justify-center">
+              <div className="mx-auto mt-8 w-full max-w-[380px] space-y-3">
                 <GoogleLogin
                   onSuccess={handleGoogleLogin}
                   useOneTap
                   text="signin_with"
-                  shape="circle"
+                  shape="pill"
                   theme="outline"
-                  width="380"
+                  size="large"
+                  width={380}
+                  containerProps={{
+                    className:
+                      "flex h-10 max-h-10 w-full shrink-0 items-center justify-center overflow-hidden [&_iframe]:!h-10 [&_iframe]:!max-h-10 [&_iframe]:w-full",
+                  }}
                 />
+                <button
+                  type="button"
+                  onClick={handleAppleLogin}
+                  disabled={!appleReady || isLoading}
+                  className="flex h-10 w-full shrink-0 items-center justify-center gap-2 rounded-full border border-black/20 bg-black px-4 text-[14px] font-medium leading-none text-white hover:opacity-90 active:opacity-80 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <SiApple
+                    className="h-5 w-5 shrink-0 text-white"
+                    aria-hidden
+                  />
+                  Sign in with Apple
+                </button>
               </div>
             </GoogleOAuthProvider>
-
-            <div className="mt-3 flex justify-center">
-              <button
-                type="button"
-                onClick={handleAppleLogin}
-                disabled={!appleReady || isLoading}
-                className="flex h-[40px] w-[380px] items-center justify-center gap-2 rounded-full border border-black/20 bg-black px-4 text-[14px] font-medium text-white hover:opacity-90 active:opacity-80 transition disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                <SiApple className="h-5 w-5 shrink-0 text-white" aria-hidden />
-                Sign in with Apple
-              </button>
-            </div>
 
             <div className="my-6 flex items-center gap-4">
               <div className="h-px flex-1 border-t border-dashed border-black/30" />

@@ -21,12 +21,12 @@ const faqItems = [
       "Go to the login page and click 'Forgot password'. Enter your email address and we'll send you a reset link within a few minutes. Check your spam folder if you don't see it.",
   },
   {
-    id: "export",
+    id: "backup",
     question: "Can I backup my blogs?",
     answer: "Yes! Go to Account Settings > Blog backup",
   },
   {
-    id: "export",
+    id: "use-cases",
     question: "Is Bloggo only for travels?",
     answer:
       "No, you could use Bloggo for any purpose you want. It's not limited to travels.",
@@ -102,7 +102,7 @@ export default function SupportPage() {
           </h2>
           <p className="text-[var(--bloggo-text-secondary)] max-w-2xl leading-relaxed">
             Bloggo helps you save places you&apos;ve visited by turning photos
-            into meaningful travel memories.
+            into a meaningful travel blog.
           </p>
         </Container>
       </section>
