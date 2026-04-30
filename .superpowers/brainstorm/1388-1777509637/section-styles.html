@@ -1,0 +1,171 @@
+<h2>Which section style feels right for Bloggo?</h2>
+<p class="subtitle">Pick the vibe that matches the experience you want to create below the hero</p>
+
+<div class="cards" style="display: flex; flex-direction: column; gap: 32px; margin-top: 24px;">
+
+  <!-- OPTION A: Cinematic Alternating Story -->
+  <div class="card" data-choice="a" onclick="toggleSelect(this)" style="padding: 0; overflow: hidden; border-radius: 16px; cursor: pointer;">
+    <div style="background: #f8f8fa; padding: 12px 16px; border-bottom: 1px solid #e5e5ea;">
+      <span style="font-weight: 700; font-size: 13px; color: #555;">Option A — Cinematic Story</span>
+      <span style="font-size: 12px; color: #999; margin-left: 8px;">Full-width alternating rows, massive step numbers</span>
+    </div>
+    <div style="background: white; font-family: system-ui, sans-serif;">
+
+      <!-- Step 1 -->
+      <div style="display: flex; align-items: center; padding: 48px 56px; gap: 48px; border-bottom: 1px solid #f0f0f5; position: relative; overflow: hidden;">
+        <div style="position: absolute; right: 40px; top: 50%; transform: translateY(-50%); font-size: 180px; font-weight: 900; color: #f0f0f5; line-height: 1; user-select: none; pointer-events: none;">1</div>
+        <div style="flex: 1; max-width: 480px; position: relative; z-index: 1;">
+          <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.12em; color: #7c3aed; margin-bottom: 12px; text-transform: uppercase;">Step 01</div>
+          <h3 style="font-size: 32px; font-weight: 900; color: #0a0a0f; margin: 0 0 14px; line-height: 1.1;">Memories are meant to last.</h3>
+          <p style="color: #6b7280; font-size: 16px; line-height: 1.65; margin: 0;">Photos shouldn't sit scattered in your camera roll, forgotten. We group them by place and turn scattered shots into a clear, organized draft.</p>
+        </div>
+        <div style="width: 220px; height: 140px; background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%); border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 48px; flex-shrink: 0; position: relative; z-index: 1;">📸</div>
+      </div>
+
+      <!-- Step 2 -->
+      <div style="display: flex; align-items: center; flex-direction: row-reverse; padding: 48px 56px; gap: 48px; background: #fafafa; position: relative; overflow: hidden;">
+        <div style="position: absolute; left: 40px; top: 50%; transform: translateY(-50%); font-size: 180px; font-weight: 900; color: #f0f0f5; line-height: 1; user-select: none; pointer-events: none;">2</div>
+        <div style="flex: 1; max-width: 480px; position: relative; z-index: 1;">
+          <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.12em; color: #7c3aed; margin-bottom: 12px; text-transform: uppercase;">Step 02</div>
+          <h3 style="font-size: 32px; font-weight: 900; color: #0a0a0f; margin: 0 0 14px; line-height: 1.1;">You shouldn't start from nothing.</h3>
+          <p style="color: #6b7280; font-size: 16px; line-height: 1.65; margin: 0;">Your photos become a structured blog draft in seconds, so you never start from scratch.</p>
+        </div>
+        <div style="width: 220px; height: 140px; background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%); border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 48px; flex-shrink: 0; position: relative; z-index: 1;">📍</div>
+      </div>
+
+      <!-- Step 3 -->
+      <div style="display: flex; align-items: center; padding: 48px 56px; gap: 48px; position: relative; overflow: hidden;">
+        <div style="position: absolute; right: 40px; top: 50%; transform: translateY(-50%); font-size: 180px; font-weight: 900; color: #f0f0f5; line-height: 1; user-select: none; pointer-events: none;">3</div>
+        <div style="flex: 1; max-width: 480px; position: relative; z-index: 1;">
+          <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.12em; color: #7c3aed; margin-bottom: 12px; text-transform: uppercase;">Step 03</div>
+          <h3 style="font-size: 32px; font-weight: 900; color: #0a0a0f; margin: 0 0 14px; line-height: 1.1;">You already lived the story.</h3>
+          <p style="color: #6b7280; font-size: 16px; line-height: 1.65; margin: 0;">Now you can write it without the friction. Focus on your voice, your perspective, the details that make it yours.</p>
+        </div>
+        <div style="width: 220px; height: 140px; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 48px; flex-shrink: 0; position: relative; z-index: 1;">✨</div>
+      </div>
+
+      <!-- Dark break + privacy section -->
+      <div style="background: #0a0f1e; padding: 48px 56px; text-align: center;">
+        <p style="font-size: 28px; font-weight: 900; color: white; margin: 0; line-height: 1.2;">Your photos never leave your phone.</p>
+        <p style="color: #6b7280; margin: 12px 0 0; font-size: 15px;">Private by default. Always.</p>
+      </div>
+    </div>
+    <div style="background: #f8f8fa; padding: 10px 16px; display: flex; gap: 16px; align-items: center;">
+      <span style="font-size: 12px; color: #666;">✓ Narrative flow &nbsp;·&nbsp; ✓ Dramatic rhythm &nbsp;·&nbsp; ✓ High visual contrast</span>
+    </div>
+  </div>
+
+  <!-- OPTION B: Bold editorial / magazine -->
+  <div class="card" data-choice="b" onclick="toggleSelect(this)" style="padding: 0; overflow: hidden; border-radius: 16px; cursor: pointer;">
+    <div style="background: #f8f8fa; padding: 12px 16px; border-bottom: 1px solid #e5e5ea;">
+      <span style="font-weight: 700; font-size: 13px; color: #555;">Option B — Bold Editorial</span>
+      <span style="font-size: 12px; color: #999; margin-left: 8px;">Large type, minimal layout, confident whitespace</span>
+    </div>
+    <div style="background: white; font-family: system-ui, sans-serif; padding: 56px;">
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 64px; align-items: start; margin-bottom: 64px;">
+        <div>
+          <div style="font-size: 72px; font-weight: 900; color: #e5e7eb; line-height: 1; margin-bottom: -8px;">01</div>
+          <h3 style="font-size: 26px; font-weight: 900; color: #0a0a0f; margin: 0 0 12px;">Memories are meant to last.</h3>
+          <p style="color: #6b7280; font-size: 15px; line-height: 1.7; margin: 0; border-left: 3px solid #7c3aed; padding-left: 16px;">We group your photos by place and turn a camera roll into a clear, organized draft.</p>
+        </div>
+        <div>
+          <div style="font-size: 72px; font-weight: 900; color: #e5e7eb; line-height: 1; margin-bottom: -8px;">02</div>
+          <h3 style="font-size: 26px; font-weight: 900; color: #0a0a0f; margin: 0 0 12px;">You shouldn't start from nothing.</h3>
+          <p style="color: #6b7280; font-size: 15px; line-height: 1.7; margin: 0; border-left: 3px solid #0ea5e9; padding-left: 16px;">Your photos become a structured blog draft in seconds. Never a blank page again.</p>
+        </div>
+      </div>
+
+      <!-- Full-width quote break -->
+      <div style="border-top: 2px solid #0a0a0f; border-bottom: 2px solid #0a0a0f; padding: 32px 0; margin-bottom: 64px; text-align: center;">
+        <p style="font-size: 36px; font-weight: 900; color: #0a0a0f; margin: 0; letter-spacing: -0.02em;">"The trip happened. <span style="color: #7c3aed;">Now tell the story.</span>"</p>
+      </div>
+
+      <!-- Privacy grid -->
+      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px;">
+        <div style="padding: 24px; border: 2px solid #f0f0f5; border-radius: 12px;">
+          <div style="font-size: 28px; margin-bottom: 12px;">🔒</div>
+          <h4 style="font-weight: 800; color: #0a0a0f; margin: 0 0 8px; font-size: 15px;">Local first, private by default.</h4>
+          <p style="color: #9ca3af; font-size: 13px; margin: 0; line-height: 1.6;">Nothing shared unless you choose.</p>
+        </div>
+        <div style="padding: 24px; border: 2px solid #f0f0f5; border-radius: 12px;">
+          <div style="font-size: 28px; margin-bottom: 12px;">👤</div>
+          <h4 style="font-weight: 800; color: #0a0a0f; margin: 0 0 8px; font-size: 15px;">Try it as a guest.</h4>
+          <p style="color: #9ca3af; font-size: 13px; margin: 0; line-height: 1.6;">No account needed to get started.</p>
+        </div>
+        <div style="padding: 24px; border: 2px solid #f0f0f5; border-radius: 12px;">
+          <div style="font-size: 28px; margin-bottom: 12px;">✨</div>
+          <h4 style="font-weight: 800; color: #0a0a0f; margin: 0 0 8px; font-size: 15px;">Unlimited with a free account.</h4>
+          <p style="color: #9ca3af; font-size: 13px; margin: 0; line-height: 1.6;">Save and export as many blogs as you like.</p>
+        </div>
+      </div>
+    </div>
+    <div style="background: #f8f8fa; padding: 10px 16px;">
+      <span style="font-size: 12px; color: #666;">✓ Clean & minimal &nbsp;·&nbsp; ✓ Editorial personality &nbsp;·&nbsp; ✓ Strong typography</span>
+    </div>
+  </div>
+
+  <!-- OPTION C: Immersive dark with motion feel -->
+  <div class="card" data-choice="c" onclick="toggleSelect(this)" style="padding: 0; overflow: hidden; border-radius: 16px; cursor: pointer;">
+    <div style="background: #f8f8fa; padding: 12px 16px; border-bottom: 1px solid #e5e5ea;">
+      <span style="font-weight: 700; font-size: 13px; color: #555;">Option C — Immersive Dark</span>
+      <span style="font-size: 12px; color: #999; margin-left: 8px;">Dark backdrop, glowing accents, app-like feel</span>
+    </div>
+    <div style="font-family: system-ui, sans-serif; background: #0a0f1e;">
+
+      <!-- Ticker strip -->
+      <div style="background: #111827; border-top: 1px solid #1f2937; border-bottom: 1px solid #1f2937; padding: 12px 0; overflow: hidden;">
+        <div style="display: flex; gap: 48px; white-space: nowrap; color: #4b5563; font-size: 13px; font-weight: 600; letter-spacing: 0.08em;">
+          <span>NO BLANK PAGE</span><span style="color: #7c3aed;">·</span>
+          <span>YOUR STORY YOUR VOICE</span><span style="color: #7c3aed;">·</span>
+          <span>PRIVATE BY DEFAULT</span><span style="color: #7c3aed;">·</span>
+          <span>BLOG FROM ANYWHERE</span><span style="color: #7c3aed;">·</span>
+          <span>NO BLANK PAGE</span><span style="color: #7c3aed;">·</span>
+          <span>YOUR STORY YOUR VOICE</span>
+        </div>
+      </div>
+
+      <!-- Steps -->
+      <div style="padding: 56px; display: flex; flex-direction: column; gap: 2px;">
+        <div style="display: flex; gap: 32px; align-items: flex-start; padding: 32px; border-radius: 16px; background: #111827; border: 1px solid #1f2937; margin-bottom: 12px;">
+          <div style="width: 48px; height: 48px; border-radius: 12px; background: linear-gradient(135deg, #7c3aed, #6d28d9); display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 900; color: white; flex-shrink: 0;">1</div>
+          <div>
+            <h3 style="font-size: 22px; font-weight: 900; color: white; margin: 0 0 8px;">Memories are meant to last.</h3>
+            <p style="color: #6b7280; font-size: 15px; line-height: 1.65; margin: 0;">We group your photos by place and turn scattered shots into a clear, organized draft.</p>
+          </div>
+          <div style="margin-left: auto; font-size: 36px; flex-shrink: 0;">📸</div>
+        </div>
+
+        <div style="display: flex; gap: 32px; align-items: flex-start; padding: 32px; border-radius: 16px; background: #111827; border: 1px solid #1f2937; margin-bottom: 12px;">
+          <div style="width: 48px; height: 48px; border-radius: 12px; background: linear-gradient(135deg, #0ea5e9, #0284c7); display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 900; color: white; flex-shrink: 0;">2</div>
+          <div>
+            <h3 style="font-size: 22px; font-weight: 900; color: white; margin: 0 0 8px;">You shouldn't start from nothing.</h3>
+            <p style="color: #6b7280; font-size: 15px; line-height: 1.65; margin: 0;">Your photos become a structured blog draft in seconds. Never from scratch.</p>
+          </div>
+          <div style="margin-left: auto; font-size: 36px; flex-shrink: 0;">📍</div>
+        </div>
+
+        <div style="display: flex; gap: 32px; align-items: flex-start; padding: 32px; border-radius: 16px; background: #111827; border: 1px solid #1f2937;">
+          <div style="width: 48px; height: 48px; border-radius: 12px; background: linear-gradient(135deg, #f59e0b, #d97706); display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 900; color: white; flex-shrink: 0;">3</div>
+          <div>
+            <h3 style="font-size: 22px; font-weight: 900; color: white; margin: 0 0 8px;">You already lived the story.</h3>
+            <p style="color: #6b7280; font-size: 15px; line-height: 1.65; margin: 0;">Focus on your voice, your perspective, the details that make it yours.</p>
+          </div>
+          <div style="margin-left: auto; font-size: 36px; flex-shrink: 0;">✨</div>
+        </div>
+      </div>
+
+      <!-- Bold statement -->
+      <div style="padding: 48px 56px; border-top: 1px solid #1f2937; text-align: center; background: linear-gradient(180deg, #0a0f1e 0%, #0f172a 100%);">
+        <p style="font-size: 40px; font-weight: 900; color: white; margin: 0 0 8px; letter-spacing: -0.02em;">Your photos never leave your phone.</p>
+        <p style="color: #4b5563; font-size: 16px; margin: 0;">Private by default. Always yours.</p>
+      </div>
+    </div>
+    <div style="background: #f8f8fa; padding: 10px 16px;">
+      <span style="font-size: 12px; color: #666;">✓ High drama &nbsp;·&nbsp; ✓ App-like feel &nbsp;·&nbsp; ✓ Motion-ready</span>
+    </div>
+  </div>
+
+</div>
+
+<p style="text-align: center; color: #9ca3af; font-size: 13px; margin-top: 16px;">Click a style to select it, then let me know in the terminal</p>

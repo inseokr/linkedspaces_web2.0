@@ -142,6 +142,13 @@ export default function BloggoHeader() {
             }
             className="shrink-0 flex items-center gap-2 font-bold text-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 rounded-lg"
           >
+            <Image
+              src="/images/bloggo-icon.png"
+              alt="Bloggo"
+              width={28}
+              height={28}
+              className="rounded-md"
+            />
             <span className="gradient-text">Bloggo</span>
           </Link>
 

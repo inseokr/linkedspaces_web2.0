@@ -2,16 +2,13 @@ import Link from "next/link";
 import Image from "next/image";
 import Container from "@/bloggo/components/ui/Container";
 import Button from "@/bloggo/components/ui/Button";
-import Card from "@/bloggo/components/ui/Card";
 import Badge from "@/bloggo/components/ui/Badge";
-import SectionHeader from "@/bloggo/components/ui/SectionHeader";
 import BloggoHomeRedirect from "@/bloggo/components/BloggoHomeRedirect";
 
 const BASE = "/bloggo";
 
 const BETA_TESTFLIGHT_URL = "https://testflight.apple.com/join/QTvGbGK2";
 
-/** Matches Button primary + lg for an external link (valid HTML; no button inside anchor). */
 const betaCtaClassName = [
   "inline-flex items-center justify-center gap-2 font-medium transition-all duration-200",
   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bloggo-bg)]",
@@ -20,51 +17,48 @@ const betaCtaClassName = [
   "px-7 py-3.5 text-base rounded-xl",
 ].join(" ");
 
-const howItWorks = [
+const steps = [
   {
-    step: "1",
+    number: "01",
+    emoji: "📸",
     title: "Memories are meant to last.",
-    description:
-      "Photos shouldn't sit scattered in your camera roll, forgotten. We group them by place and turn scattered photos into a clear, organized draft.",
-    microCopy: "Just choose the adventure you want to turn into a blog.",
-    icon: "📸",
+    desc: "Photos shouldn't sit scattered in your camera roll, forgotten. We group them by place and turn scattered shots into a clear, organized draft.",
+    microcopy: "Just choose the adventure you want to tell.",
+    side: "left",
   },
   {
-    step: "2",
+    number: "02",
+    emoji: "📍",
     title: "You shouldn't start from nothing.",
-    description:
-      "Your photos become a structured blog draft in seconds, so you never start from scratch.",
-    microCopy: 'From "IMG_4821" to "Blue Bottle Coffee, San Francisco."',
-    icon: "📍",
+    desc: "Your photos become a structured blog draft in seconds, so you never start from scratch.",
+    microcopy: '"IMG_4821" → "Blue Bottle Coffee, San Francisco."',
+    side: "right",
   },
   {
-    step: "3",
+    number: "03",
+    emoji: "✨",
     title: "You already lived the story.",
-    description:
-      "Now you can write it without the friction. You can focus on adding your voice, your perspective, and the details that make it yours.",
-    microCopy: "Never from scratch again.",
-    icon: "✨",
+    desc: "Now you can write it without the friction. Focus on adding your voice, your perspective, and the details that make it uniquely yours.",
+    microcopy: "Never from scratch again.",
+    side: "left",
   },
 ];
 
-const privateByDefaultFeatures = [
+const privacyFeatures = [
   {
-    title: "Local first, private by default.",
-    description:
-      "Your blog drafts live on your device until you export or publish. Nothing is shared unless you choose.",
     icon: "🔒",
+    title: "Local first, private by default.",
+    desc: "Your blog drafts live on your device until you export or publish. Nothing is shared unless you choose.",
   },
   {
-    title: "Try it as a guest.",
-    description:
-      "No account needed to get started. Guests can save one blog and export once; both stay on your device.",
     icon: "👤",
+    title: "Try it as a guest.",
+    desc: "No account needed to get started. Guests can save one blog and export once; both stay on your device.",
   },
   {
-    title: "Unlimited with a free account.",
-    description:
-      "Sign in to save and export as many blogs as you like, with the same local first privacy and no guest caps.",
     icon: "✨",
+    title: "Unlimited with a free account.",
+    desc: "Sign in to save and export as many blogs as you like, with the same local first privacy and no guest caps.",
   },
 ];
 
@@ -72,6 +66,8 @@ export default function BloggoHomePage() {
   return (
     <>
       <BloggoHomeRedirect />
+
+      {/* ── HERO — untouched ── */}
       <section className="relative overflow-hidden pt-8 pb-12 sm:pt-10 sm:pb-16">
         <Container>
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-12 lg:gap-16">
@@ -148,103 +144,271 @@ export default function BloggoHomePage() {
         />
       </section>
 
-      <section className="py-24 border-t border-[var(--bloggo-border)] bg-[var(--bloggo-bg-secondary)]/30">
-        <Container className="flex flex-col gap-16">
-          <SectionHeader
-            eyebrow="How It Works"
-            title="From Camera Roll to Blog in 3 Steps"
-            subtitle="Stop staring at a blank screen. Let your photos tell the story first."
-          />
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {howItWorks.map((step) => (
-              <Card
-                key={step.step}
-                padding="lg"
-                className="relative group hover:-translate-y-1 transition-transform duration-300"
-              >
-                <div className="absolute top-6 right-6 text-4xl font-black text-black/20 select-none group-hover:text-blue-600 transition-colors">
-                  {step.step}
-                </div>
-                <div className="text-4xl mb-6" aria-hidden="true">
-                  {step.icon}
-                </div>
-                <h3 className="text-xl font-bold text-[var(--bloggo-text-primary)] mb-3">
-                  {step.title}
-                </h3>
-                <p className="text-[var(--bloggo-text-secondary)] leading-relaxed">
-                  {step.description}
-                </p>
-              </Card>
-            ))}
-          </div>
-        </Container>
-      </section>
-
-      <section className="py-24 border-t border-[var(--bloggo-border)]">
-        <Container className="flex flex-col gap-16">
-          <SectionHeader
-            eyebrow="Privacy First"
-            title="Private by default"
-            subtitle="Your trip blogs stay on your phone until you export or publish. Try Bloggo as a guest, or sign in when you're ready for unlimited saves and exports."
-          />
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {privateByDefaultFeatures.map((feature) => (
-              <Card
-                key={feature.title}
-                padding="lg"
-                className="flex flex-col gap-4 border-transparent hover:border-[var(--bloggo-border)] transition-colors"
-              >
-                <div className="w-12 h-12 rounded-xl bg-violet-500/10 flex items-center justify-center text-2xl">
-                  {feature.icon}
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-[var(--bloggo-text-primary)] mb-2">
-                    {feature.title}
-                  </h3>
-                  <p className="text-sm text-[var(--bloggo-text-secondary)]">
-                    {feature.description}
-                  </p>
-                </div>
-              </Card>
-            ))}
-          </div>
-        </Container>
-      </section>
-
-      <section className="py-24 border-t border-[var(--bloggo-border)]">
-        <Container size="md">
-          <Card
-            padding="lg"
-            className="flex flex-col items-center text-center gap-8 relative overflow-hidden py-16"
+      {/* ── HOW IT WORKS — vertical timeline ── */}
+      <section style={{ background: "#060d1f" }} className="py-24">
+        <div className="text-center mb-16">
+          <span
+            className="inline-block px-4 py-1.5 rounded-full text-xs font-bold tracking-widest uppercase mb-4"
+            style={{
+              background: "rgba(56,189,248,0.1)",
+              border: "1px solid rgba(56,189,248,0.25)",
+              color: "#38bdf8",
+            }}
           >
-            <div
-              className="absolute inset-0 pointer-events-none"
-              aria-hidden="true"
-              style={{
-                background:
-                  "radial-gradient(ellipse 80% 80% at 50% 120%, rgba(124,58,237,0.15) 0%, transparent 70%)",
-              }}
-            />
-            <div className="relative z-10 flex flex-col items-center gap-6">
-              <h2 className="text-4xl sm:text-5xl font-black text-[var(--bloggo-text-primary)] tracking-tight">
-                Ready to relive your trips?
-              </h2>
-              <p className="text-lg text-[var(--bloggo-text-secondary)] max-w-lg">
-                Download the app and start building your drafts today.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-4 w-full justify-center mt-2">
-                <Button
-                  size="lg"
-                  variant="primary"
-                  className="w-full sm:w-auto px-8 opacity-50 cursor-not-allowed"
-                  disabled
+            How It Works
+          </span>
+          <h2
+            className="text-4xl sm:text-5xl font-black tracking-tight leading-tight"
+            style={{ color: "white" }}
+          >
+            From camera roll
+            <br />
+            to published blog.
+          </h2>
+        </div>
+
+        {/* Timeline */}
+        <div className="max-w-5xl mx-auto px-6">
+          <div className="flex flex-col">
+            {steps.map((step, index) => {
+              const isLast = index === steps.length - 1;
+              const StepContent = () => (
+                <div className={index === 0 ? "pt-0" : ""}>
+                  <div
+                    className="text-xs font-bold tracking-widest uppercase mb-2"
+                    style={{ color: "#38bdf8" }}
+                  >
+                    Step {step.number}
+                  </div>
+                  <h3
+                    className="text-xl font-black mb-3 leading-snug"
+                    style={{ color: "white" }}
+                  >
+                    {step.title}
+                  </h3>
+                  <p
+                    className="text-sm leading-relaxed mb-3"
+                    style={{ color: "#94a3b8" }}
+                  >
+                    {step.desc}
+                  </p>
+                  <span
+                    className="inline-block px-3 py-1 rounded-full text-xs italic"
+                    style={{
+                      background: "rgba(56,189,248,0.08)",
+                      border: "1px solid rgba(56,189,248,0.15)",
+                      color: "#38bdf8",
+                    }}
+                  >
+                    {step.microcopy}
+                  </span>
+                </div>
+              );
+
+              return (
+                <div
+                  key={step.number}
+                  className="grid grid-cols-1 md:grid-cols-[1fr_48px_1fr] md:items-stretch"
                 >
-                  Coming Soon
-                </Button>
+                  {/* Left slot */}
+                  <div
+                    className={`md:pr-14 pb-12 ${step.side === "left" ? "md:text-right" : "hidden md:block"}`}
+                  >
+                    {step.side === "left" && <StepContent />}
+                  </div>
+
+                  {/* Center: node + connecting line */}
+                  <div className="hidden md:flex flex-col items-center">
+                    <div
+                      className="w-12 h-12 rounded-full flex items-center justify-center text-xl flex-shrink-0 z-10"
+                      style={{
+                        background: "#0ea5e9",
+                        border: "3px solid #060d1f",
+                        boxShadow:
+                          "0 0 0 2px #38bdf8, 0 0 20px rgba(56,189,248,0.4)",
+                      }}
+                    >
+                      {step.emoji}
+                    </div>
+                    {!isLast && (
+                      <div
+                        className="flex-1 w-0.5 mt-1"
+                        style={{
+                          background:
+                            "linear-gradient(180deg, #38bdf8, #0284c7)",
+                          opacity: 0.55,
+                        }}
+                      />
+                    )}
+                  </div>
+
+                  {/* Right slot */}
+                  <div
+                    className={`md:pl-14 pb-12 ${step.side === "right" ? "" : "hidden md:block"}`}
+                  >
+                    {step.side === "right" && <StepContent />}
+                  </div>
+
+                  {/* Mobile: node + content stacked */}
+                  <div className="md:hidden flex gap-4 items-start pb-10">
+                    <div
+                      className="w-10 h-10 rounded-full flex items-center justify-center text-lg flex-shrink-0"
+                      style={{
+                        background: "#0ea5e9",
+                        border: "3px solid #060d1f",
+                        boxShadow:
+                          "0 0 0 2px #38bdf8, 0 0 16px rgba(56,189,248,0.4)",
+                      }}
+                    >
+                      {step.emoji}
+                    </div>
+                    <StepContent />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* ── PRIVACY FIRST ── */}
+      <section
+        style={{
+          background: "#0a1628",
+          borderTop: "1px solid rgba(56,189,248,0.1)",
+          borderBottom: "1px solid rgba(56,189,248,0.1)",
+        }}
+        className="py-24"
+      >
+        <div className="text-center mb-14 px-6">
+          <span
+            className="inline-block px-4 py-1.5 rounded-full text-xs font-bold tracking-widest uppercase mb-4"
+            style={{
+              background: "rgba(56,189,248,0.1)",
+              border: "1px solid rgba(56,189,248,0.25)",
+              color: "#38bdf8",
+            }}
+          >
+            Privacy First
+          </span>
+          <h2
+            className="text-4xl sm:text-5xl font-black tracking-tight mb-4"
+            style={{ color: "white" }}
+          >
+            Private by default
+          </h2>
+          <p
+            className="text-base leading-relaxed max-w-xl mx-auto"
+            style={{ color: "#94a3b8" }}
+          >
+            Your trip blogs stay on your phone until you export or publish. Try
+            Bloggo as a guest, or sign in when you&apos;re ready for unlimited
+            saves and exports.
+          </p>
+        </div>
+
+        <div className="max-w-4xl mx-auto px-6 grid grid-cols-1 md:grid-cols-3 gap-8">
+          {privacyFeatures.map((f) => (
+            <div key={f.title} className="flex items-start gap-4">
+              <div
+                className="w-11 h-11 rounded-xl flex items-center justify-center text-xl flex-shrink-0"
+                style={{
+                  background: "rgba(56,189,248,0.1)",
+                  border: "1px solid rgba(56,189,248,0.15)",
+                }}
+              >
+                {f.icon}
+              </div>
+              <div>
+                <h4
+                  className="text-sm font-extrabold mb-1"
+                  style={{ color: "#f1f5f9" }}
+                >
+                  {f.title}
+                </h4>
+                <p
+                  className="text-xs leading-relaxed"
+                  style={{ color: "#94a3b8" }}
+                >
+                  {f.desc}
+                </p>
               </div>
             </div>
-          </Card>
-        </Container>
+          ))}
+        </div>
+      </section>
+
+      {/* ── BIG EMOTIONAL CTA ── */}
+      <section
+        style={{ background: "#060d1f" }}
+        className="py-32 px-6 text-center relative overflow-hidden"
+      >
+        {/* Glow */}
+        <div
+          className="pointer-events-none absolute inset-0"
+          aria-hidden="true"
+          style={{
+            background:
+              "radial-gradient(ellipse 80% 60% at 50% 100%, rgba(14,165,233,0.12) 0%, transparent 70%)",
+          }}
+        />
+
+        <div className="relative z-10 max-w-3xl mx-auto">
+          <span
+            className="inline-block px-4 py-1.5 rounded-full text-xs font-bold tracking-widest uppercase mb-8"
+            style={{
+              background: "rgba(56,189,248,0.1)",
+              border: "1px solid rgba(56,189,248,0.25)",
+              color: "#38bdf8",
+            }}
+          >
+            Ready?
+          </span>
+          <h2
+            className="text-5xl sm:text-6xl font-black tracking-tight leading-[1.05] mb-5"
+            style={{ color: "white" }}
+          >
+            The trip happened.
+            <br />
+            <span
+              style={{
+                background: "linear-gradient(135deg, #38bdf8, #818cf8)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+              }}
+            >
+              Now tell the story.
+            </span>
+          </h2>
+          <p className="text-lg mb-10" style={{ color: "#64748b" }}>
+            Download Bloggo on TestFlight and start your first draft today.
+          </p>
+          <a
+            href={BETA_TESTFLIGHT_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-3 px-9 py-4 rounded-2xl text-base font-bold text-white transition-all active:scale-[0.98]"
+            style={{
+              background: "linear-gradient(135deg, #0ea5e9, #38bdf8)",
+              boxShadow: "0 0 40px rgba(14,165,233,0.35)",
+            }}
+          >
+            Try Beta on TestFlight
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M13 7l5 5m0 0l-5 5m5-5H6"
+              />
+            </svg>
+          </a>
+        </div>
       </section>
     </>
   );
