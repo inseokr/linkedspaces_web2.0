@@ -21,15 +21,40 @@ const faqItems = [
       "Go to the login page and click 'Forgot password'. Enter your email address and we'll send you a reset link within a few minutes. Check your spam folder if you don't see it.",
   },
   {
-    id: "backup",
-    question: "Can I backup my blogs?",
-    answer: "Yes! Go to Account Settings > Blog backup",
+    id: "create",
+    question: "How do I create my first blog?",
+    answer:
+      "Open the Bloggo app on your phone, tap the create button, and add your photos and text. Your blog is saved locally on your device and ready to view, edit, or share whenever you like.",
   },
   {
-    id: "use-cases",
-    question: "Is Bloggo only for travels?",
+    id: "export",
+    question: "Can I export my blogs?",
     answer:
-      "No, you could use Bloggo for any purpose you want. It's not limited to travels.",
+      "You must create an account to export your blogs freely. Once signed in, you can download your blogs onto your phone.",
+  },
+  {
+    id: "desktop",
+    question: "How do I edit my blog on the desktop?",
+    answer:
+      "Upload your blog to the cloud from the Bloggo app, then sign into the same account on the Bloggo website. From there you can edit your blogs directly in the browser.",
+  },
+  {
+    id: "privacy",
+    question: "Can others see my blogs?",
+    answer:
+      "Your blogs stay on your phone, private to you. However, you can share, export, and upload them to the cloud for easier sharing capabilities and a big screen blogging experience.",
+  },
+  {
+    id: "sharing",
+    question: "How do I share my blog with others?",
+    answer:
+      "You can share your blog from both the phone and the desktop. Simply copy your blog link and forward it to your friends and family through text, email, or social media.",
+  },
+  {
+    id: "images",
+    question: "What image formats are supported?",
+    answer:
+      "Bloggo supports JPEG, PNG, WebP, GIF, and SVG. Images are automatically optimized and served via CDN. Maximum file size is 10 MB per image.",
   },
 ];
 

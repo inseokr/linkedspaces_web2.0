@@ -588,11 +588,28 @@ function RecapPlaceBlock({
           </div>
         </div>
 
-        {/* Category label — shown above place story */}
-        {entry.categoryLabel && (
-          <span className="inline-flex items-center rounded-full bg-sky-100 px-3 py-1 text-[13px] font-bold text-sky-600 shadow-sm">
-            {entry.categoryLabel}
-          </span>
+        {/* Start/End and Category labels — shown above place story */}
+        {(entryRole !== "poi" || entry.categoryLabel) && (
+          <div className="flex items-center gap-2">
+            {entryRole !== "poi" && (
+              <span
+                className="inline-flex items-center rounded-full px-3 py-1 text-[13px] font-bold text-white"
+                style={{
+                  background:
+                    entryRole === "start"
+                      ? "rgb(34, 197, 94)"
+                      : "rgb(249, 115, 22)",
+                }}
+              >
+                {entryRole === "start" ? "Start" : "End"}
+              </span>
+            )}
+            {entry.categoryLabel && (
+              <span className="inline-flex items-center rounded-full bg-sky-100 px-3 py-1 text-[13px] font-bold text-sky-600 shadow-sm">
+                {entry.categoryLabel}
+              </span>
+            )}
+          </div>
         )}
 
         {/* Place Story Section */}
@@ -726,23 +743,6 @@ function RecapPhotoCarousel({
 
   return (
     <div className="relative w-full mx-auto max-w-full lg:max-w-[920px] 2xl:max-w-[1100px]">
-      {/* Category and Start/End labels pill above the first photo */}
-      {entryRole !== "poi" && (
-        <div className="mb-4 flex items-center gap-2">
-          <span
-            className="inline-flex items-center rounded-full px-3 py-1 text-[13px] font-bold text-white"
-            style={{
-              background:
-                entryRole === "start"
-                  ? "rgb(34, 197, 94)"
-                  : "rgb(249, 115, 22)",
-            }}
-          >
-            {entryRole === "start" ? "Start" : "End"}
-          </span>
-        </div>
-      )}
-
       <div
         ref={scrollerRef}
         className={[

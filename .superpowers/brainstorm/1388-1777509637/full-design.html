@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bloggo — Full Page Design Preview</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #060d1f; color: white; }
+
+  /* ── HEADER (simplified) ── */
+  .header {
+    height: 60px;
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 48px;
+    background: rgba(6,13,31,0.95);
+    position: sticky; top: 0; z-index: 10;
+  }
+  .header-logo { font-size: 18px; font-weight: 900; background: linear-gradient(135deg, #38bdf8, #818cf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .header-nav { display: flex; gap: 24px; font-size: 13px; color: #94a3b8; font-weight: 600; }
+  .header-nav span { cursor: pointer; }
+  .header-nav span:hover { color: #e2e8f0; }
+
+  /* ── HERO (abbreviated) ── */
+  .hero {
+    padding: 72px 48px 64px;
+    text-align: center;
+    background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(56,189,248,0.08) 0%, transparent 70%);
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+  .hero-badge {
+    display: inline-block; padding: 5px 14px; border-radius: 999px;
+    background: rgba(124,58,237,0.2); border: 1px solid rgba(124,58,237,0.4);
+    font-size: 11px; font-weight: 700; letter-spacing: 0.12em; color: #c4b5fd;
+    text-transform: uppercase; margin-bottom: 24px;
+  }
+  .hero h1 { font-size: 52px; font-weight: 900; letter-spacing: -0.02em; line-height: 1.08; margin-bottom: 16px; }
+  .hero h1 span { background: linear-gradient(135deg, #38bdf8, #818cf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .hero p { color: #94a3b8; font-size: 17px; line-height: 1.65; max-width: 480px; margin: 0 auto 32px; }
+  .hero-btns { display: flex; gap: 12px; justify-content: center; }
+  .btn-primary {
+    padding: 13px 28px; border-radius: 12px; font-size: 15px; font-weight: 700;
+    background: #0ea5e9; color: white; border: none; cursor: pointer;
+  }
+  .btn-secondary {
+    padding: 13px 28px; border-radius: 12px; font-size: 15px; font-weight: 700;
+    background: rgba(255,255,255,0.07); color: #e2e8f0; border: 1px solid rgba(255,255,255,0.1); cursor: pointer;
+  }
+  .hero-note { font-size: 12px; color: #374151; margin-top: 40px; font-style: italic; }
+
+  /* ── TIMELINE SECTION ── */
+  .timeline-section {
+    padding: 96px 48px;
+    background: #060d1f;
+    position: relative;
+  }
+  .section-eyebrow {
+    display: inline-block;
+    padding: 5px 14px;
+    border-radius: 999px;
+    background: rgba(56,189,248,0.1);
+    border: 1px solid rgba(56,189,248,0.25);
+    font-size: 11px; font-weight: 700; letter-spacing: 0.12em;
+    color: #38bdf8; text-transform: uppercase; margin-bottom: 16px;
+  }
+  .eyebrow-wrap {
+    text-align: center; margin-bottom: 16px;
+  }
+  .section-title {
+    text-align: center;
+    font-size: 40px; font-weight: 900; letter-spacing: -0.02em;
+    color: white; margin-bottom: 72px; line-height: 1.1;
+  }
+
+  .timeline {
+    position: relative;
+    max-width: 860px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+  /* Vertical spine */
+  .timeline::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 24px;
+    bottom: 24px;
+    width: 2px;
+    background: linear-gradient(180deg, #38bdf8 0%, #0ea5e9 50%, #0284c7 100%);
+    transform: translateX(-50%);
+    opacity: 0.6;
+  }
+
+  .timeline-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 0;
+    margin-bottom: 64px;
+    position: relative;
+  }
+  .timeline-step:last-child { margin-bottom: 0; }
+
+  /* Left steps */
+  .timeline-step.left { flex-direction: row; }
+  .timeline-step.left .step-content { text-align: right; padding-right: 56px; flex: 1; }
+  .timeline-step.left .step-spacer { flex: 1; padding-left: 56px; }
+
+  /* Right steps */
+  .timeline-step.right { flex-direction: row; }
+  .timeline-step.right .step-spacer { flex: 1; padding-right: 56px; }
+  .timeline-step.right .step-content { text-align: left; padding-left: 56px; flex: 1; }
+
+  /* Center node */
+  .step-node {
+    width: 48px; height: 48px; border-radius: 50%;
+    background: #0ea5e9;
+    border: 3px solid #060d1f;
+    box-shadow: 0 0 0 2px #38bdf8, 0 0 20px rgba(56,189,248,0.4);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+    position: relative; z-index: 2;
+    margin-top: 4px;
+  }
+
+  .step-label {
+    font-size: 10px; font-weight: 700; letter-spacing: 0.14em;
+    color: #38bdf8; text-transform: uppercase; margin-bottom: 8px;
+  }
+  .step-title {
+    font-size: 22px; font-weight: 900; color: white;
+    margin-bottom: 10px; line-height: 1.2;
+  }
+  .step-desc {
+    font-size: 14px; color: #94a3b8; line-height: 1.7;
+  }
+  .step-microcopy {
+    display: inline-block;
+    margin-top: 12px;
+    padding: 5px 12px;
+    background: rgba(56,189,248,0.08);
+    border: 1px solid rgba(56,189,248,0.15);
+    border-radius: 999px;
+    font-size: 12px; color: #38bdf8; font-style: italic;
+  }
+
+  /* ── PRIVACY STRIP ── */
+  .privacy-strip {
+    background: #0a1628;
+    border-top: 1px solid rgba(56,189,248,0.1);
+    border-bottom: 1px solid rgba(56,189,248,0.1);
+    padding: 48px;
+  }
+  .privacy-grid {
+    max-width: 860px; margin: 0 auto;
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px;
+  }
+  .privacy-item { display: flex; align-items: flex-start; gap: 16px; }
+  .privacy-icon {
+    width: 44px; height: 44px; border-radius: 12px;
+    background: rgba(56,189,248,0.1); border: 1px solid rgba(56,189,248,0.15);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; flex-shrink: 0;
+  }
+  .privacy-text h4 { font-size: 14px; font-weight: 800; color: #f1f5f9; margin-bottom: 4px; }
+  .privacy-text p { font-size: 13px; color: #94a3b8; line-height: 1.6; }
+
+  /* ── BIG CTA ── */
+  .cta-section {
+    padding: 120px 48px;
+    text-align: center;
+    background: radial-gradient(ellipse 100% 80% at 50% 100%, rgba(56,189,248,0.1) 0%, transparent 70%);
+    position: relative; overflow: hidden;
+  }
+  .cta-section::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse 60% 60% at 50% 50%, rgba(14,165,233,0.05) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .cta-eyebrow {
+    font-size: 11px; font-weight: 700; letter-spacing: 0.16em;
+    color: #38bdf8; text-transform: uppercase; margin-bottom: 24px;
+  }
+  .cta-headline {
+    font-size: 56px; font-weight: 900; letter-spacing: -0.03em; line-height: 1.05;
+    color: white; margin-bottom: 20px; max-width: 700px; margin-left: auto; margin-right: auto;
+  }
+  .cta-headline span {
+    background: linear-gradient(135deg, #38bdf8, #818cf8);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .cta-sub { font-size: 17px; color: #4b5563; margin-bottom: 40px; }
+  .cta-btn {
+    display: inline-flex; align-items: center; gap: 10px;
+    padding: 16px 36px; border-radius: 14px; font-size: 16px; font-weight: 700;
+    background: linear-gradient(135deg, #0ea5e9, #38bdf8);
+    color: white; border: none; cursor: pointer;
+    box-shadow: 0 0 40px rgba(14,165,233,0.3);
+    text-decoration: none;
+  }
+  .cta-btn svg { width: 18px; height: 18px; }
+
+  /* Selection overlay */
+  .select-bar {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: #0ea5e9; color: white;
+    padding: 12px; text-align: center;
+    font-weight: 700; font-size: 14px;
+    display: none; z-index: 100;
+    cursor: pointer;
+  }
+  .select-bar.visible { display: block; }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-logo">Bloggo</div>
+  <div class="header-nav">
+    <span>Features</span>
+    <span>Support</span>
+  </div>
+</div>
+
+<!-- Hero (abbreviated — just to give context) -->
+<div class="hero">
+  <div class="hero-badge">Photo-First Blogging</div>
+  <h1>Turn Trip Photos into <span>Blogs. Fast.</span></h1>
+  <p>Bloggo eliminates blank page anxiety. Turn your camera roll into a blog draft in seconds.</p>
+  <div class="hero-btns">
+    <button class="btn-primary">Try Beta →</button>
+    <button class="btn-secondary">Explore features</button>
+  </div>
+  <div class="hero-note">↓ Scroll to see the redesigned sections below</div>
+</div>
+
+<!-- Timeline Section -->
+<div class="timeline-section">
+  <div class="eyebrow-wrap"><div class="section-eyebrow">How It Works</div></div>
+  <div class="section-title">From camera roll<br>to published blog.</div>
+
+  <div class="timeline">
+
+    <!-- Step 1 — Left -->
+    <div class="timeline-step left">
+      <div class="step-content">
+        <div class="step-label">Step 01</div>
+        <div class="step-title">Memories are meant to last.</div>
+        <div class="step-desc">Photos shouldn't sit scattered in your camera roll, forgotten. We group them by place and turn scattered shots into a clear, organized draft.</div>
+        <div class="step-microcopy">Just choose the adventure you want to tell.</div>
+      </div>
+      <div class="step-node">📸</div>
+      <div class="step-spacer"></div>
+    </div>
+
+    <!-- Step 2 — Right -->
+    <div class="timeline-step right">
+      <div class="step-spacer"></div>
+      <div class="step-node">📍</div>
+      <div class="step-content">
+        <div class="step-label">Step 02</div>
+        <div class="step-title">You shouldn't start from nothing.</div>
+        <div class="step-desc">Your photos become a structured blog draft in seconds, so you never start from scratch. From "IMG_4821" to a real narrative.</div>
+        <div class="step-microcopy">"IMG_4821" → "Blue Bottle Coffee, San Francisco."</div>
+      </div>
+    </div>
+
+    <!-- Step 3 — Left -->
+    <div class="timeline-step left">
+      <div class="step-content">
+        <div class="step-label">Step 03</div>
+        <div class="step-title">You already lived the story.</div>
+        <div class="step-desc">Now you can write it without the friction. Focus on adding your voice, your perspective, and the details that make it uniquely yours.</div>
+        <div class="step-microcopy">Never from scratch again.</div>
+      </div>
+      <div class="step-node">✨</div>
+      <div class="step-spacer"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Privacy Strip -->
+<div class="privacy-strip">
+  <div style="text-align: center; margin-bottom: 48px;">
+    <div class="eyebrow-wrap"><div class="section-eyebrow">Privacy First</div></div>
+    <div style="font-size: 36px; font-weight: 900; color: white; letter-spacing: -0.02em; margin-bottom: 12px;">Private by default</div>
+    <p style="font-size: 16px; color: #94a3b8; max-width: 520px; margin: 0 auto; line-height: 1.65;">Your trip blogs stay on your phone until you export or publish. Try Bloggo as a guest, or sign in when you're ready for unlimited saves and exports.</p>
+  </div>
+  <div class="privacy-grid">
+    <div class="privacy-item">
+      <div class="privacy-icon">🔒</div>
+      <div class="privacy-text">
+        <h4>Local first, private by default.</h4>
+        <p>Your blog drafts live on your device until you export or publish. Nothing is shared unless you choose.</p>
+      </div>
+    </div>
+    <div class="privacy-item">
+      <div class="privacy-icon">👤</div>
+      <div class="privacy-text">
+        <h4>Try it as a guest.</h4>
+        <p>No account needed to get started. Save one blog and export — all stays on your device.</p>
+      </div>
+    </div>
+    <div class="privacy-item">
+      <div class="privacy-icon">✨</div>
+      <div class="privacy-text">
+        <h4>Unlimited with a free account.</h4>
+        <p>Sign in to save and export as many blogs as you like, with the same privacy and no caps.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Big Emotional CTA -->
+<div class="cta-section">
+  <div class="eyebrow-wrap"><div class="section-eyebrow">Ready?</div></div>
+  <div class="cta-headline">The trip happened.<br><span>Now tell the story.</span></div>
+  <div class="cta-sub">Download Bloggo on TestFlight and start your first draft today.</div>
+  <a href="#" class="cta-btn">
+    Try Beta on TestFlight
+    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+  </a>
+</div>
+
+<div class="select-bar" id="selectBar" onclick="this.classList.toggle('visible')">
+  ✓ Looks good — tell Claude in the terminal
+</div>
+
+<script>
+  // Show select bar after scrolling
+  window.addEventListener('scroll', () => {
+    const bar = document.getElementById('selectBar');
+    if (window.scrollY > 300) bar.classList.add('visible');
+  });
+</script>
+
+</body>
+</html>
