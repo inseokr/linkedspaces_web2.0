@@ -7,7 +7,9 @@ import Badge from "@/bloggo/components/ui/Badge";
 import SectionHeader from "@/bloggo/components/ui/SectionHeader";
 import Input from "@/bloggo/components/ui/Input";
 import Button from "@/bloggo/components/ui/Button";
+import FormSubmittingIndicator from "@/bloggo/components/ui/FormSubmittingIndicator";
 import Accordion from "@/bloggo/components/ui/Accordion";
+import { submitSupportContact } from "@/api/supportContact";
 
 const SUPPORT_EMAIL = "bloggo@linkedspaces.com";
 
@@ -65,13 +67,22 @@ export default function SupportPage() {
   });
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitError(null);
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 1200));
+    const result = await submitSupportContact({
+      name: formState.name.trim(),
+      email: formState.email.trim(),
+      subject: formState.subject.trim(),
+      message: formState.message.trim(),
+      source: "bloggo",
+    });
     setLoading(false);
-    setSubmitted(true);
+    if (result.ok) setSubmitted(true);
+    else setSubmitError(result.message);
   };
 
   return (
@@ -116,7 +127,7 @@ export default function SupportPage() {
           </h2>
           <p className="text-[var(--bloggo-text-secondary)] max-w-2xl leading-relaxed">
             Bloggo helps you save places you&apos;ve visited by turning photos
-            into meaningful travel memories.
+            into a meaningful travel blog.
           </p>
         </Container>
       </section>
@@ -175,6 +186,7 @@ export default function SupportPage() {
                   size="sm"
                   onClick={() => {
                     setSubmitted(false);
+                    setSubmitError(null);
                     setFormState({
                       name: "",
                       email: "",
@@ -192,6 +204,7 @@ export default function SupportPage() {
                   onSubmit={handleSubmit}
                   noValidate
                   className="flex flex-col gap-5"
+                  aria-busy={loading ? true : undefined}
                 >
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                     <Input
@@ -257,6 +270,7 @@ export default function SupportPage() {
                     type="submit"
                     variant="primary"
                     loading={loading}
+                    loadingLabel="Sending…"
                     disabled={
                       !formState.name ||
                       !formState.email ||
@@ -266,6 +280,15 @@ export default function SupportPage() {
                   >
                     Send Message
                   </Button>
+                  <FormSubmittingIndicator active={loading} />
+                  {submitError ? (
+                    <p
+                      className="text-sm text-red-400 text-center"
+                      role="alert"
+                    >
+                      {submitError}
+                    </p>
+                  ) : null}
                   <p className="text-xs text-[var(--bloggo-text-muted)] text-center">
                     Or email us directly at{" "}
                     <a

@@ -104,6 +104,11 @@ type RealDashboardAnalyticsResponse = {
       placesAdded: number;
       photosAdded: number;
       joinedDate: string;
+      homeLocation?: {
+        city: string | null;
+        state: string | null;
+        country: string | null;
+      };
     }>;
     engagement?: {
       photosWithStoryPct?: string | number;
@@ -177,6 +182,13 @@ function normalizeRealAnalyticsToLegacy(
           placesAdded: asNumber(u.placesAdded),
           photosAdded: asNumber(u.photosAdded),
           joinedDate: String(u.joinedDate ?? ""),
+          homeLocation: u.homeLocation
+            ? {
+                city: u.homeLocation.city ?? null,
+                state: u.homeLocation.state ?? null,
+                country: u.homeLocation.country ?? null,
+              }
+            : undefined,
         }))
       : [],
     engagement: {
@@ -239,6 +251,11 @@ export type BackendTopActiveUser = {
   placesAdded: number;
   photosAdded: number;
   joinedDate: string;
+  homeLocation?: {
+    city: string | null;
+    state: string | null;
+    country: string | null;
+  };
 };
 
 export type BackendEngagement = {
@@ -270,6 +287,11 @@ export type BackendUserDetails = {
   audioCaptionPercentage: string;
   avgStoryLength: number;
   friendCount: number;
+  homeLocation?: {
+    city: string | null;
+    state: string | null;
+    country: string | null;
+  };
 };
 
 type RealPerUserDashboardResponse = {
@@ -281,6 +303,11 @@ type RealPerUserDashboardResponse = {
       totalPlaces?: number;
       totalPhotos?: number;
       friendCount?: number;
+      homeLocation?: {
+        city: string | null;
+        state: string | null;
+        country: string | null;
+      };
     };
     geography?: {
       placesByCountry?: Array<{ country: string; count: number }>;
@@ -360,6 +387,13 @@ function normalizeRealPerUserToLegacy(
     photosWithStoryPercentage: String(e.photosWithStoryPct ?? "0"),
     audioCaptionPercentage: String(e.photosWithAudioPct ?? "0"),
     avgStoryLength: asNumber(e.averageStoryLengthChars),
+    homeLocation: o.homeLocation
+      ? {
+          city: o.homeLocation.city ?? null,
+          state: o.homeLocation.state ?? null,
+          country: o.homeLocation.country ?? null,
+        }
+      : undefined,
   };
 }
 
@@ -694,6 +728,96 @@ export async function fetchUserDetails(
   }
 }
 
+// ---------------------------------------------------------------------------
+// Observability metrics (Bloggo admin Observability Overview)
+// ---------------------------------------------------------------------------
+
+type RealObservabilityResponse = {
+  result: "OK" | "FAIL" | string;
+  data?: {
+    overview?: {
+      totalUsers?: number;
+      totalPhotos?: number;
+      totalTrips?: number;
+      tripsSaved?: number;
+      tripsCompleted?: number;
+      totalPublishedTrips?: number;
+      blogsWithShareLink?: number;
+      blogsWithShareLinkPct?: number;
+      photosWithCaptionPct?: number;
+      activeUsers30d?: number;
+      newBlogsLast1d?: number;
+      newBlogsLast7d?: number;
+      newBlogsLast30d?: number;
+    };
+  };
+  message?: string;
+  reason?: string;
+  error?: string;
+};
+
+export type ObservabilityMetricsData = {
+  totalUsers: number;
+  activeUsers: number;
+  cloudPublishes: number;
+  photosUploaded: number;
+  blogsCreated: { day: number; week: number; month: number };
+  avgBlogsPerUser: number;
+  avgUploadsPerUser: number;
+  avgPhotosPerBlog: number;
+  blogLifecycle: { saved: number; completed: number; published: number };
+  blogsWithShareLink: number;
+  blogsWithShareLinkPct: number;
+  photosWithCaptionPct: number;
+};
+
+/**
+ * Fetch Bloggo observability KPIs from the analytics endpoint.
+ * GET /LS_API/admin/dashboard/analytics/bloggo (admin-only)
+ */
+export async function fetchObservabilityMetrics(): Promise<ObservabilityMetricsData> {
+  const token = getAuthToken();
+  const res = await apiFetch<RealObservabilityResponse>(
+    "/admin/dashboard/analytics/bloggo",
+    { method: "GET", token },
+  );
+  const result = String(res?.result ?? "").toUpperCase();
+  if (result !== "OK") {
+    throw new Error(
+      res?.reason ??
+        res?.message ??
+        res?.error ??
+        `Unexpected result: ${result}`,
+    );
+  }
+  const o = res.data?.overview ?? {};
+  const totalUsers = asNumber(o.totalUsers);
+  const totalTrips = asNumber(o.totalTrips);
+  const totalPhotos = asNumber(o.totalPhotos);
+  return {
+    totalUsers,
+    activeUsers: asNumber(o.activeUsers30d),
+    cloudPublishes: asNumber(o.totalPublishedTrips),
+    photosUploaded: totalPhotos,
+    blogsCreated: {
+      day: asNumber(o.newBlogsLast1d),
+      week: asNumber(o.newBlogsLast7d),
+      month: asNumber(o.newBlogsLast30d),
+    },
+    avgBlogsPerUser: totalUsers > 0 ? totalTrips / totalUsers : 0,
+    avgUploadsPerUser: totalUsers > 0 ? totalPhotos / totalUsers : 0,
+    avgPhotosPerBlog: totalTrips > 0 ? totalPhotos / totalTrips : 0,
+    blogLifecycle: {
+      saved: asNumber(o.tripsSaved),
+      completed: asNumber(o.tripsCompleted),
+      published: asNumber(o.totalPublishedTrips),
+    },
+    blogsWithShareLink: asNumber(o.blogsWithShareLink),
+    blogsWithShareLinkPct: asNumber(o.blogsWithShareLinkPct),
+    photosWithCaptionPct: asNumber(o.photosWithCaptionPct),
+  };
+}
+
 // --- Storage cost (Bloggo admin Cost Dashboard) ---
 // API returns { bucket, data: { storage, estimatedMonthlyCost, storageGrowth, history } }
 
@@ -865,5 +989,370 @@ export async function fetchEventAnalytics(
   return apiFetch<EventAnalyticsResponse>(
     `/admin/dashboard/activity/stream?days=${days}`,
     { method: "GET", token },
+  );
+}
+
+export type EventUsersResponse = {
+  result: "OK" | "FAIL";
+  periodDays: number;
+  total: number;
+  users: {
+    anonymousId: string;
+    userId: string | null;
+    username: string | null;
+    firstSeen: string;
+    recentActivity: string;
+    eventCount: number;
+    platforms: string[];
+    appVersions: string[];
+    homeLocation?: {
+      city: string | null;
+      state: string | null;
+      country: string | null;
+    };
+  }[];
+  stats?: {
+    minEventCount: number;
+    maxEventCount: number;
+    avgEventCount: number;
+  };
+};
+
+export type PerUserEventAnalyticsResponse = {
+  result: "OK" | "FAIL";
+  periodDays: number;
+  anonymousId: string;
+  userId: string | null;
+  username: string | null;
+  homeLocation?: {
+    city: string | null;
+    state: string | null;
+    country: string | null;
+  };
+  meta: {
+    firstSeen: string;
+    recentActivity: string;
+    totalEvents: number;
+    platforms: string[];
+    appVersions: string[];
+  } | null;
+  data: {
+    funnel: { eventName: string; count: number }[];
+    dailyTrend: ({ date: string } & Record<string, number>)[];
+    topEvents: { eventName: string; count: number }[];
+  };
+  eventStats?: { minDaily: number; maxDaily: number; avgDaily: number };
+  placeStats?: {
+    totalPlaces: number;
+    totalBlogs: number;
+    avgDaysPerBlog: number | null;
+    minDaysPerBlog: number | null;
+    maxDaysPerBlog: number | null;
+  };
+};
+
+/**
+ * Fetch list of users (anonymous IDs) who have events in the given period.
+ * GET /LS_API/admin/dashboard/activity/stream/users?days=N (admin-only)
+ */
+export async function fetchEventUsers(days = 30): Promise<EventUsersResponse> {
+  const token = getAuthToken();
+  return apiFetch<EventUsersResponse>(
+    `/admin/dashboard/activity/stream/users?days=${days}`,
+    { method: "GET", token },
+  );
+}
+
+/**
+ * Fetch per-identity event analytics for a (anonymousId, userId) pair.
+ * GET /LS_API/admin/dashboard/activity/stream/user?anonymousId=X&userId=Y&days=N
+ * Omit userId (or pass null) for anonymous sessions.
+ */
+export async function fetchUserEventAnalytics(
+  anonymousId: string,
+  userId: string | null,
+  days = 30,
+): Promise<PerUserEventAnalyticsResponse> {
+  const token = getAuthToken();
+  const params = new URLSearchParams({ anonymousId, days: String(days) });
+  if (userId) params.set("userId", userId);
+  return apiFetch<PerUserEventAnalyticsResponse>(
+    `/admin/dashboard/activity/stream/user?${params}`,
+    { method: "GET", token },
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Activity snapshots (BLOGGO-355 pre-computed daily metrics)
+// ---------------------------------------------------------------------------
+
+export type ActivitySnapshotsResponse = {
+  result: "OK" | "FAIL";
+  days: number;
+  snapshots: import("@/app/bloggo/admin/dashboard/types").ActivitySnapshot[];
+};
+
+/**
+ * Fetch pre-computed daily activity snapshots.
+ * GET /LS_API/admin/dashboard/activity/snapshots?days=N (admin-only)
+ */
+export async function fetchActivitySnapshots(
+  days = 30,
+): Promise<ActivitySnapshotsResponse> {
+  const token = getAuthToken();
+  return apiFetch<ActivitySnapshotsResponse>(
+    `/admin/dashboard/activity/snapshots?days=${days}`,
+    { method: "GET", token },
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Delayed push notification rules (admin-defined APNs)
+// ---------------------------------------------------------------------------
+
+export type PushNotificationRuleDTO = {
+  _id: string;
+  name: string;
+  enabled: boolean;
+  triggerEvent: string;
+  delayMs: number;
+  titleTemplate: string;
+  bodyTemplate: string;
+  userType: string;
+  cancelEventNames: string[];
+  correlationProperty: string | null;
+  deepLinkPayload?: Record<string, unknown>;
+  deliveryWindowEnabled: boolean;
+  deliveryWindowStartHour: number;
+  deliveryWindowEndHour: number;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type PushRulesListResponse = {
+  result: "OK" | "FAIL";
+  rules: PushNotificationRuleDTO[];
+};
+
+export async function fetchPushRules(): Promise<PushRulesListResponse> {
+  const token = getAuthToken();
+  return apiFetch<PushRulesListResponse>(`/admin/dashboard/push-rules`, {
+    method: "GET",
+    token,
+  });
+}
+
+export type CreatePushRuleBody = {
+  name: string;
+  triggerEvent: string;
+  delayMs: number;
+  titleTemplate: string;
+  bodyTemplate: string;
+  userType?: string;
+  cancelEventNames?: string[];
+  correlationProperty?: string | null;
+  enabled?: boolean;
+  deepLinkPayload?: Record<string, unknown>;
+  deliveryWindowEnabled?: boolean;
+  deliveryWindowStartHour?: number;
+  deliveryWindowEndHour?: number;
+};
+
+export async function createPushRule(
+  body: CreatePushRuleBody,
+): Promise<{ result: "OK" | "FAIL"; rule: PushNotificationRuleDTO }> {
+  const token = getAuthToken();
+  return apiFetch(`/admin/dashboard/push-rules`, {
+    method: "POST",
+    token,
+    body,
+  });
+}
+
+export async function updatePushRule(
+  id: string,
+  body: Partial<CreatePushRuleBody> & { enabled?: boolean },
+): Promise<{ result: "OK" | "FAIL"; rule: PushNotificationRuleDTO }> {
+  const token = getAuthToken();
+  return apiFetch(`/admin/dashboard/push-rules/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    token,
+    body,
+  });
+}
+
+export type PushRuleUserStatsRow = {
+  userId: string;
+  username: string | null;
+  pending: number;
+  sent: number;
+  failed: number;
+  cancelled: number;
+  total: number;
+};
+
+export type PushRuleStatsByRuleRow = {
+  ruleId: string;
+  name: string | null;
+  triggerEvent: string | null;
+  enabled: boolean | null;
+  userType: string | null;
+  delayMs: number | null;
+  windowDays: number;
+  since: string;
+  counts: {
+    pending: number;
+    sent: number;
+    failed: number;
+    cancelled: number;
+  };
+  total: number;
+  nextSendAt: string | null;
+  nextRemainingMs: number | null;
+  uniqueUsersPending: number;
+  topUsers: PushRuleUserStatsRow[];
+};
+
+export type PushRuleStatsByEventRow = {
+  triggerEvent: string;
+  windowDays: number;
+  since: string;
+  counts: {
+    pending: number;
+    sent: number;
+    failed: number;
+    cancelled: number;
+  };
+  total: number;
+  nextSendAt: string | null;
+  nextRemainingMs: number | null;
+  uniqueUsersPending: number;
+  topUsers: PushRuleUserStatsRow[];
+};
+
+export type PushRulesStatsResponse = {
+  result: "OK" | "FAIL";
+  days: number;
+  since: string;
+  now: string;
+  rules: PushRuleStatsByRuleRow[];
+  events: PushRuleStatsByEventRow[];
+};
+
+/**
+ * Scheduled push job stats (from `scheduled_pushes`), grouped by rule and by trigger event.
+ * GET /LS_API/admin/dashboard/push-rules/stats?days=30&userLimit=10
+ */
+export async function fetchPushRulesStats(params?: {
+  days?: number;
+  userLimit?: number;
+}): Promise<PushRulesStatsResponse> {
+  const token = getAuthToken();
+  const search = new URLSearchParams();
+  if (params?.days != null) search.set("days", String(params.days));
+  if (params?.userLimit != null)
+    search.set("userLimit", String(params.userLimit));
+  const q = search.toString();
+  return apiFetch<PushRulesStatsResponse>(
+    `/admin/dashboard/push-rules/stats${q ? `?${q}` : ""}`,
+    { method: "GET", token },
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Manual push (admin → selected users with iosPushToken)
+// ---------------------------------------------------------------------------
+
+export type ManualPushRecipient = {
+  userId: string;
+  username: string | null;
+  email: string | null;
+};
+
+export type ManualPushRecipientsResponse = {
+  result: "OK" | "FAIL";
+  users: ManualPushRecipient[];
+  reason?: string;
+};
+
+export async function fetchManualPushRecipients(params?: {
+  q?: string;
+  limit?: number;
+}): Promise<ManualPushRecipientsResponse> {
+  const token = getAuthToken();
+  const search = new URLSearchParams();
+  if (params?.q != null && params.q.trim()) search.set("q", params.q.trim());
+  if (params?.limit != null) search.set("limit", String(params.limit));
+  const qs = search.toString();
+  return apiFetch<ManualPushRecipientsResponse>(
+    `/admin/dashboard/push/manual/recipients${qs ? `?${qs}` : ""}`,
+    { method: "GET", token },
+  );
+}
+
+export type SendManualPushBody = {
+  userIds: string[];
+  title: string;
+  body: string;
+  schedule: "immediate" | "scheduled";
+  localDate?: string;
+  localTime?: string;
+  timezone?: string;
+  deliveryWindowEnabled?: boolean;
+  deliveryWindowStartHour?: number;
+  deliveryWindowEndHour?: number;
+  pushData?: Record<string, unknown>;
+};
+
+export type SendManualPushResponse = {
+  result: "OK" | "FAIL";
+  schedule?: "immediate" | "scheduled";
+  sent?: number;
+  scheduled?: number;
+  sendAt?: string;
+  timezone?: string;
+  targeted?: number;
+  skippedNoToken?: number;
+  reason?: string;
+};
+
+export async function sendManualPush(
+  body: SendManualPushBody,
+): Promise<SendManualPushResponse> {
+  const token = getAuthToken();
+  return apiFetch<SendManualPushResponse>(`/admin/dashboard/push/manual`, {
+    method: "POST",
+    token,
+    body,
+  });
+}
+
+export type PurgeAnalyticsEventsBody = {
+  beforeDays?: number;
+  eventName?: string;
+  userId?: string;
+  dryRun?: boolean;
+};
+
+export type PurgeAnalyticsEventsResponse = {
+  result: "OK" | "FAIL";
+  dryRun: boolean;
+  matched: number;
+  deleted: number;
+  filter: Record<string, unknown>;
+  reason?: string;
+};
+
+/**
+ * Delete analytics events matching filters (admin-only, destructive).
+ * POST /LS_API/admin/dashboard/analytics/purge
+ */
+export async function purgeAnalyticsEvents(
+  body: PurgeAnalyticsEventsBody,
+): Promise<PurgeAnalyticsEventsResponse> {
+  const token = getAuthToken();
+  return apiFetch<PurgeAnalyticsEventsResponse>(
+    `/admin/dashboard/analytics/purge`,
+    { method: "POST", token, body },
   );
 }

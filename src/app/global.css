@@ -186,6 +186,20 @@ html.theme-dark {
   background: var(--user-pill-bg-hover);
 }
 
+/* Indeterminate bar for contact / support form submit */
+@keyframes form-submit-indeterminate {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(350%);
+  }
+}
+
+.form-submit-indeterminate-fill {
+  animation: form-submit-indeterminate 1.15s ease-in-out infinite;
+}
+
 @layer utilities {
   .scrollbar-hide {
     -ms-overflow-style: none;

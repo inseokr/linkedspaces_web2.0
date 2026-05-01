@@ -11,6 +11,10 @@ import {
   fetchAwsCost,
   fetchMongoStorage,
   fetchEventAnalytics,
+  fetchEventUsers,
+  fetchUserEventAnalytics,
+  fetchObservabilityMetrics,
+  fetchActivitySnapshots,
   type StorageCostResponse,
   type AwsCostResponse,
   type MongoStorageResponse,
@@ -24,14 +28,23 @@ import {
   MOCK_SERVICE_USAGE,
   MOCK_COST_DASHBOARD,
 } from "./mockData";
-import type { CostDashboardMetrics, CostItem } from "./types";
+import type {
+  CostDashboardMetrics,
+  CostItem,
+  UserStreamEntry,
+  PerUserEventAnalytics,
+  ObservabilityMetrics,
+} from "./types";
 import type { ServiceUsage as ServiceUsageType } from "./types";
 import { ObservabilityOverview } from "./components/ObservabilityOverview";
+import DashboardPushRules from "./components/DashboardPushRules";
+import DashboardManualPush from "./components/DashboardManualPush";
 import { ServiceUsage } from "./components/ServiceUsage";
 import { CostDashboard } from "./components/CostDashboard";
 import { CostProjectionModel } from "./components/CostProjectionModel";
 import { DashboardEventFunnel } from "./components/DashboardEventFunnel";
-import type { EventAnalytics } from "./types";
+import { ActivityMetricsDashboard } from "./components/ActivityMetricsDashboard";
+import type { EventAnalytics, ActivitySnapshot } from "./types";
 
 const STORAGE_SERVICE = "AWS S3 (Storage)";
 const MONGO_SERVICE = "MongoDB Atlas";
@@ -252,10 +265,65 @@ export default function BloggoAdminDashboard() {
   const [waitlistLoading, setWaitlistLoading] = useState(false);
   const [waitlistError, setWaitlistError] = useState<string | null>(null);
 
+  const [observabilityMetrics, setObservabilityMetrics] =
+    useState<ObservabilityMetrics>(MOCK_OBSERVABILITY_METRICS);
+  const [observabilityLoading, setObservabilityLoading] = useState(true);
+  const [observabilityError, setObservabilityError] = useState<string | null>(
+    null,
+  );
+
   const [eventData, setEventData] = useState<EventAnalytics | null>(null);
   const [eventDays, setEventDays] = useState(30);
   const [eventLoading, setEventLoading] = useState(false);
   const [eventError, setEventError] = useState<string | null>(null);
+
+  // Per-user event analytics state
+  const [eventUsers, setEventUsers] = useState<UserStreamEntry[]>([]);
+  const [eventUsersLoading, setEventUsersLoading] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<UserStreamEntry | null>(
+    null,
+  );
+  const [perUserData, setPerUserData] = useState<PerUserEventAnalytics | null>(
+    null,
+  );
+  const [perUserLoading, setPerUserLoading] = useState(false);
+  const [perUserError, setPerUserError] = useState<string | null>(null);
+
+  const [activitySnapshots, setActivitySnapshots] = useState<
+    ActivitySnapshot[]
+  >([]);
+  const [activityDays, setActivityDays] = useState(30);
+  const [activityLoading, setActivityLoading] = useState(false);
+  const [activityError, setActivityError] = useState<string | null>(null);
+
+  const loadObservability = useCallback(async () => {
+    setObservabilityLoading(true);
+    setObservabilityError(null);
+    try {
+      const data = await fetchObservabilityMetrics();
+      setObservabilityMetrics((prev) => ({
+        ...prev,
+        totalUsers: data.totalUsers,
+        activeUsers: data.activeUsers,
+        cloudPublishes: data.cloudPublishes,
+        photosUploaded: data.photosUploaded,
+        blogsCreated: data.blogsCreated,
+        avgBlogsPerUser: data.avgBlogsPerUser,
+        avgUploadsPerUser: data.avgUploadsPerUser,
+        avgPhotosPerBlog: data.avgPhotosPerBlog,
+        blogLifecycle: data.blogLifecycle,
+        blogsWithShareLink: data.blogsWithShareLink,
+        blogsWithShareLinkPct: data.blogsWithShareLinkPct,
+        photosWithCaptionPct: data.photosWithCaptionPct,
+      }));
+    } catch (e) {
+      setObservabilityError(
+        e instanceof Error ? e.message : "Failed to load observability metrics",
+      );
+    } finally {
+      setObservabilityLoading(false);
+    }
+  }, []);
 
   const loadEventAnalytics = useCallback(async (days: number) => {
     setEventLoading(true);
@@ -275,6 +343,61 @@ export default function BloggoAdminDashboard() {
       setEventLoading(false);
     }
   }, []);
+
+  const loadEventUsers = useCallback(async (days: number) => {
+    setEventUsersLoading(true);
+    try {
+      const res = await fetchEventUsers(days);
+      if (res.result === "OK") {
+        setEventUsers(res.users);
+      }
+    } catch {
+      // silently ignore; list simply stays empty
+    } finally {
+      setEventUsersLoading(false);
+    }
+  }, []);
+
+  const handleSelectUser = useCallback(
+    async (user: UserStreamEntry | null) => {
+      setSelectedUser(user);
+      setPerUserData(null);
+      setPerUserError(null);
+      if (!user) return;
+      setPerUserLoading(true);
+      try {
+        const res = await fetchUserEventAnalytics(
+          user.anonymousId,
+          user.userId,
+          eventDays,
+        );
+        if (res.result === "OK") {
+          setPerUserData({
+            anonymousId: res.anonymousId,
+            userId: res.userId,
+            username: res.username,
+            periodDays: res.periodDays,
+            homeLocation: res.homeLocation,
+            meta: res.meta,
+            funnel: res.data.funnel,
+            dailyTrend: res.data.dailyTrend,
+            topEvents: res.data.topEvents,
+            eventStats: res.eventStats,
+            placeStats: res.placeStats,
+          });
+        } else {
+          setPerUserError("Failed to load user data");
+        }
+      } catch (e) {
+        setPerUserError(
+          e instanceof Error ? e.message : "Failed to load user data",
+        );
+      } finally {
+        setPerUserLoading(false);
+      }
+    },
+    [eventDays],
+  );
 
   const loadWaitlist = useCallback(async () => {
     setWaitlistLoading(true);
@@ -381,12 +504,49 @@ export default function BloggoAdminDashboard() {
     setAllowed(true);
   }, [authLoading, isAuthenticated, router]);
 
+  // Sync real S3 storage GB into observability metrics once available
+  useEffect(() => {
+    const gb = serviceUsage.aws?.storageUsedGb;
+    if (gb != null && gb > 0) {
+      setObservabilityMetrics((prev) => ({ ...prev, storageUsedGb: gb }));
+    }
+  }, [serviceUsage.aws?.storageUsedGb]);
+
+  const loadActivitySnapshots = useCallback(async (days: number = 30) => {
+    setActivityLoading(true);
+    setActivityError(null);
+    try {
+      const res = await fetchActivitySnapshots(days);
+      if (res.result === "OK") {
+        setActivitySnapshots(res.snapshots ?? []);
+        setActivityDays(res.days ?? days);
+      }
+    } catch (e) {
+      setActivityError(
+        e instanceof Error ? e.message : "Failed to load activity data",
+      );
+    } finally {
+      setActivityLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (!allowed) return;
+    loadObservability();
     loadCosts(COST_DAYS_DEFAULT);
     loadWaitlist();
     loadEventAnalytics(eventDays);
-  }, [allowed, loadCosts, loadWaitlist, loadEventAnalytics]); // eslint-disable-line react-hooks/exhaustive-deps
+    loadEventUsers(eventDays);
+    loadActivitySnapshots(30);
+  }, [
+    allowed,
+    loadObservability,
+    loadCosts,
+    loadWaitlist,
+    loadEventAnalytics,
+    loadEventUsers,
+    loadActivitySnapshots,
+  ]);
 
   if (authLoading || allowed === null) {
     return (
@@ -441,7 +601,11 @@ export default function BloggoAdminDashboard() {
               />
             </svg>
             <p className="text-sm text-amber-800">
-              <strong>Notice:</strong> Observability uses mock data.{" "}
+              <strong>Data sources:</strong> <strong>Observability</strong> uses{" "}
+              <code className="rounded bg-amber-100 px-1">
+                /admin/dashboard/analytics/bloggo
+              </code>{" "}
+              (real user/trip/photo counts; blog dates are trip-start proxies).{" "}
               <strong>Service Usage</strong> and <strong>Cost Dashboard</strong>{" "}
               use{" "}
               <code className="rounded bg-amber-100 px-1">
@@ -451,9 +615,9 @@ export default function BloggoAdminDashboard() {
               <code className="rounded bg-amber-100 px-1">
                 /admin/dashboard/aws/cost
               </code>{" "}
-              for S3 bandwidth (Data Transfer) cost, and{" "}
+              for S3 bandwidth, and{" "}
               <code className="rounded bg-amber-100 px-1">/storage/mongo</code>{" "}
-              for MongoDB storage. Other metrics are mock.
+              for MongoDB storage. Mapbox/Heroku metrics remain mock.
             </p>
           </div>
 
@@ -464,6 +628,47 @@ export default function BloggoAdminDashboard() {
             error={waitlistError}
             onRefresh={loadWaitlist}
           />
+
+          <DashboardPushRules />
+
+          <DashboardManualPush />
+
+          {/* BLOGGO-355 Activity Metrics */}
+          <section className="bg-gray-50 border border-gray-200 rounded-xl p-5">
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="text-base font-semibold text-gray-800">
+                User Activity Metrics
+              </h2>
+              <div className="flex gap-2">
+                {([7, 30, 90] as const).map((d) => (
+                  <button
+                    key={d}
+                    onClick={() => loadActivitySnapshots(d)}
+                    className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
+                      activityDays === d
+                        ? "bg-blue-600 text-white border-blue-600"
+                        : "bg-white text-gray-600 border-gray-300 hover:border-blue-400"
+                    }`}
+                  >
+                    {d}d
+                  </button>
+                ))}
+              </div>
+            </div>
+            {activityLoading ? (
+              <p className="text-sm text-gray-400 py-6 text-center">Loading…</p>
+            ) : activityError ? (
+              <p className="text-sm text-red-500 py-6 text-center">
+                {activityError}
+              </p>
+            ) : (
+              <ActivityMetricsDashboard
+                snapshots={activitySnapshots}
+                days={activityDays}
+              />
+            )}
+          </section>
+
           <DashboardEventFunnel
             data={eventData}
             loading={eventLoading}
@@ -471,10 +676,24 @@ export default function BloggoAdminDashboard() {
             days={eventDays}
             onChangeDays={(d) => {
               setEventDays(d);
+              setSelectedUser(null);
+              setPerUserData(null);
               loadEventAnalytics(d);
+              loadEventUsers(d);
             }}
+            users={eventUsers}
+            usersLoading={eventUsersLoading}
+            selectedUser={selectedUser}
+            onSelectUser={handleSelectUser}
+            perUserData={perUserData}
+            perUserLoading={perUserLoading}
+            perUserError={perUserError}
           />
-          <ObservabilityOverview data={MOCK_OBSERVABILITY_METRICS} />
+          <ObservabilityOverview
+            data={observabilityMetrics}
+            loading={observabilityLoading}
+            error={observabilityError}
+          />
           <ServiceUsage
             data={serviceUsage}
             awsStorageGrowth={awsStorageGrowth}
@@ -489,7 +708,7 @@ export default function BloggoAdminDashboard() {
           <CostProjectionModel
             awsCostBreakdown={awsCostBreakdown}
             storageUsedGb={serviceUsage.aws?.storageUsedGb}
-            currentMau={MOCK_OBSERVABILITY_METRICS.activeUsers}
+            currentMau={observabilityMetrics.activeUsers}
             photoCount={serviceUsage.aws?.s3Uploads}
           />
         </div>

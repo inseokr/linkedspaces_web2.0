@@ -722,12 +722,12 @@ export default function PhotoLightbox({
             )}
 
             {/* Bottom info overlay: place name, timestamp, caption */}
-            <div className="absolute bottom-0 left-0 right-0 min-h-[120px] bg-gradient-to-t from-black/80 via-black/50 to-transparent backdrop-blur-md px-4 pt-8 pb-6 flex flex-col items-center justify-end z-[50] pointer-events-none">
-              <h2 className="text-center text-lg font-semibold text-white leading-tight">
+            <div className="absolute bottom-0 left-0 right-0 min-h-[128px] bg-gradient-to-t from-black/80 via-black/50 to-transparent backdrop-blur-md px-4 pt-8 pb-6 flex flex-col items-center justify-end z-[50] pointer-events-none">
+              <h2 className="text-center text-xl sm:text-2xl font-semibold text-white leading-snug tracking-tight">
                 {title ?? "Photo"}
               </h2>
               {dateTime && (
-                <p className="text-center text-sm text-white/80 mt-0.5">
+                <p className="text-center text-base text-white/85 mt-1 font-medium">
                   {dateTime}
                 </p>
               )}
@@ -739,7 +739,7 @@ export default function PhotoLightbox({
                 if (!currentCaption?.trim()) return null;
                 return (
                   <div className="mt-3 w-full min-h-[2.5rem] flex items-center justify-center px-2">
-                    <p className="text-center text-sm text-white/95 leading-relaxed max-w-full line-clamp-4 pointer-events-auto">
+                    <p className="text-center text-base sm:text-lg text-white/95 leading-relaxed max-w-[min(100%,52rem)] line-clamp-4 pointer-events-auto font-medium">
                       {currentCaption}
                     </p>
                   </div>

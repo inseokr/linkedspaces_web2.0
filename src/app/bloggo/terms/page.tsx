@@ -1,15 +1,16 @@
 import type { Metadata } from "next";
 import Container from "@/bloggo/components/ui/Container";
 import Badge from "@/bloggo/components/ui/Badge";
+import { getLegalDocLastUpdated } from "@/bloggo/lib/legalDocLastUpdated";
 
 export const metadata: Metadata = {
   title: "Terms of Service",
   description: "Bloggo Terms of Service — the rules for using our platform.",
 };
 
-const LAST_UPDATED = "February 24, 2026";
-
 export default function TermsPage() {
+  const lastUpdated = getLegalDocLastUpdated("src/app/bloggo/terms/page.tsx");
+
   return (
     <Container size="md" className="py-16">
       <div className="flex flex-col gap-6 mb-12">
@@ -18,169 +19,228 @@ export default function TermsPage() {
           Terms of Service
         </h1>
         <p className="text-sm text-[var(--bloggo-text-muted)]">
-          Last updated: {LAST_UPDATED}
+          Last updated: {lastUpdated}
         </p>
         <p className="text-[var(--bloggo-text-secondary)] leading-relaxed">
-          Please read these Terms of Service carefully before using Bloggo. By
-          accessing or using our service, you agree to be bound by these terms.
+          These Terms of Service govern your use of the Bloggo mobile
+          application and related Services provided by LinkedSpaces LLC.
         </p>
       </div>
 
-      <div className="prose-bloggo flex flex-col gap-2">
+      <div className="prose-bloggo flex flex-col gap-2 pb-10">
         <h2>1. Acceptance of Terms</h2>
         <p>
-          By creating an account or using Bloggo, you agree to these Terms of
-          Service and our Privacy Policy. If you do not agree, please do not use
-          our service.
+          The Bloggo mobile application and the features and services available
+          through it (the &quot;App,&quot; and our &quot;Services&quot;) are
+          provided to you by LinkedSpaces LLC (&quot;LinkedSpaces,&quot;
+          &quot;we,&quot; &quot;us&quot;) subject to these Terms of Service,
+          including the policies described in our Privacy Policy (together, the
+          &quot;Terms&quot;). By downloading, accessing, or using the App,
+          whether as a guest or with a registered account, you agree to follow
+          and be bound by the Terms. We may update the Terms from time to time.
+          The current Terms are available within the App. We and our third party
+          service providers may change features, services, related to the App
+          without notice. Bloggo is a travel journaling app; your blog content
+          and photos are stored locally on your device and are not uploaded to
+          our servers as part of normal app operation, except as described in
+          our Privacy Policy (for example, account information you provide and
+          limited technical or usage data). Certain parts of the Terms may be
+          clarified by additional notices we show in the App.
+        </p>
+        <p>
+          Bloggo is offered on the Apple App Store with a 4+ age rating. That
+          rating describes the general suitability of the Bloggo app for a wide
+          audience when used as designed. Registering for a Bloggo account is
+          separate: it involves providing personal information and using our
+          authentication and account services. You must be at least 13 years old
+          to create an account (or the minimum age required in your jurisdiction
+          for you to consent to our collection and use of your personal
+          information online, if that age is higher). If you are under that age,
+          you must not register; you may use Bloggo only as a guest, within the
+          limits described in these Terms. Parents and guardians are responsible
+          for deciding whether guest use is appropriate for minors in their
+          care. If you do not agree with the Terms, do not use the App.
+        </p>
+        <p>
+          BY CONTINUING TO USE THE APP, YOU INDICATE YOUR AGREEMENT TO THE TERMS
+          AND ANY REVISIONS WE POST.
+        </p>
+        <p>
+          We may modify or discontinue the App or any part of it, temporarily or
+          permanently, with or without notice. You agree that we are not liable
+          to you or to any third party for any modification, suspension, or
+          discontinuance of the App or any portion of it.
         </p>
 
         <h2>2. Description of Service</h2>
         <p>
-          Bloggo is a travel blogging platform that allows users to create,
-          edit, publish, and share blog posts from both the Bloggo iOS mobile
-          app and the Bloggo web platform. Our service includes:
+          Bloggo is a travel journaling app that helps you create, edit, and
+          share beautifully formatted blog posts from your travel experiences.
+          Our service includes:
         </p>
         <ul>
           <li>
-            AI-powered blog generation: automatically create blog posts from
-            your travel photos using on-device or cloud-based AI
+            Blog generation with AI on your device: automatically create blog
+            posts from your travel photos.
           </li>
           <li>
-            Cloud upload and sync: upload and store your locally created blogs
-            to the cloud so they are accessible from any device
+            Blog drafts: save and manage multiple blog drafts locally on your
+            device.
           </li>
           <li>
-            Web blog editor: edit, format, and publish your blog posts directly
-            from a web browser at bloggo.linkedspaces.com
+            PDF export: export any blog as a polished PDF to share however you
+            choose.
           </li>
           <li>
-            Public sharing: share your published blogs via a unique public link
-          </li>
-        </ul>
-        <p>
-          We reserve the right to modify, suspend, or discontinue any aspect of
-          the service at any time.
-        </p>
-
-        <h2>3. User Accounts</h2>
-        <p>
-          You are responsible for maintaining the confidentiality of your
-          account credentials and for all activities that occur under your
-          account. You must notify us immediately of any unauthorized use of
-          your account.
-        </p>
-        <ul>
-          <li>You must be at least 4 years old to use Bloggo</li>
-          <li>You may not create more than one account per email</li>
-          <li>You must provide accurate and complete information</li>
-          <li>You are responsible for all content posted from your account</li>
-        </ul>
-
-        <h2>4. Cloud Storage &amp; Uploads</h2>
-        <p>
-          Bloggo offers the ability to upload locally created blogs and their
-          associated photos to our cloud infrastructure. By using the cloud
-          upload feature, you acknowledge and agree that:
-        </p>
-        <ul>
-          <li>
-            Uploaded content (including blog text and photos) will be stored on
-            Bloggo&apos;s servers and may be accessible from any device where
-            you are signed in
-          </li>
-          <li>
-            You are solely responsible for ensuring you have the right to upload
-            any photos or content you submit
-          </li>
-          <li>
-            We may compress or optimize photos during the upload process to
-            ensure optimal performance
-          </li>
-          <li>
-            Bloggo is not responsible for data loss due to user-initiated
-            deletion, account termination for Terms violations, or unforeseen
-            technical failures, though we take reasonable precautions to protect
-            your data
+            QR code sharing: generate a QR code for any blog to share it in
+            person with another Bloggo user.
           </li>
         </ul>
 
-        <h2>5. Web Blog Editor</h2>
+        <h2>3. Guest Users and Registered Accounts</h2>
         <p>
-          The Bloggo web platform provides a full-featured blog editor
-          accessible at bloggo.linkedspaces.com. By using the web editor, you
-          agree that:
+          Bloggo can be used with or without a registered account. The App Store
+          4+ rating applies to the app overall; account registration is reserved
+          for users who meet the age requirement in Section 4.
         </p>
         <ul>
           <li>
-            Edits made in the web editor are saved to your cloud blog and will
-            be reflected across all platforms where your blog is published
+            Guest Users: Guests may create and export one (1) blog. Guest data
+            is stored locally on the device and is not associated with any
+            account.
           </li>
           <li>
-            You are responsible for all content you create or modify using the
-            web editor
-          </li>
-          <li>
-            The web editor is provided as-is and may be updated or modified at
-            any time; we will make reasonable efforts to preserve your content
-            during such updates
-          </li>
-          <li>
-            Auto-save functionality may be available; however, you should
-            manually save your work regularly to avoid data loss in the event of
-            a connectivity interruption
+            Registered Users: Creating a Bloggo account allows you to save and
+            manage unlimited blog drafts and export as many blogs as you like.
+            Registered accounts require a valid email address and that you are
+            at least 13 years old (or the applicable age of digital consent in
+            your jurisdiction, if higher).
           </li>
         </ul>
+        <p>
+          Account creation takes only a moment. Registered users enjoy the full
+          Bloggo experience with no content restrictions.
+        </p>
+
+        <h2>4. User Accounts</h2>
+        <p>
+          If you create an account, you are responsible for maintaining the
+          confidentiality of your account credentials and for all activities
+          that occur under your account. Please notify us immediately of any
+          unauthorized use.
+        </p>
+        <p>
+          Eligibility. You must be at least 13 years of age to create a Bloggo
+          account, or the minimum age required in your country or region for you
+          to agree to our processing of your personal data without parental
+          consent, whichever is greater. By registering, you represent and
+          warrant that you satisfy this requirement. If you do not, you must not
+          create an account and may use Bloggo only as a guest.
+        </p>
+        <ul>
+          <li>
+            Users under the applicable minimum age may use Bloggo without an
+            account only, subject to guest limits described elsewhere in these
+            Terms.
+          </li>
+          <li>Only one account may be created per email address.</li>
+          <li>
+            You must provide accurate and complete information during
+            registration.
+          </li>
+          <li>
+            You are responsible for all content created or exported from your
+            account.
+          </li>
+        </ul>
+
+        <h2>5. Sharing Features</h2>
+        <p>
+          Bloggo supports two sharing methods, both of which are entirely
+          initiated by you:
+        </p>
+        <ul>
+          <li>
+            PDF Export: You may export any blog as a PDF and share it through
+            any channel available on your device. Once the PDF leaves your
+            device, it is subject to the terms of whatever platform you use to
+            transmit it.
+          </li>
+          <li>
+            QR Code Sharing: You may generate a QR code for a blog to share it
+            in person with another Bloggo user. QR code sharing is intended for
+            direct, local sharing and does not publish your blog to the internet
+            or create a public link.
+          </li>
+        </ul>
+        <p>
+          Bloggo does not publish your blogs to a public website or make them
+          accessible via a web URL. You remain in full control of your content
+          and how it is shared.
+        </p>
 
         <h2>6. Content Policy</h2>
         <p>
-          You retain ownership of the content you create on Bloggo. By posting
-          content or uploading it to the cloud, you grant us a non-exclusive,
-          worldwide license to store, display, distribute, and promote your
-          content on our platform.
+          You retain full ownership of the content you create in Bloggo. Your
+          blogs and photos are stored locally on your device and are never
+          uploaded to our servers as part of normal app operation.
         </p>
-        <p>You agree not to post or upload content that:</p>
+        <p>
+          Regardless of how content is shared or exported, you agree not to
+          create or distribute content that:
+        </p>
         <ul>
-          <li>Is illegal, harmful, or violates others&apos; rights</li>
-          <li>Contains spam, malware, or deceptive information</li>
-          <li>Infringes on intellectual property or privacy rights</li>
-          <li>Harasses, threatens, or intimidates others</li>
-          <li>Contains adult content without proper age-gating</li>
+          <li>Is illegal, harmful, or violates the rights of others.</li>
           <li>
-            Includes photos of individuals without their consent, especially
-            minors
+            Contains spam, malware, or deliberately deceptive information.
+          </li>
+          <li>Infringes on intellectual property or privacy rights.</li>
+          <li>Harasses, threatens, or intimidates any individual.</li>
+          <li>
+            Contains adult content or material inappropriate for general
+            audiences.
+          </li>
+          <li>
+            Includes photos or identifying information of individuals without
+            their consent, particularly minors.
           </li>
         </ul>
 
         <h2>7. Intellectual Property</h2>
         <p>
           Bloggo and its original content, features, and functionality are owned
-          by Bloggo and are protected by international copyright, trademark, and
-          other intellectual property laws.
+          by LinkedSpaces LLC and are protected by applicable copyright,
+          trademark, and other intellectual property laws. You may not
+          reproduce, modify, or distribute any part of the Bloggo app or its
+          interface without our express written permission.
         </p>
 
         <h2>8. Termination</h2>
         <p>
           We may terminate or suspend your account at our sole discretion,
-          without notice, for conduct that we believe violates these Terms or is
-          harmful to other users, us, or third parties. Upon termination, your
-          cloud-stored content may be deleted after a reasonable grace period.
+          without prior notice, for conduct that we believe violates these Terms
+          or is harmful to other users, us, or third parties. Because your blog
+          content is stored locally on your device, termination of your account
+          does not affect locally saved content on your device.
         </p>
 
         <h2>9. Disclaimer of Warranties</h2>
         <p>
-          Bloggo is provided &quot;as is&quot; without warranties of any kind.
-          We do not warrant that the service will be uninterrupted, error-free,
-          or free of viruses or other harmful components. Cloud storage
-          availability is subject to our infrastructure uptime and is not
-          guaranteed to be 100% available at all times.
+          Bloggo is provided &quot;as is&quot; and &quot;as available&quot;
+          without warranties of any kind, express or implied. We do not warrant
+          that the service will be uninterrupted, free of errors, or free from
+          bugs or other issues. We are not responsible for any loss of locally
+          stored content resulting from device failure, operating system
+          changes, or deletion that you initiate.
         </p>
 
         <h2>10. Limitation of Liability</h2>
         <p>
-          To the maximum extent permitted by law, Bloggo shall not be liable for
-          any indirect, incidental, special, consequential, or punitive damages
-          resulting from your use of or inability to use the service, including
-          any loss of cloud-stored data.
+          To the maximum extent permitted by applicable law, LinkedSpaces LLC,
+          the Bloggo app, and our affiliates shall not be liable for any
+          indirect, incidental, special, consequential, or punitive damages
+          arising from your use of or inability to use the service, including
+          any loss of locally stored content or exported files.
         </p>
 
         <h2>11. Governing Law</h2>
@@ -191,19 +251,12 @@ export default function TermsPage() {
 
         <h2>12. Contact</h2>
         <p>
-          For questions about these Terms, contact us at{" "}
+          For questions about these Terms of Service, please contact us at{" "}
           <a
             href="mailto:bloggo@linkedspaces.com"
             className="text-sky-400 hover:text-sky-300 transition-colors"
           >
             bloggo@linkedspaces.com
-          </a>{" "}
-          or through our{" "}
-          <a
-            href="/bloggo/support"
-            className="text-sky-400 hover:text-sky-300 transition-colors"
-          >
-            support page
           </a>
           .
         </p>
