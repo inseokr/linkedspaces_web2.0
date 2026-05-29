@@ -44,6 +44,7 @@ import { CostDashboard } from "./components/CostDashboard";
 import { CostProjectionModel } from "./components/CostProjectionModel";
 import { DashboardEventFunnel } from "./components/DashboardEventFunnel";
 import { ActivityMetricsDashboard } from "./components/ActivityMetricsDashboard";
+import { DailyAppPerformanceDashboard } from "./components/DailyAppPerformanceDashboard";
 import type { EventAnalytics, ActivitySnapshot } from "./types";
 
 const STORAGE_SERVICE = "AWS S3 (Storage)";
@@ -632,6 +633,42 @@ export default function BloggoAdminDashboard() {
           <DashboardPushRules />
 
           <DashboardManualPush />
+
+          {/* Daily app performance */}
+          <section className="bg-gray-50 border border-gray-200 rounded-xl p-5">
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="text-base font-semibold text-gray-800">
+                Daily App Performance
+              </h2>
+              <div className="flex gap-2">
+                {([7, 30, 90] as const).map((d) => (
+                  <button
+                    key={d}
+                    onClick={() => loadActivitySnapshots(d)}
+                    className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
+                      activityDays === d
+                        ? "bg-blue-600 text-white border-blue-600"
+                        : "bg-white text-gray-600 border-gray-300 hover:border-blue-400"
+                    }`}
+                  >
+                    {d}d
+                  </button>
+                ))}
+              </div>
+            </div>
+            {activityLoading ? (
+              <p className="text-sm text-gray-400 py-6 text-center">Loading…</p>
+            ) : activityError ? (
+              <p className="text-sm text-red-500 py-6 text-center">
+                {activityError}
+              </p>
+            ) : (
+              <DailyAppPerformanceDashboard
+                snapshots={activitySnapshots}
+                days={activityDays}
+              />
+            )}
+          </section>
 
           {/* BLOGGO-355 Activity Metrics */}
           <section className="bg-gray-50 border border-gray-200 rounded-xl p-5">

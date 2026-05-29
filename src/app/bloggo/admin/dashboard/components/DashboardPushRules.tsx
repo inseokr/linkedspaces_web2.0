@@ -50,15 +50,28 @@ const EVENT_OPTIONS: EventOption[] = [
   },
   {
     category: "App",
+    name: "App-InAppCamera-VibePhoto-Taken",
+    label: "App-InAppCamera-VibePhoto-Taken",
+    description: "Vibe photo captured via in-app camera.",
+  },
+  {
+    category: "App",
+    name: "App-InAppCamera-Reel-Saved",
+    label: "App-InAppCamera-Reel-Saved",
+    description:
+      "Reel saved via in-app camera (duration: 5/10/15/30, stopMode: auto/manual).",
+  },
+  {
+    category: "App",
     name: "App-InAppCamera-VibeON",
     label: "App-InAppCamera-VibeON",
-    description: "Vibe mode enabled in the camera.",
+    description: "Vibe mode enabled in the camera (legacy).",
   },
   {
     category: "App",
     name: "App-InAppCamera-Caption",
     label: "App-InAppCamera-Caption",
-    description: "Caption added via in-app camera.",
+    description: "Caption added to a photo, vibe photo, or reel.",
   },
 
   // ── Blog lifecycle ─────────────────────────────────────────────────────────
@@ -269,7 +282,19 @@ const TRIGGER_EVENT_OPTIONS: EventOption[] = [
     name: "App-InAppCamera-PhotoTaken",
     label: "App-InAppCamera-PhotoTaken",
     description:
-      "Photo taken via in-app camera. More specific engagement signal than camera open.",
+      "Plain photo taken via in-app camera. More specific engagement signal than camera open.",
+  },
+  {
+    category: "In-app camera",
+    name: "App-InAppCamera-VibePhoto-Taken",
+    label: "App-InAppCamera-VibePhoto-Taken",
+    description: "Vibe photo captured via in-app camera.",
+  },
+  {
+    category: "In-app camera",
+    name: "App-InAppCamera-Reel-Saved",
+    label: "App-InAppCamera-Reel-Saved",
+    description: "Reel saved via in-app camera.",
   },
 ];
 

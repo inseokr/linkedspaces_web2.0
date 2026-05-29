@@ -70,13 +70,22 @@ function RatioRow({
   part,
   total,
   partLabel,
+  /** Event counts that can exceed saves (e.g. multiple renames per blog). */
+  ratePerUnit,
 }: {
   label: string;
   part: number;
   total: number;
   partLabel?: string;
+  ratePerUnit?: string;
 }) {
   const ratio = total > 0 ? part / total : 0;
+  const metricLabel = ratePerUnit
+    ? total > 0
+      ? `${ratio.toFixed(2)}×`
+      : "—"
+    : pct(part, total);
+  const barPct = Math.min(ratio * 100, 100);
   return (
     <div className="flex items-center gap-3 py-1.5 border-b border-gray-100 last:border-0">
       <span className="text-sm text-gray-700 flex-1">{label}</span>
@@ -84,11 +93,19 @@ function RatioRow({
       <div className="w-24 bg-gray-100 rounded-full h-1.5">
         <div
           className="bg-blue-500 h-1.5 rounded-full"
-          style={{ width: `${Math.min(ratio * 100, 100)}%` }}
+          style={{ width: `${barPct}%` }}
         />
       </div>
-      <span className="text-sm text-gray-500 w-12 text-right">
-        {pct(part, total)}
+      <span
+        className="text-sm text-gray-500 text-right"
+        title={ratePerUnit ? `per ${ratePerUnit}` : undefined}
+      >
+        <span className="inline-block w-12">{metricLabel}</span>
+        {ratePerUnit && total > 0 && (
+          <span className="inline-block w-14 text-[11px] text-gray-400">
+            / {ratePerUnit}
+          </span>
+        )}
       </span>
       {partLabel && (
         <span className="text-xs text-gray-400 w-20 text-right">
@@ -148,7 +165,15 @@ export function ActivityMetricsDashboard({ snapshots, days }: Props) {
 
   const totalInAppOpens = sum(snapshots, "inAppCameraOpens");
   const totalInAppPhotos = sum(snapshots, "inAppPhotosTaken");
-  const totalVibeOn = sum(snapshots, "inAppPhotosVibeOn");
+  const totalVibePhotos = sum(snapshots, "inAppVibePhotosTaken");
+  const totalReels = sum(snapshots, "inAppReelsSaved");
+  const totalReelsAuto = sum(snapshots, "inAppReelsSavedAuto");
+  const totalReelsManual = sum(snapshots, "inAppReelsSavedManual");
+  const totalReelsDur5 = sum(snapshots, "inAppReelsSavedDur5");
+  const totalReelsDur10 = sum(snapshots, "inAppReelsSavedDur10");
+  const totalReelsDur15 = sum(snapshots, "inAppReelsSavedDur15");
+  const totalReelsDur30 = sum(snapshots, "inAppReelsSavedDur30");
+  const totalCaptures = totalInAppPhotos + totalVibePhotos + totalReels;
   const totalCaption = sum(snapshots, "inAppPhotosCaption");
 
   const totalAppOpens = sum(snapshots, "appOpens");
@@ -206,6 +231,7 @@ export function ActivityMetricsDashboard({ snapshots, days }: Props) {
           label="Rename (total)"
           part={totalPlaceRenames}
           total={totalSaves}
+          ratePerUnit="save"
         />
         <RatioRow
           label="  ↳ POI click"
@@ -289,19 +315,50 @@ export function ActivityMetricsDashboard({ snapshots, days }: Props) {
           total={totalAppOpens}
         />
         <RatioRow
-          label="Photos taken"
+          label="Plain photo"
           part={totalInAppPhotos}
-          total={totalInAppOpens}
+          total={totalCaptures}
         />
         <RatioRow
-          label="  ↳ Vibe ON"
-          part={totalVibeOn}
-          total={totalInAppPhotos}
+          label="Vibe photo"
+          part={totalVibePhotos}
+          total={totalCaptures}
         />
+        <RatioRow label="Reel saved" part={totalReels} total={totalCaptures} />
         <RatioRow
-          label="  ↳ Caption added"
+          label="Caption added"
           part={totalCaption}
-          total={totalInAppPhotos}
+          total={totalCaptures}
+        />
+        <RatioRow
+          label="  ↳ Reel auto stop"
+          part={totalReelsAuto}
+          total={totalReels}
+        />
+        <RatioRow
+          label="  ↳ Reel manual stop"
+          part={totalReelsManual}
+          total={totalReels}
+        />
+        <RatioRow
+          label="  ↳ Reel 5s"
+          part={totalReelsDur5}
+          total={totalReels}
+        />
+        <RatioRow
+          label="  ↳ Reel 10s"
+          part={totalReelsDur10}
+          total={totalReels}
+        />
+        <RatioRow
+          label="  ↳ Reel 15s"
+          part={totalReelsDur15}
+          total={totalReels}
+        />
+        <RatioRow
+          label="  ↳ Reel 30s"
+          part={totalReelsDur30}
+          total={totalReels}
         />
       </div>
     </div>

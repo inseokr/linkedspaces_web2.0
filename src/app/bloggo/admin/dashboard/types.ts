@@ -106,6 +106,10 @@ export type ActivitySnapshot = {
   date: string; // ISO date string, UTC midnight
   // App-level
   appOpens: number;
+  /** First-time anonymousId seen (30-day lookback; see dashboard note). */
+  newDevices: number;
+  /** New account from User.accountCreatedAt on that day. */
+  newUsers: number;
   newSessions: number;
   uniqueUsers: number;
   uniqueDevices: number;
@@ -134,11 +138,24 @@ export type ActivitySnapshot = {
   // MoreMemories
   moreMemoriesClicks: number;
   moreMemoriesBlogs: number;
-  // In-app camera
+  // In-app camera (App-InAppCamera-* events)
   inAppCameraOpens: number;
+  /** App-InAppCamera-PhotoTaken */
   inAppPhotosTaken: number;
-  inAppPhotosVibeOn: number;
+  /** App-InAppCamera-VibePhoto-Taken */
+  inAppVibePhotosTaken: number;
+  /** App-InAppCamera-Reel-Saved */
+  inAppReelsSaved: number;
+  inAppReelsSavedAuto: number;
+  inAppReelsSavedManual: number;
+  inAppReelsSavedDur5: number;
+  inAppReelsSavedDur10: number;
+  inAppReelsSavedDur15: number;
+  inAppReelsSavedDur30: number;
+  /** App-InAppCamera-Caption */
   inAppPhotosCaption: number;
+  /** @deprecated App-InAppCamera-VibeON — use inAppVibePhotosTaken */
+  inAppPhotosVibeOn?: number;
 };
 
 export type PerUserEventAnalytics = {
