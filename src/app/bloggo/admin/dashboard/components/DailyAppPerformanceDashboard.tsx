@@ -108,7 +108,10 @@ function MetricChart({
                 const row = payload?.[0]?.payload as DailyPoint | undefined;
                 return row?.date ?? "";
               }}
-              formatter={(value: number) => [fmt(value), label]}
+              formatter={(value) => [
+                fmt(typeof value === "number" ? value : 0),
+                label,
+              ]}
             />
             <Line
               type="monotone"
