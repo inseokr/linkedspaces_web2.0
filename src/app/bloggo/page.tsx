@@ -73,7 +73,7 @@ export default function BloggoHomePage() {
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-12 lg:gap-16">
             {/* Left column — text content */}
             <div className="flex flex-col items-start text-left gap-6 lg:max-w-[520px]">
-              <Badge variant="violet" size="lg">
+              <Badge variant="violet" size="lg" className="text-gray-300">
                 Photo-First Blogging
               </Badge>
               <h1 className="text-balance text-5xl font-black leading-[1.08] tracking-tight text-[var(--bloggo-text-primary)] sm:text-6xl lg:text-7xl">
@@ -212,7 +212,7 @@ export default function BloggoHomePage() {
                 >
                   {/* Left slot */}
                   <div
-                    className={`md:pr-14 pb-12 ${step.side === "left" ? "md:text-right" : "hidden md:block"}`}
+                    className={`hidden md:block md:pr-14 pb-12 ${step.side === "left" ? "md:text-right" : ""}`}
                   >
                     {step.side === "left" && <StepContent />}
                   </div>
@@ -244,7 +244,7 @@ export default function BloggoHomePage() {
 
                   {/* Right slot */}
                   <div
-                    className={`md:pl-14 pb-12 ${step.side === "right" ? "" : "hidden md:block"}`}
+                    className={`hidden md:block md:pl-14 pb-12 ${step.side === "right" ? "" : ""}`}
                   >
                     {step.side === "right" && <StepContent />}
                   </div>
