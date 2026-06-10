@@ -65,7 +65,7 @@ export default function BloggoHomePage() {
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-12 lg:gap-16">
             {/* Left column — text content */}
             <div className="flex flex-col items-start text-left gap-6 lg:max-w-[520px]">
-              <Badge variant="violet" size="lg" className="text-gray-300">
+              <Badge variant="violet" size="lg" className="!text-sky-400">
                 Photo-First Blogging
               </Badge>
               <h1 className="text-balance text-5xl font-black leading-[1.08] tracking-tight text-[var(--bloggo-text-primary)] sm:text-6xl lg:text-7xl">
