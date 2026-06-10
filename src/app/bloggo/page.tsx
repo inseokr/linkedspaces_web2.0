@@ -83,11 +83,9 @@ export default function BloggoHomePage() {
                   rel="noopener noreferrer"
                   aria-label="Download Bloggo on the App Store"
                 >
-                  <Image
+                  <img
                     src="/images/app-store-badge.svg"
                     alt="Download on the App Store"
-                    width={160}
-                    height={54}
                     className="h-[54px] w-auto"
                   />
                 </a>
@@ -387,11 +385,9 @@ export default function BloggoHomePage() {
             rel="noopener noreferrer"
             aria-label="Download Bloggo on the App Store"
           >
-            <Image
+            <img
               src="/images/app-store-badge.svg"
               alt="Download on the App Store"
-              width={200}
-              height={67}
               className="h-[67px] w-auto mx-auto"
             />
           </a>
