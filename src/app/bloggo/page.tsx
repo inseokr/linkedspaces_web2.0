@@ -84,7 +84,7 @@ export default function BloggoHomePage() {
                   aria-label="Download Bloggo on the App Store"
                 >
                   <img
-                    src="/images/app-store-badge.svg"
+                    src="/images/app-store-badge.png"
                     alt="Download on the App Store"
                     className="h-[54px] w-auto"
                   />
@@ -386,7 +386,7 @@ export default function BloggoHomePage() {
             aria-label="Download Bloggo on the App Store"
           >
             <img
-              src="/images/app-store-badge.svg"
+              src="/images/app-store-badge.png"
               alt="Download on the App Store"
               className="h-[67px] w-auto mx-auto"
             />
