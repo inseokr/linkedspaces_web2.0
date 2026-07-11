@@ -4,6 +4,11 @@ import Container from "@/bloggo/components/ui/Container";
 import Button from "@/bloggo/components/ui/Button";
 import Badge from "@/bloggo/components/ui/Badge";
 import BloggoHomeRedirect from "@/bloggo/components/BloggoHomeRedirect";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  alternates: { canonical: "/" },
+};
 
 const BASE = "/bloggo";
 

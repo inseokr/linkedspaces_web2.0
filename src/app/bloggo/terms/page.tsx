@@ -6,6 +6,7 @@ import { getLegalDocLastUpdated } from "@/bloggo/lib/legalDocLastUpdated";
 export const metadata: Metadata = {
   title: "Terms of Service",
   description: "Bloggo Terms of Service — the rules for using our platform.",
+  alternates: { canonical: "/terms" },
 };
 
 export default function TermsPage() {
