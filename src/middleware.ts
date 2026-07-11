@@ -7,6 +7,12 @@ const BLOGGO_HOSTNAMES = [
   "bloggo.localhost",
 ];
 
+// Files that exist in public/ at their real paths. Rewriting them under
+// /bloggo would 404. /sitemap.xml is deliberately NOT here — it must fall
+// through to the rewrite so it reaches the generated /bloggo/sitemap.xml.
+const PUBLIC_ASSETS =
+  /^\/(images|icons|gifs|videos)\/|^\/bloggo\/(screenshots\/|og-image\.png)|^\/(robots\.txt|manifest\.json|bloggo-icon\.png|reset-password\.html)$/;
+
 function isBloggoHost(hostname: string): boolean {
   return BLOGGO_HOSTNAMES.some(
     (h) => hostname === h || hostname.startsWith(h + ":"),
@@ -22,6 +28,10 @@ export function middleware(request: NextRequest) {
 
     // Next.js API routes live at /api/*, not under /bloggo — avoid rewriting them.
     if (pathname.startsWith("/api")) {
+      return NextResponse.next();
+    }
+
+    if (PUBLIC_ASSETS.test(pathname)) {
       return NextResponse.next();
     }
 
