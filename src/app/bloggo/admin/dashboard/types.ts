@@ -78,6 +78,29 @@ export type EventAnalytics = {
     authenticated: number;
     uniqueDevices: number;
   };
+  behavior?: {
+    photoAccess: { full: number; limited: number; none: number };
+    cleanup: {
+      createdBlogs: number;
+      savedBlogs: number;
+      openedBlogs: number;
+      deletedBlogs: number;
+      cleanedBlogs: number;
+      openedPct: number;
+      deletedPct: number;
+      cleanedPct: number;
+      cleanedOfOpenedPct: number;
+      trackingStartedAt?: string | null;
+    };
+    share: {
+      createdBlogs: number;
+      savedBlogs: number;
+      sharedBlogs: number;
+      sharedPct: number;
+      trackingStartedAt?: string | null;
+      byType: { type: string; events: number; uniqueBlogs: number }[];
+    };
+  };
 };
 
 // Unique identity = one (device, user) pair.
@@ -156,6 +179,19 @@ export type ActivitySnapshot = {
   inAppPhotosCaption: number;
   /** @deprecated App-InAppCamera-VibeON — use inAppVibePhotosTaken */
   inAppPhotosVibeOn?: number;
+  photoAccessFull?: number;
+  photoAccessLimited?: number;
+  photoAccessNone?: number;
+  photoPermissions?: number;
+  smartCleanupOpened?: number;
+  smartCleanupScanned?: number;
+  smartCleanupDeleted?: number;
+  blogShares?: number;
+  blogSharesPhotos?: number;
+  blogSharesPolaroid?: number;
+  blogSharesStudio?: number;
+  blogSharesStitchReels?: number;
+  blogSharesWebLink?: number;
 };
 
 export type PerUserEventAnalytics = {

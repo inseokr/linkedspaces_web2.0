@@ -48,7 +48,15 @@ function buildDailyPoints(snapshots: ActivitySnapshot[]): DailyPoint[] {
       newUsers: s.newUsers ?? 0,
       appOpens: s.appOpens ?? 0,
       blogCreatedSaved: (s.blogScans ?? 0) + (s.blogSaves ?? 0),
-      blogShared: (s.blogSharesPDF ?? 0) + (s.blogSharesNearby ?? 0),
+      blogShared:
+        (s.blogShares ?? 0) ||
+        (s.blogSharesPDF ?? 0) +
+          (s.blogSharesNearby ?? 0) +
+          (s.blogSharesPhotos ?? 0) +
+          (s.blogSharesPolaroid ?? 0) +
+          (s.blogSharesStudio ?? 0) +
+          (s.blogSharesStitchReels ?? 0) +
+          (s.blogSharesWebLink ?? 0),
     }));
 }
 

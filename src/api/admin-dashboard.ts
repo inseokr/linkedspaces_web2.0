@@ -975,6 +975,29 @@ export type EventAnalyticsResponse = {
       authenticated: number;
       uniqueDevices: number;
     };
+    behavior?: {
+      photoAccess: { full: number; limited: number; none: number };
+      cleanup: {
+        createdBlogs: number;
+        savedBlogs: number;
+        openedBlogs: number;
+        deletedBlogs: number;
+        cleanedBlogs: number;
+        openedPct: number;
+        deletedPct: number;
+        cleanedPct: number;
+        cleanedOfOpenedPct: number;
+        trackingStartedAt?: string | null;
+      };
+      share: {
+        createdBlogs: number;
+        savedBlogs: number;
+        sharedBlogs: number;
+        sharedPct: number;
+        trackingStartedAt?: string | null;
+        byType: { type: string; events: number; uniqueBlogs: number }[];
+      };
+    };
   };
 };
 
