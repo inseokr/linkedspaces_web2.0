@@ -419,9 +419,18 @@ function OwnerTripRecapView({
   const heroProps = useMemo(() => {
     if (!effectiveModel?.hero) return null;
 
+    // effectiveModel.hero.coverImageUrl already prefers a photo used in the blog
+    // (selected -> first). Only fall back to the trip-card cover when the blog
+    // has no usable photo and we're on the bundled placeholder.
+    const blogCover = effectiveModel.hero.coverImageUrl;
+    const coverImageUrl =
+      blogCover === "/images/recap/us.png"
+        ? (tripCoverOverride ?? blogCover)
+        : blogCover;
+
     return {
       ...effectiveModel.hero,
-      coverImageUrl: tripCoverOverride ?? effectiveModel.hero.coverImageUrl,
+      coverImageUrl,
     };
   }, [effectiveModel?.hero, tripCoverOverride]);
 

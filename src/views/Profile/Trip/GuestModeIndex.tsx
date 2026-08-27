@@ -1625,7 +1625,14 @@ export default function GuestRecapPage({ userId, tripId, brand }: Props) {
       <div className="p-3 -mt-[30px] mb-[30px]">
         <RecapBlogHero
           {...effectiveModel.hero}
-          coverImageUrl={tripCoverOverride ?? effectiveModel.hero.coverImageUrl}
+          coverImageUrl={
+            // effectiveModel.hero.coverImageUrl is already a photo from the blog
+            // (selected -> first). Only fall back to the trip-card cover when the
+            // blog has no usable photo and we're stuck on the bundled placeholder.
+            effectiveModel.hero.coverImageUrl === "/images/recap/us.png"
+              ? (tripCoverOverride ?? effectiveModel.hero.coverImageUrl)
+              : effectiveModel.hero.coverImageUrl
+          }
           lastEditedAt={effectiveModel.hero.lastEditedAt}
         />
       </div>

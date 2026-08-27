@@ -51,13 +51,16 @@ export function mapTripRecapToPageModel(
     ? normalizeImageSrc(trip.profilePicture).src
     : undefined;
 
-  //  cover: trip.coverPhotoUri 우선 (trip card와 동일), 없으면 days/places/photoList에서 첫 사진으로 fallback
+  //  cover: prefer a photo that actually appears in the recap blog (selected ->
+  //  first). Fall back to the trip's stored coverPhotoUri, then a bundled image.
+  //  The stored cover is often a place-visit photo that isn't part of this blog,
+  //  which looked "wrong" to users.
   const explicitCover =
     typeof trip.coverPhotoUri === "string" && trip.coverPhotoUri.trim()
       ? normalizeImageSrc(trip.coverPhotoUri.trim()).src
       : undefined;
   const coverImageUrl =
-    explicitCover ?? pickCoverFromRecap(recapData) ?? "/images/recap/us.png";
+    pickCoverFromRecap(recapData) ?? explicitCover ?? "/images/recap/us.png";
 
   const locationText = "";
 
