@@ -7,15 +7,7 @@ import BloggoHomeRedirect from "@/bloggo/components/BloggoHomeRedirect";
 
 const BASE = "/bloggo";
 
-const BETA_TESTFLIGHT_URL = "https://testflight.apple.com/join/QTvGbGK2";
-
-const betaCtaClassName = [
-  "inline-flex items-center justify-center gap-2 font-medium transition-all duration-200",
-  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bloggo-bg)]",
-  "active:scale-[0.98]",
-  "bg-sky-600 hover:bg-sky-500 text-white shadow-lg shadow-sky-900/40 border border-sky-500/30",
-  "px-7 py-3.5 text-base rounded-xl",
-].join(" ");
+const APP_STORE_URL = "https://apps.apple.com/us/app/bloggo/id6759849314";
 
 const steps = [
   {
@@ -73,7 +65,7 @@ export default function BloggoHomePage() {
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-12 lg:gap-16">
             {/* Left column — text content */}
             <div className="flex flex-col items-start text-left gap-6 lg:max-w-[520px]">
-              <Badge variant="violet" size="lg">
+              <Badge variant="violet" size="lg" className="!text-sky-400">
                 Photo-First Blogging
               </Badge>
               <h1 className="text-balance text-5xl font-black leading-[1.08] tracking-tight text-[var(--bloggo-text-primary)] sm:text-6xl lg:text-7xl">
@@ -86,12 +78,16 @@ export default function BloggoHomePage() {
               </p>
               <div className="mt-2 flex flex-wrap gap-4">
                 <a
-                  href={BETA_TESTFLIGHT_URL}
+                  href={APP_STORE_URL}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className={betaCtaClassName}
+                  aria-label="Download Bloggo on the App Store"
                 >
-                  Try Beta
+                  <img
+                    src="/images/app-store-badge.png"
+                    alt="Download on the App Store"
+                    className="h-[54px] w-auto"
+                  />
                 </a>
                 <Link href={`${BASE}/features`}>
                   <Button
@@ -212,7 +208,7 @@ export default function BloggoHomePage() {
                 >
                   {/* Left slot */}
                   <div
-                    className={`md:pr-14 pb-12 ${step.side === "left" ? "md:text-right" : "hidden md:block"}`}
+                    className={`hidden md:block md:pr-14 pb-12 ${step.side === "left" ? "md:text-right" : ""}`}
                   >
                     {step.side === "left" && <StepContent />}
                   </div>
@@ -244,7 +240,7 @@ export default function BloggoHomePage() {
 
                   {/* Right slot */}
                   <div
-                    className={`md:pl-14 pb-12 ${step.side === "right" ? "" : "hidden md:block"}`}
+                    className={`hidden md:block md:pl-14 pb-12 ${step.side === "right" ? "" : ""}`}
                   >
                     {step.side === "right" && <StepContent />}
                   </div>
@@ -381,32 +377,19 @@ export default function BloggoHomePage() {
             </span>
           </h2>
           <p className="text-lg mb-10" style={{ color: "#64748b" }}>
-            Download Bloggo on TestFlight and start your first draft today.
+            Download Bloggo on the App Store and start your first draft today.
           </p>
           <a
-            href={BETA_TESTFLIGHT_URL}
+            href={APP_STORE_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-3 px-9 py-4 rounded-2xl text-base font-bold text-white transition-all active:scale-[0.98]"
-            style={{
-              background: "linear-gradient(135deg, #0ea5e9, #38bdf8)",
-              boxShadow: "0 0 40px rgba(14,165,233,0.35)",
-            }}
+            aria-label="Download Bloggo on the App Store"
           >
-            Try Beta on TestFlight
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M13 7l5 5m0 0l-5 5m5-5H6"
-              />
-            </svg>
+            <img
+              src="/images/app-store-badge.png"
+              alt="Download on the App Store"
+              className="h-[67px] w-auto mx-auto"
+            />
           </a>
         </div>
       </section>

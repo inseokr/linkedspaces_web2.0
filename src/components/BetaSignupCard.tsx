@@ -64,9 +64,9 @@ export default function BetaSignupSection() {
 
             {/* Description */}
             <p className="text-xl font-medium leading-relaxed text-gray-600/90 max-w-2xl">
-              We&apos;re almost ready... are you? Say goodbye to “Where was that
-              again?” and hello to never forgetting a memory with LinkedSpaces!
-              Start saving moments before they fade away.
+              We&apos;re almost ready... are you? Say goodbye to &quot;Where was
+              that again?&quot; and hello to never forgetting a memory with
+              LinkedSpaces! Start saving moments before they fade away.
             </p>
 
             {/* Fields */}
