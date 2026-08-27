@@ -57,7 +57,7 @@ export function mapTripRecapToPageModel(
       ? normalizeImageSrc(trip.coverPhotoUri.trim()).src
       : undefined;
   const coverImageUrl =
-    explicitCover ?? pickCoverFromRecap(recapData) ?? "/images/hero/us.jpg";
+    explicitCover ?? pickCoverFromRecap(recapData) ?? "/images/recap/us.png";
 
   const locationText = "";
 

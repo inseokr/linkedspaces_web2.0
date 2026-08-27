@@ -1453,29 +1453,12 @@ export default function GuestRecapPage({ userId, tripId, brand }: Props) {
     const leftPanel = leftScrollRef.current;
     if (!leftPanel) return;
 
-    let ticking = false;
-    const updateLock = () => {
-      const mapEl = mapStickyRef.current;
-      if (!mapEl) return;
-      const rect = mapEl.getBoundingClientRect();
-      const isPinned = rect.top <= desktopStickyTopRef.current + 1;
-
-      leftPanel.style.overflowY = isPinned ? "auto" : "hidden";
-    };
-
-    const onScroll = () => {
-      if (!ticking) {
-        window.requestAnimationFrame(() => {
-          updateLock();
-          ticking = false;
-        });
-        ticking = true;
-      }
-    };
-
-    window.addEventListener("scroll", onScroll, { passive: true });
-    updateLock(); // init
-    return () => window.removeEventListener("scroll", onScroll);
+    // The left list is always scrollable now. Previously it was locked to
+    // overflow:hidden until the map "pinned", but the sticky columns have
+    // almost no travel room so that state was rarely reached — the list
+    // appeared frozen. The snap-to-top logic below still aligns the split
+    // view on the first left-panel scroll.
+    leftPanel.style.overflowY = "auto";
   }, [isLg]);
 
   useLayoutEffect(() => {
@@ -1690,7 +1673,7 @@ export default function GuestRecapPage({ userId, tripId, brand }: Props) {
                 height: BLOG_HEIGHT,
                 scrollBehavior: "auto",
                 overflowAnchor: "none",
-                overflowY: "hidden", // Default to hidden until JS overrides
+                overflowY: "auto", // always scrollable; snap logic aligns the split on first scroll
               }}
             >
               <div className="space-y-12 p-4">
