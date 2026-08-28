@@ -100,11 +100,54 @@ export type TripRecapDay = {
   places: TripRecapPlace[];
 };
 
+export type TripHighlightsLongestStay = {
+  placeName: string;
+  durationSeconds: number;
+  durationLabel: string;
+  placeIndex?: number;
+  placeKey?: string;
+  photoUri?: string;
+};
+
+export type TripHighlightsSteps = {
+  totalSteps: number;
+  distanceMeters: number;
+  flightsClimbed: number;
+};
+
+export type TripHighlightsTopPlace = {
+  rank: number;
+  placeName: string;
+  locationLine?: string;
+  photoCount: number;
+  placeIndex?: number;
+  placeKey?: string;
+  photoUri?: string;
+};
+
+export type TripHighlights = {
+  version: number;
+  generatedAt?: string;
+  stats?: {
+    dayCount: number;
+    placeCount: number;
+    photoCount: number;
+  };
+  summary?: {
+    travelSpanMeters?: number;
+    travelSpanLabel?: string;
+    longestStay?: TripHighlightsLongestStay;
+    steps?: TripHighlightsSteps;
+  };
+  topPlaces?: TripHighlightsTopPlace[];
+};
+
 /** trip-recap 최상위 응답 */
 export type TripRecapResponse = {
   trip: {
     title: string;
     highlight: string;
+    highlights?: TripHighlights;
 
     startTimeString: string;
     endTimeString: string;

@@ -12,6 +12,7 @@ import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 
 import RecapBlogHero from "./component/RecapBlogTopImage";
+import RecapTripHighlights from "./component/RecapTripHighlights";
 import {
   RecapBlogDaySection,
   RecapBlogEntryCard,
@@ -1636,6 +1637,16 @@ export default function GuestRecapPage({ userId, tripId, brand }: Props) {
           lastEditedAt={effectiveModel.hero.lastEditedAt}
         />
       </div>
+
+      {recapData?.trip?.highlights && (
+        <div className="px-3 mb-6">
+          <RecapTripHighlights
+            highlights={recapData.trip.highlights}
+            days={effectiveModel.days}
+            onOpenPlace={onMarkerClick}
+          />
+        </div>
+      )}
 
       {/* Mobile: sticky day tabs (now below the header, not on the cover image) */}
       {!isLg && (

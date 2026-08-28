@@ -25,6 +25,7 @@ import RecapDayTabs, {
   type DayTab,
 } from "@/views/Profile/Trip/component/RecapDayTabs";
 import RecapBlogHero from "@/views/Profile/Trip/component/RecapBlogTopImage";
+import RecapTripHighlights from "@/views/Profile/Trip/component/RecapTripHighlights";
 
 import { RecapBlogDaySection } from "@/views/Profile/Trip/component/RecapBlogPlace";
 
@@ -1226,6 +1227,14 @@ function OwnerTripRecapView({
               lastEditedAt={effectiveModel?.hero.lastEditedAt}
             />
           </div>
+        )}
+
+        {recapData?.trip?.highlights && effectiveModel && (
+          <RecapTripHighlights
+            highlights={recapData.trip.highlights}
+            days={effectiveModel.days}
+            onOpenPlace={focusByMarkerId}
+          />
         )}
 
         {error && (
