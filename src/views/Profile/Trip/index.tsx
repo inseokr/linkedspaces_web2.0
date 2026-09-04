@@ -1220,22 +1220,22 @@ function OwnerTripRecapView({
       />
 
       <div className="flex flex-col gap-[70px] px-6 pb-6 pt-2">
-        {heroProps && (
-          <div className="-mt-[30px]">
+        <div className="-mt-[30px] flex flex-col gap-[30px]">
+          {heroProps && (
             <RecapBlogHero
               {...heroProps}
               lastEditedAt={effectiveModel?.hero.lastEditedAt}
             />
-          </div>
-        )}
+          )}
 
-        {recapData?.trip?.highlights && effectiveModel && (
-          <RecapTripHighlights
-            highlights={recapData.trip.highlights}
-            days={effectiveModel.days}
-            onOpenPlace={focusByMarkerId}
-          />
-        )}
+          {recapData?.trip?.highlights && effectiveModel && (
+            <RecapTripHighlights
+              highlights={recapData.trip.highlights}
+              days={effectiveModel.days}
+              onOpenPlace={focusByMarkerId}
+            />
+          )}
+        </div>
 
         {error && (
           <div className="rounded-2xl border border-black/10 bg-black/[0.02] p-4 text-sm">

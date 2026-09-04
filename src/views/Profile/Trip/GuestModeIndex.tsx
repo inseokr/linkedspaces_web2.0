@@ -1623,7 +1623,7 @@ export default function GuestRecapPage({ userId, tripId, brand }: Props) {
       {/* push content below the fixed login bar */}
       <div style={{ height: LOGIN_BAR_HEIGHT_PX }} />
 
-      <div className="p-3 -mt-[30px] mb-[30px]">
+      <div className="p-3 -mt-[30px] mb-[30px] flex flex-col gap-[30px]">
         <RecapBlogHero
           {...effectiveModel.hero}
           coverImageUrl={
@@ -1636,17 +1636,14 @@ export default function GuestRecapPage({ userId, tripId, brand }: Props) {
           }
           lastEditedAt={effectiveModel.hero.lastEditedAt}
         />
-      </div>
-
-      {recapData?.trip?.highlights && (
-        <div className="px-3 mb-6">
+        {recapData?.trip?.highlights && (
           <RecapTripHighlights
             highlights={recapData.trip.highlights}
             days={effectiveModel.days}
             onOpenPlace={onMarkerClick}
           />
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Mobile: sticky day tabs (now below the header, not on the cover image) */}
       {!isLg && (

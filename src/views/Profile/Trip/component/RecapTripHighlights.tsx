@@ -31,9 +31,9 @@ export function hasTripHighlights(highlights?: TripHighlights | null) {
   const summary = highlights.summary;
   const hasSummary = Boolean(
     (summary?.travelSpanMeters && summary.travelSpanMeters > 0) ||
-      summary?.travelSpanLabel ||
-      summary?.longestStay?.placeName ||
-      (summary?.steps && summary.steps.totalSteps > 0),
+    summary?.travelSpanLabel ||
+    summary?.longestStay?.placeName ||
+    (summary?.steps && summary.steps.totalSteps > 0),
   );
   const hasPlaces = (highlights.topPlaces?.length ?? 0) > 0;
   return hasSummary || hasPlaces;
@@ -81,7 +81,7 @@ export default function RecapTripHighlights({
   }
 
   return (
-    <section className="rounded-[24px] border border-black/8 bg-white px-4 py-5 sm:px-6">
+    <section className="rounded-[24px] border border-black/8 bg-white px-4 py-4 sm:px-6 sm:py-5">
       <div className="flex flex-wrap items-end justify-between gap-2">
         <div>
           <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-black/40">
@@ -143,7 +143,11 @@ export default function RecapTripHighlights({
               const photo = place.photoUri
                 ? normalizeImageSrc(place.photoUri).src
                 : null;
-              const entryId = findEntryId(days, place.placeKey, place.placeName);
+              const entryId = findEntryId(
+                days,
+                place.placeKey,
+                place.placeName,
+              );
               const clickable = Boolean(entryId && onOpenPlace);
               return (
                 <button

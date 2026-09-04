@@ -5,9 +5,11 @@ import { useRef, useState } from "react";
 
 export default function BetaSignupSection() {
   const formRef = useRef<HTMLFormElement | null>(null);
+  const formStartedAtRef = useRef<number>(Date.now());
 
   const [email, setEmail] = useState("");
   const [firstName, setFirstName] = useState("");
+  const [honeypot, setHoneypot] = useState("");
   const [emailError, setEmailError] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
@@ -30,15 +32,22 @@ export default function BetaSignupSection() {
 
     setSubmitting(true);
     try {
-      await joinWaitlist(email.trim(), firstName.trim() || undefined);
+      await joinWaitlist(email.trim(), firstName.trim() || undefined, {
+        website: honeypot,
+        formStartedAt: formStartedAtRef.current,
+      });
       setSubmitSuccess(true);
       setEmail("");
       setFirstName("");
+      setHoneypot("");
     } catch (err) {
+      const status = (err as { status?: number })?.status;
       const message =
-        err instanceof Error
-          ? err.message
-          : "Something went wrong. Please try again.";
+        status === 429
+          ? "Too many attempts. Please try again later."
+          : err instanceof Error
+            ? err.message
+            : "Something went wrong. Please try again.";
       setSubmitError(message);
     } finally {
       setSubmitting(false);
@@ -55,7 +64,7 @@ export default function BetaSignupSection() {
             ref={formRef}
             noValidate
             onSubmit={onSubmit}
-            className="flex flex-col gap-6"
+            className="relative flex flex-col gap-6"
           >
             {/* Title */}
             <h2 className="text-[35px] [font-family:var(--font-poppins)] font-bold">
@@ -114,6 +123,22 @@ export default function BetaSignupSection() {
                   type="text"
                   placeholder="Optional"
                   className="h-12 w-full rounded-xl border border-gray-200 bg-white/50 px-4 py-2 text-base text-gray-900 placeholder:text-gray-400 outline-none transition-all focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
+                />
+              </label>
+
+              {/* Honeypot: hidden from people, bots often fill it */}
+              <label
+                className="absolute -left-[9999px] h-0 w-0 overflow-hidden opacity-0"
+                aria-hidden="true"
+              >
+                Website
+                <input
+                  name="website"
+                  value={honeypot}
+                  onChange={(e) => setHoneypot(e.target.value)}
+                  type="text"
+                  tabIndex={-1}
+                  autoComplete="off"
                 />
               </label>
             </div>

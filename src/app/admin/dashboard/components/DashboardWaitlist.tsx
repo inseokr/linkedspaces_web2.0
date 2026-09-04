@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { WaitlistEntry } from "@/api/waitlist";
-import { updateUserLevel } from "@/api/waitlist";
+import { updateUserLevel, purgeSpamWaitlist } from "@/api/waitlist";
 
 type ActionState = "idle" | "loading" | "done" | "error";
 
@@ -41,6 +41,8 @@ export default function DashboardWaitlist({
 }: Props) {
   // Per-row action states keyed by email (unique in waitlist)
   const [rowActions, setRowActions] = useState<Record<string, RowAction>>({});
+  const [purgingSpam, setPurgingSpam] = useState(false);
+  const [purgeMessage, setPurgeMessage] = useState<string | null>(null);
 
   function setRowAction(email: string, action: RowAction) {
     setRowActions((prev) => ({ ...prev, [email]: action }));
@@ -68,6 +70,26 @@ export default function DashboardWaitlist({
     }
   }
 
+  async function handlePurgeSpam() {
+    setPurgingSpam(true);
+    setPurgeMessage(null);
+    try {
+      const { deleted } = await purgeSpamWaitlist();
+      setPurgeMessage(
+        deleted === 0
+          ? "No bot-like waitlist rows found."
+          : `Removed ${deleted} bot signup${deleted === 1 ? "" : "s"}.`,
+      );
+      onRefresh();
+    } catch (err: unknown) {
+      setPurgeMessage(
+        err instanceof Error ? err.message : "Failed to remove spam signups.",
+      );
+    } finally {
+      setPurgingSpam(false);
+    }
+  }
+
   return (
     <section className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
       {/* Header */}
@@ -80,14 +102,24 @@ export default function DashboardWaitlist({
             Manage requests for cloud / web premium access
           </p>
         </div>
-        <button
-          type="button"
-          onClick={onRefresh}
-          disabled={loading}
-          className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
-        >
-          {loading ? "Loading…" : "Refresh"}
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={handlePurgeSpam}
+            disabled={loading || purgingSpam || waitlist.length === 0}
+            className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-100 disabled:opacity-50"
+          >
+            {purgingSpam ? "Removing…" : "Remove bot signups"}
+          </button>
+          <button
+            type="button"
+            onClick={onRefresh}
+            disabled={loading}
+            className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+          >
+            {loading ? "Loading…" : "Refresh"}
+          </button>
+        </div>
       </div>
 
       {/* Summary cards */}
@@ -114,6 +146,11 @@ export default function DashboardWaitlist({
       {error && (
         <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           {error}
+        </div>
+      )}
+      {purgeMessage && (
+        <div className="mt-4 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700">
+          {purgeMessage}
         </div>
       )}
 

@@ -721,8 +721,9 @@ export default function PhotoLightbox({
               </>
             )}
 
-            {/* Bottom info overlay: place name, timestamp, caption */}
-            <div className="absolute bottom-0 left-0 right-0 min-h-[128px] bg-gradient-to-t from-black/80 via-black/50 to-transparent backdrop-blur-md px-4 pt-8 pb-6 flex flex-col items-center justify-end z-[50] pointer-events-none">
+            {/* Bottom info overlay: place name, timestamp, caption.
+                Keep this light + short so the bottom of the photo stays visible. */}
+            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 via-black/25 to-transparent px-4 pt-14 pb-5 flex flex-col items-center justify-end z-[50] pointer-events-none">
               <h2 className="text-center text-xl sm:text-2xl font-semibold text-white leading-snug tracking-tight">
                 {title ?? "Photo"}
               </h2>
