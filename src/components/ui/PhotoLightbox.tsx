@@ -347,7 +347,7 @@ export default function PhotoLightbox({
   const showNav = total > 1;
 
   return createPortal(
-    <div className="fixed inset-0 z-[2147483647] flex items-center justify-center">
+    <div className="fixed inset-0 z-[2147483647] flex items-stretch justify-center sm:items-center">
       {/* Backdrop (dims everything) */}
       <button
         type="button"
@@ -377,7 +377,7 @@ export default function PhotoLightbox({
       <div
         role="dialog"
         aria-modal="true"
-        className="relative mx-auto flex h-full w-full flex-col rounded-none bg-transparent p-0 backdrop-blur-0 sm:h-auto sm:w-[min(1100px,92vw)] sm:rounded-2xl sm:bg-black/25 sm:p-3 sm:backdrop-blur"
+        className="relative flex h-full w-full flex-col rounded-none bg-transparent p-0 sm:mx-auto sm:h-auto sm:w-[min(1100px,92vw)] sm:rounded-2xl sm:bg-black/25 sm:p-3 sm:backdrop-blur"
       >
         {/* Header — overlays the photo on mobile so the stage gets the full height */}
         <div className="pointer-events-none absolute inset-x-0 top-0 z-[60] flex items-center justify-between gap-3 bg-gradient-to-b from-black/55 to-transparent px-2 pb-8 pt-[max(0.5rem,env(safe-area-inset-top))] sm:pointer-events-auto sm:static sm:bg-none sm:pb-2 sm:pt-0">
