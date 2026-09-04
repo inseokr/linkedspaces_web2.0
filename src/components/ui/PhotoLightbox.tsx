@@ -373,17 +373,17 @@ export default function PhotoLightbox({
         }}
       />
 
-      {/* Modal */}
+      {/* Modal — true full-screen on mobile, floating card on >= sm */}
       <div
         role="dialog"
         aria-modal="true"
-        className="relative mx-auto w-[min(1100px,92vw)] rounded-2xl bg-black/25 p-3 backdrop-blur"
+        className="relative mx-auto flex h-full w-full flex-col rounded-none bg-transparent p-0 backdrop-blur-0 sm:h-auto sm:w-[min(1100px,92vw)] sm:rounded-2xl sm:bg-black/25 sm:p-3 sm:backdrop-blur"
       >
-        {/* Header */}
-        <div className="flex items-center justify-between gap-3 px-2 pb-2">
+        {/* Header — overlays the photo on mobile so the stage gets the full height */}
+        <div className="pointer-events-none absolute inset-x-0 top-0 z-[60] flex items-center justify-between gap-3 bg-gradient-to-b from-black/55 to-transparent px-2 pb-8 pt-[max(0.5rem,env(safe-area-inset-top))] sm:pointer-events-auto sm:static sm:bg-none sm:pb-2 sm:pt-0">
           <div className="min-w-0 flex-1"></div>
 
-          <div className="flex items-center gap-2">
+          <div className="pointer-events-auto flex items-center gap-2">
             {onSelect && total > 0 && (
               <button
                 type="button"
@@ -427,12 +427,12 @@ export default function PhotoLightbox({
           </div>
         </div>
 
-        {/* Image area */}
-        <div className="relative overflow-hidden rounded-xl bg-black">
+        {/* Image area — fills remaining height on mobile, fixed size on >= sm */}
+        <div className="relative min-h-0 flex-1 overflow-hidden rounded-none bg-black sm:flex-none sm:rounded-xl">
           <div
             ref={stageRef}
             className={[
-              "relative h-[min(78vh,760px)] w-full",
+              "relative h-full w-full sm:h-[min(78vh,760px)]",
               zoom > 1
                 ? "cursor-grab active:cursor-grabbing"
                 : "cursor-default",
@@ -723,7 +723,7 @@ export default function PhotoLightbox({
 
             {/* Bottom info overlay: place name, timestamp, caption.
                 Keep this light + short so the bottom of the photo stays visible. */}
-            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 via-black/25 to-transparent px-4 pt-14 pb-5 flex flex-col items-center justify-end z-[50] pointer-events-none">
+            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 via-black/25 to-transparent px-4 pt-14 pb-[max(1.25rem,env(safe-area-inset-bottom))] flex flex-col items-center justify-end z-[50] pointer-events-none">
               <h2 className="text-center text-xl sm:text-2xl font-semibold text-white leading-snug tracking-tight">
                 {title ?? "Photo"}
               </h2>
@@ -750,9 +750,9 @@ export default function PhotoLightbox({
           </div>
         </div>
 
-        {/* Thumbnail preview strip */}
+        {/* Thumbnail preview strip — hidden on mobile (swipe to navigate) */}
         {total > 1 && (
-          <div className="mt-3 rounded-xl bg-black/25 px-2 py-2">
+          <div className="mt-3 hidden rounded-xl bg-black/25 px-2 py-2 sm:block">
             <div
               ref={thumbsRef}
               className={[
