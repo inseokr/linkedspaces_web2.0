@@ -111,12 +111,12 @@ export async function fetchPremiumUserCount(): Promise<number> {
  * Update a user's level.
  * @param username - the user's username (from waitlist entry `userName`)
  * @param email    - the user's email
- * @param userLevel - "premium" to allow, "normal" to reject/downgrade
+ * @param userLevel - "freemium" to allow, "normal" to reject/downgrade
  */
 export async function updateUserLevel(
   username: string,
   email: string,
-  userLevel: "normal" | "premium" | "influencer",
+  userLevel: "normal" | "freemium" | "premium" | "influencer",
 ): Promise<void> {
   const token = getAuthToken();
   const res = await apiFetch<UpdateUserLevelResponse>(

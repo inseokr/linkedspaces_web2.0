@@ -51,7 +51,7 @@ export default function DashboardWaitlist({
   async function handleAllow(entry: WaitlistEntry) {
     setRowAction(entry.email, { state: "loading", label: "Allowing…" });
     try {
-      await updateUserLevel(entry.userName, entry.email, "premium");
+      await updateUserLevel(entry.userName, entry.email, "freemium");
       setRowAction(entry.email, { state: "done", label: "Allowed" });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to allow user";
