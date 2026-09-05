@@ -507,95 +507,142 @@ export default function MapboxMap({
     return null;
   }, []);
 
-  const focusOnLatLng = useCallback((lat: number, lng: number) => {
+  /**
+   * Force Mapbox to re-project every DOM marker. With globe projection a
+   * marker's CSS transform can go stale after a camera animation and stay
+   * invisible until the user pans; re-setting each marker's LngLat plus a
+   * repaint pulls them back onto the map.
+   */
+  const reprojectMarkers = useCallback(() => {
     const map = mapRef.current;
     if (!map) return;
-
-    const last = lastFocusedLatLngRef.current;
-    const isSameLocation =
-      last !== null &&
-      Math.abs(last.lat - lat) < 1e-6 &&
-      Math.abs(last.lng - lng) < 1e-6;
-
-    const nextZoom = isSameLocation && last.zoom === 18 ? 10 : 18;
-
-    const runFocus = () => {
-      map.stop();
-
-      map.flyTo({
-        center: [lng, lat],
-        zoom: nextZoom,
-        duration: 650,
-      });
-
-      // With globe projection, DOM marker CSS transforms can become stale after
-      // a flyTo animation. Force Mapbox to re-project all marker positions once
-      // the camera settles so they don't remain invisible until the user pans.
-      map.once("moveend", () => map.triggerRepaint());
-
-      lastFocusedLatLngRef.current = { lat, lng, zoom: nextZoom };
-      hasEverFocusedToEntryRef.current = true;
-    };
-
-    if (map.isStyleLoaded()) runFocus();
-    else map.once("idle", runFocus);
+    markerHandlesRef.current.forEach((h) => {
+      try {
+        h?.marker?.setLngLat(h.marker.getLngLat());
+      } catch {}
+    });
+    try {
+      map.triggerRepaint();
+    } catch {}
   }, []);
 
-  const fitToCurrentMarkersBounds = useCallback(() => {
-    const map = mapRef.current;
-    if (!map) return false;
+  const focusOnLatLng = useCallback(
+    (
+      lat: number,
+      lng: number,
+      opts?: { zoom?: number; allowZoomToggle?: boolean },
+    ) => {
+      const map = mapRef.current;
+      if (!map) return;
 
-    const arr =
-      modeRef.current === "place"
-        ? placeMarkersRef.current
-        : markersRef.current;
+      const baseZoom = opts?.zoom ?? 18;
+      const allowZoomToggle = opts?.allowZoomToggle ?? true;
 
-    const pts = arr.filter(
-      (m) => Number.isFinite(m.lat) && Number.isFinite(m.lng),
-    ) as Array<{ lat: number; lng: number }>;
+      const last = lastFocusedLatLngRef.current;
+      const isSameLocation =
+        last !== null &&
+        Math.abs(last.lat - lat) < 1e-6 &&
+        Math.abs(last.lng - lng) < 1e-6;
 
-    if (pts.length === 0) return false;
+      // A repeated tap on the same spot zooms back out (marker-click
+      // affordance). Scroll-driven focus disables this so a re-emitted
+      // location can't randomly kick the camera out to zoom 10.
+      const nextZoom =
+        allowZoomToggle && isSameLocation && last.zoom === baseZoom
+          ? 10
+          : baseZoom;
 
-    // One point → keep existing single-focus behavior.
-    if (pts.length === 1) {
-      focusOnLatLng(pts[0].lat, pts[0].lng);
-      return true;
-    }
+      const runFocus = () => {
+        map.stop();
 
-    let minLng = Infinity;
-    let minLat = Infinity;
-    let maxLng = -Infinity;
-    let maxLat = -Infinity;
-
-    for (const p of pts) {
-      minLng = Math.min(minLng, p.lng);
-      minLat = Math.min(minLat, p.lat);
-      maxLng = Math.max(maxLng, p.lng);
-      maxLat = Math.max(maxLat, p.lat);
-    }
-
-    const run = () => {
-      map.stop();
-      map.fitBounds(
-        [
-          [minLng, minLat],
-          [maxLng, maxLat],
-        ],
-        {
-          padding: 80,
+        map.flyTo({
+          center: [lng, lat],
+          zoom: nextZoom,
           duration: 650,
-          maxZoom: 10,
-        },
-      );
+        });
 
-      hasEverFocusedToEntryRef.current = true;
-    };
+        // Globe projection leaves DOM markers with stale transforms after a
+        // fly animation. Re-project once the camera settles and again once the
+        // map is fully idle so markers never stay invisible until a manual pan.
+        map.once("moveend", () => reprojectMarkers());
+        map.once("idle", () => reprojectMarkers());
 
-    if (map.isStyleLoaded()) run();
-    else map.once("idle", run);
+        lastFocusedLatLngRef.current = { lat, lng, zoom: nextZoom };
+        hasEverFocusedToEntryRef.current = true;
+      };
 
-    return true;
-  }, [focusOnLatLng]);
+      if (map.isStyleLoaded()) runFocus();
+      else map.once("idle", runFocus);
+    },
+    [reprojectMarkers],
+  );
+
+  const fitToCurrentMarkersBounds = useCallback(
+    (opts?: { maxZoom?: number; singleZoom?: number; padding?: number }) => {
+      const map = mapRef.current;
+      if (!map) return false;
+
+      const arr =
+        modeRef.current === "place"
+          ? placeMarkersRef.current
+          : markersRef.current;
+
+      const pts = arr.filter(
+        (m) => Number.isFinite(m.lat) && Number.isFinite(m.lng),
+      ) as Array<{ lat: number; lng: number }>;
+
+      if (pts.length === 0) return false;
+
+      // One point → single-focus. Callers can pass a gentler zoom (scroll-
+      // follow) instead of the default marker-click zoom.
+      if (pts.length === 1) {
+        focusOnLatLng(pts[0].lat, pts[0].lng, {
+          zoom: opts?.singleZoom,
+          allowZoomToggle: opts?.singleZoom == null,
+        });
+        return true;
+      }
+
+      let minLng = Infinity;
+      let minLat = Infinity;
+      let maxLng = -Infinity;
+      let maxLat = -Infinity;
+
+      for (const p of pts) {
+        minLng = Math.min(minLng, p.lng);
+        minLat = Math.min(minLat, p.lat);
+        maxLng = Math.max(maxLng, p.lng);
+        maxLat = Math.max(maxLat, p.lat);
+      }
+
+      const run = () => {
+        map.stop();
+        map.fitBounds(
+          [
+            [minLng, minLat],
+            [maxLng, maxLat],
+          ],
+          {
+            padding: opts?.padding ?? 80,
+            duration: 650,
+            maxZoom: opts?.maxZoom ?? 10,
+          },
+        );
+
+        // Same globe stale-transform guard as focusOnLatLng.
+        map.once("moveend", () => reprojectMarkers());
+        map.once("idle", () => reprojectMarkers());
+
+        hasEverFocusedToEntryRef.current = true;
+      };
+
+      if (map.isStyleLoaded()) run();
+      else map.once("idle", run);
+
+      return true;
+    },
+    [focusOnLatLng, reprojectMarkers],
+  );
 
   const clearPlacePath = useCallback(() => {
     const map = mapRef.current;
@@ -1200,14 +1247,23 @@ export default function MapboxMap({
         syncMarkersRef.current();
 
         // 초기 포커스는 “최신 props(ref)” 기준
+        const isPlace = modeRef.current === "place";
         const fl = focusLatLngRef.current;
         if (fl) {
-          focusOnLatLng(fl.lat, fl.lng);
+          focusOnLatLng(
+            fl.lat,
+            fl.lng,
+            isPlace ? { zoom: 15, allowZoomToggle: false } : undefined,
+          );
           return;
         }
 
         // Prefer fitting all markers so the map covers everything.
-        if (fitToCurrentMarkersBounds()) {
+        if (
+          fitToCurrentMarkersBounds(
+            isPlace ? { maxZoom: 15, singleZoom: 15, padding: 60 } : undefined,
+          )
+        ) {
           return;
         }
 
@@ -1340,16 +1396,29 @@ export default function MapboxMap({
     if (!mapRef.current) return;
 
     if (focusLatLng) {
+      const isPlace = modeRef.current === "place";
+      // In the recap blog the marker set swaps to the new day the instant you
+      // scroll across a day boundary, so a long camera delay leaves the map
+      // parked on empty space. Keep place-mode follow tight; hold a fixed,
+      // non-toggling zoom so re-emitted coordinates don't jump the camera.
+      const focusOpts = isPlace
+        ? { zoom: 15, allowZoomToggle: false }
+        : undefined;
+
       // On the very first focus (initial load), move immediately.
       if (!hasEverFocusedToEntryRef.current) {
-        focusOnLatLng(focusLatLng.lat, focusLatLng.lng);
+        focusOnLatLng(focusLatLng.lat, focusLatLng.lng, focusOpts);
         return;
       }
 
-      // Otherwise debounce — wait for scrolling to settle.
-      const timer = setTimeout(() => {
-        focusOnLatLng(focusLatLng.lat, focusLatLng.lng);
-      }, 1500);
+      // Otherwise debounce briefly — enough to coalesce a fast scroll, short
+      // enough that markers don't disappear while the camera catches up.
+      const timer = setTimeout(
+        () => {
+          focusOnLatLng(focusLatLng.lat, focusLatLng.lng, focusOpts);
+        },
+        isPlace ? 450 : 1500,
+      );
       return () => clearTimeout(timer);
     }
 
@@ -1375,6 +1444,59 @@ export default function MapboxMap({
     fitToCurrentMarkersBounds,
     getFirstValidEntryLatLng,
   ]);
+
+  // Place mode: when the marker set changes (e.g. scrolling into a new day)
+  // make sure the new markers are actually in view. If none are — the camera
+  // is still on the previous day — frame them right away instead of waiting for
+  // the debounced focusLatLng move, which is what leaves the map looking empty.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    if (mode !== "place") return;
+    if (placeMarkers.length === 0) return;
+
+    const run = () => {
+      // Don't yank the camera right after a deliberate pan/pinch/zoom.
+      const msSinceUser = Date.now() - lastUserInteractionAtRef.current;
+      if (msSinceUser < 1200) return;
+
+      const pts = placeMarkersRef.current.filter(
+        (m) => Number.isFinite(m.lat) && Number.isFinite(m.lng),
+      );
+      if (pts.length === 0) return;
+
+      let anyVisible = false;
+      try {
+        const bounds = map.getBounds();
+        anyVisible =
+          !!bounds && pts.some((p) => bounds.contains([p.lng, p.lat]));
+      } catch {
+        anyVisible = false;
+      }
+
+      if (anyVisible) {
+        // Already on screen — just un-stick any marker left invisible by globe
+        // projection so a scroll no longer needs a manual nudge to reveal them.
+        reprojectMarkers();
+        return;
+      }
+
+      fitToCurrentMarkersBounds({ maxZoom: 15, singleZoom: 15, padding: 60 });
+    };
+
+    if (map.isStyleLoaded()) {
+      // One frame so syncMarkers can (re)build handles for the new set first.
+      const raf = requestAnimationFrame(run);
+      return () => cancelAnimationFrame(raf);
+    }
+    const onIdle = () => run();
+    map.once("idle", onIdle);
+    return () => {
+      try {
+        map.off("idle", onIdle);
+      } catch {}
+    };
+  }, [placeMarkers, mode, fitToCurrentMarkersBounds, reprojectMarkers]);
 
   // When markers change (e.g. year filter), refit bounds unless the user just interacted.
   useEffect(() => {
