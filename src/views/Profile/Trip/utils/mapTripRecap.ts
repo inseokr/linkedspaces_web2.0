@@ -241,7 +241,9 @@ function mapPlaceToEntry(p: TripRecapPlace, fallbackId: string): RecapEntry {
  * - 전체 recap에서 "대표 이미지"를 하나 뽑음
  * - 우선순위: selected photo -> 첫 photo
  */
-function pickCoverFromRecap(recapData: TripRecapResponse): string | undefined {
+export function pickCoverFromRecap(
+  recapData: TripRecapResponse,
+): string | undefined {
   const days = recapData.days ?? [];
 
   // 1) selected photo 우선
