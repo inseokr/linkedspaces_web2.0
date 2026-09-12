@@ -25,6 +25,7 @@ import RecapDayTabs, {
   type DayTab,
 } from "@/views/Profile/Trip/component/RecapDayTabs";
 import RecapBlogHero from "@/views/Profile/Trip/component/RecapBlogTopImage";
+import RecapTripHighlights from "@/views/Profile/Trip/component/RecapTripHighlights";
 
 import { RecapBlogDaySection } from "@/views/Profile/Trip/component/RecapBlogPlace";
 
@@ -419,9 +420,18 @@ function OwnerTripRecapView({
   const heroProps = useMemo(() => {
     if (!effectiveModel?.hero) return null;
 
+    // effectiveModel.hero.coverImageUrl already prefers a photo used in the blog
+    // (selected -> first). Only fall back to the trip-card cover when the blog
+    // has no usable photo and we're on the bundled placeholder.
+    const blogCover = effectiveModel.hero.coverImageUrl;
+    const coverImageUrl =
+      blogCover === "/images/recap/us.png"
+        ? (tripCoverOverride ?? blogCover)
+        : blogCover;
+
     return {
       ...effectiveModel.hero,
-      coverImageUrl: tripCoverOverride ?? effectiveModel.hero.coverImageUrl,
+      coverImageUrl,
     };
   }, [effectiveModel?.hero, tripCoverOverride]);
 
@@ -1210,14 +1220,22 @@ function OwnerTripRecapView({
       />
 
       <div className="flex flex-col gap-[70px] px-6 pb-6 pt-2">
-        {heroProps && (
-          <div className="-mt-[30px]">
+        <div className="-mt-[30px] flex flex-col gap-[30px]">
+          {heroProps && (
             <RecapBlogHero
               {...heroProps}
               lastEditedAt={effectiveModel?.hero.lastEditedAt}
             />
-          </div>
-        )}
+          )}
+
+          {recapData?.trip?.highlights && effectiveModel && (
+            <RecapTripHighlights
+              highlights={recapData.trip.highlights}
+              days={effectiveModel.days}
+              onOpenPlace={focusByMarkerId}
+            />
+          )}
+        </div>
 
         {error && (
           <div className="rounded-2xl border border-black/10 bg-black/[0.02] p-4 text-sm">

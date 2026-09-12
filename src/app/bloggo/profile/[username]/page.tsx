@@ -6,6 +6,8 @@ import Link from "next/link";
 import { MapPin } from "lucide-react";
 import { assetUrl } from "@/api/assets";
 import { apiFetch, ApiError } from "@/api/client";
+import { fetchTripRecapForCover } from "@/api/trips";
+import { pickCoverFromRecap } from "@/views/Profile/Trip/utils/mapTripRecap";
 import MapboxMap, {
   type MarkerData,
 } from "@/views/Profile/travel-stats/components/MapBoxMap";
@@ -485,6 +487,16 @@ export default function ProfilePage() {
   );
   const [imgError, setImgError] = useState(false);
 
+  // Cover photos built from the cached user snapshot point at a private S3
+  // bucket without a signature (bare "/public/..." path), so they always 403.
+  // The live trip-recap API returns properly signed URLs, so fetch that per
+  // blog (this page only ever shows the logged-in owner's own trips) and use
+  // it as the real cover once it arrives.
+  const [liveCoverByBlogKey, setLiveCoverByBlogKey] = useState<
+    Record<string, string>
+  >({});
+  const fetchedCoverKeysRef = useRef<Set<string>>(new Set());
+
   // State derived from URL
   const selectedCountry = urlCountry;
   const mode: Mode = selectedCountry ? "mapView" : "recap";
@@ -600,30 +612,61 @@ export default function ProfilePage() {
     fetchProfile();
   }, [username]);
 
+  // Overlay live, properly-signed covers over the (likely 403) cached ones.
+  const blogs = useMemo(() => {
+    if (!profile) return [];
+    return profile.blogs.map((b) =>
+      liveCoverByBlogKey[b.blogKey]
+        ? { ...b, coverPhotoUrl: liveCoverByBlogKey[b.blogKey] }
+        : b,
+    );
+  }, [profile, liveCoverByBlogKey]);
+
+  // ── Fetch live (signed) cover photos ────────────────────────────────────────
+  useEffect(() => {
+    if (!profile) return;
+
+    const needsLiveCover = profile.blogs.filter(
+      (b) => !fetchedCoverKeysRef.current.has(b.blogKey),
+    );
+    if (needsLiveCover.length === 0) return;
+
+    needsLiveCover.forEach((b) => {
+      fetchedCoverKeysRef.current.add(b.blogKey);
+
+      fetchTripRecapForCover(profile.username, b.blogKey).then((data) => {
+        const cover = data ? pickCoverFromRecap(data) : undefined;
+        if (!cover) return;
+        setLiveCoverByBlogKey((prev) =>
+          prev[b.blogKey] === cover ? prev : { ...prev, [b.blogKey]: cover },
+        );
+      });
+    });
+  }, [profile]);
+
   // ── Derive years from blogs ─────────────────────────────────────────────────
   const availableYears = useMemo(() => {
     if (!profile) return [];
     const set = new Set<number>();
-    for (const b of profile.blogs) {
+    for (const b of blogs) {
       const src = b.createdAt || b.tripDateRangeText || "";
       const match = src.match(/\b(20\d{2}|19\d{2})\b/);
       if (match) set.add(Number(match[0]));
     }
     return Array.from(set).sort((a, b) => b - a);
-  }, [profile]);
+  }, [blogs]);
 
   // ── Filter blogs by year ────────────────────────────────────────────────────
   const filteredBlogs = useMemo(() => {
     if (!profile) return [];
 
-    console.warn("Filtering blogs:", profile.blogs);
-    if (selectedYear === "ALL") return profile.blogs;
-    return profile.blogs.filter((b) => {
+    if (selectedYear === "ALL") return blogs;
+    return blogs.filter((b) => {
       const src = b.createdAt || b.tripDateRangeText || "";
       const match = src.match(/\b(20\d{2}|19\d{2})\b/);
       return match ? Number(match[0]) === selectedYear : false;
     });
-  }, [profile, selectedYear]);
+  }, [profile, blogs, selectedYear]);
 
   // ── Hide empty years based on selected country ─────────────────────────────
   const visibleYears = useMemo(() => {
@@ -860,7 +903,6 @@ export default function ProfilePage() {
 
   // ── Profile ───────────────────────────────────────────────────────────────────
   const displayName = profile.displayName || profile.username;
-  const blogs = profile.blogs ?? [];
   const initials = displayName[0]?.toUpperCase() ?? "?";
 
   return (

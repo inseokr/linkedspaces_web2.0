@@ -21,10 +21,14 @@ import RecapYearTabs, {
 import type { Trip } from "@/views/Profile/recap-blogs/types";
 
 import { getCachedUser } from "@/api/user";
+import { fetchTripRecapForCover } from "@/api/trips";
+import { pickCoverFromRecap } from "@/views/Profile/Trip/utils/mapTripRecap";
 
 import {
   transformToAllBlogItems,
   transformToRecapItems,
+  resolveTripCoverUrl,
+  isDefaultCoverUrl,
 } from "@/views/Profile/recap-blogs/utils/tripDataTransform";
 
 import MapboxMap, {
@@ -242,6 +246,41 @@ export default function ProfileRecapBlogsView() {
     });
   }, [visibleTrips, selectedYear]);
 
+  // Live cover fallback: the cached user snapshot (localStorage, set at login)
+  // can be stale or only hold local `file://` photo URIs, in which case
+  // resolveTripCoverUrl() falls back to the placeholder image. When that
+  // happens, fetch the same live trip-recap API the blog detail page uses
+  // (which always has fresh, cloud-hosted photos) to backfill a real cover.
+  const [liveCoverByBlogKey, setLiveCoverByBlogKey] = useState<
+    Record<string, string>
+  >({});
+  const fetchedCoverKeysRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (!username) return;
+
+    const needsLiveCover = tripsFilteredByYear.filter((t) => {
+      const key = String(t.blogKey);
+      if (fetchedCoverKeysRef.current.has(key)) return false;
+      const cached = resolveTripCoverUrl(t, placeVisitHistory);
+      return isDefaultCoverUrl(cached);
+    });
+    if (needsLiveCover.length === 0) return;
+
+    needsLiveCover.forEach((t) => {
+      const key = String(t.blogKey);
+      fetchedCoverKeysRef.current.add(key);
+
+      fetchTripRecapForCover(username, t.blogKey).then((data) => {
+        const cover = data ? pickCoverFromRecap(data) : undefined;
+        if (!cover) return;
+        setLiveCoverByBlogKey((prev) =>
+          prev[key] === cover ? prev : { ...prev, [key]: cover },
+        );
+      });
+    });
+  }, [tripsFilteredByYear, placeVisitHistory, username]);
+
   // recap items (country grouped) - already returns CountryRecapItem[]
   const recapItems = useMemo(() => {
     return transformToRecapItems(tripsFilteredByYear, placeVisitHistory);
@@ -253,8 +292,18 @@ export default function ProfileRecapBlogsView() {
       username,
       placeVisitHistory,
       includeYearInDateLabel: selectedYear === "ALL",
-    });
-  }, [tripsFilteredByYear, username, placeVisitHistory, selectedYear]);
+    }).map((it) =>
+      liveCoverByBlogKey[it.id]
+        ? { ...it, coverImageUrl: liveCoverByBlogKey[it.id] }
+        : it,
+    );
+  }, [
+    tripsFilteredByYear,
+    username,
+    placeVisitHistory,
+    selectedYear,
+    liveCoverByBlogKey,
+  ]);
 
   const normalizedSelectedCountry = useMemo(
     () => normalizeIso2(selectedCountryCode),
@@ -275,8 +324,18 @@ export default function ProfileRecapBlogsView() {
       username,
       placeVisitHistory,
       includeYearInDateLabel: selectedYear === "ALL",
-    });
-  }, [tripsForSelectedCountry, username, placeVisitHistory, selectedYear]);
+    }).map((it) =>
+      liveCoverByBlogKey[it.id]
+        ? { ...it, coverImageUrl: liveCoverByBlogKey[it.id] }
+        : it,
+    );
+  }, [
+    tripsForSelectedCountry,
+    username,
+    placeVisitHistory,
+    selectedYear,
+    liveCoverByBlogKey,
+  ]);
 
   // map markers: Trip -> MarkerData
   const mapMarkers: MarkerData[] = useMemo(() => {
@@ -288,7 +347,10 @@ export default function ProfileRecapBlogsView() {
       placeVisitHistory,
       includeYearInDateLabel: selectedYear === "ALL",
     })) {
-      coverByBlogKey.set(String(item.id), item.coverImageUrl);
+      coverByBlogKey.set(
+        String(item.id),
+        liveCoverByBlogKey[item.id] || item.coverImageUrl,
+      );
     }
 
     return tripsForSelectedCountry
@@ -321,6 +383,7 @@ export default function ProfileRecapBlogsView() {
     placeVisitHistory,
     username,
     selectedYear,
+    liveCoverByBlogKey,
   ]);
 
   // Track the trip that is currently at the top of the visible left list.

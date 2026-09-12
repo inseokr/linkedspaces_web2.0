@@ -27,11 +27,22 @@ const FUNNEL_LABELS: Record<string, string> = {
   blog_created: "Blog Created",
   blog_saved: "Blog Saved",
   blog_published: "Published",
+  "Photo-Permission": "Photo Permission",
+  "App-Open": "App Open",
 };
 
-// Events to show on the trend chart (keep it readable)
-const TREND_KEYS = ["app_opened", "blog_created", "blog_published"];
-const TREND_COLORS = ["#38bdf8", "#34d399", "#fb923c"];
+const TREND_KEYS = ["App-Open", "Photo-Permission", "blog_created"];
+const TREND_COLORS = ["#38bdf8", "#a78bfa", "#34d399"];
+
+const SHARE_TYPE_LABELS: Record<string, string> = {
+  photos: "Photos",
+  polaroid: "Polaroid",
+  studio: "Bloggo Studio",
+  stitch_reels: "Stitch Reels",
+  nearby: "Nearby / QR",
+  pdf: "PDF",
+  web_link: "Web link",
+};
 
 type SortKey =
   | "anonymousId"
@@ -197,6 +208,15 @@ export function DashboardEventFunnel({
               sub={`${identity.authenticated.toLocaleString()} events`}
             />
           </div>
+
+          <BehaviorMetricsCards
+            behavior={data.behavior}
+            photoPermissionEventCount={
+              (data.topEvents ?? []).find(
+                (event) => event.eventName === "Photo-Permission",
+              )?.count ?? 0
+            }
+          />
 
           {/* Funnel */}
           <div>
@@ -742,6 +762,180 @@ export function DashboardEventFunnel({
 // ---------------------------------------------------------------------------
 // Small helper components
 // ---------------------------------------------------------------------------
+function BehaviorMetricsCards({
+  behavior,
+  photoPermissionEventCount,
+}: {
+  behavior: EventAnalytics["behavior"];
+  photoPermissionEventCount: number;
+}) {
+  const photoAccess = behavior?.photoAccess ?? {
+    full: 0,
+    limited: 0,
+    none: 0,
+  };
+  const cleanup = behavior?.cleanup ?? {
+    createdBlogs: 0,
+    savedBlogs: 0,
+    openedBlogs: 0,
+    deletedBlogs: 0,
+    cleanedBlogs: 0,
+    openedPct: 0,
+    deletedPct: 0,
+    cleanedPct: 0,
+    cleanedOfOpenedPct: 0,
+    trackingStartedAt: null,
+  };
+  const savedBlogs = cleanup.savedBlogs || cleanup.createdBlogs;
+  const cleanedBlogs = cleanup.cleanedBlogs ?? cleanup.deletedBlogs;
+  const cleanedPct = cleanup.cleanedPct ?? cleanup.deletedPct;
+  const share = behavior?.share ?? {
+    createdBlogs: 0,
+    savedBlogs: 0,
+    sharedBlogs: 0,
+    sharedPct: 0,
+    trackingStartedAt: null,
+    byType: [],
+  };
+  const shareSavedBlogs = share.savedBlogs || share.createdBlogs;
+  const photoTotal = photoAccess.full + photoAccess.limited + photoAccess.none;
+  const photoPct = (n: number) =>
+    photoTotal > 0 ? `${Math.round((n / photoTotal) * 100)}%` : "—";
+  const maxShareEvents = Math.max(1, ...share.byType.map((row) => row.events));
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <h3 className="mb-1 text-sm font-medium text-[var(--bloggo-text-primary)]">
+          Photo permit type
+        </h3>
+        <p className="mb-3 text-xs text-[var(--bloggo-text-secondary)]">
+          Latest <code>Photo-Permission.status</code> or{" "}
+          <code>App-Open.photoAccess</code> per device.{" "}
+          {photoPermissionEventCount.toLocaleString()} Photo-Permission event
+          {photoPermissionEventCount === 1 ? "" : "s"} in this period.
+        </p>
+        <div className="grid grid-cols-3 gap-4">
+          <StatCard
+            label="Full"
+            value={photoAccess.full}
+            sub={photoPct(photoAccess.full)}
+          />
+          <StatCard
+            label="Limited"
+            value={photoAccess.limited}
+            sub={photoPct(photoAccess.limited)}
+          />
+          <StatCard
+            label="None"
+            value={photoAccess.none}
+            sub={photoPct(photoAccess.none)}
+          />
+        </div>
+        {photoTotal === 0 && photoPermissionEventCount > 0 && (
+          <p className="mt-2 text-xs text-amber-700">
+            Photo-Permission events are in Top events, but the Full / Limited /
+            None split is still 0. Redeploy Pocketverse so{" "}
+            <code>GET /activity/stream</code> reads{" "}
+            <code>properties.status</code> on Photo-Permission.
+          </p>
+        )}
+      </div>
+
+      <div>
+        <h3 className="mb-3 text-sm font-medium text-[var(--bloggo-text-primary)]">
+          Smart Cleanup on saved recap blogs
+        </h3>
+        <p className="mb-3 text-xs text-[var(--bloggo-text-secondary)]">
+          Count of blogs that opened cleanup and deleted at least once, among
+          blogs created after tracking started
+          {cleanup.trackingStartedAt
+            ? ` (${new Date(cleanup.trackingStartedAt).toLocaleDateString()})`
+            : ""}
+          . Treat the count as the main signal until this event has more
+          history.
+        </p>
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <StatCard label="Created + saved since tracking" value={savedBlogs} />
+          <StatCard
+            label="Opened cleanup"
+            value={cleanup.openedBlogs}
+            sub={`${cleanup.openedPct}% of those blogs`}
+          />
+          <StatCard
+            label="Cleaned at least once"
+            value={cleanedBlogs}
+            sub={`${cleanedPct}% of those blogs`}
+          />
+          <StatCard
+            label="Cleaned / opened"
+            value={`${cleanup.cleanedOfOpenedPct ?? 0}%`}
+            sub="of blogs that opened cleanup"
+          />
+        </div>
+      </div>
+
+      <div>
+        <h3 className="mb-3 text-sm font-medium text-[var(--bloggo-text-primary)]">
+          Share on saved recap blogs
+        </h3>
+        <p className="mb-3 text-xs text-[var(--bloggo-text-secondary)]">
+          Count of blogs that completed a share at least once, among blogs
+          created after tracking started
+          {share.trackingStartedAt
+            ? ` (${new Date(share.trackingStartedAt).toLocaleDateString()})`
+            : ""}
+          . Treat the count as the main signal until this event has more
+          history.
+        </p>
+        <div className="grid grid-cols-3 gap-4 mb-3">
+          <StatCard
+            label="Created + saved since tracking"
+            value={shareSavedBlogs}
+          />
+          <StatCard
+            label="Shared at least once"
+            value={share.sharedBlogs}
+            sub={`${share.sharedPct}% of those blogs`}
+          />
+          <StatCard
+            label="Share events"
+            value={share.byType.reduce((sum, row) => sum + row.events, 0)}
+          />
+        </div>
+        {share.byType.length === 0 ? (
+          <p className="text-sm text-[var(--bloggo-text-secondary)]">
+            No completed shares in this period.
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {share.byType.map((row) => {
+              const barPct = Math.round((row.events / maxShareEvents) * 100);
+              return (
+                <div key={row.type}>
+                  <div className="mb-1 flex justify-between text-xs text-[var(--bloggo-text-secondary)]">
+                    <span>{SHARE_TYPE_LABELS[row.type] ?? row.type}</span>
+                    <span>
+                      {row.events.toLocaleString()} events ·{" "}
+                      {row.uniqueBlogs.toLocaleString()} blogs
+                    </span>
+                  </div>
+                  <div className="h-2 overflow-hidden rounded-full bg-black/5">
+                    <div
+                      className="h-full rounded-full bg-amber-400"
+                      style={{ width: `${barPct}%` }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function StatCard({
   label,
   value,

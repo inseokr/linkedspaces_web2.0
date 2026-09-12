@@ -193,6 +193,17 @@ export function resolveTripCoverUrl(
   return fallback;
 }
 
+/**
+ * True when resolveTripCoverUrl() had nothing usable and returned the shared
+ * placeholder — i.e. the cached user snapshot (localStorage, set at login) has
+ * no cloud-hosted photo for this trip. Callers use this to know when it's worth
+ * fetching a live cover (e.g. from the trip-recap API) instead of showing the
+ * placeholder image.
+ */
+export function isDefaultCoverUrl(url: string): boolean {
+  return url === DEFAULT_BLOG_COVER || url === DEFAULT_RECAP_COVER;
+}
+
 export const transformToAllBlogItems = (
   trips: Trip[],
   args?: {

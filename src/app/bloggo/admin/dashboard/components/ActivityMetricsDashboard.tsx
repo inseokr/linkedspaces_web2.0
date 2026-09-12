@@ -1,6 +1,6 @@
 "use client";
 
-import type { ActivitySnapshot } from "../types";
+import type { ActivitySnapshot, EventAnalytics } from "../types";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -123,9 +123,11 @@ function RatioRow({
 interface Props {
   snapshots: ActivitySnapshot[];
   days: number;
+  behavior?: EventAnalytics["behavior"];
+  behaviorDays?: number;
 }
 
-export function ActivityMetricsDashboard({ snapshots, days }: Props) {
+export function ActivityMetricsDashboard({ snapshots, days, behavior }: Props) {
   if (!snapshots.length) {
     return (
       <div className="text-sm text-gray-400 py-8 text-center">
@@ -140,10 +142,36 @@ export function ActivityMetricsDashboard({ snapshots, days }: Props) {
   const totalDeletes = sum(snapshots, "blogDeletes");
   const totalSharesPDF = sum(snapshots, "blogSharesPDF");
   const totalSharesNearby = sum(snapshots, "blogSharesNearby");
-  const totalShares = totalSharesPDF + totalSharesNearby;
+  const totalSharesPhotos = sum(snapshots, "blogSharesPhotos");
+  const totalSharesPolaroid = sum(snapshots, "blogSharesPolaroid");
+  const totalSharesStudio = sum(snapshots, "blogSharesStudio");
+  const totalSharesStitch = sum(snapshots, "blogSharesStitchReels");
+  const totalSharesWebLink = sum(snapshots, "blogSharesWebLink");
+  const totalSharesTyped = sum(snapshots, "blogShares");
+  const totalShares =
+    totalSharesTyped ||
+    totalSharesPDF +
+      totalSharesNearby +
+      totalSharesPhotos +
+      totalSharesPolaroid +
+      totalSharesStudio +
+      totalSharesStitch +
+      totalSharesWebLink;
+  const totalPhotoFull = sum(snapshots, "photoAccessFull");
+  const totalPhotoLimited = sum(snapshots, "photoAccessLimited");
+  const totalPhotoNone = sum(snapshots, "photoAccessNone");
   const totalSlideshows = sum(snapshots, "blogSlideshowPlays");
   const totalSplits = sum(snapshots, "blogSplits");
   const totalMerges = sum(snapshots, "blogMerges");
+
+  const savedBlogs =
+    behavior?.cleanup?.savedBlogs || behavior?.cleanup?.createdBlogs || 0;
+  const openedCleanupBlogs = behavior?.cleanup?.openedBlogs ?? 0;
+  const cleanedBlogs =
+    behavior?.cleanup?.cleanedBlogs ?? behavior?.cleanup?.deletedBlogs ?? 0;
+  const sharedBlogs = behavior?.share?.sharedBlogs ?? 0;
+  const shareSavedBlogs =
+    behavior?.share?.savedBlogs || behavior?.share?.createdBlogs || savedBlogs;
 
   const totalPlaceRenames = sum(snapshots, "placeRenames");
   const totalRenamesPoi = sum(snapshots, "placeRenamesPoi");
@@ -192,7 +220,28 @@ export function ActivityMetricsDashboard({ snapshots, days }: Props) {
       </div>
 
       {/* ── Blog lifecycle ───────────────────────────────── */}
+      <SectionHeader title="Share (unique blogs)" />
+      <p className="mb-2 text-xs text-gray-500">
+        Count first, % second. Only blogs created after completed-share tracking
+        started
+        {behavior?.share?.trackingStartedAt
+          ? ` (${new Date(behavior.share.trackingStartedAt).toLocaleDateString()})`
+          : ""}
+        . Older saved blogs are left out so the % is not pulled down.
+      </p>
+      <div className="bg-white border border-gray-200 rounded-lg divide-y divide-gray-100 px-4 mb-4">
+        <RatioRow
+          label="Shared at least once"
+          part={sharedBlogs}
+          total={shareSavedBlogs}
+          partLabel="blogs"
+        />
+      </div>
+
       <SectionHeader title="Blog Lifecycle" />
+      <p className="mb-2 text-xs text-gray-500">
+        Rows below are tap counts vs save counts, not unique blogs.
+      </p>
       <div className="bg-white border border-gray-200 rounded-lg divide-y divide-gray-100 px-4">
         <RatioRow label="Scan → Save" part={totalSaves} total={totalScans} />
         <RatioRow
@@ -201,18 +250,39 @@ export function ActivityMetricsDashboard({ snapshots, days }: Props) {
           total={totalSaves}
         />
         <RatioRow
-          label="Save → Share (any)"
+          label="Share events / saves"
           part={totalShares}
           total={totalSaves}
         />
         <RatioRow
-          label="  ↳ PDF share"
-          part={totalSharesPDF}
+          label="  ↳ Photos"
+          part={totalSharesPhotos}
           total={totalShares}
         />
         <RatioRow
-          label="  ↳ Nearby share"
+          label="  ↳ Polaroid"
+          part={totalSharesPolaroid}
+          total={totalShares}
+        />
+        <RatioRow
+          label="  ↳ Studio"
+          part={totalSharesStudio}
+          total={totalShares}
+        />
+        <RatioRow
+          label="  ↳ Stitch Reels"
+          part={totalSharesStitch}
+          total={totalShares}
+        />
+        <RatioRow
+          label="  ↳ Nearby / QR"
           part={totalSharesNearby}
+          total={totalShares}
+        />
+        <RatioRow label="  ↳ PDF" part={totalSharesPDF} total={totalShares} />
+        <RatioRow
+          label="  ↳ Web link"
+          part={totalSharesWebLink}
           total={totalShares}
         />
         <RatioRow
@@ -222,6 +292,54 @@ export function ActivityMetricsDashboard({ snapshots, days }: Props) {
         />
         <RatioRow label="Split events" part={totalSplits} total={totalSaves} />
         <RatioRow label="Merge events" part={totalMerges} total={totalSaves} />
+      </div>
+
+      <SectionHeader title="Photo permit type (daily volume)" />
+      <div className="bg-white border border-gray-200 rounded-lg divide-y divide-gray-100 px-4">
+        <RatioRow
+          label="Photo-Permission events"
+          part={sum(snapshots, "photoPermissions")}
+          total={totalAppOpens}
+        />
+        <RatioRow
+          label="Full"
+          part={totalPhotoFull}
+          total={totalPhotoFull + totalPhotoLimited + totalPhotoNone}
+        />
+        <RatioRow
+          label="Limited"
+          part={totalPhotoLimited}
+          total={totalPhotoFull + totalPhotoLimited + totalPhotoNone}
+        />
+        <RatioRow
+          label="None"
+          part={totalPhotoNone}
+          total={totalPhotoFull + totalPhotoLimited + totalPhotoNone}
+        />
+      </div>
+
+      <SectionHeader title="Smart Cleanup" />
+      <p className="mb-2 text-xs text-gray-500">
+        Count first, % second. Only blogs created after Smart Cleanup tracking
+        started
+        {behavior?.cleanup?.trackingStartedAt
+          ? ` (${new Date(behavior.cleanup.trackingStartedAt).toLocaleDateString()})`
+          : ""}
+        . Older saved blogs are left out so the % is not pulled down.
+      </p>
+      <div className="bg-white border border-gray-200 rounded-lg divide-y divide-gray-100 px-4">
+        <RatioRow
+          label="Opened cleanup"
+          part={openedCleanupBlogs}
+          total={savedBlogs}
+          partLabel="blogs"
+        />
+        <RatioRow
+          label="Cleaned at least once"
+          part={cleanedBlogs}
+          total={savedBlogs}
+          partLabel="blogs"
+        />
       </div>
 
       {/* ── Place actions ────────────────────────────────── */}

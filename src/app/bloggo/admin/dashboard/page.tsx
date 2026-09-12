@@ -702,6 +702,8 @@ export default function BloggoAdminDashboard() {
               <ActivityMetricsDashboard
                 snapshots={activitySnapshots}
                 days={activityDays}
+                behavior={eventData?.behavior}
+                behaviorDays={eventData?.periodDays ?? eventDays}
               />
             )}
           </section>
