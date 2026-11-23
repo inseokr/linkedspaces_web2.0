@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { GoogleOAuthProvider, GoogleLogin } from "@react-oauth/google";
+import { getGoogleOAuthWebClientId } from "@/config/googleOAuthWeb";
 
 type Props = {
   open: boolean;
@@ -125,7 +126,7 @@ export default function BloggoSignInModal({
           {title}
         </h2>
 
-        <GoogleOAuthProvider clientId="365835568807-9s56gicbdaj9vkn3kkbkvs2crt8k764e.apps.googleusercontent.com">
+        <GoogleOAuthProvider clientId={getGoogleOAuthWebClientId("bloggo")}>
           <div className="mt-8 flex justify-center">
             <GoogleLogin
               onSuccess={handleGoogleSuccess}

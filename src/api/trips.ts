@@ -100,11 +100,54 @@ export type TripRecapDay = {
   places: TripRecapPlace[];
 };
 
+export type TripHighlightsLongestStay = {
+  placeName: string;
+  durationSeconds: number;
+  durationLabel: string;
+  placeIndex?: number;
+  placeKey?: string;
+  photoUri?: string;
+};
+
+export type TripHighlightsSteps = {
+  totalSteps: number;
+  distanceMeters: number;
+  flightsClimbed: number;
+};
+
+export type TripHighlightsTopPlace = {
+  rank: number;
+  placeName: string;
+  locationLine?: string;
+  photoCount: number;
+  placeIndex?: number;
+  placeKey?: string;
+  photoUri?: string;
+};
+
+export type TripHighlights = {
+  version: number;
+  generatedAt?: string;
+  stats?: {
+    dayCount: number;
+    placeCount: number;
+    photoCount: number;
+  };
+  summary?: {
+    travelSpanMeters?: number;
+    travelSpanLabel?: string;
+    longestStay?: TripHighlightsLongestStay;
+    steps?: TripHighlightsSteps;
+  };
+  topPlaces?: TripHighlightsTopPlace[];
+};
+
 /** trip-recap 최상위 응답 */
 export type TripRecapResponse = {
   trip: {
     title: string;
     highlight: string;
+    highlights?: TripHighlights;
 
     startTimeString: string;
     endTimeString: string;
@@ -143,6 +186,27 @@ export type UpdateDayStoryRequest = {
   dateKey: number;
   story: string;
 };
+
+/**
+ * Fetch the live trip-recap payload for one trip. Used to backfill a cover
+ * photo when the cached user snapshot (localStorage, set at login) has no
+ * usable cloud photo for this trip — e.g. the trip was created/synced after
+ * login, or its cached photoList only contains local `file://` URIs.
+ * Returns null on any failure so callers can silently keep the placeholder.
+ */
+export async function fetchTripRecapForCover(
+  username: string,
+  blogKey: number | string,
+): Promise<TripRecapResponse | null> {
+  try {
+    return await apiFetch<TripRecapResponse>(
+      `/ls-beta-test/trip-recap/${encodeURIComponent(username)}/${blogKey}`,
+      { cache: "no-store" },
+    );
+  } catch {
+    return null;
+  }
+}
 
 /**
  * Update trip cover photo (server-side).

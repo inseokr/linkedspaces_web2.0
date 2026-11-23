@@ -13,6 +13,8 @@ import { isAdminUsername } from "@/lib/admin";
 const BASE = "/bloggo";
 
 const navLinks = [
+  { href: `${BASE}/how-it-works`, label: "How it works" },
+  { href: `${BASE}/guides`, label: "Guides" },
   { href: `${BASE}/features`, label: "Features" },
   { href: `${BASE}/support`, label: "Support" },
 ];
@@ -258,7 +260,7 @@ export default function BloggoHeader() {
 
                         {/* Additional Nav Links in Menu */}
                         {navLinks
-                          .filter((link) => link.label !== "Features")
+                          .filter((link) => link.label === "Support")
                           .map((link) => (
                             <Link
                               key={link.href}

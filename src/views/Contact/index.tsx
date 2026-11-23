@@ -9,7 +9,9 @@ import Badge from "@/bloggo/components/ui/Badge";
 import SectionHeader from "@/bloggo/components/ui/SectionHeader";
 import Input from "@/bloggo/components/ui/Input";
 import Button from "@/bloggo/components/ui/Button";
+import FormSubmittingIndicator from "@/bloggo/components/ui/FormSubmittingIndicator";
 import Accordion from "@/bloggo/components/ui/Accordion";
+import { submitSupportContact } from "@/api/supportContact";
 
 const SUPPORT_EMAIL = "contact@linkedspaces.com";
 
@@ -55,14 +57,22 @@ export default function ContactView() {
   });
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitError(null);
     setLoading(true);
-    // Mock submission - replace with real API call later
-    await new Promise((r) => setTimeout(r, 1200));
+    const result = await submitSupportContact({
+      name: formState.name.trim(),
+      email: formState.email.trim(),
+      subject: formState.subject.trim(),
+      message: formState.message.trim(),
+      source: "linkedspaces",
+    });
     setLoading(false);
-    setSubmitted(true);
+    if (result.ok) setSubmitted(true);
+    else setSubmitError(result.message);
   };
 
   return (
@@ -167,6 +177,7 @@ export default function ContactView() {
                   size="sm"
                   onClick={() => {
                     setSubmitted(false);
+                    setSubmitError(null);
                     setFormState({
                       name: "",
                       email: "",
@@ -184,6 +195,7 @@ export default function ContactView() {
                   onSubmit={handleSubmit}
                   noValidate
                   className="flex flex-col gap-5"
+                  aria-busy={loading ? true : undefined}
                 >
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                     <Input
@@ -249,6 +261,7 @@ export default function ContactView() {
                     type="submit"
                     variant="primary"
                     loading={loading}
+                    loadingLabel="Sending…"
                     disabled={
                       !formState.name ||
                       !formState.email ||
@@ -258,6 +271,15 @@ export default function ContactView() {
                   >
                     Send Message
                   </Button>
+                  <FormSubmittingIndicator active={loading} />
+                  {submitError ? (
+                    <p
+                      className="text-sm text-red-500 text-center"
+                      role="alert"
+                    >
+                      {submitError}
+                    </p>
+                  ) : null}
                   <p className="text-xs text-[var(--bloggo-text-muted)] text-center">
                     Or email us directly at{" "}
                     <a

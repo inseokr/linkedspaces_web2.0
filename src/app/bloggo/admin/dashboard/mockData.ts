@@ -17,6 +17,11 @@ export const MOCK_OBSERVABILITY_METRICS: ObservabilityMetrics = {
   storageUsedGb: 145.2,
   avgBlogsPerUser: 1.2,
   avgUploadsPerUser: 24.7,
+  avgPhotosPerBlog: 20.6,
+  blogLifecycle: { saved: 980, completed: 620, published: 550 },
+  blogsWithShareLink: 430,
+  blogsWithShareLinkPct: 20.0,
+  photosWithCaptionPct: 34.5,
 };
 
 export const MOCK_SERVICE_USAGE: ServiceUsage = {

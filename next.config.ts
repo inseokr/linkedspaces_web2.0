@@ -4,8 +4,8 @@ import type { NextConfig } from "next";
 const BLOG_ORIGIN = process.env.BLOG_ORIGIN;
 
 const nextConfig: NextConfig = {
-  // Allow the bloggo subdomain to access the dev server.
-  allowedDevOrigins: ["bloggo.localhost"],
+  // Allow the bloggo / hyodo subdomains to access the dev server.
+  allowedDevOrigins: ["bloggo.localhost", "hyodo.localhost"],
   // Use this directory as the workspace root for output file tracing (avoids
   // "multiple lockfiles" warning when a parent repo also has a package-lock.json).
   outputFileTracingRoot: path.join(__dirname),

@@ -8,7 +8,8 @@ import Button from "@/bloggo/components/ui/Button";
 export const metadata: Metadata = {
   title: "Features",
   description:
-    "Explore Bloggo's powerful features for writers and developers — rich editor, analytics, custom domains, and more.",
+    "Everything Bloggo does with your photos — automatic trip detection, place grouping, instant blog drafts, and carousel, PDF, and video export.",
+  alternates: { canonical: "/features" },
 };
 
 const smartFeatures = [

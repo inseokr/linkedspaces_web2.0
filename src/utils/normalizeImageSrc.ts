@@ -4,11 +4,18 @@
 const ASSET_ORIGIN = "https://s3-us-west-1.amazonaws.com/linkedspaces.fs";
 
 export function normalizeImageSrc(src?: string) {
-  if (!src) return { src: "/images/hero/fallback.jpg", unoptimized: false };
+  if (!src) return { src: "/images/recap/us.png", unoptimized: false };
 
   //  로컬 프리뷰(blob/data)는 그대로 써야 함
   if (src.startsWith("blob:") || src.startsWith("data:")) {
     return { src, unoptimized: true };
+  }
+
+  // Local Next.js public assets (bundled fallbacks, icons, etc.) must be served
+  // as-is. Without this they fall into the generic "startsWith('/')" branch below
+  // and get rewritten to a non-existent S3 URL → broken image.
+  if (/^\/(?:images|icons|fonts|videos|assets|_next)\b/.test(src)) {
+    return { src, unoptimized: false };
   }
 
   // 이미 절대 주소(http...)인 경우 그대로 반환

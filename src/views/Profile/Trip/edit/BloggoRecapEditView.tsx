@@ -46,6 +46,9 @@ export default function BloggoRecapEditView({
   const [error, setError] = useState<string | null>(null);
   const [recapData, setRecapData] = useState<TripRecapResponse | null>(null);
   const [coverGalleryOpen, setCoverGalleryOpen] = useState(false);
+  // Keep the loading screen visible while navigating away after save,
+  // to avoid a brief overlap/flicker between edit/view pages.
+  const didNavigateAwayRef = useRef(false);
   // draft
   const [draft, setDraft] = useState<RecapEditDraft | null>(null);
   const draftRef = useRef<RecapEditDraft | null>(null);
@@ -523,11 +526,14 @@ export default function BloggoRecapEditView({
       baselineDraftFingerprintRef.current = draftFingerprint(draft);
       baselineTitleRef.current = draft.recapTitle;
 
-      router.back();
+      didNavigateAwayRef.current = true;
+      router.replace(
+        `/bloggo/trip/${encodeURIComponent(userId)}/${encodeURIComponent(tripId)}`,
+      );
     } catch (e: any) {
       setError(e?.message ?? "Failed to update recap");
     } finally {
-      setLoading(false);
+      if (!didNavigateAwayRef.current) setLoading(false);
     }
   };
 

@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { notifyAuthChanged } from "@/hooks/useAuth";
 import { loginWithGoogle, loginWithJwt, isLoginSuccess } from "@/api/auth";
 import { setCachedUser } from "@/api/user";
+import { getGoogleOAuthWebClientId } from "@/config/googleOAuthWeb";
 
 export default function SignInSection() {
   const [openGuide, setOpenGuide] = useState(false);
@@ -36,7 +37,7 @@ export default function SignInSection() {
       const idToken = response.credential || response.tokenId;
       if (!idToken) return;
 
-      const data = await loginWithGoogle(idToken);
+      const data = await loginWithGoogle(idToken, { userType: "linkedspaces" });
 
       if (isLoginSuccess(data)) {
         persistTokenBestEffort(data.token);
@@ -80,7 +81,9 @@ export default function SignInSection() {
               LinkedSpaces
             </h1>
 
-            <GoogleOAuthProvider clientId="365835568807-9s56gicbdaj9vkn3kkbkvs2crt8k764e.apps.googleusercontent.com">
+            <GoogleOAuthProvider
+              clientId={getGoogleOAuthWebClientId("linkedspaces")}
+            >
               <div className="mt-8 flex justify-center">
                 <GoogleLogin
                   onSuccess={handleGoogleLogin}

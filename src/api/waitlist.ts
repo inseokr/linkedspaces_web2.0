@@ -67,10 +67,16 @@ type JoinWaitlistResponse = {
 export async function joinWaitlist(
   email: string,
   userName?: string,
+  extras?: { website?: string; formStartedAt?: number },
 ): Promise<void> {
   const res = await apiFetch<JoinWaitlistResponse>("/waitlist", {
     method: "POST",
-    body: { email, userName: userName || email.split("@")[0] || "Guest" },
+    body: {
+      email,
+      userName: userName || email.split("@")[0] || "Guest",
+      website: extras?.website ?? "",
+      formStartedAt: extras?.formStartedAt,
+    },
   });
   if (res.result !== "OK") {
     throw new Error(res.reason ?? "Failed to join waitlist");
@@ -105,12 +111,12 @@ export async function fetchPremiumUserCount(): Promise<number> {
  * Update a user's level.
  * @param username - the user's username (from waitlist entry `userName`)
  * @param email    - the user's email
- * @param userLevel - "premium" to allow, "normal" to reject/downgrade
+ * @param userLevel - "freemium" to allow, "normal" to reject/downgrade
  */
 export async function updateUserLevel(
   username: string,
   email: string,
-  userLevel: "normal" | "premium" | "influencer",
+  userLevel: "normal" | "freemium" | "premium" | "influencer",
 ): Promise<void> {
   const token = getAuthToken();
   const res = await apiFetch<UpdateUserLevelResponse>(
@@ -124,4 +130,40 @@ export async function updateUserLevel(
   if (res.result !== "OK") {
     throw new Error(res.reason ?? "Failed to update user level");
   }
+}
+
+type WaitlistMutationResponse = {
+  result: string;
+  deleted?: number;
+  emails?: string[];
+  reason?: string;
+};
+
+/** Remove specific waitlist rows by email. Admin only. */
+export async function removeFromWaitlist(emails: string[]): Promise<number> {
+  const token = getAuthToken();
+  const res = await apiFetch<WaitlistMutationResponse>(
+    "/admin/dashboard/waitlist/remove",
+    { method: "POST", token, body: { emails } },
+  );
+  if (res.result !== "OK") {
+    throw new Error(res.reason ?? "Failed to remove waitlist entries");
+  }
+  return res.deleted ?? 0;
+}
+
+/** Delete waitlist rows whose username looks bot-generated. Admin only. */
+export async function purgeSpamWaitlist(): Promise<{
+  deleted: number;
+  emails: string[];
+}> {
+  const token = getAuthToken();
+  const res = await apiFetch<WaitlistMutationResponse>(
+    "/admin/dashboard/waitlist/purge-spam",
+    { method: "POST", token, body: {} },
+  );
+  if (res.result !== "OK") {
+    throw new Error(res.reason ?? "Failed to purge spam waitlist entries");
+  }
+  return { deleted: res.deleted ?? 0, emails: res.emails ?? [] };
 }

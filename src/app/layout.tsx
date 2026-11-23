@@ -39,11 +39,17 @@ export default async function RootLayout({
   // Middleware sets this header when the request comes from bloggo.linkedspaces.com
   const headersList = await headers();
   const isBloggoDomain = headersList.get("x-bloggo-domain") === "true";
+  // ...and this one when it comes from hyodo.linkedspaces.com (HomeWatch).
+  const isHyodoDomain = headersList.get("x-hyodo-domain") === "true";
 
   const fontVariables = `${inter.variable} ${poppins.variable} ${montserrat.variable}`;
 
   return (
-    <LayoutClient isBloggoDomain={isBloggoDomain} fontVariables={fontVariables}>
+    <LayoutClient
+      isBloggoDomain={isBloggoDomain}
+      isHyodoDomain={isHyodoDomain}
+      fontVariables={fontVariables}
+    >
       {children}
     </LayoutClient>
   );

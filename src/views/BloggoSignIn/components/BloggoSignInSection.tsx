@@ -14,6 +14,8 @@ import {
 } from "@/api/auth";
 import { setCachedUser } from "@/api/user";
 import { assertBloggoUser } from "@/lib/bloggo";
+import { getGoogleOAuthWebClientId } from "@/config/googleOAuthWeb";
+import { SiApple } from "react-icons/si";
 
 // Apple Sign in with Apple JS SDK type declarations
 declare global {
@@ -143,7 +145,7 @@ export default function BloggoSignInSection() {
       const idToken = response.credential || response.tokenId;
       if (!idToken) return;
 
-      const data = await loginWithGoogle(idToken);
+      const data = await loginWithGoogle(idToken, { userType: "bloggo" });
 
       if (isLoginSuccess(data)) {
         handleAuthSuccess(data.token, data.user);
@@ -230,37 +232,35 @@ export default function BloggoSignInSection() {
               </Link>
             </h1>
 
-            <GoogleOAuthProvider clientId="365835568807-9s56gicbdaj9vkn3kkbkvs2crt8k764e.apps.googleusercontent.com">
-              <div className="mt-8 flex justify-center">
+            <GoogleOAuthProvider clientId={getGoogleOAuthWebClientId("bloggo")}>
+              <div className="mx-auto mt-8 w-full max-w-[380px] space-y-3">
                 <GoogleLogin
                   onSuccess={handleGoogleLogin}
                   useOneTap
                   text="signin_with"
-                  shape="circle"
+                  shape="pill"
                   theme="outline"
-                  width="380"
+                  size="large"
+                  width={380}
+                  containerProps={{
+                    className:
+                      "flex h-10 max-h-10 w-full shrink-0 items-center justify-center overflow-hidden [&_iframe]:!h-10 [&_iframe]:!max-h-10 [&_iframe]:w-full",
+                  }}
                 />
+                <button
+                  type="button"
+                  onClick={handleAppleLogin}
+                  disabled={!appleReady || isLoading}
+                  className="flex h-10 w-full shrink-0 items-center justify-center gap-2 rounded-full border border-black/20 bg-black px-4 text-[14px] font-medium leading-none text-white hover:opacity-90 active:opacity-80 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <SiApple
+                    className="h-5 w-5 shrink-0 text-white"
+                    aria-hidden
+                  />
+                  Sign in with Apple
+                </button>
               </div>
             </GoogleOAuthProvider>
-
-            <div className="mt-3 flex justify-center">
-              <button
-                type="button"
-                onClick={handleAppleLogin}
-                disabled={!appleReady || isLoading}
-                className="flex h-[40px] w-[380px] items-center justify-center gap-2 rounded-full border border-black/20 bg-black px-4 text-[14px] font-medium text-white hover:opacity-90 active:opacity-80 transition disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 814 1000"
-                  className="h-5 w-5 fill-white"
-                  aria-hidden="true"
-                >
-                  <path d="M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.3 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76 0-103.7 40.8-165.9 40.8s-105-57.8-155.5-127.4C46 523 26.3 321.3 81.3 203.9c13.4-28.8 41.3-63.8 93.4-105.1C245.8 38.7 335.9 6.5 422.5 5.8c.2 0 .2 0 .3 0 1.5 0 3 .1 4.5.2l-.1.1c58.2 1.8 111.6 28.2 150.3 55.7 36.2 25.9 63 55.8 68.7 64.4l-.1-.1c13.7 21.4 17 23.1 11.9 40.8z" />
-                </svg>
-                Sign in with Apple
-              </button>
-            </div>
 
             <div className="my-6 flex items-center gap-4">
               <div className="h-px flex-1 border-t border-dashed border-black/30" />

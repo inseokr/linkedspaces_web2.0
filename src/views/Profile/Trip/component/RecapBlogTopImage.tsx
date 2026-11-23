@@ -211,10 +211,13 @@ function CoverImage({
   coverImageUrl,
   title,
   showGradient = true,
+  fillParent = false,
 }: {
   coverImageUrl: string;
   title: string;
   showGradient?: boolean;
+  /** Fill the parent element instead of enforcing a 16/7 aspect ratio. */
+  fillParent?: boolean;
 }) {
   const { src, unoptimized } = getBlogImageResolved(coverImageUrl);
   // Parallax refs
@@ -247,17 +250,23 @@ function CoverImage({
     // Outer container: fixed height, clips the overflowing image
     <div
       ref={containerRef}
-      className="relative w-full overflow-hidden"
-      style={{ aspectRatio: "16/7" }}
+      className={
+        fillParent
+          ? "absolute inset-0 h-full w-full overflow-hidden"
+          : "relative w-full overflow-hidden"
+      }
+      style={fillParent ? undefined : { aspectRatio: "16/7" }}
     >
       {/* Inner wrapper: taller than container so parallax has room to travel */}
       <div
         ref={imgRef}
         className="absolute inset-x-0 will-change-transform"
         style={{
-          // Give it more room at the bottom so it can travel upwards without showing empty space
+          // Give it more room at the bottom so it can travel upwards without showing empty space.
+          // Keep the overhang small when filling a tall parent (mobile) so the
+          // landscape cover photo isn't cropped into a narrow vertical slice.
           top: "0%",
-          bottom: "-60%",
+          bottom: fillParent ? "-20%" : "-60%",
         }}
       >
         {src ? (
@@ -366,7 +375,12 @@ export default function RecapBlogHero({
         className="relative w-full overflow-hidden rounded-[28px] border border-black/5 sm:hidden"
         style={{ aspectRatio: "4/5" }}
       >
-        <CoverImage coverImageUrl={coverImageUrl} title={title} showGradient />
+        <CoverImage
+          coverImageUrl={coverImageUrl}
+          title={title}
+          showGradient
+          fillParent
+        />
 
         <div className="pointer-events-none absolute inset-0 flex flex-col justify-end z-20">
           <div className="pb-5 px-6 text-center">
