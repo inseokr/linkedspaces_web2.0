@@ -16,6 +16,8 @@ type SubdomainApp = {
    * extension) as-is instead of stripping the prefix.
    */
   servePublicAssets?: boolean;
+  /** Extra paths served as-is from public/ (checked before any rewrite). */
+  publicAssets?: RegExp;
   /**
    * Redirect /<prefix>/* on any other host (e.g. linkedspaces.com) to the
    * subdomain, so the sub-site isn't exposed on the main site.
@@ -23,7 +25,15 @@ type SubdomainApp = {
   canonical?: { prodOrigin: string; devHost: string };
 };
 
-const BLOGGO: SubdomainApp = { prefix: "/bloggo", header: "x-bloggo-domain" };
+const BLOGGO: SubdomainApp = {
+  prefix: "/bloggo",
+  header: "x-bloggo-domain",
+  // Files that exist in public/ at their real paths. Rewriting them under
+  // /bloggo would 404. /sitemap.xml is deliberately NOT here — it must fall
+  // through to the rewrite so it reaches the generated /bloggo/sitemap.xml.
+  publicAssets:
+    /^\/(images|icons|gifs|videos)\/|^\/bloggo\/(screenshots\/|og-image\.png)|^\/(robots\.txt|manifest\.json|bloggo-icon\.png|reset-password\.html)$/,
+};
 
 const HYODO: SubdomainApp = {
   prefix: "/hyodo",
@@ -58,6 +68,10 @@ function handleSubdomainApp(request: NextRequest, app: SubdomainApp) {
 
   // Next.js API routes live at /api/*, not under the app folder.
   if (pathname.startsWith("/api")) {
+    return NextResponse.next();
+  }
+
+  if (app.publicAssets?.test(pathname)) {
     return NextResponse.next();
   }
 

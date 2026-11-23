@@ -7,7 +7,11 @@ import { useAuth } from "@/hooks/useAuth";
 const BASE = "/bloggo";
 
 const footerLinks = {
-  Product: [{ href: `${BASE}/features`, label: "Features" }],
+  Product: [
+    { href: `${BASE}/features`, label: "Features" },
+    { href: `${BASE}/how-it-works`, label: "How it works" },
+    { href: `${BASE}/guides`, label: "Guides" },
+  ],
   Company: [
     { href: `${BASE}/support`, label: "Support" },
     { href: `${BASE}/privacy`, label: "Privacy Policy" },
