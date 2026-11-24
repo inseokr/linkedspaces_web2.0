@@ -1,4 +1,4 @@
-/* HomeWatch (hyodo.linkedspaces.com): scoped so it can't leak into the main app. */
+/* Hyodo (hyodo.linkedspaces.com): scoped so it can't leak into the main app. */
 .hyodo-root {
   --hw-paper: #f6f3fd;
   --hw-ink: #231545;

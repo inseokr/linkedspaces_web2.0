@@ -5,33 +5,31 @@ import { COMPANY, SUPPORT_EMAIL } from "@/hyodo/lib/site";
 
 export const metadata: Metadata = {
   title: "Terms of Service",
-  description: "The terms for using HomeWatch.",
+  description: "The terms for using Hyodo.",
   alternates: { canonical: "/terms" },
 };
 
-// Source: HomeWatch iOS repo, Store/terms-of-service.md
+// Source: iOS repo, Store/terms-of-service.md
 export default function HyodoTermsPage() {
   return (
     <LegalPage
       title="Terms of Service"
       intro={
         <>
-          HomeWatch is provided by {COMPANY} (&ldquo;we&rdquo;,
-          &ldquo;us&rdquo;). By using HomeWatch, you agree to these terms. If
-          you don&rsquo;t agree, please don&rsquo;t use the app.
+          Hyodo is provided by {COMPANY} (&ldquo;we&rdquo;, &ldquo;us&rdquo;).
+          By using Hyodo, you agree to these terms. If you don&rsquo;t agree,
+          please don&rsquo;t use the app.
         </>
       }
     >
-      <h2>What HomeWatch is, and isn&rsquo;t</h2>
+      <h2>What Hyodo is, and isn&rsquo;t</h2>
       <p>
-        HomeWatch is a <strong>peace-of-mind tool</strong>. It tells a family
-        member when a phone has been quiet at home for longer than they chose,
-        and it lets the two of you send knocks.
+        Hyodo is a <strong>peace-of-mind tool</strong>. It tells a family member
+        when a phone has been quiet at home for longer than they chose, and it
+        lets the two of you send knocks.
       </p>
       <p>
-        <strong>
-          HomeWatch is not an emergency service or a medical device.
-        </strong>
+        <strong>Hyodo is not an emergency service or a medical device.</strong>
       </p>
       <ul>
         <li>It doesn&rsquo;t call 911 or emergency services.</li>
@@ -46,7 +44,7 @@ export default function HyodoTermsPage() {
         If you think someone is in danger, call them or call your local
         emergency number.{" "}
         <strong className="text-[var(--hw-coral)]">
-          Don&rsquo;t wait for HomeWatch.
+          Don&rsquo;t wait for Hyodo.
         </strong>
       </div>
 
@@ -54,8 +52,7 @@ export default function HyodoTermsPage() {
       <ul>
         <li>The person whose phone is watched must know about it and agree.</li>
         <li>
-          Use HomeWatch only with someone who chose to share their status with
-          you.
+          Use Hyodo only with someone who chose to share their status with you.
         </li>
         <li>
           Don&rsquo;t install it on another person&rsquo;s phone without their
@@ -71,7 +68,7 @@ export default function HyodoTermsPage() {
       <ul>
         <li>
           Keep the app installed, location set to &ldquo;Always&rdquo;, and
-          notifications on, so HomeWatch can work.
+          notifications on, so Hyodo can work.
         </li>
         <li>Share your family code only with people you trust.</li>
         <li>
@@ -82,7 +79,7 @@ export default function HyodoTermsPage() {
 
       <h2>The service</h2>
       <ul>
-        <li>HomeWatch 1.0 is free.</li>
+        <li>Hyodo 1.0 is free.</li>
         <li>
           We may change, pause or end features. If paid features come later,
           they&rsquo;ll be clearly marked, and we won&rsquo;t charge you without
@@ -100,8 +97,7 @@ export default function HyodoTermsPage() {
       <h2>No warranty, and limits on liability</h2>
       <ul>
         <li>
-          HomeWatch is provided &ldquo;as is&rdquo;, without warranties of any
-          kind.
+          Hyodo is provided &ldquo;as is&rdquo;, without warranties of any kind.
         </li>
         <li>
           As far as the law allows, we aren&rsquo;t liable for harm or losses
@@ -116,16 +112,16 @@ export default function HyodoTermsPage() {
 
       <h2>Ownership and governing law</h2>
       <p>
-        HomeWatch, its content, and its features are owned by {COMPANY}. These
-        terms are governed by the laws of the State of California, without
-        regard to its conflict-of-law rules.
+        Hyodo, its content, and its features are owned by {COMPANY}. These terms
+        are governed by the laws of the State of California, without regard to
+        its conflict-of-law rules.
       </p>
 
       <h2>Changes</h2>
       <p>
         We may update these terms. If the changes are significant, we&rsquo;ll
-        let you know in the app. Using HomeWatch after an update means you
-        accept the new terms.
+        let you know in the app. Using Hyodo after an update means you accept
+        the new terms.
       </p>
 
       <h2>Contact</h2>

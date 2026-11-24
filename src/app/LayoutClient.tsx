@@ -35,7 +35,7 @@ export default function LayoutClient({
   // Treat as bloggo if the path starts with /bloggo OR the request is from
   // the bloggo subdomain (detected server-side via middleware header).
   const isBloggo = (pathname?.startsWith("/bloggo") ?? false) || isBloggoDomain;
-  // HomeWatch (hyodo) pages bring their own header and footer too.
+  // Hyodo (hyodo) pages bring their own header and footer too.
   const isHyodo = (pathname?.startsWith("/hyodo") ?? false) || isHyodoDomain;
   const isSubApp = isBloggo || isHyodo;
 

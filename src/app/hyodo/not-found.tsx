@@ -13,7 +13,7 @@ export default function HyodoNotFound() {
         The page you&rsquo;re looking for doesn&rsquo;t exist.
       </p>
       <Link href="/" className="hw-button mt-8">
-        Go to HomeWatch
+        Go to Hyodo
       </Link>
     </div>
   );

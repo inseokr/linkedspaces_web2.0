@@ -5,7 +5,7 @@ import { SUPPORT_EMAIL } from "@/hyodo/lib/site";
 export const metadata: Metadata = {
   title: "Delete your account",
   description:
-    "How to delete your HomeWatch account and data, in the app or by email.",
+    "How to delete your Hyodo account and data, in the app or by email.",
   alternates: { canonical: "/delete-account" },
 };
 
@@ -17,9 +17,9 @@ const DELETED = [
   "Your status (home / away, last phone use, phone health, knocks)",
 ];
 
-const MAIL_SUBJECT = encodeURIComponent("Delete my HomeWatch data");
+const MAIL_SUBJECT = encodeURIComponent("Delete my Hyodo data");
 const MAIL_BODY = encodeURIComponent(
-  "Please delete my HomeWatch data.\n\nFamily code: \nMy name in the app: \n",
+  "Please delete my Hyodo data.\n\nFamily code: \nMy name in the app: \n",
 );
 
 // Required by Google Play: a web page explaining how to request deletion.
@@ -28,11 +28,11 @@ export default function HyodoDeleteAccountPage() {
     <LegalPage
       eyebrow="Your data"
       title="Delete your account"
-      intro="You can delete your HomeWatch account and data at any time."
+      intro="You can delete your Hyodo account and data at any time."
     >
       <h2>In the app</h2>
       <ol>
-        <li>Open HomeWatch.</li>
+        <li>Open Hyodo.</li>
         <li>
           Go to <strong>Settings</strong>.
         </li>

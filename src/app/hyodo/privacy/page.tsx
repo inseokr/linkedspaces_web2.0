@@ -6,11 +6,11 @@ import { COMPANY, SUPPORT_EMAIL } from "@/hyodo/lib/site";
 export const metadata: Metadata = {
   title: "Privacy Policy",
   description:
-    "What HomeWatch collects, why, who can see it, and how to delete it.",
+    "What Hyodo collects, why, who can see it, and how to delete it.",
   alternates: { canonical: "/privacy" },
 };
 
-// Source: HomeWatch iOS repo, Store/privacy-policy.md
+// Source: iOS repo, Store/privacy-policy.md
 const DATA = [
   {
     what: "Home location",
@@ -30,7 +30,7 @@ const DATA = [
     what: "Phone health",
     detail:
       "Battery level, charging, location and notification permission, app version.",
-    why: "To tell your family when HomeWatch can't do its job, for example because the phone is dead or location is off.",
+    why: "To tell your family when Hyodo can't do its job, for example because the phone is dead or location is off.",
   },
   {
     what: "Names you enter",
@@ -52,9 +52,9 @@ export default function HyodoPrivacyPage() {
       title="Privacy Policy"
       intro={
         <>
-          HomeWatch is operated by {COMPANY} (&ldquo;we&rdquo;,
-          &ldquo;us&rdquo;). It helps a family know that someone living alone is
-          OK at home. It is built to share as little as possible.
+          Hyodo is operated by {COMPANY} (&ldquo;we&rdquo;, &ldquo;us&rdquo;).
+          It helps a family know that someone living alone is OK at home. It is
+          built to share as little as possible.
         </>
       }
     >
@@ -129,7 +129,7 @@ export default function HyodoPrivacyPage() {
       </ul>
 
       <h2>Children</h2>
-      <p>HomeWatch is not directed to children under 13.</p>
+      <p>Hyodo is not directed to children under 13.</p>
 
       <h2>Contact</h2>
       <p>

@@ -5,20 +5,20 @@ import { SUPPORT_EMAIL } from "@/hyodo/lib/site";
 
 export const metadata: Metadata = {
   title: "Support",
-  description: "How HomeWatch works, common fixes, and how to reach us.",
+  description: "How Hyodo works, common fixes, and how to reach us.",
   alternates: { canonical: "/support" },
 };
 
-// Source: HomeWatch iOS repo, Store/support.md
+// Source: iOS repo, Store/support.md
 const FAQ: { q: string; a: React.ReactNode }[] = [
   {
     q: "How does it work?",
     a: (
       <>
-        The person who lives alone installs HomeWatch and sets their home. A
-        family member installs it too and enters the 6-character code. If the
-        phone sits unused at home longer than the limit you pick (8, 12 or 24
-        hours), the family member gets an alert.
+        The person who lives alone installs Hyodo and sets their home. A family
+        member installs it too and enters the 6-character code. If the phone
+        sits unused at home longer than the limit you pick (8, 12 or 24 hours),
+        the family member gets an alert.
       </>
     ),
   },
@@ -26,9 +26,8 @@ const FAQ: { q: string; a: React.ReactNode }[] = [
     q: "Does it track my location?",
     a: (
       <>
-        No. HomeWatch only knows whether the phone is inside the home circle.
-        Family members see &ldquo;home&rdquo; or &ldquo;away&rdquo;, never a
-        place.
+        No. Hyodo only knows whether the phone is inside the home circle. Family
+        members see &ldquo;home&rdquo; or &ldquo;away&rdquo;, never a place.
       </>
     ),
   },
@@ -37,7 +36,7 @@ const FAQ: { q: string; a: React.ReactNode }[] = [
     a: (
       <>
         On the family member&rsquo;s phone, check Settings → Notifications →
-        HomeWatch. On the watched phone, location must be set to{" "}
+        Hyodo. On the watched phone, location must be set to{" "}
         <strong>Always</strong> with <strong>Precise</strong> on.
       </>
     ),
@@ -46,8 +45,8 @@ const FAQ: { q: string; a: React.ReactNode }[] = [
     q: "It says “phone not reporting”.",
     a: (
       <>
-        The watched phone may be off, out of battery, or offline. HomeWatch
-        tells you this so silence never looks like &ldquo;all fine&rdquo;.
+        The watched phone may be off, out of battery, or offline. Hyodo tells
+        you this so silence never looks like &ldquo;all fine&rdquo;.
       </>
     ),
   },
@@ -102,7 +101,7 @@ export default function HyodoSupportPage() {
       <div className="hw-card mt-8 p-6 text-center">
         <h2 className="!mt-0">Contact us</h2>
         <a
-          href={`mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent("HomeWatch support")}`}
+          href={`mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent("Hyodo support")}`}
           className="hw-button !text-white !no-underline"
         >
           Email {SUPPORT_EMAIL}
